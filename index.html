@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b141b">
+  <meta name="description" content="An infinite landscape hidden inside a simple equation. Explore the Mandelbrot set in full color with adaptive precision.">
+  <title>ATLAS — An infinite landscape</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <main id="observatory">
+    <div id="fractal-surface"><canvas id="fractal" aria-label="Interactive Mandelbrot fractal. Scroll to zoom, drag to pan, or use the keyboard controls." tabindex="0"></canvas></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <header class="topbar chrome">
+      <a class="brand" href="#" id="brand-home" aria-label="Atlas home"><span class="brand-symbol">∞</span><span>ATLAS</span><i></i><small>THE MANDELBROT EXPLORER</small></a>
+      <nav class="header-actions" aria-label="View actions">
+        <button id="settings-button" class="icon-button mobile-only" title="Explorer settings" aria-label="Explorer settings" aria-expanded="false"><span data-icon="sliders"></span></button>
+        <button id="help-button" class="icon-button" title="Controls and about (?)" aria-label="Controls and about"><span data-icon="help"></span></button>
+        <button id="cinema-button" class="icon-button" title="Cinema mode (H)" aria-label="Cinema mode"><span data-icon="expand"></span></button>
+        <span class="action-divider"></span>
+        <button id="share-button" class="text-button"><span data-icon="link"></span><span>Share view</span></button>
+        <button id="export-button" class="export-button"><span data-icon="download"></span><span>Capture</span></button>
+      </nav>
+    </header>
+
+    <section class="intro chrome" aria-label="Current location">
+      <div class="eyebrow"><span class="live-dot"></span> A WINDOW INTO INFINITY</div>
+      <h1>An infinite<br>landscape.</h1>
+      <p>One equation. Endless discovery.</p>
+      <button id="tour-button" class="tour-button"><span data-icon="play"></span> Take a journey <span class="arrow">↗</span></button>
+    </section>
+
+    <aside id="control-panel" class="panel chrome" aria-label="Explorer controls">
+      <div class="panel-top"><div><span class="eyebrow">YOUR OBSERVATORY</span><h2>Make it your own.</h2></div><span class="tiny-orbit" aria-hidden="true">✳</span></div>
+      <div class="panel-section">
+        <div class="section-heading"><label>Color atmosphere</label><span class="small-tag">24-BIT RGB</span></div>
+        <div id="palette-grid" class="palette-grid"></div>
+        <div class="palette-caption"><span id="palette-name">Solar flare</span><span id="palette-description">Copper · gold · midnight</span></div>
+        <div class="slider-label"><label for="phase">Color shift</label><button id="cycle-button" class="mini-button" aria-pressed="false" title="Animate the palette"><span data-icon="spark"></span> Animate</button></div>
+        <input id="phase" type="range" min="0" max="1000" value="110" aria-label="Color shift">
+        <div class="slider-label"><label for="frequency">Color density</label><output id="frequency-value" for="frequency">1.0×</output></div>
+        <input id="frequency" type="range" min="20" max="250" value="100">
+      </div>
+      <div class="panel-section">
+        <div class="section-heading"><label for="detail">Level of detail</label><output id="detail-value" for="detail">1,024</output></div>
+        <input id="detail" type="range" min="0" max="5" step="1" value="1">
+        <div class="range-caption"><span>Faster</span><span>Finer</span></div>
+        <label class="toggle-row" for="relief"><span>Orbit texture <small>Let the light find the details</small></span><input id="relief" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
+      </div>
+      <div class="panel-section location-section">
+        <div class="section-heading"><label>In the complex plane</label><button id="coordinates-button" class="mini-button" title="Go to coordinates"><span data-icon="crosshair"></span> Go to</button></div>
+        <div class="coordinate"><span>Re</span><span id="coordinate-re">−0.743643887037151</span></div>
+        <div class="coordinate"><span>Im</span><span id="coordinate-im">+0.131825904205330</span></div>
+        <button id="bookmark-button" class="bookmark-button"><span data-icon="bookmark"></span> Save this discovery <span class="keycap">B</span></button>
+      </div>
+      <div class="panel-footer"><span class="live-dot"></span><button id="engine-status" class="engine-button" aria-label="Show graphics details">INITIALIZING</button><span id="precision-status">40 DIGITS</span></div>
+    </aside>
+
+    <div class="navigation chrome" aria-label="Navigation controls">
+      <button id="zoom-in" title="Zoom in (+)" aria-label="Zoom in"><span data-icon="plus"></span></button>
+      <div class="zoom-readout"><span id="zoom-value">7,079</span><small>× MAGNIFICATION</small></div>
+      <button id="zoom-out" title="Zoom out (−)" aria-label="Zoom out"><span data-icon="minus"></span></button>
+      <span class="nav-divider"></span>
+      <button id="home-button" title="The whole set (R)" aria-label="Reset to whole Mandelbrot set"><span data-icon="home"></span></button>
+    </div>
+    <div class="navigation-hint chrome"><span data-icon="mouse"></span><span>Scroll to zoom</span><i></i><span>Drag to explore</span><i></i><span>Double-click to dive</span></div>
+
+    <section id="destinations" class="destinations chrome" aria-label="Places to explore">
+      <div class="destinations-heading"><div><span class="eyebrow">THE UNIVERSE NEXT DOOR</span><h2>Somewhere to begin.</h2></div><div class="destination-tabs" role="group" aria-label="Location collection"><button id="places-tab" class="active" aria-pressed="true">Curated places</button><button id="saved-tab" aria-pressed="false">Your discoveries <span id="saved-count">0</span></button></div><button id="gallery-toggle" class="icon-button" title="Collapse places" aria-label="Collapse places"><span data-icon="chevron"></span></button></div>
+      <div id="destination-grid" class="destination-grid"></div>
+    </section>
+
+    <footer class="statusbar chrome"><span><span class="status-dot"></span><span id="render-status">Preparing your window…</span></span><span class="formula">z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c <i></i> INFINITELY SIMPLE. ENDLESSLY COMPLEX.</span><span id="resolution-status"></span></footer>
+    <button id="exit-cinema" class="exit-cinema" title="Show controls (H or Escape)"><span data-icon="expand"></span> Show controls <kbd>H</kbd></button>
+    <div id="tour-status" class="tour-status" hidden><span class="live-dot"></span><span id="tour-location">A journey into the set</span><button id="stop-tour" aria-label="Stop journey"><span data-icon="pause"></span></button></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <dialog id="help-dialog" class="modal">
+    <button class="modal-close icon-button" data-close aria-label="Close"><span data-icon="close"></span></button>
+    <span class="eyebrow">WELCOME TO ATLAS</span><h2>There is always more.</h2>
+    <p>Every shape you see comes from repeating one tiny equation. Follow a boundary. Find a spiral. Keep going.</p>
+    <div class="help-keys"><span>Zoom toward the pointer</span><kbd>Scroll</kbd><span>Move through the landscape</span><kbd>Drag / ↑ ↓ ← →</kbd><span>Dive into a detail</span><kbd>Double-click / +</kbd><span>Step back</span><kbd>−</kbd><span>Return to the whole set</span><kbd>R</kbd><span>Hide the instruments</span><kbd>H</kbd><span>Save your discovery</span><kbd>B</kbd><span>Capture an image</span><kbd>S</kbd></div>
+    <p class="help-note">On touchscreens, drag with one finger and pinch to zoom. Precision grows with your journey; there is no preset zoom ceiling. Very deep or intricate views need more time and a higher detail setting. A black region may be inside the set, or may need more iterations.</p>
+    <a class="source-link" href="https://mathr.co.uk/web/deep-zoom.html" target="_blank" rel="noreferrer">The mathematics behind the journey ↗</a>
+    <button id="graphics-button" class="secondary-button">Graphics details</button>
+  </dialog>
+
+  <dialog id="graphics-dialog" class="modal">
+    <button class="modal-close icon-button" data-close aria-label="Close"><span data-icon="close"></span></button>
+    <span class="eyebrow">YOUR DEVICE</span><h2>Your rendering engine.</h2>
+    <p id="graphics-summary"></p>
+    <dl class="graphics-details">
+      <div><dt>Active renderer</dt><dd id="graphics-device"></dd></div>
+      <div id="graphics-attempted-row" hidden><dt>Attempted graphics device</dt><dd id="graphics-attempted"></dd></div>
+      <div><dt>GPU initialization</dt><dd id="graphics-reason"></dd></div>
+    </dl>
+    <p id="graphics-guidance" class="help-note"></p>
+  </dialog>
+
+  <dialog id="coordinate-dialog" class="modal">
+    <button class="modal-close icon-button" data-close aria-label="Close"><span data-icon="close"></span></button>
+    <span class="eyebrow">A PLACE IN INFINITY</span><h2>Go somewhere precise.</h2>
+    <form id="coordinate-form">
+      <label for="input-re">Real coordinate</label><textarea id="input-re" rows="2" required spellcheck="false"></textarea>
+      <label for="input-im">Imaginary coordinate</label><textarea id="input-im" rows="2" required spellcheck="false"></textarea>
+      <label for="input-zoom">Magnification · power of 10</label><input id="input-zoom" type="number" min="-0.6" step="any" required>
+      <p class="help-note">For 10²⁰ magnification, enter 20. All coordinate digits are preserved.</p>
+      <p id="coordinate-error" class="form-error" role="alert"></p>
+      <button type="submit" class="primary-button">Explore this location <span>↗</span></button>
+    </form>
+  </dialog>
+
+  <dialog id="capture-dialog" class="modal">
+    <button class="modal-close icon-button" data-close aria-label="Close"><span data-icon="close"></span></button>
+    <span class="eyebrow">A LITTLE PIECE OF INFINITY</span><h2>Keep the view.</h2><p>A full-color PNG, without the instruments. Your coordinates travel alongside it in a location file.</p>
+    <label for="export-size">Image resolution</label><select id="export-size"><option value="1920">Full HD · 1920 px wide</option><option value="3840">4K · 3840 px wide</option><option value="current">Current viewport</option></select>
+    <button id="download-image" class="primary-button">Save image <span data-icon="download"></span></button>
+    <button id="download-location" class="secondary-button">Save location (.json)</button>
+    <label class="import-label" for="import-location">Open a saved location <span>↗</span></label><input id="import-location" type="file" accept="application/json,.json" hidden>
+    <p id="capture-status" class="help-note" role="status"></p>
+  </dialog>
+  <noscript><div class="noscript">ATLAS needs JavaScript to calculate and explore the Mandelbrot set.</div></noscript>
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
