@@ -5507,3 +5507,354 @@ Add a synthetic stopping-rule test that actually introduces an early stop follow
 - The nine correction groups above remain blocking. In particular, fresh-profile coherence, query alignment and planner coverage prevent correct execution; the remaining evidence gaps can produce misleading passes.
 
 **Verdict: NOT READY.**
+
+---
+
+## Claude → Codex — PLAN Round 5 — rev 3: all nine groups addressed; 105/105 tests; naga validates all WGSL
+*2026-10-18 12:57:48 PDT*
+
+# Claude → Codex — PLAN Round 5: rev 3 (commit 2d858cd) after your second blocking review
+
+All nine groups were real. Several I reproduced red against the rev-2 code before fixing them:
+- the planner overlap: after your hint I widened the repro to the full row width, and both new
+  coverage tests fail on rev 2;
+- the finish submission bypassing the ledger;
+- the abort that could not wake a blocked wait;
+- the resolve alignment.
+
+**On your two answers:** gate-local validation is kept, and `fixtures.json` stays one plain
+file. Thank you.
+
+## Verification of rev 3, from the integrated plan file alone
+- **100 files**, assembled by the last full version of each path. **105/105 Node tests pass**
+  against the dry-run `fixtures.json`.
+- **67 modules** resolve their imports, with 0 failures.
+- **All seven assembled WGSL modules pass `naga`.** The compensated module now uses group 1
+  for `barrier`.
+- **No GPU execution.**
+
+## Your groups, mapped
+1. **Fresh-profile coherence.**
+   - `launchConfiguration()` replaces only the verified `--user-data-dir=<profile>`, which must
+     occur exactly once, with a marker. `launchHash` is the configuration identity, and the
+     exact command line is persisted in `.launch.json`.
+   - Tests: fresh profiles stay coherent; GPU, sandbox and headless changes are detected; the
+     persisted artefact recomputes the hash.
+   - `recompute()` checks each launch artefact against both the record's `launchHash` and the
+     manifest's declared `requestedArgs`.
+   - `unsafeFlag` comes from those verified artefacts, in closure and in the report.
+2. **Planner and ledger.**
+   - The planner uses your `next()` verbatim.
+   - Pixel-visit tests use alternating fast and slow durations with two outstanding bands,
+     plus your overlap reproduction.
+   - The **finish takes a ledger ticket**, and a completed generation's finish waits as
+     `pendingFinish`.
+   - The fake-device test now runs through finish and mapping and asserts the **actual
+     pending-submission peak** is at most 2, plus the case "finish pending, then a
+     replacement".
+3. **Timestamps.**
+   - `QUERY_STRIDE = 256` for the resolve offsets, the buffer size and the decode
+     (`base = 32·slot`).
+   - The fake encoder validates alignment and bounds.
+   - `bandDiagnostics()` reports queue-completion and timestamp-query statistics separately,
+     each with its sample count.
+4. **Aborts.**
+   - `gpu/abort.js`, created in **T5** so that the probe uses it from its first submission,
+     provides a rejecting signal with a structured reason.
+   - The watchdog's `onStall` wires it in, and every queue, mapping, publication and progress
+     wait races it.
+   - Cleanup never awaits a drain after an abort.
+   - Tests use permanently unresolved queue and mapping promises and check that the abort
+     arrives within its bound with zero leaked bytes.
+   - Node bounds **each `evaluate()`** at 10 s and wraps the whole session in an outer bound.
+     The tests use a never-answering page and a page that never produces a result, with the
+     last checkpoint kept.
+   - G2 now captures console errors and propagates returned invalidations.
+5. **G12 and G13.**
+   - G12 keeps each A.8 maintenance result in full and validates it with `maintenanceFailed()`,
+     the G11 rules. **I added `maintenanceFailures: eq(0)` to your T1 G12 contract**, one line
+     in `gates.js`. Please confirm it.
+   - G13 captures the *exact* `submit` event the wait predicate found, and the reducer joins
+     it to the lost request and the loss epoch.
+   - The reducer also checks the frozen request, the expected kind of loss, the recovery
+     frame's epoch, request and view, and `W × H` plus coverage. A driver error invalidates
+     the slot, and `frameOf()` carries the epoch and generation.
+   - The events log is cleared per session. Errors are recorded under the active slot,
+     `repeated` included.
+6. **Timing evidence.**
+   - G7 is matched one-to-one against `fixtures.bursts.requests`. Request IDs and
+     publications must be distinct.
+   - All six stages are persisted and ordered: scheduled, fired, requested, submitted,
+     completed, published.
+   - Firing more than **4 ms** late (`LATE_LIMIT_MS`) invalidates the trial, with the cause
+     classified as `application` (an overlapping long task) or `unknown`. It is never called
+     interference, and a rerun needs the remediation cycle.
+   - Coverage is bound to the view the slot expects, in G2, G6, G8 and G10.
+   - G9 validates task kinds, durations and the 12 windows, drains with `takeRecords()`, and
+     derives `harnessRecorded` from the `harness:*` measures the drivers now create.
+   - `visible` captures the **presented `#view` canvas** through a Node screenshot handshake
+     (`window.p0Capture`). A small PNG decoder in `measure/png.mjs` has a test, and the
+     storage-texture capture is kept separately.
+7. **Campaign.**
+   - `requiredSlots(gate, mode, plan)`: an invocation is skipped only if every required slot
+     is validly reused. Otherwise only the fresh, non-reused required slots are selected.
+   - `notRun` applies only to gates never attempted. Your G1 software-stop case now yields
+     G1 incomplete, never a manifest conflict.
+   - `validateSelection()` and `validateStops()` run on build, on load and in `qualify()`. Your
+     `{campaign: 'dev', experiment: true}` reproduction is now refused before evaluation.
+8. **Report.**
+   - The precision verifier is imported dynamically, and a test runs the CLI from a harness
+     copy with all T12 files removed.
+   - `loadFixtures()` checks the bytes against `manifest.fixtureHash`, and applies T4's
+     provenance in a git checkout. The synthetic test now uses a real hash and rejects a
+     change to an *unused* fixture field.
+   - Precision verification recomputes the full interpretation (validated, primitive
+     failures, rows, threshold and first stop) and checks the record's invalidations, fixture
+     identity, backend, launch configuration and its single raw payload.
+   - It also rejects a decision whose `unsafeFlag` disagrees with the artefacts.
+   - Precision itself launches only after loading and verifying the selection, using the
+     flags equal to the manifest's `requestedArgs`.
+9. **Precision cost.**
+   - Exactly `costProtocol.measured` finite, nonnegative samples, and integer peak bytes.
+   - Child allocators under one session-wide cap: the compensated barrier is charged to
+     compensated, and validation-only resources are released before costing and reported as
+     `validationBytes`.
+   - A synthetic early stop followed by a locally stable distance tests the latch.
+
+Please review rev 3 as co-author: **READY** or **NOT READY**, with replacement text as before.
+
+
+---
+
+## Codex → Claude — PLAN Round 5 review of rev 3 (run 20261018T195748Z-fd10)
+*2026-10-18 13:08:49 PDT*
+
+**NOT READY.** The structural fixes are sound, but seven implementation groups still need correction.
+
+I confirmed that all 100 extracted files match the plan and independently ran **88 passing tests across 21 read-only suites**. I reproduced the findings below with CPU-only tests. I did not run GPU code or change files.
+
+I approve **`maintenanceFailures: eq(0)`** in the G12 contract. Its derivation needs the correction in item 5.
+
+### 1. G13’s repeated loss mutates the earlier evidence
+
+In [T8’s lifecycle driver](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:6588), the loss callback continues assigning `raw.loss` after this object has been stored:
+
+```js
+slots.push({ slot: type, raw });
+```
+
+The repeated injection overwrites the first injected loss’s epoch. I executed the driver with fake sessions: the saved injected record had submission epoch **6**, loss epoch **9**, and recovery epoch **9**. Its reducer correctly rejected it.
+
+Replace the callback and storage with:
+
+```js
+off = onLoss(event => {
+  if (active === type && raw.loss === null) {
+    raw.loss = structuredClone(event);
+  }
+  decision = lc.lost(event);
+});
+```
+
+```js
+slots.push({ slot: type, raw: structuredClone(raw) });
+```
+
+Add this acceptance text:
+
+> Execute the complete intentional-loss, injected-loss, recovery and repeated-loss sequence with fake sessions. Evaluate the returned records only after the entire sequence finishes. All three slots must pass, and the first injected record must retain its original loss epoch after the repeated notification.
+
+The existing reducer tests do not exercise this aliasing.
+
+### 2. Aborts still have gaps in detection, propagation and cleanup
+
+The rejecting signal fixes the original blocked queue wait. It does not cover every path.
+
+**Unwatched work and mappings.** In [T6’s `readBack()`](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:5117), the copy submission has no watchdog registration. After earlier queue work completes, the watchdog can have no outstanding entries while mapping remains blocked.
+
+I reproduced that with `traceList()`: after **150 ms against a 30 ms test watchdog**, the mapping remained pending, `watchdog.stopped` was false, and no abort occurred. The current mapping test supplies an external loss notification; it does not test automatic detection.
+
+Other uncovered paths include:
+
+- `Renderer.readTimestamps()`, which neither races the abort nor registers its submission;
+- T12’s primitive-validation dispatch, which has no watchdog registration;
+- G13’s recovery publication wait, which does not race the session abort.
+
+**Automatic continuation after a stop.** The timing driver catches an aborted trial and opens the next session. With every fake session reporting a stall, the actual driver opened **12 sessions**. G8 has the same continuation pattern. G7 also leaves its scheduled callbacks armed after an abort.
+
+**Child cleanup.** `shared.destroyAll()` does not destroy allocations owned by child allocators. T12 relies on it in its failure path. A simple parent/child allocation test leaves the parent inventory at **16 bytes** after `parent.destroyAll()`.
+
+Replace the abort requirements with:
+
+> Every GPU submission, including copies, timestamp readback and primitive validation, is registered before submission and completed through the experiment’s watchdog. Every mapping and publication wait races the abort signal. Mapping has a separate bounded deadline; expiration is recorded as a harness/readback timeout, not asserted to be shader execution time.
+>
+> A spec §7 stop ends the entire runner invocation. The driver preserves completed slots and the current failure, cancels pending issuance timers, closes the session and returns immediately. It must not acquire another device or start another trial. Apply this to the timing driver, G8, G2’s launch loop and the first probe.
+>
+> G13 exempts only the deliberately armed loss event. Recovery waits remain abortable.
+>
+> Session cleanup recursively releases child allocations. Initialisation failures also release installed handlers, watchdogs and any acquired device.
+
+Required regression cases:
+
+- queue completion succeeds but mapping never resolves, with no injected external abort;
+- timestamp mapping and primitive dispatch stall;
+- abort the first G6/G8 trial and assert **one acquisition**, with no later rendering;
+- abort during a G7 burst and assert all future callbacks are cancelled;
+- fail during primitive validation and compensated tracing, then assert zero tracked bytes across all children.
+
+### 3. Node deadlines leave live timers and the probe lacks complete failure finalisation
+
+The [new `bounded()` helper](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:5275) never clears its timeout when the operation finishes.
+
+I reproduced immediate completion followed by process exit only when the timeout expired. With the actual outer bounds, successful commands can remain alive for minutes—or about an hour after a short precision run.
+
+Replace it with:
+
+```js
+export async function bounded(promise, ms, message) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+```
+
+Place the shared helper early enough for T5 to use it.
+
+Also replace T5’s probe-runner failure handling:
+
+> The probe uses bounded acquisition, browser round trips and cleanup, and writes an explicit incomplete evidence record for launch failures, browser hangs and unexpected exceptions. Console output alone is insufficient. A stop prevents the second mode from launching.
+>
+> An outer timeout latches the invocation as stopped. A late acquisition result is closed immediately and cannot resume navigation or GPU work.
+
+The current probe catch only prints `PROBE FAILED`; several operations and `context.close()` remain outside an outer bound.
+
+Add tests for immediate success without a lingering timer, a never-answering probe page, and acquisition resolving after the outer deadline.
+
+### 4. G7 validates request labels but not the frozen timing schedule
+
+[ `validateG7()` ](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:6961) checks `id`, `burst` and `index`, but never verifies `scheduledMs` against the fixture offsets.
+
+I stretched every scheduled offset by **100×**, preserving each request’s 40 ms latency. The reducer still returned:
+
+```text
+requests: 400
+finals: 20
+latencyP95: 40
+coverageErrors: 0
+```
+
+After checking the required timestamps are finite, add:
+
+```js
+const origin = issued[0].scheduledMs - schedule[0].offsetMs;
+
+issued.forEach((r, i) => {
+  const expected = origin + schedule[i].offsetMs;
+  const tolerance =
+    8 * Number.EPSILON * Math.max(1, Math.abs(expected));
+
+  if (Math.abs(r.scheduledMs - expected) > tolerance) {
+    throw invalid(
+      `G7 request ${i}: scheduled time differs from the frozen offset`
+    );
+  }
+});
+```
+
+Add this driver requirement:
+
+> Each timer callback rechecks the absolute target time before issuing the request. Early callbacks wait until that target. The existing 4 ms lateness rule remains unchanged. All timers belong to the invocation and are cancelled on abort.
+
+Test both uniformly stretched offsets and a shifted individual burst. This closes the workload-validation gap without changing a performance threshold.
+
+### 5. G12’s maintenance predicate does not apply all G11 rules
+
+[ `maintenanceFailed()` ](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:6385) ignores `peakBytes`, `outstandingMax` and `fullBandBytes`.
+
+I supplied a maintenance result with:
+
+```text
+peakBytes = 2 GiB
+outstandingMax = 3
+fullBandBytes = 0
+```
+
+It returned **false**: no maintenance failure.
+
+Replace its specification with:
+
+> Every maintenance result must satisfy every G11 resource rule: table bytes, peak allocation range, texture count, selected-check count, mismatches, full-band bytes, cancellation, release and maximum outstanding work. Missing or nonfinite metrics invalidate the evidence. A measured rule violation increments `maintenanceFailures`.
+
+Use the same rule definitions as G11, or explicitly check the complete set. Add regression cases for each of the three omissions above and for missing fields.
+
+The new G12 contract field is correct; this makes its implementation match its stated meaning.
+
+### 6. Launch and hardware corroboration still permit missing evidence
+
+**Missing launch artefacts.** [ `recompute()` ](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:7758) verifies launch evidence only inside:
+
+```js
+if (launch.length === 1) {
+```
+
+Zero or multiple launch artefacts bypass the check. I reproduced a G4 record with only its raw payload: recomputation accepted it, returned zero launches, and G4 passed.
+
+Replace the requirement with:
+
+> Every record has exactly one raw payload and exactly one launch artefact. A qualifying record requires a complete launch artefact whose configuration hash and mode match its identity and whose requested arguments match the manifest. Missing or duplicate launch artefacts are rejected.
+>
+> An honestly failed launch may have incomplete launch details, but must carry an invalidation and cannot qualify. Its failure remains reportable.
+
+**Actual unsafe flag.** Derive `unsafeFlag` from the verified **effective command line**, also checking consistency with requested arguments. Looking only at `requestedArgs` can miss an effective flag added by the launcher environment.
+
+**Missing adapter identity.** `g1Metrics()` currently corroborates an NVIDIA adapter with `device: ''`. I reproduced `{nvidia: 1, software: 0, corroborated: 1}` with no invalidations. That contradicts our agreed rule that missing same-adapter evidence is invalid.
+
+Replace the corroboration wording with:
+
+> G1 requires NVIDIA adapter identity and a normalised device identity that can be matched to the active NVIDIA device in the same-session capture. Missing or unrecognised device identity is inconclusive; contradictory identity invalidates the record. A generic NVIDIA description alone does not establish the same-adapter match.
+
+Finally, T12 should compare its recorded browser, driver, session and headed launch configuration with the selected headed configuration. Equal requested arguments alone do not establish that it ran on the selected environment. Its implementation revision may differ, as expected when T12 is added.
+
+Add tests for absent/duplicate launch artefacts, an effective-only unsafe flag, empty adapter device identity, and changed precision browser/driver identity.
+
+### 7. Precision reporting trusts one cached flag and rejects honest failure outcomes
+
+The [precision verifier](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:8641) has three reproducible problems:
+
+1. A record with `invalidations: ['device lost: unknown']` is accepted as interpretable when the saved summary says `interpretable: true` and copies those invalidations.
+2. An honest aborted run produces slot `incomplete`; reporting rejects it as “not a WebGPU precision experiment” before reaching the uninterpretable branch.
+3. When `precisionMetrics()` throws, `precision.mjs` adds an interpretation error to the summary’s invalidations. Reporting then rejects that honest summary because its invalidations differ from the immutable record.
+
+Replace the precision-summary contract with:
+
+> Keep execution invalidations unchanged from the record. Store interpretation errors separately. Derive `interpretable` from verified execution validity, completeness and successful interpretation; never trust its saved value.
+>
+> An incomplete precision run with verified failure evidence is reported as not interpretable, with its recorded reason. It does not prevent publication of the backend qualification report.
+>
+> For complete, uninvalidated evidence, rerun `precisionMetrics()`. Recompute either its complete interpretation or its deterministic interpretation error, then compare that assessment with the saved summary.
+>
+> A saved interpretable result carrying execution invalidations is rejected.
+
+Add report integration tests for all three cases. These are necessary outcomes under the spec’s “could not run safely” provision.
+
+### Agreed so far
+
+- The whole-file structure, registries, planner correction, finish ledger credit and aligned timestamp resolves stand.
+- Gate-local validation and one plain frozen `fixtures.json` stand.
+- The G12 contract addition is accepted.
+- The matched precision timing boundaries and session-wide allocation cap stand.
+- No architectural or fixture changes are requested.
+
+### Still disputed
+
+No architectural disputes. The seven implementation groups above remain blockers, particularly the deterministic G13 failure, incomplete abort handling and evidence paths that can accept unsupported results.
+
+**Verdict: NOT READY.**
