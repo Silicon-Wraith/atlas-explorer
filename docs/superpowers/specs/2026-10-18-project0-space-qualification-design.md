@@ -1,6 +1,6 @@
 # Project 0 — Space Backend Qualification
 
-**Status:** draft for user approval · **Date:** 2026-10-18 · **Revision:** 3 (after Codex's
+**Status:** approved by the user 2026-10-18 · **Date:** 2026-10-18 · **Revision:** 3 (after Codex's
 second author review)
 **Authors:** Claude and Codex, co-designed as peers
 **Governed by:** `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`

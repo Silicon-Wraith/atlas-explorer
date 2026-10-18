@@ -1,6 +1,6 @@
 # ATLAS Workbench — Architectural Charter
 
-**Status:** draft for user approval · **Date:** 2026-10-18
+**Status:** approved by the user 2026-10-18 · **Date:** 2026-10-18
 **Authors:** Claude and Codex, co-designed as peers
 **Governs:** every ATLAS Workbench project spec. A project spec may narrow this charter but not
 contradict it; changing the charter takes a revision approved by the user.
