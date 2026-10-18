@@ -1,7 +1,7 @@
 # ATLAS Workbench — Architectural Charter
 
 **Status:** draft for user approval · **Date:** 2026-10-18
-**Authors:** Claude and Codex, co-designed as peers (full record: `docs/codesign/conversation-log.md`)
+**Authors:** Claude and Codex, co-designed as peers
 **Governs:** every ATLAS Workbench project spec. A project spec may narrow this charter but not
 contradict it; changing the charter takes a revision approved by the user.
 
@@ -33,15 +33,16 @@ Every feature must strengthen one workflow:
 A feature that serves none of these steps is out of scope, however impressive it may be.
 
 Rejected framings:
-- **An art-first renderer.** It competes with Mandelbulber on its own ground and discards
-  ATLAS's rigour.
+- **An art-only renderer with uninspectable mathematics.** Visual exploration comes first, but
+  parameters, numerical limits and results remain inspectable.
 - **A research console.** It demands estimator literacy before the user can navigate.
 
 ## 3. Architecture
 
 ### 3.1 One application, two workspaces
 - **Plane:** today's ATLAS. Its navigation, effectively unbounded deep zoom, precision,
-  bookmarks and exports are all preserved. It stays on WebGL 2 and remains fully useful on its own.
+  bookmarks and exports are all preserved, along with its WebGL 2 renderer and worker-based CPU
+  fallback. It remains fully useful on its own.
 - **Space:** a new 3D workspace with its own numerical kernels, renderer and cameras. It hosts
   linked instruments (slice, inspector).
 
@@ -52,8 +53,10 @@ Rejected framings:
 - render requests, reports and job scheduling;
 - interface components where they are genuinely common.
 
-**Never shared:** coordinate systems, navigation controllers, numerical kernels and renderer
-resources. The 2D perturbation engine and a 3D ray marcher have fundamentally different needs.
+**Workspace-owned:** coordinate representations, numerical engines, navigation controllers and
+renderer resources. Small pure utilities are shared only where their semantics genuinely
+coincide. There is no universal renderer or coordinate abstraction: the 2D perturbation engine
+and a 3D ray marcher have fundamentally different needs.
 
 `src/app.js` is extracted incrementally, as Space actually requires it. There is no preparatory rewrite.
 
@@ -66,7 +69,8 @@ src/
   ui/       application shell and shared interface components
 ```
 - Space's mathematical models import no DOM or GPU code.
-- Independent test references live in `tests/`, not in production modules.
+- Independent test references stay outside production modules: in `tests/` for product tests
+  and in `spikes/project0/reference/` for Project 0.
 - Workspace-specific controllers stay beside their workspace, so `ui/` must not become a
   second `app.js`.
 - `shared/` holds genuinely shared contracts only. Plane's deep-coordinate machinery stays in `plane/`.
@@ -74,12 +78,17 @@ src/
 ### 3.3 Space rendering
 - **Method:** distance-estimated surface ray marching, with direct lighting, shadows, restrained
   ambient occlusion and orbit-derived colour.
-- **Backend:** one production backend. It is WebGPU if Project 0 qualifies it on this
-  workstation, otherwise WebGL 2. Two production 3D backends are never maintained.
+- **Backend:** select WebGPU if it qualifies on this workstation. Otherwise qualify a disposable
+  WebGL 2 prototype and select WebGL 2 only if it passes. Neither passing is a no-go, and
+  evidence that cannot be collected is inconclusive. Exactly one production Space backend is
+  maintained.
 - **No CPU fallback:** there is no interactive CPU path for Space. CPU implementations exist as
   independent references for tests and for inspecting single points.
-- **Render generations:** each camera, geometry, estimator or quality change starts a new
-  generation, and samples from different generations are never blended.
+- **Render generations:** every change invalidates the passes whose outputs it affects, along
+  with their dependent accumulation.
+  - Camera, mathematics, estimator and geometry-quality changes invalidate the geometry.
+  - Appearance-only changes may reuse valid geometry, but samples computed under different
+    lighting or appearance settings are never accumulated together.
   - While moving: coherent reduced-resolution drafts on a stable canvas.
   - At rest: full-resolution geometry, then accumulated antialiasing and lighting until the
     requested quality is reached.
@@ -92,8 +101,9 @@ src/
   and ghosting), path tracing, volumetric rendering and meshing.
 
 ### 3.4 Estimator honesty (invariant)
-- **Declared category:** every Space model declares the category of its distance estimator,
-  with its applicability domain and derivation version. The categories are:
+- **Declared category:** every model that exposes a distance-estimation capability declares its
+  category, applicability domain, signed or exterior-only semantics, and derivation version.
+  The categories are:
   - **exact distance**;
   - **conservative bound**;
   - **heuristic**.
@@ -106,9 +116,16 @@ src/
   - in model metadata, the inspector, diagnostics and render reports;
   - as a compact indicator in the ordinary viewport.
 - **Statuses kept distinct:**
-  - mathematical point status: *escaped*, *bounded within budget* or *numerical failure*;
-  - renderer status: *approximate hit*, *miss*, *step-budget exhausted* or *numerical failure*.
-- **Unresolved is its own result:** budget exhaustion is never silently turned into a hit or a miss.
+  - **Mathematical point status:** `escaped`, `not escaped within iteration budget` or
+    `numerical failure`. Failure to escape within a finite budget does not establish
+    membership or boundedness.
+  - **Renderer status:** `approximate hit`, `miss`, `unresolved` or `numerical failure`.
+    `unresolved` carries a reason that distinguishes ray-step exhaustion from an unresolved
+    point evaluation.
+- **Unresolved is its own result:** an unavailable distance estimate is never silently replaced
+  by zero, and budget exhaustion is never silently turned into a hit or a miss.
+- **Tracing profiles:** every profile specifies how an unresolved point evaluation terminates
+  or continues the ray. An approximate hit requires the profile's explicit hit criterion.
 - **No fake error heatmap:** step exhaustion can be observed directly, but estimator
   over- or under-estimation needs a reference. ATLAS never shows a live "error heatmap" that
   actually displays only computational cost.
@@ -128,8 +145,8 @@ src/
   - field precision;
   - rendering tolerance.
   Camera-relative coordinates help the first and do not solve the second.
-- **Deeper 3D** (for example compensated arithmetic, or quaternion perturbation with
-  δₙ₊₁ = Qₙδₙ + δₙQₙ + δₙ²) is research. It is chosen for one family and shown to help against
+- **Deeper 3D** (for example compensated arithmetic, or quaternion perturbation for a fixed C
+  with δₙ₊₁ = Qₙδₙ + δₙQₙ + δₙ²; changing the parameter would need a δC term) is research. It is chosen for one family and shown to help against
   an independent reference before it becomes a product promise.
 
 ### 3.6 Reproducibility
@@ -155,15 +172,21 @@ src/
 ### 3.7 Coordinate conventions (Space)
 - **World space:** right-handed and **Z-up**. Units are dimensionless and match the model's
   native coordinates.
-- **Quaternions:** q = a + b**i** + c**j** + d**k**, stored as `(a, b, c, d)`. The complex
-  number x + y**i** embeds as `(x, y, 0, 0)`.
-- **The default quaternion Julia slice** maps world `(x, y, z)` to q₀ = x + y**i** + z**j**,
-  with the fourth component (k) fixed at a parameter, default 0.
-  - The **invariant complex plane** is world z = 0, the horizontal "ground" plane. On it, the
-    quaternion recurrence qₙ₊₁ = qₙ² + c with c = a + b**i** is exactly the complex recurrence.
-  - Orbits keep all four components; iterates are never projected back into the slice.
+- **Quaternions:** q = a + b**i** + c**j** + d**k**, stored as `(a, b, c, d)`. The recurrence
+  parameter is written with an uppercase **C**, to distinguish it from the third stored
+  component. The complex number x + y**i** embeds as `(x, y, 0, 0)`.
+- **The default quaternion Julia slice** embeds world `(x, y, z)` as q₀ = x + y**i** + z**j** + κ**k**.
+  The slice parameter κ defaults to 0.
+  - **Invariant complex plane:** when κ = 0 and C = C_r + C_i **i**, world z = 0 (the
+    horizontal "ground" plane) is invariant. On it, the recurrence is exactly the complex
+    recurrence zₙ₊₁ = zₙ² + C. No such correspondence is claimed for a nonzero κ, or for
+    parameters with **j** or **k** components.
+  - **Orbits keep all four components:** iterates are never projected back into the initial slice.
+  - **Approximation remains:** exact correspondence of the recurrence does not make a
+    finite-tolerance rendered surface agree exactly with the mathematical Julia boundary.
 - **Mandelbulb:** the standard spherical-coordinate form, with θ = acos(z/r) and φ = atan2(y, x),
-  so the polar axis is world Z. The power-8 default and the validated power range are fixed by
+  so the polar axis is world Z. Implementations define the r = 0 case, clamp the `acos`
+  argument against roundoff, and define the azimuth on the polar axis. The power-8 default and the validated power range are fixed by
   the Project 1b spec.
 - **Every family spec** documents its recurrence, initialisation, bailout rule, iteration
   limit, estimator derivation and tested parameter domain. A family name alone is not a specification.
@@ -195,7 +218,7 @@ preserved and the effective Space precision is shown. It is never silently round
 
 | Failure | Required behaviour |
 |---|---|
-| First-use shader compilation | Prepare pipelines asynchronously, show the preparation status and keep the current view. Slider edits update parameters, not shaders. |
+| First-use shader compilation | Prepare pipelines before interaction, show the preparation status and keep the current view. WebGPU uses asynchronous pipeline creation. WebGL uses `KHR_parallel_shader_compile` where available; otherwise pipelines are prewarmed and any compilation stall is measured under the startup gate. Parameter edits update uniforms and buffers, never recompile shaders. |
 | Pathological cost | Bound the work in each submission and in total. Stop future submissions. |
 | Device loss during an export | Preserve the scene and job, mark the export interrupted and offer a restart. Never claim it completed. |
 | Repeated device loss | Stop retrying automatically, while keeping saved scenes and Plane available. |
@@ -222,7 +245,7 @@ preserved and the effective Space precision is shown. It is never silently round
 
 ## 4. Roadmap
 
-**Committed:** Project 0. Projects 1a and 1b are committed in outline, and their specs follow
+**Proposed for approval:** Project 0, and the outline of Projects 1a and 1b, whose specs follow
 the Project 0 report. **Later projects are candidates, not commitments**: placing a feature in
 Project 3 does not commit anyone to building it.
 
@@ -230,7 +253,7 @@ Project 3 does not commit anyone to building it.
 |---|---|---|
 | **0 — Qualification** | Hardware and numerical feasibility; selects the Space backend from workstation evidence; one bounded precision experiment. | Specified separately; approved with this charter |
 | **1a — Foundations** | Plane moved to `src/plane/` with behaviour unchanged. Versioned scene envelope and legacy adapters. Scene commands with undo/redo (one slider drag is one edit). Immutable render requests, generation identity, cancellation outcomes and render reports. | Committed in outline |
-| **1b — Space** | Three milestones, each usable: **(1) render and recover:** calibration objects, Mandelbulb, quaternion Julia, bounded scheduling, orbit and basic flight cameras, failure handling. **(2) connect and inspect:** the Plane↔Space quaternion bridge, an independent recurrence slice, the orbit inspector, view modes, precision reporting. **(3) complete the workflow:** scoped presets, compositions, discovery cards, viewport and 4K PNG export with scene and report. | Committed in outline |
+| **1b — Space** | Three milestones, each usable: **(1) render and recover:** analytic calibration objects and the finite-Menger test fixture, Mandelbulb, quaternion Julia, bounded scheduling, orbit and basic flight cameras, failure handling. **(2) connect and inspect:** the Plane↔Space quaternion bridge, an independent recurrence slice, the orbit inspector, view modes, precision reporting. **(3) complete the workflow:** scoped presets, compositions, discovery cards, viewport and 4K PNG export with scene and report. | Committed in outline |
 | 2 — Investigation | Mandelbox; pin-and-diff comparison; parameter maps; a **Variations** grid with immutable lineage; a findings graph; expeditions; a bounded "survey nearby" guide; an exploration journal. | Candidate |
 | 3 — Publication and motion | Render queue with immutable build snapshots; tiled stills; recorded flight re-rendered offline; keyframes with per-parameter interpolation; deterministic image sequences, then video; photo-mode depth of field; path tracing. | Candidate |
 | 4 — Formula authoring | A typed, bounded-iteration expression language compiled to a CPU evaluator and a shader. Capability types (recurrence, implicit field, density, distance). Automatic differentiation for derivatives, which does not certify bounds. | Candidate |
@@ -240,7 +263,9 @@ Project 3 does not commit anyone to building it.
 1. Pick c in Plane.
 2. Open its quaternion Julia set in Space.
 3. Find a feature.
-4. Intersect it with the slice and confirm that the z = 0 slice matches Plane's Julia section.
+4. With κ = 0, compare the invariant section with the new linked complex-Julia instrument, at
+   matching effective parameters, iteration settings and sample coordinates. This does not imply
+   an arbitrary-precision Julia engine is included.
 5. Inspect a point's orbit.
 6. Change a parameter, then undo.
 7. Save a discovery card, reload, and reproduce the view.
@@ -257,7 +282,9 @@ Project 3 does not commit anyone to building it.
     scaled by the estimator is assistance, not collision protection: it is clamped and
     smoothed, and needs no per-frame synchronous readback.
   - Escape releases input, and losing focus stops movement.
-  - A camera inside the occupied set gives a recoverable diagnostic, not a black frame.
+  - If the camera cannot be resolved as exterior, ATLAS shows a recoverable diagnostic and
+    offers overview and reset. It never claims proven interior membership from a finite
+    iteration budget.
   - Not included: inertia, collision avoidance or a vehicle model.
 - **Scoped presets with rendered swatches** (after Bryce's labs and MagicaVoxel's scopes):
   - appearance-only and lighting-only presets, previewed on the current scene and undoable,
