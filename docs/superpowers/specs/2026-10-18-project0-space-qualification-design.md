@@ -310,6 +310,8 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
   - **Sensitivity screen:** see the rule after this list.
   - **Expected:** CPU preparation found 3,814 escaping and 282 not escaping within budget. That
     is a sanity check, not certified interior.
+  - **Eligibility:** under the sensitivity screen below, CPU preparation found 3,684 of 4,096
+    eligible (89.9%). For `bulb-samples` the figure is 3,972 of 4,096 (97.0%).
 - **`qjulia-offplane`:**
   - **Start:** q₀ = (0.25, 0.5, 0.125, −0.25) with the same C. The expected first update is
     q₁ = (−0.465625, 1.05, 0.0625, −0.125).
@@ -494,8 +496,10 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
 - **Baseline:** before it is recorded, prepare every pipeline the sequence uses (including
   resource verification), return to 1280 × 720, drain submitted work and release transient
   resources.
-- **Pass:** after the sequence and the same drain-and-release procedure, tracked allocations are
-  within 1% of the baseline and the live resource counts equal it.
+- **Pass:** after the sequence, return to 1280 × 720 with the same internal dimensions and
+  resource configuration as the baseline. Drain submitted work and release transient resources.
+  Tracked allocations must then be within 1% of the baseline, and the live resource counts must
+  equal it.
 
 ### A.10 Precision baseline
 - **Setup:** anchor A and approach direction D (A.6). Each pixel's own direction is written
