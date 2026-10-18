@@ -1,7 +1,7 @@
 # Project 0 — Space Backend Qualification
 
-**Status:** draft for user approval · **Date:** 2026-10-18 · **Revision:** 2 (after Codex's
-author review)
+**Status:** draft for user approval · **Date:** 2026-10-18 · **Revision:** 3 (after Codex's
+second author review)
 **Authors:** Claude and Codex, co-designed as peers
 **Governed by:** `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`
 
@@ -251,7 +251,8 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
 ### A.2 Tracing profiles
 
 **Mandelbulb kernel (heuristic estimator; category `heuristic`, exterior-only):**
-- **State:** z₀ = (0, 0, 0) and dr₀ = 0. For n = 0, 1, … up to the iteration cap:
+- **State:** z₀ = (0, 0, 0) and dr₀ = 0. For n = 0…N−1, where N is the iteration cap, perform
+  one update:
   1. r = |zₙ|. If r = 0, then P₈(zₙ) = 0. Otherwise:
      - θ = acos(clamp(z/r, −1, 1));
      - φ = atan2(y, x), with φ = 0 when x = y = 0;
@@ -261,11 +262,13 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
   4. If |zₙ₊₁| > 2, the point is **escaped**, with escape index n+1, R = |zₙ₊₁| and
      estimate DE = 0.5·ln(R)·R / drₙ₊₁.
 - **No escape** within the cap gives `not escaped within iteration budget`, with no usable estimate.
-- **Numerical failure:** any non-finite intermediate gives `numerical failure`.
+- **Numerical failure:** any invalid domain or overflow gives `numerical failure`. These are
+  guarded *before* executing the affected operation, never detected only afterwards as NaN or
+  infinity: WGSL permits implementations to assume those values do not occur.
 
 **Marcher (Mandelbulb):**
 - **Bounding volume:** a sphere of radius 1.25 at the origin.
-  - A ray that misses it is a `miss`.
+  - A ray with no forward interval through it, including t_exit < max(0, t_entry), is a `miss`.
   - Otherwise marching starts at max(0, t_entry).
 - **Hit tolerance:** tol(t) = max(10⁻⁶, 0.5·α·t), where α = 2·tan(30°)/H_internal is the
   angular pixel size at the profile's internal resolution.
@@ -279,23 +282,22 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
 
 **Marcher (analytic and Menger fixtures):**
 - The rules are the same, with the fixture's distance function.
-- **Hit tolerance:** fixed at 10⁻⁶. The stricter tolerance in A.4 keeps the tracing tolerance
-  tighter than the permitted depth error.
+- **Hit tolerance and step cap:** a fixed hit tolerance of 10⁻⁶ and a fixed cap of 512 steps
+  for G3. The tracing tolerance is therefore tighter than every permitted depth error.
 - **Bounding volumes:** a sphere of radius 2 for `sphere` and `box`, and the box [−1, 1]³ for Menger.
 - **Step multiplier:** k = 1.0 for all of these fixtures.
 
 ### A.3 Arithmetic samples (G4, G5)
 - **`bulb-samples`** (4,096 samples):
   - **Grid:** the cell centres of a 16³ grid over [−1.2, 1.2]³. The cap is 64 iterations.
-  - **Inputs:** CPU double values converted to f32 with round-to-nearest. The CPU reference
-    runs on those same f32-representable inputs.
+  - **Inputs:** CPU double values converted to f32 with round-to-nearest. All arithmetic
+    references use the same effective f32 inputs and parameters as the GPU, and the requested
+    decimal values are recorded separately.
   - **Compared:**
     - escape status and index, which must match exactly;
     - ln R at escape, relative tolerance 10⁻⁴;
     - DE, relative tolerance 10⁻³.
-  - **Ambiguous samples:** during CPU preparation, perturb each input by ±1 f32 ulp along each
-    axis (six perturbations). A sample whose double-precision escape index changes under any
-    perturbation is excluded. The exclusions and their count are frozen in `fixtures.json`.
+  - **Sensitivity screen:** see the rule after this list.
 - **`qjulia-plane`** (4,096 samples):
   - **Starting points:** C = (−0.2, 0.8, 0, 0). For i, j = 0…63, xᵢ = −1.5 + 3(i+½)/64 and
     yⱼ = −1.5 + 3(j+½)/64, starting at q₀ = (xᵢ, yⱼ, 0, 0).
@@ -305,23 +307,40 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
   - **Compared against:** an independently implemented CPU **complex** recurrence z → z² + C.
     Escape status and index must match exactly; `logEscapeRadius` has a relative tolerance of 10⁻⁵.
   - **Recorded separately:** the requested decimal values of C and their effective f32 values.
-  - **Ambiguity:** the same ±1-ulp rule as `bulb-samples`.
+  - **Sensitivity screen:** see the rule after this list.
   - **Expected:** CPU preparation found 3,814 escaping and 282 not escaping within budget. That
     is a sanity check, not certified interior.
 - **`qjulia-offplane`:**
   - **Start:** q₀ = (0.25, 0.5, 0.125, −0.25) with the same C. The expected first update is
     q₁ = (−0.465625, 1.05, 0.0625, −0.125).
-  - **Compared:** the first 8 iterates against an independent CPU quaternion recurrence, at a
-    relative tolerance of 10⁻⁵ per component (absolute 10⁻⁶ near zero).
+  - **Compared:** the first 8 iterates against an independent CPU quaternion recurrence. Each
+    component must satisfy |actual − reference| ≤ 10⁻⁶ + 10⁻⁵·|reference|.
   - **Purpose:** catches an implementation that drops the **j** and **k** components.
+
+**Sensitivity screen** (the pre-registration rule for `bulb-samples` and `qjulia-plane`):
+- **Neighbours:** the immediately adjacent representable f32 values, `nextDown` and `nextUp`,
+  never a nominal ulp added or subtracted.
+  - For the bulb, each of the three sample coordinates is perturbed individually.
+  - For the complex Julia set, x, y, C_r and C_i are perturbed individually, keeping the **j**
+    and **k** components zero.
+- **Exclusion:** a sample is excluded from the mandatory full-orbit comparisons if any neighbour
+  does either of these:
+  - changes the escape status or escape index;
+  - changes a compared continuous quantity by more than a quarter of that quantity's acceptance
+    tolerance.
+- **Freezing:** the eligible set, and the reason for each exclusion, are frozen before GPU
+  execution. Every excluded sample is kept in the diagnostic report.
+- **Minimum eligibility:** at least 80% of the original grid must remain eligible. Otherwise
+  the fixture is revised before freezing.
+- **Limits of the screen:** it is empirical and is not a bound on accumulated floating-point error.
+- **Relative tolerance** means |actual − reference| ≤ rtol·|reference|.
 
 ### A.4 Analytic reference rays (G3)
 - **`sphere`:**
   - **Geometry:** radius 1 at the origin, with exact signed distance |p| − 1. L = 1.
   - **Rays:** origin (u, −4, v) and direction (0, 1, 0), for u, v ∈ {−1.2, −1.1, …, 1.2} (625 rays).
   - **Expected:** a hit iff u² + v² < 1, at depth t = 4 − √(1 − u² − v²).
-  - **Excluded as tangent:** rays with |√(u² + v²) − 1| < 0.02. These are expected to report a
-    hit or miss, never a numerical failure.
+  - **Excluded as tangent:** rays with |√(u² + v²) − 1| < 0.02.
 - **`box`:**
   - **Geometry:** local half-extents h = (1, 0.5, 0.25), object-to-world rotation R_z(π/6), and
     exterior distance d(p) = ‖max(|u| − h, 0)‖ with u = R_z(−π/6)·p. L = 0.25. Interior distance
@@ -338,16 +357,23 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
   - **CPU reference:** enumerates the boxes. Exterior distance is the minimum point-to-box
     distance, and ray intersections come from merging per-box slab intervals.
   - **L:** 1/3 at depth 1 and 1/9 at depth 2.
-  - **Rays:** origin (u, −4, v) and direction normalize(0.3, 1, 0.2), for u and v on a 41 × 41
-    grid over [−1.2, 1.2]. The oblique direction avoids rays lying in face planes.
+  - **Rays:** origin (u, −4, v) and direction normalize(0.3, 1, 0.2), with u = −1.2 + 2.4i/40 and
+    v = −1.2 + 2.4j/40 for i, j = 0…40. The oblique direction avoids rays lying in face planes.
   - **Excluded as edge rays:** the same 10⁻³ rule as `box`.
-  - **GPU routine:** the standard iterated-fold Menger distance routine, its exact expression
-    frozen in `fixtures.json`. Its category follows its derivation and applicability domain;
-    the comparisons validate the implementation, not the category.
+  - **GPU routine:** d(p) = min over b of ‖max(|p − c_b| − h_b, 0)‖, taken over the 20 or 400
+    occupied boxes (centres c_b, half-extents h_b) from the same subdivision.
+    - In real arithmetic this gives the exact exterior distance to the finite union.
+    - Floating-point implementation error is still subject to validation.
+    - The independent CPU ray oracle uses merged slab intervals.
+    - A compact folded implementation is deferred. Project 0 does not choose an unnamed substitute.
+- **Edge cases (all G3 fixtures):** excluded tangent and edge rays may return an approximate
+  hit, a miss, or unresolved through step exhaustion. A numerical failure is never acceptable.
+  Their outcomes are recorded separately, and the ordinary depth assertion does not apply to them.
 
 ### A.5 Shading (draft and settled)
 - **Normals:** the central-difference gradient of DE with offset ε = 0.5·tol(t).
-  - If any of the six samples is not escaped, the normal is `unavailable`.
+  - The normal is `unavailable` if any of the six samples is not escaped or is invalid, or if
+    the gradient is zero-length or non-finite.
   - For analytic fixtures, the gradient of the exact distance function.
 - **Lighting:** colour = 0.15 + 0.85·max(0, n·ℓ), with ℓ = normalize(1, 0.6, 1.5), in white.
   The background is (0.02, 0.02, 0.03).
@@ -364,9 +390,14 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
 - **Numerical anchor A** (anchor, not exact surface point):
   - **Construction:** the CPU double-precision reference marches the central ray of
     `bulb-overview` (direction D = (−0.768, 0.576, −0.28)). It uses 256 iterations, k = 0.5, a
-    fixed hit tolerance of 10⁻⁹ and up to 4,096 steps.
-  - **Preparation value:** the hit lies at t = 1.6444593 and A = (0.6570552, −0.4927914, 0.2395514).
-    `fixtures.json` stores full double values.
+    fixed hit tolerance of 10⁻¹³ and up to 4,096 steps.
+  - **Convergence check:** repeat the march with a tolerance of 10⁻¹⁵ and record the difference
+    in t. This indicates empirical convergence; it is not a certified geometric error bound.
+  - **Preparation value:**
+    - t = 1.644459322137676, giving A = (0.6570552405982646, −0.49279143044869844,
+      0.23955138980145063);
+    - at 10⁻¹⁵, t = 1.6444593221416959, a difference of about 4.0 × 10⁻¹²;
+    - `fixtures.json` stores the full double values.
 - **`bulb-detail-0.05` and `bulb-detail-0.005`:**
   - **Camera:** position A − d·D for d = 0.05 and 0.005, with target A.
   - **Coverage:** preparation gave 100% hit for both.
@@ -377,20 +408,41 @@ Conventions are those of charter §3.7: right-handed, Z-up, dimensionless units.
   - **Coverage:** preparation gave 34.9% hit and 65.1% unresolved (steps).
   - **Declared range:** unresolved (steps) ≥ 0.40.
 
-`fixtures.json` re-derives these values with the committed CPU reference before freezing. If the
-fractions differ beyond the declared ranges, the ranges are revised *before* the freeze, never after.
+- **Rendered `sphere` fixture** (used by G8 and G12):
+  - **Camera:** position (1.92, −1.44, 0.70), target the origin, with the A.1 projection, under
+    the draft profile.
+  - **Pass:** a nonempty sphere image with no unresolved or numerical-failure pixels.
+
+**Applicability:**
+- The ordinary coverage ranges apply separately to the draft and settled profiles, and to every
+  completed frame on the declared paths.
+- An unavailable-normal hit still counts as a geometry hit; normal availability is reported
+  separately.
+- Numerical failures are counted separately and invalidate an ordinary qualification render.
+- The ranges do not apply to arithmetic-only fixtures, excluded G3 edge rays, or the
+  intentionally failing deep precision samples.
+
+**Preparation and freezing:**
+- CPU preparation verifies both profiles and the moving views before freezing. The 160 × 90
+  figures above are illustrative and do not substitute for that check.
+- `fixtures.json` re-derives every value with the committed CPU reference.
+- If the fractions fall outside the declared ranges, the ranges are revised *before* the
+  freeze, never after.
 
 ### A.7 Motion
 - **`bulb-overview` path:** the camera moves on the horizontal circle of radius 2.4 at
-  z = 0.70, always looking at the origin. The angle at trial time τ is θ(τ) = −0.6435 + 2π·τ/30,
-  so the start matches the static pose.
-- **Detail paths:** the camera orbits the vertical axis through A at its fixed distance d, with
-  the azimuth offset 10°·sin(2π·τ/10), always looking at A.
+  z = 0.70, always looking at the origin. With θ₀ = atan2(−1.44, 1.92), the angle at trial time τ
+  is θ(τ) = θ₀ + 2π·τ/30.
+- **Detail paths:** with v₀ = −d·D and β(τ) = (π/18)·sin(2π·τ/10), the camera is at
+  A + R_z(β(τ))·v₀, looking at A.
 - **Bursts (G7):**
-  - **One burst:** on the overview path, issue 20 camera requests 8 ms apart, advancing 1° each,
-    then wait 1 s.
+  - **Start:** each trial resets to the overview start.
+  - **Requests:** burst b and request j (both zero-based) use the angle θ₀ + (20b + j + 1)·π/180.
+    Requests are issued 8 ms apart.
+  - **Quiet interval:** one second, beginning after request 19.
   - **Volume:** 20 bursts per trial, 3 trials.
-  - **Measured:** latency is measured for each burst's final request.
+  - **Measured:** the latency of each burst's final request. The p95 is evaluated independently
+    for each trial.
 
 ### A.8 Resource table (G11, at 3840 × 2160 = 8,294,400 pixels)
 
@@ -406,41 +458,82 @@ fractions differ beyond the declared ranges, the ranges are revised *before* the
 | Readback staging band (3840 × 256) | rgba8 | — | 2 | 7,864,320 |
 | **Total** | | | | **405,995,520 (≈ 387 MiB)** |
 
-This reflects the charter's architecture: one in-progress generation, one retained display, and
-a banded readback. The 1 GiB cap leaves room for pipelines and uniforms, which are also tracked.
+- **Why this layout:** it reflects the charter's architecture of one in-progress generation, one
+  retained display and a banded readback.
+- **Total:** 405,995,520 bytes (387.1875 MiB) before any additional declared buffers. This is not
+  a measurement of physical VRAM consumption.
+- **Texture descriptors:** every texture has one mip level, one array layer and a sample count of
+  one. The usage flags, and the allocation, write and readback sequence, are frozen with the harness.
+- **What the byte cap counts:** declared texture payloads and actual buffer sizes, including
+  alignment, staging and overlapping allocations. Pipeline and bind-group counts are tracked
+  separately, because their opaque driver allocation sizes cannot be measured through this
+  accounting.
+- **Verification pattern:**
+  - **Writes:** every texel of every texture is written, in bounded passes. For resource index
+    r, k = (13x + 17y + r) mod 251 is stored as k in integer formats, k + 0.25 in floating
+    formats and k/255 in unorm colour channels.
+  - **Readback:** the Cartesian product of x ∈ {0, ⌊W/2⌋, W−1} and y ∈ {0, ⌊H/2⌋, H−1} is read
+    back from each texture in its source format, using correctly aligned small copies into the
+    existing staging buffers. The stored representation is verified.
+  - **Full band:** a full 3840 × 256 RGBA8 band readback is exercised separately.
+  - **Peak:** the peak inventory is recorded before anything is released.
 
 ### A.9 Stability sequence (G12)
-- **Structure:** 60 cycles of 10 s each.
-- **Each cycle:**
-  1. 3 s on the `bulb-overview` path;
-  2. a switch to `sphere` for 1 s;
-  3. 3 s on the `bulb-detail-0.005` path;
-  4. one `bulb-stress` request cancelled by a `sphere` request;
-  5. one resize, rotating through the backing sizes 1280 × 720, 1920 × 1080 and 960 × 540;
-  6. every 10th cycle only: allocate, verify and release the A.8 4K layout.
-- **Steady state:** the tracked inventory recorded after the first warmed cycle.
-- **Pass:** after the sequence, the release, and a return to 1280 × 720, tracked allocations
-  are within 1% of that steady state and the live resource counts are equal to it.
+- **Structure:** 60 cycles, each occupying a fixed ten-second wall-clock interval:
+  - [0, 3) s: `bulb-overview` motion;
+  - [3, 4) s: `sphere`;
+  - [4, 7) s: `bulb-detail-0.005` motion;
+  - at 7 s: submit `bulb-stress` work, replace it with the `sphere` request after submission,
+    then perform the scheduled resize, rotating through the backing sizes 1280 × 720,
+    1920 × 1080 and 960 × 540;
+  - every tenth cycle, also allocate, verify and release the A.8 layout.
+- **Deadlines:** all maintenance must finish before the next cycle boundary; otherwise a
+  cycle-deadline failure is recorded. Timestamps are kept, and a cycle is never stretched silently.
+- **Motion and sizes:** each motion phase restarts its local path time at zero. Rendering uses
+  the current backing size, with draft internal dimensions at half that size.
+- **Baseline:** before it is recorded, prepare every pipeline the sequence uses (including
+  resource verification), return to 1280 × 720, drain submitted work and release transient
+  resources.
+- **Pass:** after the sequence and the same drain-and-release procedure, tracked allocations are
+  within 1% of the baseline and the live resource counts equal it.
 
 ### A.10 Precision baseline
-- **Setup:** anchor A and direction D (A.6).
+- **Setup:** anchor A and approach direction D (A.6). Each pixel's own direction is written
+  d_ray, to keep it distinct from D.
 - **Distances:** d ∈ {10⁻¹, 10⁻², …, 10⁻⁸}, with the camera at A − d·D looking at A.
 - **Rays:** the central 64 × 64 pixels (columns 608–671, rows 328–391) of a 1280 × 720 frame
   under A.1.
-- **Profile:** settled, with hit tolerance 0.5·α·t at α for H = 720.
-- **Reference convergence:** run the CPU reference at hit-scale factors 0.5 and 0.05. A ray is
-  *unstable* if its status changes, or its t changes by more than 10⁻³ relative. Unstable rays
-  are excluded and counted.
-- **Discrepancy:** at a given d, the threshold is exceeded when, over the stable rays, more than
-  5% disagree on hit or miss, or more than 5% of the hits differ in t by more than 10⁻² relative.
-- **Stopping rule:** interpretation stops at the first d where unstable rays exceed 50%.
+- **Precision profile:** the settled iteration and step caps, but with a hit tolerance of
+  0.005·α·t (α for H = 720) and *no* absolute floor. The baseline GPU, the compensated GPU and
+  the primary CPU reference all use this profile.
+- **Reference convergence:**
+  - Compare the primary CPU trace at hit-scale 0.005 with a tighter CPU trace at 0.0005.
+  - A ray is *reference-eligible* only when both traces return the same resolved status (hit or
+    miss) and, for hits, their relative depth difference is at most 10⁻³.
+  - GPU results are compared with the primary CPU result, never with a differently configured trace.
+  - Feasibility: 86 of 4,096 rays were ineligible at d = 0.1 during preparation.
+- **Discrepancy:**
+  - Let E be the reference-eligible rays and H the CPU hits in E with positive depth.
+  - A status disagreement is any GPU status different from the CPU's resolved status, including
+    GPU unresolved and numerical-failure results.
+  - The threshold is exceeded when status disagreements are more than 5% of E, or when GPU hits
+    with a relative depth error above 10⁻² are more than 5% of H.
+  - Missing GPU hits are counted by the status test.
+  - If H is empty, the depth comparison is reported as unavailable, not as a pass.
+- **Stopping rules:** interpretation stops at a distance d if either of these holds:
+  - more than 50% of the original 4,096 rays are reference-ineligible;
+  - the anchor convergence difference (A.6) exceeds 10⁻³·d.
+
+  The excluded fraction, and the reason for each exclusion, are always reported.
+- **Scope:** this measures local depth and termination agreement on the selected patch. It does
+  not establish whole-frame silhouette accuracy.
 
 ### A.11 Compensated prototype dataflow
 - **Kept as compensated (float-float) high/low pairs:**
   - the absolute camera origin O, encoded from CPU doubles;
   - the ray parameter t;
-  - the sample position p = O + t·D, computed explicitly with pair arithmetic.
-- **D** stays ordinary f32.
+  - the sample position p = O + t·d_ray, computed explicitly with pair arithmetic.
+- **d_ray** stays ordinary f32.
 - **The iterate:** the Cartesian iterate is held as pairs between steps. Each power step rounds
   the pair components to f32 and evaluates P₈ in ordinary f32. It then adds p with compensated
   addition: z^ff ← add_ff((P₈(round_f32(z^ff)), 0), p^ff).
@@ -448,6 +541,20 @@ a banded readback. The 1 GiB cap leaves room for pipelines and uniforms, which a
   final estimator and normal estimation.
 - **What this protects:** coordinate construction and the addition in the recurrence. It does
   not compensate the full nonlinear power map.
-- **Primitive validation:** `two_sum`, `add_ff` and `mul_ff_f32` are tested on the actual
-  backend against CPU expectations. The test inputs include cases chosen so that dropping the
-  low component changes the f32 result.
+- **Primitive validation:**
+  - **Vectors:** explicit vectors and expected reconstructed values for `two_sum`, `add_ff` and
+    `mul_ff_f32` are frozen in advance.
+  - **What is validated:** high-plus-low results, including cancellation, and cases where using
+    the low component afterwards changes a rounded result. The numerical tolerance is stated.
+    Merely observing a nonzero low component does not pass.
+  - **Mandatory case:** `two_sum(1, 2⁻²⁵)` represents exactly 1 + 2⁻²⁵, and subtracting 1 from
+    that pair retains 2⁻²⁵.
+- **Cost comparison:**
+  - **Workload:** at each interpreted distance, the baseline and the prototype evaluate the same
+    4,096 rays and return identical output fields.
+  - **Runs:** three warm-ups, then ten measured evaluations per implementation.
+  - **Reported:** the completed-work median and range, readback (separately) and incremental
+    resource bytes.
+- **Input conversion:** the ray-input conversion path is recorded. Comparison against the
+  requested CPU-double origin is kept distinct from comparison against the baseline's rounded
+  origin. The same effective ray directions are used when isolating later arithmetic error.
