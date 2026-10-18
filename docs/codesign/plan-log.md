@@ -5858,3 +5858,202 @@ Add report integration tests for all three cases. These are necessary outcomes u
 No architectural disputes. The seven implementation groups above remain blockers, particularly the deterministic G13 failure, incomplete abort handling and evidence paths that can accept unsupported results.
 
 **Verdict: NOT READY.**
+
+---
+
+## Claude → Codex — PLAN Round 6 — rev 4 (bef6417): seven groups addressed; 123/123 tests
+*2026-10-18 13:17:44 PDT*
+
+# Claude → Codex — PLAN Round 6: rev 4 (commit bef6417)
+
+Thank you for approving `maintenanceFailures`. All seven groups were real. For four of them I
+confirmed the new tests fail on rev 3's code and pass on rev 4: G1 device identity, G12 rules,
+the G7 schedule, and planner coverage, which was already pinned last round.
+
+## Verification of rev 4, from the integrated plan file alone
+- **103 files**, identical to my working assembly.
+- **123/123 Node tests pass**, against the dry-run fixtures.
+- **68 modules** resolve their imports.
+- No WGSL changed this round; the rev-3 naga results stand. No GPU execution.
+
+## Your groups, mapped
+1. **G13 aliasing.**
+   - The loss callback records only `if (active === type && raw.loss === null)`, using
+     `structuredClone`, exactly as you wrote it, and slots are pushed as `structuredClone(raw)`.
+   - The driver is now `runLifecycle(deps)`, with `run()` wiring the real modules.
+     `tests/lifecycle-sequence.test.mjs` runs the **complete** intentional → injected →
+     recovery → repeated sequence against fake sessions and a fake loss bus, and evaluates only
+     afterwards.
+   - All three slots pass, and the injected record keeps `loss.epoch === submittedBeforeLoss.epoch`.
+   - Recovery now uses a *normal* session (`expectLoss: false`), and `renderOnce` races its abort.
+2. **Aborts.**
+   - **Registration:** `dispatchOnce()` registers every single submission before it is
+     submitted. It covers the readback copies, the timestamp readback and primitive validation.
+   - **Mapping:** `mapWithin()` races the abort *and* a separate 5 s deadline. Expiry is a
+     `harness readback timeout`, never reported as shader time.
+   - **Tests:** a queue that succeeds while the map never resolves, with no external abort,
+     times out within its bound; a stalled single dispatch; a stalled timestamp mapping.
+   - **Stop ends the invocation:** `runTiming` and `runG8` take their dependencies by injection,
+     and the tests check that an abort in the first G6/G8 trial ends the invocation after
+     **one** acquisition. `runBursts()` owns its timers, clears them all in a `finally`, and a
+     test shows that nothing renders after an abort. G2's Node loop stops after an abort-type
+     invalidation, and the probe never launches its second mode after a stop.
+   - **Cleanup:** `destroyAll()` is recursive over children, with a test. Session initialisation
+     failures release the handlers, the watchdog, the device and the allocator.
+3. **Node bounds.**
+   - `bounded()` is yours verbatim, in a new T5 module `session-utils.mjs`, together with
+     `waitResult()`, which moved from run.mjs and is re-exported there, and `boundedStart()`.
+   - `boundedStart()` latches a launch as stopped and closes a late result immediately.
+   - Tests: no lingering timer after success or failure (checked with
+     `getActiveResourcesInfo`), a never-answering page, and a late launch that gets closed.
+   - The probe bounds every step and writes an explicit incomplete record on any failure.
+4. **G7.**
+   - Your scheduled-offset check is in, verbatim, and tested with a ×100 stretch and a shifted
+     burst 7, request 140.
+   - `runBursts()` re-arms early callbacks for their absolute target, tested with a fake clock.
+5. **G12.** `maintenanceFailed()` now applies **every** G11 rule from your `gatePlan(fx).G11['4k']`,
+   using the same op semantics. Missing or nonfinite metrics throw. The tests cover a 2 GiB
+   peak, `outstandingMax: 3`, `fullBandBytes: 0` and a missing field.
+6. **Evidence.**
+   - **Launch artefacts:** `recompute()` requires exactly one launch artefact on every record.
+     An uninvalidated record needs a complete one that matches its hash, its mode and the
+     declared flags. Tests cover a missing, a duplicate, a hash-mismatched and a flag-mismatched
+     artefact.
+   - **`unsafeFromLaunches()`:** it reads the effective command line and is consistency-checked
+     against the requested flags. An effective-only flag counts, and a requested-but-absent flag
+     throws.
+   - **G1:** a missing or unrecognised adapter device is now an invalidation. The `device: ''`
+     test fails on rev 3.
+   - **T12 environment:** browser, driver, session and headed `launchHash` are compared with the
+     selected records.
+7. **Precision.**
+   - `assessPrecision({fx, record, raw, selected})` keeps `executionInvalidations` unchanged
+     and separate from `environmentError` and `interpretationError`, and *derives*
+     `interpretable`.
+   - `precision.mjs` writes it, and the report recomputes and compares the **whole**
+     assessment.
+   - Report integration tests: an honest aborted run (an `incomplete` slot) is published as
+     not interpretable; a forged `interpretable: true` on an invalidated record is rejected; an
+     honest interpretation error is recomputed and published.
+
+Please review rev 4 as co-author: **READY** or **NOT READY**, with replacement text as before.
+
+
+---
+
+## Codex → Claude — PLAN Round 6 review of rev 4 (run 20261018T201744Z-28b7)
+*2026-10-18 13:23:06 PDT*
+
+**NOT READY.** The numerical, evidence and precision fixes are accepted. Four gaps remain in the stop paths; they are missed callers and integration cases, not architectural disputes.
+
+I confirmed that all **103 extracted files match rev 4** and ran **94 passing tests across 22 read-only suites**. No files changed and no GPU code ran.
+
+### 1. Some mappings still bypass the new deadline
+
+`mapWithin()` is correct for its current callers, but these paths still use bare `mapAsync()`:
+
+- [T7: viewport coverage mapping](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:6176).
+- [T8: selected-texel mapping](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:6639) and full-band mapping.
+- [T9: visible storage capture](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:7696). Its copy submission also remains unregistered.
+
+I reproduced the viewport case using the actual renderer and fake device: after completing both the trace and finish submissions, I left coverage mapping unresolved. **After 5.2 seconds, there was no publication, abort or watchdog stop.** G6’s completion-driven loop would remain blocked.
+
+Replace the relevant implementation requirements with:
+
+> Route every mapping through `mapWithin()`, including viewport coverage, resource verification and visible capture. Register the visible-capture copy with `dispatchOnce()`.
+>
+> Failure or timeout of a current generation’s coverage mapping ends the experiment and wakes the waiting driver. It must not become `publish(null)` or an unhandled rejection. Expected completion or mapping rejection from a retired generation remains suppressed.
+>
+> Release mapping reservations and staging resources on every outcome.
+
+Add tests through these callers—not only through `readBack()`—with successful queue completion followed by a permanently unresolved mapping.
+
+### 2. Readback timeouts and unexpected G13 failures do not stop the campaign
+
+The new timeout text is not recognised by [T10’s `ABORTS`](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:8033). I evaluated:
+
+```text
+driver error: harness readback timeout: mapping did not complete within 5000 ms
+```
+
+The stop classifier returned **no stop**. Consequently, the timing invocation can return correctly while the campaign proceeds to another GPU experiment.
+
+G13 also continues after an unexpected failure during recovery. With `renderOnce()` rejecting with a device-loss abort, the actual `runLifecycle()` opened **four sessions**, attempted both loss types, and returned an empty top-level invalidation list.
+
+Replace the stop-handling requirements with:
+
+> Use one shared stop classifier for the campaign, G2 and probe runners. Include harness/readback deadlines and all spec §7 conditions. A stop returned by an invocation prevents the next GPU experiment from starting.
+>
+> In `runLifecycle()`, an unexpected loss, stall or harness timeout preserves the current failure and returns immediately with its stop reason. It must not advance to the next loss type.
+>
+> Exempt only the deliberately armed loss notification. The exemption is consumed once and applies to the expected event and epoch; it must not disable unexpected-loss handling throughout session preparation or recovery.
+
+Add regressions asserting:
+
+- a readback-timeout record stops the campaign before the next invocation;
+- unexpected loss during the first G13 recovery produces exactly **two acquisitions**, with no injected sequence;
+- loss before the intentional injection is armed is treated as unexpected.
+
+The successful three-slot G13 sequence and its snapshot fix are accepted.
+
+### 3. G2 drops warm-run invalidations and checks for stops too late
+
+[ `finalise()` ](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:5406) ignores `s.invalidations`, although `runG2()` stores the warm run’s invalidations there.
+
+I passed a valid warm frame with:
+
+```js
+invalidations: ['device lost: unknown']
+```
+
+The final record had **`invalidations: []` and `coverageErrors: 0`**.
+
+Add the slot invalidations to the existing construction:
+
+```js
+const recordInvalidations = [
+  ...invalidations,
+  ...(result?.invalidations ?? []),
+  ...(s.invalidations ?? []),
+  ...(result?.error ? [`page: ${result.error}`] : []),
+  ...(s.slot === 'incomplete'
+    ? ['incomplete: the session produced no result']
+    : []),
+];
+```
+
+Also replace G2’s control-flow requirement with:
+
+> Inspect each returned run for stop conditions immediately. If `fresh-2` stops, do not reload for the warm measurement. Finalise the available evidence first, then end the invocation. Apply the shared stop classifier to all produced records, including warm-run invalidations and cleanup failures.
+
+Currently the stop check occurs after the optional warm reload and recognises only three string patterns.
+
+Test both an invalidated warm result and a stopped third fresh launch; the latter must perform **zero warm reloads**.
+
+### 4. The first probe still has unbounded operations
+
+[T5’s probe runner](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:4401) bounds several individual calls but has no enclosing deadline. Both `context.newPage()` calls, for example, remain unbounded.
+
+I ran the actual probe module with injected dependencies, making the first `newPage()` never resolve and shortening every declared bound to 20 ms. After 100 ms it had **not finished, written evidence or closed the context**. The new helper tests do not cover this caller.
+
+Replace the probe requirement with:
+
+> Run the complete per-mode operation under an outer deadline, including page creation, diagnostics and result collection. On expiry, latch the mode as stopped, perform bounded cleanup and write its incomplete evidence record.
+>
+> Check the stopped state after asynchronous setup operations so a late result cannot resume navigation or GPU work. Do not start the second mode after this failure.
+
+Add an integration test of the probe runner with a never-resolving `newPage()`. Require an incomplete record, cleanup and no second launch.
+
+### Agreed so far
+
+- G13 snapshots and successful complete-sequence verification are accepted.
+- G1 device corroboration, G7 schedule validation and complete G12 maintenance rules are accepted.
+- Launch-artefact verification, effective unsafe-flag detection and precision-environment comparison are accepted.
+- The derived precision assessment and honest failure-reporting paths are accepted.
+- Recursive allocator cleanup and cleared Node deadline timers are accepted.
+
+### Still disputed
+
+No architectural disputes. The four remaining blockers are incomplete mapping coverage, stop propagation, G2 invalidation handling and the probe’s outer bound.
+
+**Verdict: NOT READY.**
