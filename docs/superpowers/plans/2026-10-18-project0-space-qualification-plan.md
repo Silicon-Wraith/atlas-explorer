@@ -32,7 +32,7 @@ No new dependencies.
 **Spec:** `docs/superpowers/specs/2026-10-18-project0-space-qualification-design.md` (rev 3.1),
 governed by `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`.
 
-**Authors:** Claude and Codex as peers, following the AGENTS.md/CLAUDE.md collaboration protocol.
+**Revision:** 2 (after Codex's blocking review, plan Round 3). **Authors:** Claude and Codex as peers, following the AGENTS.md/CLAUDE.md collaboration protocol.
 The record is `docs/codesign/plan-log.md`.
 - Codex drafted T1–T4.
 - Claude drafted the header and the other tasks.
@@ -75,6 +75,25 @@ The record is `docs/codesign/plan-log.md`.
 - **Module types:** browser modules use `.js`, because `scripts/serve.mjs` serves `.mjs`
   without a JavaScript MIME type under `nosniff`. Browser code cannot live under a path
   containing `tests`, `scripts` or `artifacts`, which the server refuses.
+- **Commit before GPU checks:** each task commits its peer-reviewed implementation *before*
+  running any GPU check, because `implementationIdentity()` refuses uncommitted harness files.
+  Evidence and interpretation are committed afterwards. Development checks keep the same
+  clean-implementation requirement and are labelled development evidence (campaign `dev`),
+  which never qualifies.
+- **Whole files, no staged edits:** every code step gives a file's complete content. A file
+  that a later task changes is given again in full. Gate drivers (`browser/drivers/<gate>.js`)
+  and metric derivations (`measure/<group>.mjs`) are separate modules loaded through
+  registries created once in T6, so later tasks add modules rather than edit earlier ones.
+  Verification assembles the plan by taking the last full version of each file.
+- **Module-relative URLs:** browser code fetches with `new URL(path, import.meta.url)` and
+  checks `response.ok` before decoding.
+- **Owned server:** Project 0 starts its own server on the dedicated port 5180 (`PORT` and
+  `--port`). It never adopts an existing listener. An occupied port is reported without
+  touching the listener.
+- **Live aborts:** every GPU experiment installs a 5-second submission-progress watchdog and an
+  unexpected-loss handler *before* submitting work. Node independently bounds browser
+  responsiveness and total duration. Every stop finalises the available evidence as an explicit
+  incomplete record.
 - **Peer handoff (bridge):** Codex never commits.
   1. A Codex task runs as `codex_bridge.py run --mode new-worktree` from a named base commit.
   2. It returns `changes.patch` plus its test evidence.
@@ -101,67 +120,75 @@ owning task.
    final short bands, padded `bytesPerRow`, and mixed source formats. Exact indices and byte
    offsets must be verified. *T6, T8.*
 4. **The launcher attaches to the wrong server, or damages an unrelated process or profile:**
-   an occupied port without the harness identity, a reused profile (including a warm shader
-   cache that would falsify G2), or cleanup of processes it does not own. *T0.*
-5. **External interference silently changes the timing semantics:** a hidden or unfocused
-   window, delayed burst issuance, a device-pixel ratio other than 1, or a mis-sized canvas
-   backing. These produce explicit invalidation records, never quiet numbers. *T9.*
+   - any listener on the port, including a foreign server that serves identical HTML with
+     different modules;
+   - a reused profile, including a warm shader cache that would falsify G2;
+   - cleanup of a process it does not own.
+
+   Each of these must be refused. *T0.*
+5. **External interference silently changes the timing semantics:** a window that is hidden
+   or unfocused at any moment of a trial (not only at its start and end), delayed timer
+   issuance, a device-pixel ratio other than 1, or an unexpected canvas backing size. These
+   produce explicit invalidation records, never quiet numbers. *T9.*
 
 ---
 ## Task overview
 
 | Task | Deliverable | Owner | Depends on |
 |---|---|---|---|
-| T0 | Launcher, server/profile ownership, no-GPU preflight | Claude | — |
+| T0 | Launcher, owned server on port 5180, fresh profiles, complete page entry, no-GPU preflight | Claude | — |
 | T1 | Evidence contracts, metrics, gate evaluators, decision procedure | Codex | T0 |
 | T2 | Independent arithmetic references, exact f32-range policy | Codex | T1 |
 | T3 | CPU geometry, tracing, sensitivity screen, precision preparation | Codex | T2 |
 | T4 | Fixture generation, audit, reproduction, **freeze commit** | Codex (generator), Claude (runs) | T0–T3 |
-| T5 | Evidence identity, WebGPU device module, **first GPU run** (probe) | Claude | T4 |
-| T6 | WGSL arithmetic and ray-list kernels; G3–G5 checks; gate runner | Claude | T5 |
-| T7 | Band scheduler, camera-mode marcher, shading/coverage, presentation | Claude | T6 |
-| T8 | Resource accounting and A.8 verification (G11); loss/recovery (G13) | Claude | T7 |
-| T9 | In-page timing drivers (G1, G2, G6–G10, G12) and metric derivation | Claude | T7, T8 |
-| T10 | Formal WebGPU campaign, selection manifest, single remediation cycle | Claude runs; joint decisions | T1, T9 |
-| T11 | *Conditional:* WebGL API mapping + backend interface; stop for addendum | Joint | WebGPU unqualified after T10 |
-| T12 | Precision experiment on the selected backend | Claude (WGSL/driver); joint interpretation | backend selected |
-| T13 | Reproducible report, joint review, user handoff | Joint | T10 (and T11/T12 as applicable) |
+| T5 | Verified evidence identity, WebGPU device module, **first GPU run** (probe) | Claude | T4 |
+| T6 | Allocator, watchdog, WGSL arithmetic/ray-list kernels, strict decoding, registries, runner; G3–G5 | Claude | T5 |
+| T7 | Submission ledger, band planner, camera marcher, shading/coverage, lifetime-checked renderer | Claude | T6 |
+| T8 | A.8 resource verification (G11); loss/recovery on real epochs (G13) | Claude | T7 |
+| T9 | Timing drivers (G1, G2, G6–G10, G12), full-interval integrity, visible-output evidence | Claude | T7, T8 |
+| T10 | Phased WebGPU campaign, strict manifest, coherence, reuse, single remediation cycle and closure | Claude runs; joint decisions | T1, T9 |
+| T11 | *Conditional:* WebGL API mapping + backend interface; stop for the addendum | Joint | WebGPU unqualified after T10 |
+| T12 | Precision experiment on the selected configuration | Claude (WGSL/driver); joint interpretation | backend selected |
+| T13 | Report CLI that verifies and recomputes; joint review; user handoff | Joint | T10 (and T11/T12 as applicable) |
 
 The plan implements WebGPU qualification and the fallback **planning boundary**; it does not contain the conditional WebGL implementation, which is a separately reviewed and user-approved addendum (T11).
 
+**Planning-time verification (2026-10-18), recorded so reviewers know what has and has not been exercised:** every code file was extracted from this plan text (last full version per path), and all 87 Node tests pass against a **dry-run** `fixtures.json` generated by T4's generator in a scratch repository (351 s with eight workers; audit: 74 coverage frames, eligibility 3,972 / 3,684, no range crossings, no precision stop). All 65 modules resolve their imports. The WGSL guard algorithm matches T2's exact predicate on 300,105 vectors. **No GPU code has run**, as the spec requires before the freeze; All seven WGSL modules, each assembled exactly as the harness concatenates it at runtime (probe; fields+arithmetic; fields+trace; fields+trace+view; present; pattern; fields+trace+compensated), pass the offline `naga` 30.0.1 validator, which runs on the CPU with no device. Chrome's own compiler (Tint) can still differ, and T5–T7 surface any difference through `getCompilationInfo()`. `naga` is a planning-time check only, not a project dependency. The dry-run fixtures are not the frozen fixtures: T4 generates and freezes the real ones.
+
 ---
 
-### Task T0: Launcher, server ownership and environment preflight (no GPU device)
+### Task T0: Launcher, owned server and environment preflight (no GPU device)
 
 **Owner:** Claude. **Reviewer:** Codex (read-only `review --diff`).
 
 **Files:**
-- Create: `spikes/project0/launch.mjs`, the Node launcher (profile, server ownership, Chrome
-  launch, effective command line).
+- Create: `spikes/project0/launch.mjs`, the Node launcher. It provides the owned server on a
+  dedicated port, fresh profiles, the Chrome launch and the effective command line.
 - Create: `spikes/project0/preflight.mjs`, the T0 entry point.
-- Create: `spikes/project0/index.html`, the harness page, carrying the identity marker.
-- Create: `spikes/project0/browser/main.js`, the page entry. In T0 it handles only
-  `?mode=preflight`.
+- Create: `spikes/project0/index.html`, the harness page.
+- Create: `spikes/project0/browser/main.js`, the page entry in its **final form**: it dispatches
+  `preflight`, `probe` and `gate` modes to modules that later tasks add. A mode whose module
+  does not exist yet reports a clean error.
 - Test: `spikes/project0/tests/launch.test.mjs`.
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces, used by T5–T13:
-  - `ROOT: string`, the repository root;
-  - `ATTEMPT1_ARGS: readonly string[]`;
-  - `HARNESS_PATH = '/spikes/project0/index.html'`;
-  - `freshProfile(kind: string, opts?) → Promise<string>`: absolute path to a new, empty
-    directory `artifacts/runtime/project0-<kind>-<stamp>-<rand>`. It throws if the directory
-    already exists or is not empty;
-  - `ensureServer({port?, fetchFn?, spawnFn?, readFileFn?}) → Promise<{url, owned, stop()}>`:
-    reuses a server only if it serves *this checkout's* `index.html` byte for byte; otherwise
-    it throws. `stop()` terminates only a server this call spawned;
-  - `launchChrome({headless, args?, profileKind, chromium}) → Promise<{context, profile, requestedArgs, headless}>`:
-    always `channel: 'chrome'`, `chromiumSandbox: true`, viewport 1280 × 720,
+- Produces (used by T5–T13):
+  - `ROOT`, `ATTEMPT1_ARGS`, `HARNESS_PATH = '/spikes/project0/index.html'`, `PORT = 5180`;
+  - `freshProfile(kind, opts?) → Promise<string>`, the absolute path of a new, empty
+    `artifacts/runtime/project0-<kind>-<stamp>-<rand>`. It throws if the directory already
+    exists or is not empty;
+  - `startServer({port?, probeFn?, spawnFn?, startMs?, stopMs?}) → Promise<{url, stop()}>`.
+    It throws `port <n> is in use` if anything listens on the port, and never adopts a
+    listener. It spawns `scripts/serve.mjs` with both `PORT` in the environment and `--port`.
+    `stop()` sends SIGTERM, waits up to `stopMs` for the exit, then sends SIGKILL and waits;
+  - `launchChrome({headless, args?, profileKind, chromium}) → Promise<{context, profile, requestedArgs, headless}>`.
+    It uses `channel: 'chrome'`, `chromiumSandbox: true`, viewport 1280 × 720 and
     `deviceScaleFactor: 1`;
   - `effectiveCommandLine(context) → Promise<string>`, read from `chrome://version`;
-  - `assertSandboxed(commandLine: string) → void`: throws if `--no-sandbox` or
-    `--disable-gpu-watchdog` is present.
+  - `assertSandboxed(commandLine) → void`.
+- Page contract: when a mode completes, `browser/main.js` sets `window.p0Result` to either
+  `{slots, invalidations}` or `{error}`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -172,16 +199,21 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readdir, rm, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { EventEmitter } from 'node:events';
-import { ROOT, freshProfile, ensureServer, assertSandboxed, ATTEMPT1_ARGS } from '../launch.mjs';
+import { ROOT, PORT, freshProfile, startServer, assertSandboxed, ATTEMPT1_ARGS } from '../launch.mjs';
 
 async function scratchRoot() {
-  const base = resolve(ROOT, 'artifacts/runtime');
-  await mkdir(base, { recursive: true });
+  const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
   return mkdtemp(join(base, 'p0-launch-test-'));
 }
+function fakeChild({ exitOnTerm = true } = {}) {
+  const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter(), signals: [], exitCode: null });
+  child.kill = sig => { child.signals.push(sig); if (sig === 'SIGKILL' || exitOnTerm) setImmediate(() => { child.exitCode = 0; child.emit('exit', 0); }); };
+  return child;
+}
 
-test('attempt-1 flags are exactly the documented Vulkan set', () => {
+test('attempt-1 flags are exactly the documented Vulkan set, and the port is dedicated', () => {
   assert.deepEqual([...ATTEMPT1_ARGS], ['--enable-gpu', '--use-angle=vulkan', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan']);
+  assert.equal(PORT, 5180);
 });
 
 test('freshProfile creates a new empty directory and refuses to reuse one', async () => {
@@ -196,31 +228,33 @@ test('freshProfile creates a new empty directory and refuses to reuse one', asyn
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-const okBody = '<!doctype html><meta name="atlas-harness" content="project0">';
-const response = body => ({ ok: true, text: async () => body });
-
-test('ensureServer rejects a port that serves anything other than this checkout', async () => {
-  await assert.rejects(
-    ensureServer({ fetchFn: async () => response('hello'), readFileFn: async () => okBody }),
-    /not this checkout/);
-});
-
-test('ensureServer reuses a matching server without owning it', async () => {
+test('an occupied port is refused — even a foreign server serving identical HTML — and nothing is spawned', async () => {
   let spawned = false;
-  const server = await ensureServer({ fetchFn: async () => response(okBody), readFileFn: async () => okBody, spawnFn: () => { spawned = true; } });
-  assert.equal(server.owned, false); assert.equal(spawned, false);
-  await server.stop();
+  await assert.rejects(startServer({ probeFn: async () => true, spawnFn: () => { spawned = true; } }), /port 5180 is in use/);
+  assert.equal(spawned, false);
 });
 
-test('ensureServer spawns when nothing listens, and stop() kills only that child', async () => {
-  const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), killed: [], kill(sig) { this.killed.push(sig); } });
-  let calls = 0;
-  const fetchFn = async () => { if (calls++ === 0) throw new Error('ECONNREFUSED'); return response(okBody); };
-  const spawnFn = (cmd, args) => { assert.deepEqual(args.slice(0, 1), ['scripts/serve.mjs']); setImmediate(() => child.stdout.emit('data', 'ready')); return child; };
-  const server = await ensureServer({ fetchFn, spawnFn, readFileFn: async () => okBody });
-  assert.equal(server.owned, true);
+test('the owned server gets PORT in its environment and --port, and stop() awaits its exit', async () => {
+  const child = fakeChild(); let seen;
+  const spawnFn = (cmd, args, opts) => { seen = { args, env: opts.env }; setImmediate(() => child.stdout.emit('data', 'ATLAS is ready')); return child; };
+  const server = await startServer({ probeFn: async () => false, spawnFn });
+  assert.deepEqual(seen.args, ['scripts/serve.mjs', '--port', '5180']); assert.equal(seen.env.PORT, '5180');
+  assert.equal(server.url, 'http://127.0.0.1:5180');
   await server.stop();
-  assert.deepEqual(child.killed, ['SIGTERM']);
+  assert.deepEqual(child.signals, ['SIGTERM']); assert.equal(child.exitCode, 0);
+});
+
+test('stop() escalates to SIGKILL when the server ignores SIGTERM', async () => {
+  const child = fakeChild({ exitOnTerm: false });
+  const server = await startServer({ probeFn: async () => false, spawnFn: () => { setImmediate(() => child.stdout.emit('data', 'ready')); return child; }, stopMs: 50 });
+  await server.stop();
+  assert.deepEqual(child.signals, ['SIGTERM', 'SIGKILL']);
+});
+
+test('a server that never becomes ready is killed and reported', async () => {
+  const child = fakeChild();
+  await assert.rejects(startServer({ probeFn: async () => false, spawnFn: () => child, startMs: 50 }), /did not become ready/);
+  assert.deepEqual(child.signals, ['SIGTERM']);
 });
 
 test('assertSandboxed rejects a command line without the sandbox or watchdog', () => {
@@ -233,14 +267,15 @@ test('assertSandboxed rejects a command line without the sandbox or watchdog', (
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test spikes/project0/tests/launch.test.mjs`
-Expected: FAIL with `Cannot find module '.../spikes/project0/launch.mjs'`.
+Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `spikes/project0/launch.mjs`.
 
 - [ ] **Step 3: Implement `launch.mjs`**
 
 ```js
 // spikes/project0/launch.mjs — Node-side launcher. Never requests a GPU adapter or device.
 import { spawn as nodeSpawn } from 'node:child_process';
-import { mkdir, readdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir } from 'node:fs/promises';
+import { createConnection } from 'node:net';
 import { resolve, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -248,6 +283,7 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 export const ATTEMPT1_ARGS = Object.freeze(['--enable-gpu', '--use-angle=vulkan', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan']);
 export const HARNESS_PATH = '/spikes/project0/index.html';
+export const PORT = 5180;
 
 export async function freshProfile(kind, { root = ROOT, now = () => new Date(), rand = () => randomBytes(4).toString('hex') } = {}) {
   if (!/^[a-z0-9-]+$/.test(kind)) throw new Error(`invalid profile kind: ${kind}`);
@@ -262,24 +298,34 @@ export async function freshProfile(kind, { root = ROOT, now = () => new Date(), 
   return dir;
 }
 
-export async function ensureServer({ port = 5173, fetchFn = fetch, spawnFn = nodeSpawn, readFileFn = path => readFile(path, 'utf8'), root = ROOT } = {}) {
-  const url = `http://127.0.0.1:${port}`;
-  const local = await readFileFn(resolve(root, `.${HARNESS_PATH}`));
-  const servesThisCheckout = async () => { const res = await fetchFn(url + HARNESS_PATH); return res.ok && (await res.text()) === local; };
-  let listening = true;
-  try { await fetchFn(url + HARNESS_PATH); } catch { listening = false; }
-  if (listening) {
-    if (!(await servesThisCheckout())) throw new Error(`port ${port} serves something that is not this checkout's Project 0 harness`);
-    return { url, owned: false, stop: async () => {} };
-  }
-  const child = spawnFn(process.execPath, ['scripts/serve.mjs', '--port', String(port)], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
-  await new Promise((done, fail) => {
-    child.stdout.once('data', done);
-    child.once('error', fail);
-    child.once('exit', code => fail(new Error(`server exited (${code})`)));
+// true if something accepts TCP connections on 127.0.0.1:port.
+export const portInUse = port => new Promise(done => {
+  const socket = createConnection({ host: '127.0.0.1', port });
+  socket.once('connect', () => { socket.destroy(); done(true); });
+  socket.once('error', () => done(false));
+});
+
+const exited = (child, ms) => new Promise(done => {
+  if (child.exitCode !== null) return done(true);
+  const timer = setTimeout(() => done(false), ms);
+  child.once('exit', () => { clearTimeout(timer); done(true); });
+});
+
+export async function startServer({ port = PORT, probeFn = portInUse, spawnFn = nodeSpawn, root = ROOT, startMs = 10000, stopMs = 5000 } = {}) {
+  if (await probeFn(port)) throw new Error(`port ${port} is in use; Project 0 never adopts an existing listener`);
+  const child = spawnFn(process.execPath, ['scripts/serve.mjs', '--port', String(port)], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const stop = async () => {
+    child.kill('SIGTERM');
+    if (!(await exited(child, stopMs))) { child.kill('SIGKILL'); await exited(child, stopMs); }
+  };
+  const ready = await new Promise(done => {
+    const timer = setTimeout(() => done(false), startMs);
+    child.stdout.once('data', () => { clearTimeout(timer); done(true); });
+    child.once?.('error', () => { clearTimeout(timer); done(false); });
+    child.once?.('exit', () => { clearTimeout(timer); done(false); });
   });
-  if (!(await servesThisCheckout())) { child.kill('SIGTERM'); throw new Error('spawned server is not serving this checkout'); }
-  return { url, owned: true, stop: async () => { child.kill('SIGTERM'); } };
+  if (!ready) { await stop(); throw new Error(`owned server on port ${port} did not become ready within ${startMs} ms`); }
+  return { url: `http://127.0.0.1:${port}`, stop };
 }
 
 export async function launchChrome({ headless, args = ATTEMPT1_ARGS, profileKind, chromium }) {
@@ -303,14 +349,13 @@ export function assertSandboxed(commandLine) {
 }
 ```
 
-- [ ] **Step 4: Create the harness page and the preflight-only entry**
+- [ ] **Step 4: Create the harness page and the final page entry**
 
 ```html
 <!-- spikes/project0/index.html -->
 <!doctype html>
 <html lang="en">
 <meta charset="utf-8">
-<meta name="atlas-harness" content="project0">
 <title>ATLAS Project 0 harness</title>
 <style>html,body{margin:0;background:#050508;color:#ccd;font:13px system-ui}#status{position:fixed;left:8px;top:8px}canvas{display:block;width:1280px;height:720px}</style>
 <div id="status">loading…</div>
@@ -320,22 +365,38 @@ export function assertSandboxed(commandLine) {
 ```
 
 ```js
-// spikes/project0/browser/main.js — T0: preflight mode only. Never touches navigator.gpu methods.
+// spikes/project0/browser/main.js — page entry. Dispatches by ?mode=; never touches navigator.gpu in preflight.
+// Every mode ends by setting window.p0Result = {slots, invalidations} | {error}. Gate modes start at module
+// evaluation, with no Node round-trip, so G2 measures from navigation start.
 const params = new URLSearchParams(location.search);
 const status = document.getElementById('status');
-if (params.get('mode') === 'preflight') {
-  window.p0Preflight = {
-    isSecureContext, hasGpuObject: 'gpu' in navigator, userAgent: navigator.userAgent,
-    devicePixelRatio, inner: [innerWidth, innerHeight], visibility: document.visibilityState,
-  };
-  status.textContent = 'preflight: no GPU device requested';
+const say = text => { status.textContent = text; };
+const mode = params.get('mode');
+const finish = result => { window.p0Result = result; say(`${mode}: ${result.error ? 'error' : 'done'}`); };
+const fail = error => finish({ error: `${error.name}: ${error.message}` });
+
+async function loadFixtures() {
+  const response = await fetch(new URL('../fixtures.json', import.meta.url));
+  if (!response.ok) throw new Error(`fixtures.json: HTTP ${response.status}`);
+  return response.json();
+}
+
+if (mode === 'preflight') {
+  finish({ slots: [{ slot: 'environment', raw: { isSecureContext, hasGpuObject: 'gpu' in navigator, userAgent: navigator.userAgent, devicePixelRatio, inner: [innerWidth, innerHeight], visibility: document.visibilityState } }], invalidations: [] });
+} else if (mode === 'probe') {
+  import('./probe.js').then(m => m.runProbe(params, say)).then(finish, fail);                                   // T5
+} else if (mode === 'gate') {
+  Promise.all([loadFixtures(), import('./drivers/index.js')])                                                    // T6
+    .then(([fixtures, drivers]) => drivers.runGateDriver(params.get('gate'), fixtures, params, say)).then(finish, fail);
+} else {
+  fail(new Error(`unknown mode ${mode}`));
 }
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `node --test spikes/project0/tests/launch.test.mjs`
-Expected: PASS, `# pass 6`, `# fail 0`.
+Expected: PASS, `# pass 7`, `# fail 0`.
 
 - [ ] **Step 6: Write the preflight entry point**
 
@@ -347,32 +408,34 @@ import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { ROOT, HARNESS_PATH, ensureServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
+import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
 
 process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
 const record = { kind: 'preflight', at: new Date().toISOString(), node: process.version, checks: [] };
-record.playwright = createRequire(import.meta.url)('playwright/package.json').version;
-record.chrome = (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim();
-const server = await ensureServer();
-let failed = false;
+let failed = false, server;
 try {
+  record.playwright = createRequire(import.meta.url)('playwright/package.json').version;
+  record.chrome = (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim();
+  server = await startServer();
   const js = await fetch(`${server.url}/spikes/project0/browser/main.js`);
-  record.checks.push({ name: 'module-mime', contentType: js.headers.get('content-type') });
-  if (!/^text\/javascript/.test(js.headers.get('content-type') || '')) failed = true;
+  record.checks.push({ name: 'module-mime', status: js.status, contentType: js.headers.get('content-type') });
+  if (!js.ok || !/^text\/javascript/.test(js.headers.get('content-type') || '')) failed = true;
   for (const headless of [false, true]) {
-    const { context, profile, requestedArgs } = await launchChrome({ headless, profileKind: headless ? 'preflight-headless' : 'preflight-headed', chromium });
+    let launched;
     try {
-      const commandLine = await effectiveCommandLine(context);
+      launched = await launchChrome({ headless, profileKind: headless ? 'preflight-headless' : 'preflight-headed', chromium });
+      const commandLine = await effectiveCommandLine(launched.context);
       assertSandboxed(commandLine);
-      const page = await context.newPage();
+      const page = await launched.context.newPage();
       await page.goto(`${server.url}${HARNESS_PATH}?mode=preflight`);
-      const env = await page.waitForFunction(() => window.p0Preflight).then(h => h.jsonValue());
-      record.checks.push({ name: headless ? 'headless' : 'headed', profile, requestedArgs, commandLine, env });
+      const result = await page.waitForFunction(() => window.p0Result, null, { timeout: 30000 }).then(h => h.jsonValue());
+      const env = result.slots[0].raw;
+      record.checks.push({ name: headless ? 'headless' : 'headed', profile: launched.profile, requestedArgs: launched.requestedArgs, commandLine, env });
       if (!env.isSecureContext || env.devicePixelRatio !== 1) failed = true;
-    } finally { await context.close(); }
+    } finally { await launched?.context.close(); }
   }
 } catch (error) { record.error = error.message; failed = true; }
-finally { await server.stop(); }
+finally { await server?.stop(); }
 const dir = resolve(ROOT, 'artifacts/project0/preflight');
 await mkdir(dir, { recursive: true });
 await writeFile(resolve(dir, `${record.at.replace(/[-:.]/g, '')}.json`), JSON.stringify(record, null, 2));
@@ -380,25 +443,27 @@ console.log(JSON.stringify(record.checks.map(c => ({ name: c.name, ...(c.env ? {
 if (failed) { console.error(`PREFLIGHT FAILED${record.error ? `: ${record.error}` : ''}`); process.exitCode = 1; } else console.log('PREFLIGHT OK');
 ```
 
-- [ ] **Step 7: Run the preflight**
+- [ ] **Step 7: Commit** (Claude, after Codex's read-only review of the diff)
+
+```bash
+git add spikes/project0/launch.mjs spikes/project0/preflight.mjs spikes/project0/index.html spikes/project0/browser/main.js spikes/project0/tests/launch.test.mjs
+git commit -m "Project 0 T0: owned-server launcher, fresh profiles, sandbox check and no-GPU preflight"
+```
+
+- [ ] **Step 8: Run the preflight**
 
 Run: `node spikes/project0/preflight.mjs`
 Expected:
 - `PREFLIGHT OK`;
 - a `module-mime` entry with `text/javascript`;
 - `headed` and `headless` entries with `secure: true`;
-- a record written under `artifacts/project0/preflight/`.
+- a record under `artifacts/project0/preflight/`.
 
-`hasGpuObject` is recorded as information for T5, not as a pass or fail. If `PREFLIGHT FAILED`
-says Chrome could not launch under the available permissions, stop: that is evidence for an
-*inconclusive* outcome, not something to work around.
+`hasGpuObject` is information for T5, not a pass or fail.
 
-- [ ] **Step 8: Commit** (Claude, after Codex's read-only review of the diff)
-
-```bash
-git add spikes/project0/launch.mjs spikes/project0/preflight.mjs spikes/project0/index.html spikes/project0/browser/main.js spikes/project0/tests/launch.test.mjs
-git commit -m "Project 0 T0: launcher with server/profile ownership and no-GPU environment preflight"
-```
+If the output is `port 5180 is in use`, stop and report: Project 0 does not touch other
+listeners. If Chrome cannot launch under the available permissions, stop: that is evidence for
+an *inconclusive* outcome.
 
 ---
 
@@ -3861,49 +3926,55 @@ Expected:
 
 ---
 
-### Task T5: WebGPU hardware probe, evidence identity and device lifecycle (first GPU run, after the freeze)
+---
+
+### Task T5: Evidence identity, the WebGPU device module and the first hardware probe (after the freeze)
 
 **Owner:** Claude. **Reviewer:** Codex (read-only `review --diff`).
-**Precondition:** the T4 freeze commit exists. Step 1 asserts this mechanically.
+**Precondition:** T4 is complete. `node spikes/project0/verify-fixtures.mjs` must report
+`FIXTURES OK` with a non-null `identity.fixtureCommit`.
 
 **Files:**
-- Create: `spikes/project0/evidence.mjs` (Node). Builds evidence identities, hashes artefacts
-  and writes records in the T1 schema.
-- Create: `spikes/project0/gpu/device.js` (browser). Acquires the adapter and device, records
-  diagnostics, and owns the loss hook and device epoch.
-- Create: `spikes/project0/gpu/probe.wgsl`. A bounded compute dispatch over a non-divisible
-  element count.
-- Modify: `spikes/project0/browser/main.js`. Adds `?mode=probe`.
-- Create: `spikes/project0/probe.mjs` (Node entry point). Runs headed and headless, captures
-  `chrome://gpu`, and writes records.
+- Create: `spikes/project0/evidence.mjs` (Node). Evidence identities, artefact hashing and
+  collision-safe record writing.
+- Create: `spikes/project0/gpu/device.js` (browser). The only module that requests an adapter
+  or device. It owns the device epoch and the synchronous loss path.
+- Create: `spikes/project0/gpu/probe.wgsl`.
+- Create: `spikes/project0/browser/probe.js`, the `?mode=probe` driver.
+- Create: `spikes/project0/probe.mjs` (Node entry point).
 - Test: `spikes/project0/tests/evidence.test.mjs`.
 
 **Interfaces:**
 - Consumes:
-  - T0: `ensureServer`, `launchChrome`, `effectiveCommandLine`, `assertSandboxed`,
-    `HARNESS_PATH`, `ROOT`;
-  - T1: `canonical`, the record schema, `ARITH_STATUS`/`RAY_STATUS`;
-  - T4: `spikes/project0/fixtures.json` and its freezing commit.
-- Produces (used by T6–T13):
-  - `sha256(bytes|string) → hex64`;
-  - `fixtureIdentity() → {fixtureHash, fixtureCommit, specHash}`. It throws if `fixtures.json`
-    has uncommitted changes, or if no commit contains it;
-  - `implementationIdentity() → {implementationCommit, implementationHash}`. The hash covers
-    every file under `spikes/project0/` except `fixtures*.json` and `tests/`, in sorted path
-    order. It throws if any of them has uncommitted changes;
+  - T0: `startServer`, `launchChrome`, `effectiveCommandLine`, `assertSandboxed`, `HARNESS_PATH`, `ROOT`;
+  - T1: `canonical`;
+  - T4: `readVerifiedFile(false) → {bytes, fixtures, identity: {fixtureHash, fixtureCommit, specHash}}`
+    from `fixture-files.mjs`.
+- Produces (Node, `evidence.mjs`):
+  - `sha256(data) → hex64`;
+  - `fixtureIdentity({readVerified?}) → identity`. It is exactly T4's verified identity, and
+    verification errors propagate;
+  - `implementationIdentity({gitFn?}) → {implementationCommit, implementationHash}`. The hash
+    covers every committed file under `spikes/project0/` except `fixtures.json` and `tests/`, in
+    sorted path order. It throws if any of them has uncommitted changes;
   - `launchIdentity({requestedArgs, mode, commandLine}) → {launchHash, mode}`;
-  - `environmentIdentity(chromeGpuText) → {browserVersion, browserExecutable, driver, session}`;
-  - `newRunDir(label) → absolute path` of the form `artifacts/project0/<iso>-<label>/`;
-  - `writeRecord(runDir, record, artifacts: {name, data}[]) → record`. It writes each artefact,
-    fills `record.artifacts` with `{path, sha256}`, then writes `<record.id>.json`.
-
-  In the browser, `gpu/device.js` provides:
-  - `acquire({requiredFeatures?}) → Promise<{adapter, device, info, epoch}>`;
-  - `onLoss(handler)`;
+  - `environmentIdentity(chromeGpuText, {browserVersion, browserExecutable, session}) → {...}`.
+    It throws if the driver information is absent;
+  - `newRunDir(label) → path`, which refuses an existing directory;
+  - `writeRecord(runDir, record, artifacts) → record`. It rejects artefact names that collide
+    with each other or with `<record.id>.json`, writes the artefacts, then the record.
+- Produces (browser, `gpu/device.js`):
+  - `acquire({requiredFeatures?}) → {adapter, device, info, epoch}`. `info` records
+    `vendor`, `architecture`, `device` and `description` (empty strings kept), plus
+    `isFallbackAdapter` (`null` when not exposed), `fallbackSource`, `features`,
+    `grantedFeatures` and `limits`;
+  - `onLoss(handler) → unsubscribe`;
   - `currentEpoch() → number`;
-  - `destroy()`.
+  - `injectLoss() → void`;
+  - `destroy() → void`.
 
-  `info` is `{vendor, architecture, device, description, isFallbackAdapter, features: string[], limits: {...}}`.
+  Loss handling, real or injected, goes through `signalLoss`, which advances the epoch
+  **before** notifying anyone.
 
 - [ ] **Step 1: Write the failing evidence tests**
 
@@ -3911,28 +3982,46 @@ Expected:
 // spikes/project0/tests/evidence.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sha256, launchIdentity, environmentIdentity, fixtureIdentity } from '../evidence.mjs';
+import { mkdtemp, rm, mkdir, readdir } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { ROOT } from '../launch.mjs';
+import { sha256, fixtureIdentity, launchIdentity, environmentIdentity, writeRecord } from '../evidence.mjs';
 
 test('sha256 is the lowercase hex digest', () => {
   assert.equal(sha256('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
 });
 
-test('launch identity depends on flags and mode, not on argument order noise', () => {
-  const a = launchIdentity({ requestedArgs: ['--enable-gpu', '--use-angle=vulkan'], mode: 'headed', commandLine: 'chrome --enable-gpu --use-angle=vulkan' });
-  const b = launchIdentity({ requestedArgs: ['--enable-gpu', '--use-angle=vulkan'], mode: 'headless', commandLine: 'chrome --enable-gpu --use-angle=vulkan --headless' });
-  assert.match(a.launchHash, /^[a-f0-9]{64}$/);
-  assert.notEqual(a.launchHash, b.launchHash);
+test('fixture identity is exactly T4\'s verified identity, requested in non-candidate mode', async () => {
+  const identity = { fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64) };
+  let arg;
+  assert.deepEqual(await fixtureIdentity({ readVerified: async candidate => { arg = candidate; return { identity }; } }), identity);
+  assert.equal(arg, false);
+  await assert.rejects(fixtureIdentity({ readVerified: async () => { throw new Error('fixture bytes differ from the freeze commit'); } }), /freeze commit/);
 });
 
-test('environment identity extracts the driver from chrome://gpu text', () => {
-  const text = 'Graphics Feature Status\nWebGPU: Hardware accelerated\nDriver Information\nDriver vendor\tNVIDIA\nDriver version\t580.173.02\nGL_RENDERER\tANGLE (NVIDIA, Vulkan 1.4 (NVIDIA RTX 6000 Ada Generation))';
+test('launch identity depends on flags, mode and the effective command line', () => {
+  const a = launchIdentity({ requestedArgs: ['--enable-gpu'], mode: 'headed', commandLine: 'chrome --enable-gpu' });
+  const b = launchIdentity({ requestedArgs: ['--enable-gpu'], mode: 'headless', commandLine: 'chrome --enable-gpu --headless' });
+  assert.match(a.launchHash, /^[a-f0-9]{64}$/); assert.notEqual(a.launchHash, b.launchHash);
+});
+
+test('environment identity extracts the driver from chrome://gpu text, or refuses', () => {
+  const text = 'Driver Information\nDriver vendor\tNVIDIA\nDriver version\t580.173.02\n';
   const env = environmentIdentity(text, { browserVersion: 'Google Chrome 151.0.7922.108', browserExecutable: '/opt/google/chrome/chrome', session: 'wayland' });
   assert.equal(env.driver, 'NVIDIA 580.173.02');
-  assert.throws(() => environmentIdentity('no driver here', { browserVersion: 'x', browserExecutable: 'y', session: 'z' }), /driver/);
+  assert.throws(() => environmentIdentity('nothing', { browserVersion: 'x', browserExecutable: 'y', session: 'z' }), /driver/);
 });
 
-test('fixture identity refuses a fixture file that is not committed', async () => {
-  await assert.rejects(fixtureIdentity({ gitFn: async args => args.includes('--porcelain') ? ' M spikes/project0/fixtures.json\n' : 'a'.repeat(40) }), /uncommitted/);
+test('writeRecord refuses artefact names that collide with each other or with the record', async () => {
+  const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
+  const dir = await mkdtemp(join(base, 'p0-evidence-test-'));
+  try {
+    const record = { id: 'probe-headed' };
+    await assert.rejects(writeRecord(dir, record, [{ name: 'probe-headed.json', data: '{}' }]), /collides with the record/);
+    await assert.rejects(writeRecord(dir, record, [{ name: 'a.raw.json', data: '1' }, { name: 'a.raw.json', data: '2' }]), /duplicate artefact/);
+    await writeRecord(dir, { id: 'ok' }, [{ name: 'ok.raw.json', data: '{"x":1}' }]);
+    assert.deepEqual((await readdir(dir)).sort(), ['ok.json', 'ok.raw.json']);
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });
 ```
 
@@ -3952,19 +4041,15 @@ import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, relative, join } from 'node:path';
 import { ROOT } from './launch.mjs';
 import { canonical } from './contract.js';
+import { readVerifiedFile } from './fixture-files.mjs';
 
 const run = promisify(execFile);
 const git = async args => (await run('git', args, { cwd: ROOT })).stdout;
 export const sha256 = data => createHash('sha256').update(data).digest('hex');
-const SPEC = 'docs/superpowers/specs/2026-10-18-project0-space-qualification-design.md';
-const FIXTURES = ['spikes/project0/fixtures.json', 'spikes/project0/fixtures-precision.json'];
 
-export async function fixtureIdentity({ gitFn = git } = {}) {
-  if ((await gitFn(['status', '--porcelain', '--', ...FIXTURES, SPEC])).trim()) throw new Error('fixtures or spec have uncommitted changes');
-  const fixtureCommit = (await gitFn(['log', '-1', '--format=%H', '--', FIXTURES[0]])).trim();
-  if (!/^[a-f0-9]{40}$/.test(fixtureCommit)) throw new Error('fixtures.json has no freezing commit');
-  const bytes = await Promise.all(FIXTURES.map(f => readFile(resolve(ROOT, f))));
-  return { fixtureHash: sha256(Buffer.concat(bytes)), fixtureCommit, specHash: sha256(await readFile(resolve(ROOT, SPEC))) };
+export async function fixtureIdentity({ readVerified = readVerifiedFile } = {}) {
+  const { identity } = await readVerified(false);
+  return identity;
 }
 
 async function harnessFiles(dir = resolve(ROOT, 'spikes/project0')) {
@@ -3972,21 +4057,19 @@ async function harnessFiles(dir = resolve(ROOT, 'spikes/project0')) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) { if (entry.name !== 'tests') out.push(...await harnessFiles(path)); }
-    else if (!/^fixtures.*\.json$/.test(entry.name)) out.push(path);
+    else if (entry.name !== 'fixtures.json') out.push(path);
   }
   return out.sort();
 }
 
 export async function implementationIdentity({ gitFn = git } = {}) {
-  if ((await gitFn(['status', '--porcelain', '--', 'spikes/project0'])).trim()) throw new Error('harness has uncommitted changes');
+  if ((await gitFn(['status', '--porcelain', '--untracked-files=all', '--', 'spikes/project0'])).trim()) throw new Error('harness has uncommitted changes; commit before running GPU checks');
   const hash = createHash('sha256');
   for (const file of await harnessFiles()) hash.update(relative(ROOT, file)).update('\0').update(await readFile(file)).update('\0');
   return { implementationCommit: (await gitFn(['rev-parse', 'HEAD'])).trim(), implementationHash: hash.digest('hex') };
 }
 
-export function launchIdentity({ requestedArgs, mode, commandLine }) {
-  return { launchHash: sha256(canonical({ requestedArgs, mode, commandLine })), mode };
-}
+export const launchIdentity = ({ requestedArgs, mode, commandLine }) => ({ launchHash: sha256(canonical({ requestedArgs, mode, commandLine })), mode });
 
 export function environmentIdentity(chromeGpuText, { browserVersion, browserExecutable, session }) {
   const vendor = /Driver vendor\s+(.+)/.exec(chromeGpuText)?.[1]?.trim();
@@ -3996,59 +4079,87 @@ export function environmentIdentity(chromeGpuText, { browserVersion, browserExec
 }
 
 export async function newRunDir(label) {
-  if (!/^[a-z0-9-]+$/.test(label)) throw new Error(`invalid run label: ${label}`);
-  const dir = resolve(ROOT, 'artifacts/project0', `${new Date().toISOString().replace(/[-:.]/g, '')}-${label}`);
-  await mkdir(dir, { recursive: false });
+  if (!/^[a-z0-9.-]+$/.test(label)) throw new Error(`invalid run label: ${label}`);
+  const parent = resolve(ROOT, 'artifacts/project0');
+  await mkdir(parent, { recursive: true });
+  const dir = resolve(parent, `${new Date().toISOString().replace(/[-:.]/g, '')}-${label}`);
+  await mkdir(dir);                                         // throws EEXIST rather than reusing a directory
   return dir;
 }
 
 export async function writeRecord(runDir, record, artifacts) {
-  record.artifacts = [];
-  for (const { name, data } of artifacts) {
-    if (!/^[A-Za-z0-9._-]+$/.test(name)) throw new Error(`invalid artifact name: ${name}`);
-    await writeFile(join(runDir, name), data);
-    record.artifacts.push({ path: relative(resolve(ROOT, 'artifacts/project0'), join(runDir, name)), sha256: sha256(data) });
+  const names = new Set();
+  for (const { name } of artifacts) {
+    if (!/^[A-Za-z0-9._-]+$/.test(name)) throw new Error(`invalid artefact name: ${name}`);
+    if (name === `${record.id}.json`) throw new Error(`artefact ${name} collides with the record file`);
+    if (names.has(name)) throw new Error(`duplicate artefact name: ${name}`);
+    names.add(name);
   }
-  await writeFile(join(runDir, `${record.id}.json`), canonical(record));
+  record.artifacts = [];
+  const root = resolve(ROOT, 'artifacts/project0');
+  for (const { name, data } of artifacts) {
+    await writeFile(join(runDir, name), data, { flag: 'wx' });
+    record.artifacts.push({ path: relative(root, join(runDir, name)), sha256: sha256(data) });
+  }
+  await writeFile(join(runDir, `${record.id}.json`), canonical(record), { flag: 'wx' });
   return record;
 }
 ```
 
-`newRunDir` refuses to reuse a directory: `recursive: false` fails if it exists.
+`writeRecord` writes with `flag: 'wx'`, so nothing is ever overwritten. For the T5 test, the
+artefact path is resolved relative to `artifacts/project0`. The test directory sits under
+`artifacts/runtime`, so its recorded paths begin with `../runtime/`. That is harmless for the
+test, and never happens for real run directories.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `node --test spikes/project0/tests/evidence.test.mjs`
-Expected: PASS, `# pass 4`, `# fail 0`.
+Expected: PASS, `# pass 5`, `# fail 0`.
 
-- [ ] **Step 5: Write the browser device module and the probe kernel**
+- [ ] **Step 5: Write `gpu/device.js` and `gpu/probe.wgsl`**
 
 ```js
 // spikes/project0/gpu/device.js — the only module that requests an adapter or device.
-let state = { adapter: null, device: null, epoch: 0, lossHandlers: [] };
+const state = { device: null, epoch: 0, handlers: new Set() };
 export const currentEpoch = () => state.epoch;
-export const onLoss = handler => { state.lossHandlers.push(handler); };
+export function onLoss(handler) { state.handlers.add(handler); return () => state.handlers.delete(handler); }
+
+// Real and injected losses take the same path. The epoch advances *first*, so every completion still in
+// flight already belongs to a retired epoch by the time any listener — or any late callback — runs.
+function signalLoss({ reason, message = '', injected }) {
+  const lostEpoch = state.epoch;
+  state.epoch++;
+  for (const handler of [...state.handlers]) handler({ epoch: lostEpoch, reason, message, injected });
+}
 
 export async function acquire({ requiredFeatures = [] } = {}) {
   if (!('gpu' in navigator)) throw Object.assign(new Error('navigator.gpu is absent'), { code: 'no-api' });
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw Object.assign(new Error('requestAdapter returned null'), { code: 'no-adapter' });
-  const features = [...adapter.features].sort();
-  const wanted = requiredFeatures.filter(f => adapter.features.has(f));
-  const device = await adapter.requestDevice({ requiredFeatures: wanted });
+  const granted = requiredFeatures.filter(f => adapter.features.has(f));
+  const device = await adapter.requestDevice({ requiredFeatures: granted });
   const epoch = ++state.epoch;
-  device.lost.then(info => { if (epoch === state.epoch) for (const h of state.lossHandlers) h({ epoch, reason: info.reason, message: info.message, injected: false }); });
+  state.device = device;
+  device.lost.then(info => { if (epoch === state.epoch) signalLoss({ reason: info.reason, message: info.message, injected: false }); });
   device.addEventListener('uncapturederror', event => console.error(`uncapturederror: ${event.error.message}`));
-  state = { ...state, adapter, device };
   const i = adapter.info;
-  const limits = Object.fromEntries(['maxComputeWorkgroupSizeX', 'maxStorageBufferBindingSize', 'maxBufferSize', 'maxTextureDimension2D', 'maxComputeInvocationsPerWorkgroup'].map(k => [k, device.limits[k]]));
-  // Record where fallback information came from, if anywhere (Codex's G1 rule); never infer it.
   const fallbackSource = 'isFallbackAdapter' in i ? 'adapter.info.isFallbackAdapter' : 'isFallbackAdapter' in adapter ? 'adapter.isFallbackAdapter' : 'not exposed';
-  const isFallbackAdapter = fallbackSource === 'not exposed' ? null : Boolean(fallbackSource.startsWith('adapter.info') ? i.isFallbackAdapter : adapter.isFallbackAdapter);
-  return { adapter, device, epoch, info: { vendor: i.vendor, architecture: i.architecture, device: i.device, description: i.description, isFallbackAdapter, fallbackSource, features, grantedFeatures: wanted, limits } };
+  const isFallbackAdapter = fallbackSource === 'not exposed' ? null : Boolean(fallbackSource === 'adapter.info.isFallbackAdapter' ? i.isFallbackAdapter : adapter.isFallbackAdapter);
+  const limits = Object.fromEntries(['maxComputeWorkgroupSizeX', 'maxStorageBufferBindingSize', 'maxBufferSize', 'maxTextureDimension2D', 'maxComputeInvocationsPerWorkgroup'].map(k => [k, device.limits[k]]));
+  return { adapter, device, epoch, info: { vendor: i.vendor ?? '', architecture: i.architecture ?? '', device: i.device ?? '', description: i.description ?? '', isFallbackAdapter, fallbackSource, features: [...adapter.features].sort(), grantedFeatures: granted, limits } };
 }
 
-export function destroy() { state.epoch++; state.device?.destroy(); state.device = null; }
+export function injectLoss() {                     // G13: an unexpected-loss notification through the recovery path
+  const device = state.device; state.device = null;
+  signalLoss({ reason: 'unknown', message: 'injected by G13', injected: true });
+  device?.destroy();
+}
+
+export function destroy() {                        // intentional teardown: retire the epoch, then destroy
+  const device = state.device; state.device = null;
+  state.epoch++;
+  device?.destroy();
+}
 ```
 
 ```wgsl
@@ -4063,53 +4174,62 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
 }
 ```
 
-- [ ] **Step 6: Add the probe mode to `browser/main.js`**
-
-Append to `spikes/project0/browser/main.js`:
+- [ ] **Step 6: Write `browser/probe.js`**
 
 ```js
-if (params.get('mode') === 'probe') {
-  const { acquire, destroy } = await import('../gpu/device.js');
-  const result = { ok: false };
+// spikes/project0/browser/probe.js — first GPU run: adapter identity, one bounded dispatch with verified readback,
+// canvas presentation (headed), and intentional destruction. Returns raw observations only.
+import { acquire, destroy, onLoss } from '../gpu/device.js';
+
+export async function runProbe(params, say) {
+  const raw = { ok: false };
   try {
-    status.textContent = 'probe: acquiring adapter…';
-    const { device, info } = await acquire({ requiredFeatures: ['timestamp-query'] });
-    result.info = info;
-    const n = 1000;  // 15 full workgroups + one partial (1000 = 15*64 + 40)
-    const module = device.createShaderModule({ code: await (await fetch('../gpu/probe.wgsl')).text() });
-    const compilation = await module.getCompilationInfo();
-    result.compilation = compilation.messages.map(m => `${m.type}: ${m.message}`);
+    say('probe: acquiring adapter…');
+    const { device, info, epoch } = await acquire({ requiredFeatures: ['timestamp-query'] });
+    raw.info = info; raw.epoch = epoch;
+    const response = await fetch(new URL('../gpu/probe.wgsl', import.meta.url));
+    if (!response.ok) throw new Error(`probe.wgsl: HTTP ${response.status}`);
+    const module = device.createShaderModule({ code: await response.text() });
+    raw.compilation = (await module.getCompilationInfo()).messages.map(m => `${m.type}: ${m.message}`);
     const pipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: 'main' } });
+    const n = 1000;                                                // 15 full workgroups plus one partial (40 of 64)
     const uniform = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(uniform, 0, new Uint32Array([n, 0, 0, 0]));
-    const out = device.createBuffer({ size: 1024 * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    const out = device.createBuffer({ size: 4096, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(out, 0, new Uint32Array(1024).fill(0xdeadbeef));
-    const read = device.createBuffer({ size: 1024 * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const read = device.createBuffer({ size: 4096, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     const bind = device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: uniform } }, { binding: 1, resource: { buffer: out } }] });
     const enc = device.createCommandEncoder();
     const pass = enc.beginComputePass(); pass.setPipeline(pipeline); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(Math.ceil(n / 64)); pass.end();
-    enc.copyBufferToBuffer(out, 0, read, 0, 1024 * 4);
+    enc.copyBufferToBuffer(out, 0, read, 0, 4096);
     device.queue.submit([enc.finish()]);
     await read.mapAsync(GPUMapMode.READ);
     const values = new Uint32Array(read.getMappedRange().slice(0)); read.unmap();
-    result.readback = { mismatches: [...values].filter((v, i) => v !== (i < n ? 3 * i + 1 : 0xdeadbeef)).length, n, length: values.length };
-    if (!params.has('headless')) {
+    raw.readback = { mismatches: [...values].filter((v, i) => v !== (i < n ? 3 * i + 1 : 0xdeadbeef)).length, n, length: values.length };
+    if (params.get('runMode') === 'headed') {
       const context = document.getElementById('view').getContext('webgpu');
       context.configure({ device, format: navigator.gpu.getPreferredCanvasFormat(), alphaMode: 'opaque' });
       const e2 = device.createCommandEncoder();
       e2.beginRenderPass({ colorAttachments: [{ view: context.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0.1, g: 0.6, b: 0.2, a: 1 }, storeOp: 'store' }] }).end();
       device.queue.submit([e2.finish()]); await device.queue.onSubmittedWorkDone();
-      result.presented = true;
+      raw.presented = true;
     }
+    for (const b of [uniform, out, read]) b.destroy();
+    const loss = new Promise(resolve => { const off = onLoss(info => { off(); resolve(info); }); });
     const lost = device.lost;
-    destroy();
-    result.lostReason = (await lost).reason;
-    result.ok = result.readback.mismatches === 0 && result.compilation.every(m => !m.startsWith('error'));
-  } catch (error) { result.error = `${error.code || 'error'}: ${error.message}`; }
-  window.p0Probe = result;
-  status.textContent = `probe: ${result.ok ? 'ok' : 'failed'}`;
+    destroy();                                                     // intentional: epoch retires before destruction
+    raw.lostReason = (await lost).reason;
+    raw.lossHandlerFired = await Promise.race([loss.then(() => true), new Promise(r => setTimeout(() => r(false), 1000))]);
+    raw.ok = raw.readback.mismatches === 0 && raw.compilation.every(m => !m.startsWith('error'));
+  } catch (error) { raw.error = `${error.code || error.name}: ${error.message}`; }
+  return { slots: [{ slot: params.get('runMode'), raw }], invalidations: [] };
 }
 ```
+
+After `destroy()`, the epoch has already advanced. `device.lost` therefore resolves with reason
+`destroyed`, while the epoch-guarded handler in `acquire` does **not** call `signalLoss`
+again. `lossHandlerFired` is expected to be `false` for intentional destruction. That
+expectation is part of the evidence.
 
 - [ ] **Step 7: Write the Node probe entry point**
 
@@ -4119,260 +4239,486 @@ import { chromium } from 'playwright';
 import { resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { ROOT, HARNESS_PATH, ensureServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
+import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
 import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord } from './evidence.mjs';
 
 process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
 const fixture = await fixtureIdentity();
 const implementation = await implementationIdentity();
 const runDir = await newRunDir('probe');
-const server = await ensureServer();
-let failures = 0;
+let failures = 0, server;
 try {
+  server = await startServer();
   for (const mode of ['headed', 'headless']) {
-    const { context, requestedArgs } = await launchChrome({ headless: mode === 'headless', profileKind: `probe-${mode}`, chromium });
+    let launched;
     try {
-      const commandLine = await effectiveCommandLine(context); assertSandboxed(commandLine);
-      const gpuPage = await context.newPage(); await gpuPage.goto('chrome://gpu');
-      await gpuPage.waitForTimeout(1500);  // chrome://gpu fills its tables asynchronously
+      launched = await launchChrome({ headless: mode === 'headless', profileKind: `probe-${mode}`, chromium });
+      const commandLine = await effectiveCommandLine(launched.context); assertSandboxed(commandLine);
+      const page = await launched.context.newPage();
+      await page.goto(`${server.url}${HARNESS_PATH}?mode=probe&runMode=${mode}`);
+      const result = await page.waitForFunction(() => window.p0Result, null, { timeout: 60000 }).then(h => h.jsonValue());
+      const probe = result.error ? { ok: false, error: result.error } : result.slots[0].raw;
+      const gpuPage = await launched.context.newPage(); await gpuPage.goto('chrome://gpu'); await gpuPage.waitForTimeout(1500);
       const chromeGpuText = await gpuPage.locator('body').innerText(); await gpuPage.close();
-      const page = await context.newPage();
-      await page.goto(`${server.url}${HARNESS_PATH}?mode=probe${mode === 'headless' ? '&headless' : ''}`);
-      const probe = await page.waitForFunction(() => window.p0Probe, null, { timeout: 60000 }).then(h => h.jsonValue());
-      if (mode === 'headed' && probe.ok) await page.screenshot({ path: resolve(runDir, `probe-${mode}.png`) });
-      // A persistent context has no Browser object; take the version from `google-chrome --version`
-      // and the executable from the first token of chrome://version's command line.
       const browserVersion = (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim();
-      const browserExecutable = commandLine.split(/\s+/)[0];
-      let env; try { env = environmentIdentity(chromeGpuText, { browserVersion, browserExecutable, session: process.env.XDG_SESSION_TYPE || 'unknown' }); } catch (e) { env = { error: e.message }; }
-      const record = { schema: 1, id: `probe-${mode}`, gate: 'probe', slot: mode, identity: { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity({ requestedArgs, mode, commandLine }), ...env }, invalidations: [], metrics: {} };
-      await writeRecord(runDir, record, [{ name: `probe-${mode}.json`, data: JSON.stringify({ probe, commandLine }, null, 2) }, { name: `chrome-gpu-${mode}.txt`, data: chromeGpuText }]);
-      console.log(`${mode}: ${probe.ok ? 'PROBE OK' : 'PROBE FAILED'} ${probe.error || ''} vendor=${probe.info?.vendor} fallback=${probe.info?.isFallbackAdapter} mismatches=${probe.readback?.mismatches}`);
+      const invalidations = []; let env;
+      try { env = environmentIdentity(chromeGpuText, { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: process.env.XDG_SESSION_TYPE || 'unknown' }); }
+      catch (e) { env = { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], driver: 'unknown', session: process.env.XDG_SESSION_TYPE || 'unknown' }; invalidations.push(`environment identity: ${e.message}`); }
+      const record = { schema: 1, id: `probe-${mode}`, gate: 'probe', slot: mode, campaign: 'probe', identity: { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity({ requestedArgs: launched.requestedArgs, mode, commandLine }), ...env }, invalidations, metrics: {} };
+      await writeRecord(runDir, record, [
+        { name: `probe-${mode}.raw.json`, data: JSON.stringify(probe) },
+        { name: `probe-${mode}.launch.json`, data: JSON.stringify({ requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile }) },
+        { name: `probe-${mode}.chrome-gpu.txt`, data: chromeGpuText }]);
+      console.log(`${mode}: ${probe.ok ? 'PROBE OK' : 'PROBE FAILED'} ${probe.error || ''} vendor=${probe.info?.vendor} fallback=${probe.info?.isFallbackAdapter} (${probe.info?.fallbackSource}) mismatches=${probe.readback?.mismatches}`);
       if (!probe.ok) failures++;
-    } finally { await context.close(); }
+    } catch (error) { console.log(`${mode}: PROBE FAILED ${error.message}`); failures++; }
+    finally { await launched?.context.close(); }
   }
-} finally { await server.stop(); }
+} finally { await server?.stop(); }
 console.log(`evidence: ${runDir}`);
 process.exitCode = failures ? 1 : 0;
 ```
 
-`gate: 'probe'` is outside `GATES`, so `evaluateGate` never counts probe records as
-qualification evidence. G1's formal trials run in T10. The probe exists to discover failures
-early.
+`gate: 'probe'` lies outside `GATES`, so probe records never count as qualification evidence.
 
-- [ ] **Step 8: Run the probe (the first GPU run)**
-
-Run: `node spikes/project0/probe.mjs`
-Expected, if WebGPU works in both modes:
-- `headed: PROBE OK … vendor=nvidia fallback=false mismatches=0`;
-- `headless: PROBE OK …` with the same fields;
-- an `evidence:` path.
-
-**If either mode prints `PROBE FAILED`, do not work around it in this task:**
-1. Record the failure: the `no-api` or `no-adapter` code, the `chrome://gpu` text and the
-   command line are already saved.
-2. Continue the plan. T6–T9 can still be developed against whichever mode works.
-3. Take the classification and the single remediation decision to T10, jointly with Codex.
-
-A failure to launch Chrome at all is *inconclusive* evidence, not a backend failure.
-
-- [ ] **Step 9: Commit** (after Codex's read-only review)
+- [ ] **Step 8: Commit, after Codex's read-only review, and before any GPU run**
 
 ```bash
-git add spikes/project0/evidence.mjs spikes/project0/gpu/device.js spikes/project0/gpu/probe.wgsl spikes/project0/browser/main.js spikes/project0/probe.mjs spikes/project0/tests/evidence.test.mjs
-git commit -m "Project 0 T5: evidence identity, WebGPU device module and first hardware probe"
+git add spikes/project0/evidence.mjs spikes/project0/gpu/device.js spikes/project0/gpu/probe.wgsl spikes/project0/browser/probe.js spikes/project0/probe.mjs spikes/project0/tests/evidence.test.mjs
+git commit -m "Project 0 T5: verified evidence identity, WebGPU device module with synchronous loss path, hardware probe"
 ```
+
+- [ ] **Step 9: Run the probe (the first GPU run)**
+
+Run: `node spikes/project0/probe.mjs`
+
+If WebGPU works in both modes, the expected output is:
+- `headed: PROBE OK … vendor=nvidia fallback=false (…) mismatches=0`;
+- `headless: PROBE OK …`;
+- an `evidence:` path.
+
+`PROBE FAILED` is **not** worked around in this task:
+- the failure code, `chrome://gpu` and the command line are already saved;
+- T6–T9 continue against whichever mode works;
+- the classification and the single remediation decision are taken jointly in T10.
+
+A failure to launch Chrome at all is *inconclusive* evidence.
 
 ---
 
-### Task T6: GPU arithmetic and ray-list kernels; G3–G5 checks
+### Task T6: Allocator, watchdog, WGSL arithmetic and ray-list kernels, strict decoding, registries and the gate runner (G3–G5)
 
-**Owner:** Claude, with WGSL written from spec A.2–A.4 and the policy text, independently of
-`reference/`. **Reviewer:** Codex (read-only `review --diff`). Codex checks semantics against
-the spec, not by line-matching its own CPU code.
+**Owner:** Claude, with WGSL written from spec A.2–A.4 and the agreed range policy,
+independently of `reference/`. **Reviewer:** Codex (read-only `review --diff`). Codex checks
+the semantics against the spec, not by line-matching its own CPU code.
 
 **Files:**
-- `spikes/project0/gpu/fields.wgsl`: status codes, the derivative range policy, the Mandelbulb
-  kernel, the analytic and Menger fields, the quaternion square.
-- `spikes/project0/gpu/arithmetic.wgsl`: entry points for `bulb_samples`, `qjulia_plane`,
-  `qjulia_offplane` and `derivative_policy`.
-- `spikes/project0/gpu/trace.wgsl`: bounding intervals, the marcher (`trace_ray`), and the
-  ray-list entry point `trace_list`.
-- `spikes/project0/gpu/webgpu.js`: shader assembly, asynchronous pipeline preparation, buffer
-  helpers, and bounded batched dispatch.
-- `spikes/project0/browser/checks.js`: in-page drivers for `G3`, `G4`, `G5` and
-  `derivative-policy`. They return raw readbacks only, never a pass.
-- `spikes/project0/measure.mjs`: Node; derives gate metrics from raw readbacks and fixtures.
-- `spikes/project0/run.mjs`: the Node gate runner (fresh session → driver → metrics → record).
-- Modify `spikes/project0/browser/main.js`: adds `?mode=gate`.
-- Test: `spikes/project0/tests/measure.test.mjs`.
+- `spikes/project0/gpu/alloc.js`: the session allocator. It checks the cap *before*
+  allocating and counts payload bytes, buffers, textures, pipelines and bind groups.
+- `spikes/project0/gpu/watchdog.js`: the live submission-progress watchdog, which stops after
+  5 s without progress.
+- `spikes/project0/gpu/fields.wgsl`, `gpu/arithmetic.wgsl`, `gpu/trace.wgsl`: the kernels.
+- `spikes/project0/gpu/webgpu.js`: shader assembly, pipeline preparation, allocator-aware
+  helpers, and bounded batched ray lists.
+- `spikes/project0/browser/packing.js`: pure packing of fixture data into GPU layouts.
+- `spikes/project0/browser/drivers/index.js`: the driver **registry**. It maps every gate name
+  to its module, including modules later tasks add.
+- `spikes/project0/browser/drivers/checks.js`: the `G3`, `G4`, `G5` and `derivative-policy`
+  drivers, which return raw readbacks only.
+- `spikes/project0/measure/decode.mjs`: strict readback validation and decoding.
+- `spikes/project0/measure/arith.mjs`: the G3–G5 metric derivations.
+- `spikes/project0/measure/index.mjs`: the metric **registry**, mapping each gate to its
+  derivation module.
+- `spikes/project0/run.mjs`: the complete Node runner, in its final form, for every gate and
+  experiment.
+- Tests: `spikes/project0/tests/alloc.test.mjs`, `watchdog.test.mjs`, `packing.test.mjs`,
+  `decode.test.mjs` and `arith-metrics.test.mjs`.
 
 **Interfaces:**
 - Consumes:
-  - T1: `compareArithmetic`, `compareRays`, `ARITH_STATUS`, `RAY_STATUS`, `UNRESOLVED_REASON`,
-    `evaluateGate`, `gatePlan`;
-  - T3/T4 fixture keys: `analytic[name].{L, boxes, rays, effectiveOrigins, effectiveDirections}`,
-    `arithmetic.bulb[i].{id, input, reference, eligible}`, `arithmetic.plane[i]` with
-    `input = [x, y, C_r, C_i]`, `arithmetic.offplane.{q, C, orbit}`,
-    `derivativePolicy[i].{grow, dr, fits}`, `profiles.g3`;
-  - T5: `device.js` (`acquire`), `evidence.mjs`, `launch.mjs`.
+  - T1: `compareArithmetic`, `compareRays`, `ARITH_STATUS`, `RAY_STATUS`, `UNRESOLVED_REASON`;
+  - T4 keys: `analytic[name].{L, boxes, rays, effectiveOrigins, effectiveDirections}`,
+    `arithmetic.{bulb, plane, offplane}`, `arithmeticProtocol`, `derivativePolicy`,
+    `profiles.g3`;
+  - T5: `device.js`, `evidence.mjs`, `launch.mjs`.
 - Produces:
-  - **GPU status codes**, the order of the T1 vocabulary arrays:
+  - **GPU status codes**, the order of the T1 arrays:
     - arithmetic: `0 escaped`, `1 budget`, `2 failure`;
     - ray: `0 hit`, `1 miss`, `2 unresolved`, `3 failure`;
     - reason: `0 none`, `1 point`, `2 steps`.
-  - `prepare(device) → Promise<Pipelines>`. It creates every pipeline with
-    `createComputePipelineAsync`. Pipelines are keyed `bulb_samples`, `qjulia_plane`,
-    `qjulia_offplane`, `derivative_policy`, and `trace_list/<field>` for the fields `sphere`,
-    `box`, `menger`, `bulb`.
-  - `traceList({device, pipelines, field, profile, origins: Float32Array, directions: Float32Array, boxes?: Float32Array, batch = 512}) → Promise<{words: Uint32Array, batches: {start, count, submitMs, doneMs}[]}>`.
-    `words` holds four u32 per ray, `(status, reason, bitcast t, steps)`, which
-    `measure.decodeTrace` turns into rows. At most two batches are outstanding.
-  - `runGateCheck(gate, fixtures) → Promise<{slots: {slot, raw}[], invalidations: string[]}>`
-    in the browser.
-  - `metricsFor(gate, slot, raw, fixtures) → metrics` in Node, using exactly the metric names
-    `gatePlan` requires for that slot.
-  - `runGate({gate, mode, args, campaign?}) → Promise<{records, statuses}>` in Node, used by T9 and T10.
+  - `createAllocator({capBytes, onExceed?}) → alloc`, with:
+    - `texture(device, desc)` and `buffer(device, desc)`, which throw
+      `allocation cap exceeded` *before* allocating if the proposed total would exceed `capBytes`;
+    - `pipeline(p)` and `bindGroup(g)`, which count;
+    - `inventory() → {bytes, textures, buffers, pipelines, bindGroups, peakBytes}`;
+    - `destroyAll()`.
 
-- [ ] **Step 1: Write the failing Node tests for metric derivation**
+    Every resource's `destroy()` releases its accounting exactly once.
+  - `createWatchdog({stallMs = 5000, now?, every?}) → wd`, with:
+    - `submitted(id, meta) → done()`;
+    - `stopped`, a boolean: once set, no further submissions are allowed;
+    - `stall`, either `null` or `{atMs, outstanding: [{id, meta, ageMs}]}`;
+    - `check()`;
+    - `dispose()`.
+  - `prepare(device, alloc, status) → pipelines`, keyed by `bulb_samples`, `qjulia_plane`,
+    `qjulia_offplane`, `derivative_policy` and `trace_list/<sphere|box|menger|bulb>`.
+  - `upload(device, alloc, data, usage) → GPUBuffer` and
+    `readBack(device, alloc, buffer, size) → {bytes: ArrayBuffer, ms}`.
+  - `traceList({device, alloc, watchdog, pipelines, field, profile, origins, directions, boxes?, batch = 512}) → {words: Uint32Array, workMs, readMs, batches}`.
+    `workMs` covers first submission to last completion and **excludes** readback.
+  - `packBoxes(boxes) → Float32Array`, which throws if a box is not cubic;
+    `packRows(rows, fn) → Float32Array`; `vec4(flat3) → Float32Array`.
+  - `runGateDriver(gate, fixtures, params, status)` in the browser registry. Each driver
+    module exports `run(gate, fixtures, params, status) → {slots: [{slot, gate?, raw}], invalidations}`.
+  - `metricsFor(gate, slot, raw, fixtures) → Promise<metrics>` in the Node registry. Each
+    module exports `metrics(gate, slot, raw, fixtures)`.
+  - `decodeTrace(words, rows, {maxSteps})` and `decodeArith(words, rows, {minIndex, cap, de})`,
+    which throw on any malformed input.
+  - `runSession({gate, mode, args, campaign, experiment?}) → {records, runDir, result}` and
+    `runG2({args, campaign})`, used by T9, T10 and T12.
+
+- [ ] **Step 1: Write the failing tests**
 
 ```js
-// spikes/project0/tests/measure.test.mjs
+// spikes/project0/tests/alloc.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { metricsFor, decodeTrace, decodeArith } from '../measure.mjs';
-import { gatePlan } from '../gates.js';
+import { createAllocator } from '../gpu/alloc.js';
+globalThis.GPUTextureUsage ??= { STORAGE_BINDING: 8 };
+const device = { createBuffer: d => ({ ...d, destroy() { this.dead = (this.dead || 0) + 1; } }), createTexture: d => ({ ...d, destroy() {} }) };
 
+test('the allocator refuses an allocation that would exceed the cap, before allocating', () => {
+  const alloc = createAllocator({ capBytes: 1000 }); let created = 0;
+  const counting = { ...device, createBuffer: d => { created++; return device.createBuffer(d); } };
+  alloc.buffer(counting, { size: 600 });
+  assert.throws(() => alloc.buffer(counting, { size: 600 }), /allocation cap exceeded/);
+  assert.equal(created, 1);
+  assert.equal(alloc.inventory().bytes, 600);
+});
+
+test('payload bytes, counts and the peak are exact; destroy() releases once', () => {
+  const alloc = createAllocator({ capBytes: 2 ** 30 });
+  const b = alloc.buffer(device, { size: 256 });
+  const t = alloc.texture(device, { size: [4, 2], format: 'rgba16float' });
+  alloc.pipeline({}); alloc.bindGroup({});
+  assert.deepEqual(alloc.inventory(), { bytes: 256 + 64, textures: 1, buffers: 1, pipelines: 1, bindGroups: 1, peakBytes: 320 });
+  b.destroy(); b.destroy(); t.destroy();
+  assert.equal(b.dead, 1);
+  assert.deepEqual(alloc.inventory(), { bytes: 0, textures: 0, buffers: 0, pipelines: 1, bindGroups: 1, peakBytes: 320 });
+  assert.throws(() => alloc.texture(device, { size: [1, 1], format: 'bgra8unorm' }), /untracked texture format/);
+});
+```
+
+```js
+// spikes/project0/tests/watchdog.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createWatchdog } from '../gpu/watchdog.js';
+
+test('five seconds without progress stops further submissions and names the outstanding work', () => {
+  let t = 0; const wd = createWatchdog({ stallMs: 5000, now: () => t, every: null });
+  const doneA = wd.submitted('a', { gate: 'G6', generation: 1 }); wd.submitted('b', { gate: 'G6', generation: 1 });
+  t = 3000; doneA(); wd.check(); assert.equal(wd.stopped, false);      // progress at 3 s resets the clock
+  t = 7999; wd.check(); assert.equal(wd.stopped, false);
+  t = 8001; wd.check(); assert.equal(wd.stopped, true);
+  assert.deepEqual(wd.stall.outstanding.map(o => o.id), ['b']);
+  assert.throws(() => wd.submitted('c', {}), /watchdog stopped/);
+});
+
+test('an idle watchdog with nothing outstanding never stalls', () => {
+  let t = 0; const wd = createWatchdog({ stallMs: 5000, now: () => t, every: null });
+  t = 60000; wd.check(); assert.equal(wd.stopped, false);
+});
+```
+
+```js
+// spikes/project0/tests/packing.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { packBoxes, vec4 } from '../browser/packing.js';
+import { menger } from '../reference/geometry.js';
+
+test('Menger boxes pack as (centre, half-size) with no NaN, for 20 and 400 boxes', () => {
+  for (const [depth, count] of [[1, 20], [2, 400]]) {
+    const boxes = menger(depth), packed = packBoxes(boxes);
+    assert.equal(packed.length, 4 * count);
+    assert.ok(packed.every(Number.isFinite));
+    boxes.forEach((b, i) => { assert.deepEqual([...packed.subarray(4 * i, 4 * i + 3)], b.c.map(Math.fround)); assert.equal(packed[4 * i + 3], Math.fround(b.h[0])); });
+  }
+  assert.throws(() => packBoxes([{ c: [0, 0, 0], h: [1, 0.5, 0.25] }]), /cubic/);
+});
+
+test('vec4 pads flat xyz triples', () => {
+  assert.deepEqual([...vec4(new Float32Array([1, 2, 3, 4, 5, 6]))], [1, 2, 3, 0, 4, 5, 6, 0]);
+});
+```
+
+```js
+// spikes/project0/tests/decode.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { decodeTrace, decodeArith } from '../measure/decode.mjs';
+const f32bits = x => new Uint32Array(new Float32Array([x]).buffer)[0];
+
+test('a well-formed trace decodes onto the T1 vocabulary', () => {
+  const words = [0, 0, f32bits(3), 3, 1, 0, 0, 1, 2, 2, f32bits(4), 512, 2, 1, f32bits(1), 7];
+  assert.deepEqual(decodeTrace(words, 4, { maxSteps: 512 }), [
+    { id: 0, status: 'hit', reason: null, t: 3, steps: 3 }, { id: 1, status: 'miss', reason: null, t: null, steps: 1 },
+    { id: 2, status: 'unresolved', reason: 'steps', t: 4, steps: 512 }, { id: 3, status: 'unresolved', reason: 'point', t: 1, steps: 7 }]);
+});
+
+test('malformed readback is refused, never compared', () => {
+  const ok = [0, 0, f32bits(3), 3];
+  assert.throws(() => decodeTrace(ok.slice(0, 3), 1, { maxSteps: 512 }), /readback length/);
+  for (const bad of [null, 1.5, -1, 2 ** 32, NaN, '7']) assert.throws(() => decodeTrace([bad, 0, 0, 1], 1, { maxSteps: 512 }), /invalid readback word/);
+  assert.throws(() => decodeTrace([7, 0, 0, 1], 1, { maxSteps: 512 }), /unknown ray status code/);
+  assert.throws(() => decodeTrace([0, 2, f32bits(3), 3], 1, { maxSteps: 512 }), /reason on a resolved/);
+  assert.throws(() => decodeTrace([2, 0, f32bits(3), 3], 1, { maxSteps: 512 }), /unresolved ray without a reason/);
+  assert.throws(() => decodeTrace([0, 0, f32bits(3), 513], 1, { maxSteps: 512 }), /steps out of range/);
+  assert.throws(() => decodeTrace([0, 0, f32bits(NaN), 3], 1, { maxSteps: 512 }), /non-finite depth/);
+  assert.throws(() => decodeTrace([0, 0, f32bits(3), 0], 1, { maxSteps: 512 }), /hit after zero steps/);
+});
+
+test('arithmetic decoding checks status, index bounds and value finiteness', () => {
+  assert.deepEqual(decodeArith([0, 3, f32bits(1), f32bits(0.5)], 1, { minIndex: 1, cap: 64, de: true }), [{ id: 0, status: 'escaped', index: 3, logR: 1, de: 0.5 }]);
+  assert.deepEqual(decodeArith([1, 0, 0, 0], 1, { minIndex: 0, cap: 128, de: false }), [{ id: 0, status: 'budget', index: null, logR: null, de: null }]);
+  assert.throws(() => decodeArith([0, 65, f32bits(1), f32bits(1)], 1, { minIndex: 1, cap: 64, de: true }), /escape index out of range/);
+  assert.throws(() => decodeArith([0, 3, f32bits(Infinity), 0], 1, { minIndex: 1, cap: 64, de: true }), /non-finite/);
+  assert.throws(() => decodeArith([1, 4, 0, 0], 1, { minIndex: 0, cap: 128, de: false }), /budget result carries data/);
+  assert.throws(() => decodeArith([9, 0, 0, 0], 1, { minIndex: 0, cap: 128, de: false }), /unknown arithmetic status code/);
+});
+```
+
+```js
+// spikes/project0/tests/arith-metrics.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { metricsFor } from '../measure/index.mjs';
+import { gatePlan } from '../gates.js';
+const f32bits = x => new Uint32Array(new Float32Array([x]).buffer)[0];
+const eligible = n => Array.from({ length: n }, (_, id) => ({ id, eligible: true, reference: { status: 'budget', index: null, logR: null, de: null } }));
 const fixtures = {
-  analytic: { sphere: { L: 1, rays: [
-    { id: 0, reference: { status: 'hit', t: 3, excluded: false } },
-    { id: 1, reference: { status: 'miss', t: null, excluded: false } },
-    { id: 2, reference: { status: 'miss', t: null, excluded: true } }] } },
-  arithmetic: {
-    bulb: [{ id: 0, eligible: true, reference: { status: 'escaped', index: 3, logR: 1, de: .01 } }],
-    plane: [{ id: 0, eligible: true, reference: { status: 'budget', index: null, logR: null } }],
-    offplane: { orbit: Array.from({ length: 8 }, (_, n) => [n, -n, .5, 0]) },
-  },
+  profiles: { g3: { steps: 512 } },
+  arithmeticProtocol: { bulb: { iterations: 64, tolerances: { logR: 1e-4, de: 1e-3 } }, plane: { iterations: 128, tolerances: { logR: 1e-5 } }, offplane: { iterations: 8, absoluteTolerance: 1e-6, relativeTolerance: 1e-5 } },
+  analytic: { sphere: { L: 1, rays: [{ id: 0, reference: { status: 'hit', t: 3, excluded: false } }, { id: 1, reference: { status: 'miss', t: null, excluded: false } }] } },
+  arithmetic: { bulb: eligible(4096), plane: eligible(4096), offplane: { orbit: Array.from({ length: 8 }, (_, n) => [n, -n, 0.5, 0]) } },
 };
 
-test('decoders map GPU codes onto the T1 vocabulary', () => {
-  const words = new Uint32Array([0, 0, 0, 3, 1, 0, 0, 1, 2, 2, 0, 512]);
-  const f = new Float32Array(words.buffer); f[2] = 3;
-  assert.deepEqual(decodeTrace(words).slice(0, 3), [
-    { id: 0, status: 'hit', reason: null, t: 3, steps: 3 },
-    { id: 1, status: 'miss', reason: null, t: null, steps: 1 },
-    { id: 2, status: 'unresolved', reason: 'steps', t: 0, steps: 512 }]);
-  assert.throws(() => decodeTrace(new Uint32Array([7, 0, 0, 0])), /unknown ray status code/);
-  assert.throws(() => decodeArith(new Uint32Array([9, 0, 0, 0])), /unknown arithmetic status code/);
-});
-
-test('G3 metrics have exactly the gatePlan keys', () => {
-  const words = new Uint32Array([0, 0, 0, 3, 1, 0, 0, 1, 2, 2, 0, 512]);
-  new Float32Array(words.buffer)[2] = 3.00001;
-  const m = metricsFor('G3', 'sphere', { words: Array.from(words) }, fixtures);
+test('G3 metrics have exactly the gatePlan keys and measure depth error in units of 1e-4·L', async () => {
+  const m = await metricsFor('G3', 'sphere', { words: [0, 0, f32bits(3.00001), 4, 1, 0, 0, 1] }, fixtures);
   assert.deepEqual(Object.keys(m).sort(), ['depthRatio', 'edgeErrors', 'rays', 'statusErrors']);
-  assert.equal(m.statusErrors, 0); assert.equal(m.edgeErrors, 0);
-  assert.ok(m.depthRatio > .09 && m.depthRatio < .11);   // 1e-5 error / (1e-4 * L)
+  assert.ok(m.depthRatio > 0.09 && m.depthRatio < 0.11);
 });
 
-test('G5 off-plane metric is the max relative-plus-absolute component ratio over 32 components', () => {
-  const orbit = fixtures.arithmetic.offplane.orbit.flat();
-  const actual = orbit.map((v, i) => i === 5 ? v + 2e-6 : v);
-  const m = metricsFor('G5', 'qjulia-offplane', { orbit: actual }, fixtures);
+test('G4/G5 metrics match the plan keys; a short readback is refused', async () => {
+  const plan = gatePlan({ analytic: {}, arithmetic: { bulb: eligible(4096), plane: eligible(4096) } });
+  const words = Array.from({ length: 4 * 4096 }, (_, i) => (i % 4 === 0 ? 1 : 0));
+  assert.deepEqual(Object.keys(await metricsFor('G4', 'bulb-samples', { words }, fixtures)).sort(), Object.keys(plan.G4['bulb-samples']).sort());
+  assert.deepEqual(Object.keys(await metricsFor('G5', 'qjulia-plane', { words }, fixtures)).sort(), Object.keys(plan.G5['qjulia-plane']).sort());
+  await assert.rejects(metricsFor('G4', 'bulb-samples', { words: words.slice(4) }, fixtures), /readback length/);
+});
+
+test('G5 off-plane uses abs + rel tolerance over exactly 32 finite components', async () => {
+  const orbit = fixtures.arithmetic.offplane.orbit.flat(), actual = orbit.map((v, i) => (i === 5 ? v + 2e-6 : v));
+  const m = await metricsFor('G5', 'qjulia-offplane', { orbit: actual }, fixtures);
   assert.equal(m.components, 32);
   assert.ok(Math.abs(m.componentRatio - 2e-6 / (1e-6 + 1e-5 * 1)) < 1e-9);
+  await assert.rejects(metricsFor('G5', 'qjulia-offplane', { orbit: actual.slice(1) }, fixtures), /32 components/);
+  await assert.rejects(metricsFor('G5', 'qjulia-offplane', { orbit: actual.map((v, i) => (i ? v : null)) }, fixtures), /finite/);
 });
 
-test('G4 and G5 plane metrics match the plan keys', () => {
-  const words = new Uint32Array([0, 3, 0, 0]); const f = new Float32Array(words.buffer); f[2] = 1; f[3] = .01;
-  const plan = gatePlan({ analytic: {}, arithmetic: { bulb: Array.from({ length: 4096 }, () => ({ eligible: true })), plane: Array.from({ length: 4096 }, () => ({ eligible: true })) } });
-  const g4 = metricsFor('G4', 'bulb-samples', { words: Array.from(words) }, fixtures);
-  assert.deepEqual(Object.keys(g4).sort(), Object.keys(plan.G4['bulb-samples']).sort());
-  const g5 = metricsFor('G5', 'qjulia-plane', { words: [1, 0, 0, 0] }, fixtures);
-  assert.deepEqual(Object.keys(g5).sort(), Object.keys(plan.G5['qjulia-plane']).sort());
+test('an unregistered gate has no derivation', async () => {
+  await assert.rejects(metricsFor('G99', 'x', {}, fixtures), /no metric derivation for G99/);
 });
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `node --test spikes/project0/tests/measure.test.mjs`
-Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `spikes/project0/measure.mjs`.
+Run: `node --test spikes/project0/tests/alloc.test.mjs spikes/project0/tests/watchdog.test.mjs spikes/project0/tests/packing.test.mjs spikes/project0/tests/decode.test.mjs spikes/project0/tests/arith-metrics.test.mjs`
+Expected: FAIL, with `ERR_MODULE_NOT_FOUND` for `gpu/alloc.js`, `gpu/watchdog.js`,
+`browser/packing.js`, `measure/decode.mjs` and `measure/index.mjs`.
 
-- [ ] **Step 3: Implement `measure.mjs` (G3–G5 part; T9 extends it)**
+- [ ] **Step 3: Implement the pure modules**
 
 ```js
-// spikes/project0/measure.mjs — Node: raw readbacks + fixtures → gate metrics. No pass/fail here.
-import { ARITH_STATUS, RAY_STATUS, UNRESOLVED_REASON } from './contract.js';
-import { compareArithmetic, compareRays } from './metrics.js';
+// spikes/project0/gpu/alloc.js — every explicit harness buffer and texture goes through this (spec A.8 accounting).
+export const BYTES_PER_TEXEL = Object.freeze({ r32float: 4, rgba16float: 8, r32uint: 4, rgba32float: 16, rgba8unorm: 4 });
+export function textureBytes({ size: [w, h], format }) {
+  if (!(format in BYTES_PER_TEXEL)) throw new Error(`untracked texture format ${format}`);
+  return w * h * BYTES_PER_TEXEL[format];
+}
+export function createAllocator({ capBytes }) {
+  const inv = { bytes: 0, textures: 0, buffers: 0, pipelines: 0, bindGroups: 0, peakBytes: 0 };
+  const live = new Set();
+  function admit(bytes) { if (inv.bytes + bytes > capBytes) throw new Error(`allocation cap exceeded: ${inv.bytes} + ${bytes} > ${capBytes}`); }
+  function track(resource, bytes, key) {
+    inv.bytes += bytes; inv[key]++; inv.peakBytes = Math.max(inv.peakBytes, inv.bytes); live.add(resource);
+    const original = resource.destroy.bind(resource); let alive = true;
+    resource.destroy = () => { if (alive) { alive = false; inv.bytes -= bytes; inv[key]--; live.delete(resource); original(); } };
+    return resource;
+  }
+  return {
+    texture(device, desc) { const bytes = textureBytes(desc); admit(bytes); return track(device.createTexture(desc), bytes, 'textures'); },
+    buffer(device, desc) { admit(desc.size); return track(device.createBuffer(desc), desc.size, 'buffers'); },
+    pipeline(p) { inv.pipelines++; return p; },
+    bindGroup(g) { inv.bindGroups++; return g; },
+    inventory: () => ({ ...inv }),
+    destroyAll() { for (const r of [...live]) r.destroy(); },
+  };
+}
+```
 
-const REASON = [null, ...UNRESOLVED_REASON];
+```js
+// spikes/project0/gpu/watchdog.js — spec §7: 5 s without observable submission progress stops the experiment.
+export function createWatchdog({ stallMs = 5000, now = () => performance.now(), every = 250 } = {}) {
+  const outstanding = new Map(); let lastProgress = now(), seq = 0, timer = null;
+  const wd = {
+    stopped: false, stall: null,
+    submitted(id, meta = {}) {
+      if (wd.stopped) throw new Error('watchdog stopped: no further submissions');
+      const key = `${id}#${seq++}`; outstanding.set(key, { id, meta, at: now() });
+      if (outstanding.size === 1) lastProgress = now();
+      return () => { if (outstanding.delete(key)) lastProgress = now(); };
+    },
+    check() {
+      if (wd.stopped || outstanding.size === 0) return;
+      const t = now();
+      if (t - lastProgress > stallMs) { wd.stopped = true; wd.stall = { atMs: t, outstanding: [...outstanding.values()].map(o => ({ id: o.id, meta: o.meta, ageMs: t - o.at })) }; }
+    },
+    dispose() { if (timer) clearInterval(timer); },
+  };
+  if (every) timer = setInterval(() => wd.check(), every);
+  return wd;
+}
+```
 
-export function decodeTrace(words) {
-  const u = Uint32Array.from(words), f = new Float32Array(u.buffer);
-  const rows = [];
-  for (let id = 0; id < u.length / 4; id++) {
-    const code = u[4 * id], reason = u[4 * id + 1];
-    if (!(code in RAY_STATUS)) throw new Error(`unknown ray status code ${code}`);
-    if (!(reason in REASON)) throw new Error(`unknown reason code ${reason}`);
+```js
+// spikes/project0/browser/packing.js — fixture data → GPU layouts (pure; tested in Node).
+export function vec4(flat3) {
+  const n = flat3.length / 3, out = new Float32Array(4 * n);
+  for (let i = 0; i < n; i++) out.set(flat3.subarray(3 * i, 3 * i + 3), 4 * i);
+  return out;
+}
+export function packBoxes(boxes) {
+  return new Float32Array(boxes.flatMap(({ c, h }) => {
+    if (h.length !== 3 || !h.every(v => Number.isFinite(v) && v > 0 && v === h[0])) throw new Error('Menger upload requires cubic boxes');
+    return [...c, h[0]];
+  }));
+}
+export function packRows(rows, fn) {
+  const out = new Float32Array(4 * rows.length);
+  rows.forEach((r, i) => { const v = fn(r); if (v.length !== 4) throw new Error('packRows needs four lanes per row'); out.set(v, 4 * i); });
+  return out;
+}
+```
+
+```js
+// spikes/project0/measure/decode.mjs — strict readback validation. Malformed evidence throws; it is never compared.
+import { ARITH_STATUS, RAY_STATUS, UNRESOLVED_REASON } from '../contract.js';
+
+export function checkedWords(words, expectedRows) {
+  if (!(Array.isArray(words) || words instanceof Uint32Array) || words.length !== 4 * expectedRows) throw new Error(`readback length mismatch: ${words?.length} words for ${expectedRows} rows`);
+  for (const w of words) if (typeof w !== 'number' || !Number.isInteger(w) || w < 0 || w > 0xffffffff) throw new Error(`invalid readback word: ${w}`);
+  return Uint32Array.from(words);
+}
+
+export function decodeTrace(words, expectedRows, { maxSteps }) {
+  const u = checkedWords(words, expectedRows), f = new Float32Array(u.buffer), rows = [];
+  for (let id = 0; id < expectedRows; id++) {
+    const code = u[4 * id], reasonCode = u[4 * id + 1], t = f[4 * id + 2], steps = u[4 * id + 3];
+    if (!(code < RAY_STATUS.length)) throw new Error(`row ${id}: unknown ray status code ${code}`);
     const status = RAY_STATUS[code];
-    rows.push({ id, status, reason: status === 'unresolved' ? REASON[reason] : null, t: status === 'miss' ? null : f[4 * id + 2], steps: u[4 * id + 3] });
+    if (status === 'unresolved') { if (reasonCode !== 1 && reasonCode !== 2) throw new Error(`row ${id}: unresolved ray without a reason`); }
+    else if (reasonCode !== 0) throw new Error(`row ${id}: reason on a resolved or failed ray`);
+    if (steps > maxSteps) throw new Error(`row ${id}: steps out of range (${steps} > ${maxSteps})`);
+    if (status !== 'miss' && !(Number.isFinite(t) && t >= 0)) throw new Error(`row ${id}: non-finite depth`);
+    if (status === 'hit' && steps < 1) throw new Error(`row ${id}: hit after zero steps`);
+    rows.push({ id, status, reason: status === 'unresolved' ? UNRESOLVED_REASON[reasonCode - 1] : null, t: status === 'miss' ? null : t, steps });
   }
   return rows;
 }
 
-export function decodeArith(words) {
-  const u = Uint32Array.from(words), f = new Float32Array(u.buffer);
-  const rows = [];
-  for (let id = 0; id < u.length / 4; id++) {
+export function decodeArith(words, expectedRows, { minIndex, cap, de }) {
+  const u = checkedWords(words, expectedRows), f = new Float32Array(u.buffer), rows = [];
+  for (let id = 0; id < expectedRows; id++) {
     const code = u[4 * id];
-    if (!(code in ARITH_STATUS)) throw new Error(`unknown arithmetic status code ${code}`);
-    const status = ARITH_STATUS[code], escaped = status === 'escaped';
-    rows.push({ id, status, index: escaped ? u[4 * id + 1] : null, logR: escaped ? f[4 * id + 2] : null, de: escaped ? f[4 * id + 3] : null });
+    if (!(code < ARITH_STATUS.length)) throw new Error(`row ${id}: unknown arithmetic status code ${code}`);
+    const status = ARITH_STATUS[code];
+    if (status === 'escaped') {
+      const index = u[4 * id + 1], logR = f[4 * id + 2], d = f[4 * id + 3];
+      if (index < minIndex || index > cap) throw new Error(`row ${id}: escape index out of range (${index})`);
+      if (!Number.isFinite(logR) || (de && !(Number.isFinite(d) && d >= 0))) throw new Error(`row ${id}: non-finite escaped value`);
+      rows.push({ id, status, index, logR, de: de ? d : null });
+    } else if (status === 'budget') {
+      if (u[4 * id + 1] || u[4 * id + 2] || u[4 * id + 3]) throw new Error(`row ${id}: budget result carries data`);
+      rows.push({ id, status, index: null, logR: null, de: null });
+    } else {
+      if (u[4 * id + 1] < 1 || u[4 * id + 1] > cap) throw new Error(`row ${id}: failure index out of range`);
+      rows.push({ id, status, index: null, logR: null, de: null });
+    }
   }
   return rows;
 }
+```
 
-export function metricsFor(gate, slot, raw, fixtures) {
+```js
+// spikes/project0/measure/arith.mjs — G3/G4/G5 metrics from raw readbacks and the frozen fixtures.
+import { compareArithmetic, compareRays } from '../metrics.js';
+import { decodeTrace, decodeArith } from './decode.mjs';
+
+export function metrics(gate, slot, raw, fx) {
   if (gate === 'G3') {
-    const fixture = fixtures.analytic[slot];
-    return compareRays(fixture.rays, decodeTrace(raw.words), fixture.L);
+    const fixture = fx.analytic[slot]; if (!fixture) throw new Error(`G3: unknown analytic fixture ${slot}`);
+    return compareRays(fixture.rays, decodeTrace(raw.words, fixture.rays.length, { maxSteps: fx.profiles.g3.steps }), fixture.L);
   }
   if (gate === 'G4' && slot === 'bulb-samples') {
-    return compareArithmetic(fixtures.arithmetic.bulb, decodeArith(raw.words), { logR: 1e-4, de: 1e-3 });
+    const p = fx.arithmeticProtocol.bulb;
+    return compareArithmetic(fx.arithmetic.bulb, decodeArith(raw.words, fx.arithmetic.bulb.length, { minIndex: 1, cap: p.iterations, de: true }), p.tolerances);
   }
   if (gate === 'G5' && slot === 'qjulia-plane') {
-    const rows = decodeArith(raw.words).map(({ id, status, index, logR }) => ({ id, status, index, logR }));
-    return compareArithmetic(fixtures.arithmetic.plane, rows, { logR: 1e-5 });
+    const p = fx.arithmeticProtocol.plane;
+    const rows = decodeArith(raw.words, fx.arithmetic.plane.length, { minIndex: 0, cap: p.iterations, de: false }).map(({ id, status, index, logR }) => ({ id, status, index, logR }));
+    return compareArithmetic(fx.arithmetic.plane, rows, p.tolerances);
   }
   if (gate === 'G5' && slot === 'qjulia-offplane') {
-    const expected = fixtures.arithmetic.offplane.orbit.flat();
-    if (raw.orbit.length !== 32 || expected.length !== 32) throw new Error('off-plane orbit must have 32 components');
+    const p = fx.arithmeticProtocol.offplane, expected = fx.arithmetic.offplane.orbit.flat();
+    if (!Array.isArray(raw.orbit) || raw.orbit.length !== 32 || expected.length !== 32) throw new Error('off-plane orbit must have exactly 32 components');
+    if (!raw.orbit.every(v => typeof v === 'number' && Number.isFinite(v))) throw new Error('off-plane orbit components must be finite numbers');
     let componentRatio = 0;
-    raw.orbit.forEach((v, i) => {
-      const r = Number.isFinite(v) ? Math.abs(v - expected[i]) / (1e-6 + 1e-5 * Math.abs(expected[i])) : Number.MAX_VALUE;
-      componentRatio = Math.max(componentRatio, r);
-    });
+    raw.orbit.forEach((v, i) => { componentRatio = Math.max(componentRatio, Math.abs(v - expected[i]) / (p.absoluteTolerance + p.relativeTolerance * Math.abs(expected[i]))); });
     return { components: 32, componentRatio };
   }
   throw new Error(`no metric derivation for ${gate}/${slot}`);
 }
 ```
 
+```js
+// spikes/project0/measure/index.mjs — the metric registry. Later tasks add the modules it names.
+const GROUPS = { G3: './arith.mjs', G4: './arith.mjs', G5: './arith.mjs',
+  G11: './resources.mjs', G13: './lifecycle.mjs',                                                  // T8
+  G1: './timing.mjs', G2: './timing.mjs', G6: './timing.mjs', G7: './timing.mjs', G8: './timing.mjs', G9: './timing.mjs', G10: './timing.mjs', G12: './timing.mjs' };  // T9
+export async function metricsFor(gate, slot, raw, fixtures) {
+  const path = GROUPS[gate];
+  if (!path) throw new Error(`no metric derivation for ${gate}`);
+  return (await import(path)).metrics(gate, slot, raw, fixtures);
+}
+```
+
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `node --test spikes/project0/tests/measure.test.mjs`
-Expected: PASS, `# pass 4`, `# fail 0`.
+Run the Step 2 command again.
+Expected: PASS, `# pass 13`, `# fail 0`.
 
 - [ ] **Step 5: Write `gpu/fields.wgsl`**
 
 ```wgsl
-// spikes/project0/gpu/fields.wgsl — written from spec A.2–A.4 and the derivative range policy.
+// spikes/project0/gpu/fields.wgsl — written from spec A.2–A.4 and the agreed derivative range policy.
 const ST_ESCAPED: u32 = 0u;  const ST_BUDGET: u32 = 1u;  const ST_FAILURE: u32 = 2u;   // T1 ARITH_STATUS order
 struct Eval { status: u32, index: u32, log_r: f32, de: f32 }
 
-// Range policy: the update grow*dr + 1 is allowed iff its exact real value is <= F32_MAX, for nonnegative
-// finite f32 operands. Decided from exponents and an exact 24x24-bit significand product, so no
-// operation that could overflow is ever executed.
+// Range policy: the update grow*dr + 1 is allowed iff its exact real value is <= F32_MAX, for nonnegative finite
+// f32 operands. Decided from exponents and an exact 24x24-bit significand product; no operation that could
+// overflow is executed.
 fn derivative_fits(grow: f32, dr: f32) -> bool {
   if (grow == 0.0 || dr == 0.0) { return true; }
   let g = frexp(grow);  let d = frexp(dr);           // fract in [0.5, 1)
@@ -4385,7 +4731,7 @@ fn derivative_fits(grow: f32, dr: f32) -> bool {
   var lo = a0 * b0 + ((mid & 0xfffu) << 12u);
   let hi = a1 * b1 + (mid >> 12u) + (lo >> 24u);      // 48-bit product = hi * 2^24 + lo
   lo = lo & 0xffffffu;
-  // F32_MAX = (2^24 - 1) * 2^104. With product = mg*md*2^(e-48):
+  // F32_MAX = (2^24 - 1) * 2^104, with product = mg*md*2^(e-48):
   if (e == 128) { return hi <= 0xfffffeu; }                          // mg*md <= 2^48 - 2^24 - 1
   return hi < 0x7fffffu || (hi == 0x7fffffu && lo <= 0x7fffffu);     // e == 129: mg*md <= 2^47 - 2^23 - 1
 }
@@ -4403,7 +4749,7 @@ fn bulb_eval(p: vec3f, cap: u32) -> Eval {
       var phi: f32 = 0.0;
       if (z.x != 0.0 || z.y != 0.0) { phi = atan2(z.y, z.x); }
       let r2 = r * r;  let r4 = r2 * r2;
-      grow = 8.0 * r4 * r2 * r;                        // r <= 2, so grow <= 1024
+      grow = 8.0 * r4 * r2 * r;                        // r <= 2 here, so grow <= 1024
       let s = sin(8.0 * theta);
       w = (r4 * r4) * vec3f(s * cos(8.0 * phi), s * sin(8.0 * phi), cos(8.0 * theta));
     }
@@ -4420,16 +4766,19 @@ fn bulb_eval(p: vec3f, cap: u32) -> Eval {
 fn qsq(q: vec4f) -> vec4f {   // (a,b,c,d)^2 = (a^2 - b^2 - c^2 - d^2, 2ab, 2ac, 2ad)
   return vec4f(q.x * q.x - q.y * q.y - q.z * q.z - q.w * q.w, 2.0 * q.x * q.y, 2.0 * q.x * q.z, 2.0 * q.x * q.w);
 }
-
 fn rot_z(p: vec3f, a: f32) -> vec3f { let c = cos(a); let s = sin(a); return vec3f(c * p.x - s * p.y, s * p.x + c * p.y, p.z); }
 fn box_distance(p: vec3f, c: vec3f, h: vec3f) -> f32 { return length(max(abs(p - c) - h, vec3f(0.0))); }
 fn sphere_distance(p: vec3f) -> f32 { return length(p) - 1.0; }
 fn rotated_box_distance(p: vec3f) -> f32 { return box_distance(rot_z(p, -0.52359877559829887), vec3f(0.0), vec3f(1.0, 0.5, 0.25)); }
 ```
 
+The WGSL guard's algorithm was checked during planning by a line-for-line CPU port against
+T2's exact `derivativeFitsF32`: 300,105 vectors, including every boundary class, with 0
+mismatches. Step 12 checks the shader itself on the GPU.
+
 - [ ] **Step 6: Write `gpu/arithmetic.wgsl`**
 
-It is prepended with `fields.wgsl` at assembly time.
+It is prepended with `fields.wgsl` at assembly.
 
 ```wgsl
 // spikes/project0/gpu/arithmetic.wgsl — G4/G5 sample entry points and the policy readback.
@@ -4445,7 +4794,7 @@ fn bulb_samples(@builtin(global_invocation_id) id: vec3u) {
   outputs[id.x] = vec4u(e.status, e.index, bitcast<u32>(e.log_r), bitcast<u32>(e.de));
 }
 
-// The quaternion recurrence on q0 = (x, y, 0, 0), C = (Cr, Ci, 0, 0); escape tested at n = 0 .. cap.
+// Quaternion recurrence on q0 = (x, y, 0, 0) with C = (Cr, Ci, 0, 0); escape tested at n = 0 .. cap.
 @compute @workgroup_size(64)
 fn qjulia_plane(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= count.n) { return; }
@@ -4462,7 +4811,7 @@ fn qjulia_plane(@builtin(global_invocation_id) id: vec3u) {
   outputs[id.x] = out;
 }
 
-// inputs[0] = q0, inputs[1] = C; writes eight iterates as bitcast vec4f.
+// inputs[0] = q0, inputs[1] = C; eight iterates written as bitcast vec4f. Statically uses bindings 1 and 2 only.
 @compute @workgroup_size(1)
 fn qjulia_offplane() {
   var q = inputs[0];
@@ -4470,7 +4819,6 @@ fn qjulia_offplane() {
   for (var n: u32 = 0u; n < 8u; n++) { q = qsq(q) + c; outputs[n] = bitcast<vec4u>(q); }
 }
 
-// inputs[i].xy = (grow, dr); outputs[i].x = 1 if the update fits.
 @compute @workgroup_size(64)
 fn derivative_policy(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= count.n) { return; }
@@ -4483,7 +4831,8 @@ fn derivative_policy(@builtin(global_invocation_id) id: vec3u) {
 It is prepended with `fields.wgsl`, and specialised per field with the `FIELD` override.
 
 ```wgsl
-// spikes/project0/gpu/trace.wgsl — A.2 marcher. Ray status order follows T1 RAY_STATUS.
+// spikes/project0/gpu/trace.wgsl — the A.2 marcher. Step accounting follows the spec: exit test at step start,
+// steps = step + 1 when an evaluation terminates the ray.
 const RAY_HIT: u32 = 0u;  const RAY_MISS: u32 = 1u;  const RAY_UNRESOLVED: u32 = 2u;  const RAY_FAILURE: u32 = 3u;
 const WHY_NONE: u32 = 0u;  const WHY_POINT: u32 = 1u;  const WHY_STEPS: u32 = 2u;
 override FIELD: u32 = 3u;   // 0 sphere, 1 rotated box, 2 Menger union (boxes buffer), 3 Mandelbulb
@@ -4505,22 +4854,22 @@ fn field(p: vec3f) -> Eval {
   return bulb_eval(p, prof.iterations);
 }
 
-// Returns (entry, exit, ok). Sphere radius: 2 for sphere/box, 1.25 for the bulb. Box [-1,1]^3 for Menger.
+// (entry, exit, ok). Sphere radius 2 for sphere/box, 1.25 for the bulb; box [-1,1]^3 for Menger.
 fn bound(o: vec3f, d: vec3f) -> vec3f {
   if (FIELD == 2u) {
     var lo = -3.4028234e38;  var hi = 3.4028234e38;
     for (var i: u32 = 0u; i < 3u; i++) {
-      if (d[i] == 0.0) { if (o[i] < -1.0 || o[i] > 1.0) { return vec3f(0.0, 0.0, 0.0); } continue; }
+      if (d[i] == 0.0) { if (o[i] < -1.0 || o[i] > 1.0) { return vec3f(0.0); } continue; }
       let x = (-1.0 - o[i]) / d[i];  let y = (1.0 - o[i]) / d[i];
       lo = max(lo, min(x, y));  hi = min(hi, max(x, y));
-      if (lo > hi) { return vec3f(0.0, 0.0, 0.0); }
+      if (lo > hi) { return vec3f(0.0); }
     }
     return vec3f(lo, hi, 1.0);
   }
   let radius = select(2.0, 1.25, FIELD == 3u);
   let a = dot(d, d);  let b = dot(o, d);  let c = dot(o, o) - radius * radius;
   let disc = b * b - a * c;
-  if (disc < 0.0) { return vec3f(0.0, 0.0, 0.0); }
+  if (disc < 0.0) { return vec3f(0.0); }
   let s = sqrt(disc);
   return vec3f((-b - s) / a, (-b + s) / a, 1.0);
 }
@@ -4554,249 +4903,347 @@ fn trace_list(@builtin(global_invocation_id) id: vec3u) {
 }
 ```
 
-- [ ] **Step 8: Write `gpu/webgpu.js` (preparation, helpers, bounded ray-list dispatch)**
+- [ ] **Step 8: Write `gpu/webgpu.js`**
 
 ```js
-// spikes/project0/gpu/webgpu.js — WebGPU backend helpers behind the harness interface.
-const FIELDS = { sphere: 0, box: 1, menger: 2, bulb: 3 };
-const source = async name => (await fetch(new URL(name, import.meta.url))).text();
+// spikes/project0/gpu/webgpu.js — WebGPU helpers. Every buffer goes through the session allocator; every batch through the watchdog.
+import { vec4 } from '../browser/packing.js';
+export const FIELDS = Object.freeze({ sphere: 0, box: 1, menger: 2, bulb: 3 });
 
-export async function prepare(device, onStatus = () => {}) {
+export async function source(name) {
+  const response = await fetch(new URL(name, import.meta.url));
+  if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`);
+  return response.text();
+}
+export async function compile(device, code, label) {
+  const module = device.createShaderModule({ code, label });
+  const errors = (await module.getCompilationInfo()).messages.filter(m => m.type === 'error');
+  if (errors.length) throw new Error(`${label}: ${errors.map(e => `${e.lineNum}:${e.linePos} ${e.message}`).join('; ')}`);
+  return module;
+}
+
+export async function prepare(device, alloc, onStatus = () => {}) {
   const fields = await source('./fields.wgsl');
-  const modules = { arithmetic: fields + await source('./arithmetic.wgsl'), trace: fields + await source('./trace.wgsl') };
-  const compiled = {};
-  for (const [name, code] of Object.entries(modules)) {
-    const module = device.createShaderModule({ code, label: name });
-    const errors = (await module.getCompilationInfo()).messages.filter(m => m.type === 'error');
-    if (errors.length) throw new Error(`${name}.wgsl: ${errors.map(e => `${e.lineNum}:${e.linePos} ${e.message}`).join('; ')}`);
-    compiled[name] = module;
-  }
+  const arithmetic = await compile(device, fields + await source('./arithmetic.wgsl'), 'arithmetic');
+  const trace = await compile(device, fields + await source('./trace.wgsl'), 'trace');
   const jobs = [
-    ...['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy'].map(entryPoint => [entryPoint, { module: compiled.arithmetic, entryPoint }]),
-    ...Object.entries(FIELDS).map(([field, id]) => [`trace_list/${field}`, { module: compiled.trace, entryPoint: 'trace_list', constants: { FIELD: id } }]),
+    ...['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy'].map(e => [e, { module: arithmetic, entryPoint: e }]),
+    ...Object.entries(FIELDS).map(([f, id]) => [`trace_list/${f}`, { module: trace, entryPoint: 'trace_list', constants: { FIELD: id } }]),
   ];
-  const pipelines = {};
-  let done = 0;
+  const pipelines = {}; let done = 0;
   await Promise.all(jobs.map(async ([key, compute]) => {
-    pipelines[key] = await device.createComputePipelineAsync({ layout: 'auto', compute, label: key });
+    pipelines[key] = alloc.pipeline(await device.createComputePipelineAsync({ layout: 'auto', compute, label: key }));
     onStatus(`preparing pipelines ${++done}/${jobs.length}`);
   }));
   return pipelines;
 }
 
-export function buffer(device, data, usage) {
-  const bytes = data.byteLength ? data : new Uint8Array(16);
-  const b = device.createBuffer({ size: Math.max(16, Math.ceil(bytes.byteLength / 16) * 16), usage: usage | GPUBufferUsage.COPY_DST });
-  device.queue.writeBuffer(b, 0, bytes);
+export function upload(device, alloc, data, usage) {
+  const size = Math.max(16, Math.ceil(data.byteLength / 16) * 16);
+  const b = alloc.buffer(device, { size, usage: usage | GPUBufferUsage.COPY_DST });
+  device.queue.writeBuffer(b, 0, data.buffer, data.byteOffset, data.byteLength);
   return b;
 }
 
-export async function readBack(device, source, size) {
-  const read = device.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
-  const enc = device.createCommandEncoder(); enc.copyBufferToBuffer(source, 0, read, 0, size); device.queue.submit([enc.finish()]);
-  await read.mapAsync(GPUMapMode.READ);
-  const out = read.getMappedRange().slice(0); read.unmap(); read.destroy();
-  return out;
+export async function readBack(device, alloc, src, size) {
+  const t0 = performance.now();
+  const read = alloc.buffer(device, { size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+  try {
+    const enc = device.createCommandEncoder(); enc.copyBufferToBuffer(src, 0, read, 0, size); device.queue.submit([enc.finish()]);
+    await read.mapAsync(GPUMapMode.READ);
+    const bytes = read.getMappedRange().slice(0); read.unmap();
+    return { bytes, ms: performance.now() - t0 };
+  } finally { read.destroy(); }
 }
-
-const vec4 = flat3 => { const n = flat3.length / 3, out = new Float32Array(4 * n); for (let i = 0; i < n; i++) out.set(flat3.subarray(3 * i, 3 * i + 3), 4 * i); return out; };
 
 export function profileWords({ k, floor, factor, H, steps, iterations }, start, count, boxCount) {
   const words = new ArrayBuffer(48), f = new Float32Array(words), u = new Uint32Array(words);
   f[0] = k; f[1] = floor; f[2] = factor; f[3] = 2 * Math.tan(Math.PI / 6) / H;
   u[4] = steps; u[5] = iterations; u[6] = start; u[7] = count; u[8] = boxCount;
-  return words;
+  return new Uint8Array(words);
 }
 
-export async function traceList({ device, pipelines, field, profile, origins, directions, boxes = new Float32Array(4), batch = 512 }) {
-  const n = origins.length / 3;
-  const pipeline = pipelines[`trace_list/${field}`];
-  const o = buffer(device, vec4(origins), GPUBufferUsage.STORAGE), d = buffer(device, vec4(directions), GPUBufferUsage.STORAGE);
-  const bx = buffer(device, boxes, GPUBufferUsage.STORAGE);
-  const results = device.createBuffer({ size: 16 * n, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
-  const batches = [], inflight = [];
-  for (let start = 0; start < n; start += batch) {
-    while (inflight.length >= 2) await inflight.shift();            // at most two outstanding
-    const count = Math.min(batch, n - start);
-    const uniform = buffer(device, new Uint8Array(profileWords(profile, start, count, boxes.length / 4)), GPUBufferUsage.UNIFORM);
-    const bind = device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [
-      { binding: 0, resource: { buffer: uniform } }, { binding: 1, resource: { buffer: bx } },
-      { binding: 2, resource: { buffer: o } }, { binding: 3, resource: { buffer: d } }, { binding: 4, resource: { buffer: results } }] });
-    const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
-    pass.setPipeline(pipeline); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(Math.ceil(count / 64)); pass.end();
-    const row = { start, count, submitMs: performance.now(), doneMs: null };
-    device.queue.submit([enc.finish()]); batches.push(row);
-    inflight.push(device.queue.onSubmittedWorkDone().then(() => { row.doneMs = performance.now(); uniform.destroy(); }));
-  }
-  await Promise.all(inflight);
-  const words = new Uint32Array(await readBack(device, results, 16 * n));
-  for (const b of [o, d, bx, results]) b.destroy();
-  return { words, batches };
-}
-```
-
-`buffer()` writes the data's own bytes. Typed-array views are passed as `Uint8Array` where
-alignment matters. Stale-result rejection and generations belong to the viewport scheduler
-(T7); ray lists are synchronous campaign steps.
-
-- [ ] **Step 9: Write the in-page check drivers, `browser/checks.js`**
-
-```js
-// spikes/project0/browser/checks.js — G3/G4/G5 and policy drivers: raw readbacks only, never a verdict.
-import { acquire } from '../gpu/device.js';
-import { prepare, buffer, readBack, traceList } from '../gpu/webgpu.js';
-
-export async function arith(device, pipelines, entry, inputs, cap) {
-  const n = inputs.length / 4;
-  const uniform = buffer(device, new Uint32Array([n, cap, 0, 0]), GPUBufferUsage.UNIFORM);
-  const input = buffer(device, inputs, GPUBufferUsage.STORAGE);
-  const output = device.createBuffer({ size: Math.max(16, 16 * Math.max(n, 8)), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
-  const p = pipelines[entry];
-  const bind = device.createBindGroup({ layout: p.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: uniform } }, { binding: 1, resource: { buffer: input } }, { binding: 2, resource: { buffer: output } }] });
-  const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
-  pass.setPipeline(p); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(entry === 'qjulia_offplane' ? 1 : Math.ceil(n / 64)); pass.end();
-  device.queue.submit([enc.finish()]);
-  const words = new Uint32Array(await readBack(device, output, output.size));
-  for (const b of [uniform, input, output]) b.destroy();
-  return words;
-}
-
-export const pack = (rows, f) => { const out = new Float32Array(4 * rows.length); rows.forEach((r, i) => out.set(f(r), 4 * i)); return out; };
-
-export async function runGateCheck(gate, fixtures, status = () => {}) {
-  const { device } = await acquire();
-  const pipelines = await prepare(device, status);
-  const slots = [];
-  if (gate === 'G3') {
-    for (const [slot, fixture] of Object.entries(fixtures.analytic)) {
-      const field = slot.startsWith('menger') ? 'menger' : slot;
-      const boxes = new Float32Array(fixture.boxes.flatMap(b => [...b.c, b.h]));
-      const { words } = await traceList({ device, pipelines, field, profile: fixtures.profiles.g3, origins: Float32Array.from(fixture.effectiveOrigins), directions: Float32Array.from(fixture.effectiveDirections), boxes: boxes.length ? boxes : new Float32Array(4) });
-      slots.push({ slot, raw: { words: Array.from(words.subarray(0, 4 * fixture.rays.length)) } });
-    }
-  } else if (gate === 'G4') {
-    const words = await arith(device, pipelines, 'bulb_samples', pack(fixtures.arithmetic.bulb, s => [...s.input, 0]), 64);
-    slots.push({ slot: 'bulb-samples', raw: { words: Array.from(words.subarray(0, 4 * 4096)) } });
-  } else if (gate === 'G5') {
-    const plane = await arith(device, pipelines, 'qjulia_plane', pack(fixtures.arithmetic.plane, s => s.input), 128);
-    slots.push({ slot: 'qjulia-plane', raw: { words: Array.from(plane.subarray(0, 4 * 4096)) } });
-    const { q, C } = fixtures.arithmetic.offplane;
-    const orbit = new Float32Array((await arith(device, pipelines, 'qjulia_offplane', Float32Array.from([...q, ...C]), 0)).buffer, 0, 32);
-    slots.push({ slot: 'qjulia-offplane', raw: { orbit: Array.from(orbit) } });
-  } else if (gate === 'derivative-policy') {
-    const words = await arith(device, pipelines, 'derivative_policy', pack(fixtures.derivativePolicy, v => [v.grow, v.dr, 0, 0]), 0);
-    slots.push({ slot: 'vectors', raw: { fits: fixtures.derivativePolicy.map((_, i) => words[4 * i]) } });
-  } else throw new Error(`no check driver for ${gate}`);
-  device.destroy();
-  return { slots, invalidations: [] };
-}
-```
-
-The `G4` cap of 64 and the `G5` cap of 128 come from A.3. `fixtures.arithmetic.*.input`
-already holds the effective f32 values, so the shader input equals the oracle input.
-
-- [ ] **Step 10: Add `?mode=gate` to `browser/main.js`**
-
-Append:
-
-```js
-if (params.get('mode') === 'gate') {
-  const gate = params.get('gate');
+// Bounded batches, at most two outstanding, each registered with the watchdog. workMs excludes readback.
+export async function traceList({ device, alloc, watchdog, pipelines, field, profile, origins, directions, boxes = new Float32Array(4), batch = 512, label = field }) {
+  const n = origins.length / 3, pipeline = pipelines[`trace_list/${field}`];
+  const owned = [];
+  const keep = b => { owned.push(b); return b; };
   try {
-    const fixtures = await (await fetch('../fixtures.json')).json();
-    if (['G3', 'G4', 'G5', 'derivative-policy'].includes(gate)) {
-      const { runGateCheck } = await import('./checks.js');
-      window.p0Result = await runGateCheck(gate, fixtures, text => { status.textContent = text; });
-    } else {
-      const { runGateDriver } = await import('./drivers.js');      // T9
-      window.p0Result = await runGateDriver(gate, fixtures, params, text => { status.textContent = text; });
+    const o = keep(upload(device, alloc, vec4(origins), GPUBufferUsage.STORAGE)), d = keep(upload(device, alloc, vec4(directions), GPUBufferUsage.STORAGE));
+    const bx = keep(upload(device, alloc, boxes, GPUBufferUsage.STORAGE));
+    const results = keep(alloc.buffer(device, { size: Math.max(16, 16 * n), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC }));
+    const batches = [], inflight = []; const t0 = performance.now();
+    for (let start = 0; start < n; start += batch) {
+      while (inflight.length >= 2) await inflight.shift();
+      if (watchdog.stopped) throw new Error('no observable progress for 5 s: experiment stopped by the watchdog');
+      const count = Math.min(batch, n - start);
+      const uniform = upload(device, alloc, profileWords(profile, start, count, boxes.length / 4), GPUBufferUsage.UNIFORM);
+      const bind = alloc.bindGroup(device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [
+        { binding: 0, resource: { buffer: uniform } }, { binding: 1, resource: { buffer: bx } },
+        { binding: 2, resource: { buffer: o } }, { binding: 3, resource: { buffer: d } }, { binding: 4, resource: { buffer: results } }] }));
+      const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
+      pass.setPipeline(pipeline); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(Math.ceil(count / 64)); pass.end();
+      const row = { start, count, submitMs: performance.now(), doneMs: null };
+      const done = watchdog.submitted(`${label}:${start}`, { label, start, count });
+      device.queue.submit([enc.finish()]); batches.push(row);
+      inflight.push(device.queue.onSubmittedWorkDone().then(() => { row.doneMs = performance.now(); done(); uniform.destroy(); }));
     }
-  } catch (error) { window.p0Result = { error: `${error.name}: ${error.message}` }; }
-  status.textContent = `gate ${gate}: ${window.p0Result.error ? 'error' : 'done'}`;
+    await Promise.all(inflight);
+    const workMs = performance.now() - t0;
+    const { bytes, ms } = await readBack(device, alloc, results, 16 * n);
+    return { words: new Uint32Array(bytes), workMs, readMs: ms, batches };
+  } finally { for (const b of owned) b.destroy(); }
 }
 ```
 
-- [ ] **Step 11: Write the Node gate runner, `run.mjs`**
+- [ ] **Step 9: Write the driver registry and `browser/drivers/checks.js`**
+
+```js
+// spikes/project0/browser/drivers/index.js — the driver registry. Later tasks add the modules it names.
+const DRIVERS = { 'derivative-policy': './checks.js', G3: './checks.js', G4: './checks.js', G5: './checks.js',
+  smoke: './smoke.js',                                                                               // T7
+  G11: './resources.js', G13: './lifecycle.js',                                                      // T8
+  G1: './g1.js', G2: './g2.js', timing: './timing.js', G8: './g8.js', G10: './g10.js', G12: './g12.js', visible: './visible.js',  // T9
+  precision: './precision.js' };                                                                     // T12
+export async function runGateDriver(gate, fixtures, params, status) {
+  const path = DRIVERS[gate];
+  if (!path) throw new Error(`no driver for ${gate}`);
+  return (await import(path)).run(gate, fixtures, params, status);
+}
+```
+
+```js
+// spikes/project0/browser/drivers/checks.js — G3/G4/G5 and policy drivers: raw readbacks only, never a verdict.
+import { acquire, destroy, onLoss } from '../../gpu/device.js';
+import { prepare, upload, readBack, traceList } from '../../gpu/webgpu.js';
+import { createAllocator } from '../../gpu/alloc.js';
+import { createWatchdog } from '../../gpu/watchdog.js';
+import { packBoxes, packRows } from '../packing.js';
+
+export async function arith(device, alloc, watchdog, pipelines, entry, inputs, cap, rows) {
+  const n = inputs.length / 4, p = pipelines[entry];
+  const owned = [];
+  try {
+    const uniform = upload(device, alloc, new Uint32Array([n, cap, 0, 0]), GPUBufferUsage.UNIFORM); owned.push(uniform);
+    const input = upload(device, alloc, inputs, GPUBufferUsage.STORAGE); owned.push(input);
+    const output = alloc.buffer(device, { size: Math.max(16, 16 * rows), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC }); owned.push(output);
+    // layout 'auto' contains only statically used bindings: qjulia_offplane does not use binding 0.
+    const entries = [{ binding: 1, resource: { buffer: input } }, { binding: 2, resource: { buffer: output } }];
+    if (entry !== 'qjulia_offplane') entries.unshift({ binding: 0, resource: { buffer: uniform } });
+    const bind = alloc.bindGroup(device.createBindGroup({ layout: p.getBindGroupLayout(0), entries }));
+    const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
+    pass.setPipeline(p); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(entry === 'qjulia_offplane' ? 1 : Math.ceil(n / 64)); pass.end();
+    const done = watchdog.submitted(entry, { entry, n });
+    device.queue.submit([enc.finish()]);
+    await device.queue.onSubmittedWorkDone(); done();
+    return new Uint32Array((await readBack(device, alloc, output, 16 * rows)).bytes);
+  } finally { for (const b of owned) b.destroy(); }
+}
+
+export async function run(gate, fx, params, status) {
+  const alloc = createAllocator({ capBytes: fx.resources.capBytes }), watchdog = createWatchdog();
+  const invalidations = [];
+  const off = onLoss(info => invalidations.push(`device lost: ${info.reason}${info.injected ? ' (injected)' : ''}`));
+  const { device } = await acquire();
+  try {
+    const pipelines = await prepare(device, alloc, status), slots = [];
+    if (gate === 'G3') {
+      for (const [slot, fixture] of Object.entries(fx.analytic)) {
+        const field = slot.startsWith('menger') ? 'menger' : slot;
+        const boxes = fixture.boxes.length ? packBoxes(fixture.boxes) : new Float32Array(4);
+        const { words, workMs } = await traceList({ device, alloc, watchdog, pipelines, field, profile: fx.profiles.g3, origins: Float32Array.from(fixture.effectiveOrigins), directions: Float32Array.from(fixture.effectiveDirections), boxes, label: `G3/${slot}` });
+        slots.push({ slot, raw: { words: Array.from(words.subarray(0, 4 * fixture.rays.length)), workMs } });
+      }
+    } else if (gate === 'G4') {
+      const words = await arith(device, alloc, watchdog, pipelines, 'bulb_samples', packRows(fx.arithmetic.bulb, s => [...s.input, 0]), fx.arithmeticProtocol.bulb.iterations, fx.arithmetic.bulb.length);
+      slots.push({ slot: 'bulb-samples', raw: { words: Array.from(words) } });
+    } else if (gate === 'G5') {
+      const plane = await arith(device, alloc, watchdog, pipelines, 'qjulia_plane', packRows(fx.arithmetic.plane, s => s.input), fx.arithmeticProtocol.plane.iterations, fx.arithmetic.plane.length);
+      slots.push({ slot: 'qjulia-plane', raw: { words: Array.from(plane) } });
+      const { q, C } = fx.arithmetic.offplane;
+      const orbit = new Float32Array((await arith(device, alloc, watchdog, pipelines, 'qjulia_offplane', Float32Array.from([...q, ...C]), 0, 8)).buffer);
+      slots.push({ slot: 'qjulia-offplane', raw: { orbit: Array.from(orbit) } });
+    } else if (gate === 'derivative-policy') {
+      const words = await arith(device, alloc, watchdog, pipelines, 'derivative_policy', packRows(fx.derivativePolicy, v => [v.grow, v.dr, 0, 0]), 0, fx.derivativePolicy.length);
+      slots.push({ slot: 'vectors', raw: { fits: fx.derivativePolicy.map((_, i) => words[4 * i]) } });
+    } else throw new Error(`checks.js has no driver for ${gate}`);
+    if (watchdog.stall) invalidations.push(`no observable progress for 5 s: ${JSON.stringify(watchdog.stall.outstanding)}`);
+    return { slots, invalidations, alloc: alloc.inventory() };
+  } finally { off(); watchdog.dispose(); alloc.destroyAll(); destroy(); }
+}
+```
+
+The `G4` cap (64) and the `G5` cap (128) are taken from `fixtures.arithmeticProtocol`.
+`arithmetic.*.input` already holds the effective f32 values, so the shader's input equals the
+oracle's input.
+
+- [ ] **Step 10: Write the complete Node runner, `run.mjs`**
 
 ```js
 // spikes/project0/run.mjs — node spikes/project0/run.mjs --gate G4 [--mode headed|headless] [--args attempt1|remediation] [--campaign <name>]
+// One evidence-finalisation path for every outcome: success, page error, timeout, watchdog stop or launch failure.
 import { chromium } from 'playwright';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { parseArgs } from 'node:util';
-import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, ensureServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
+import { promisify, parseArgs } from 'node:util';
+import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
 import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord } from './evidence.mjs';
-import { metricsFor } from './measure.mjs';
-import { evaluateGate } from './gates.js';
+import { metricsFor } from './measure/index.mjs';
 
 process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
-export const LAUNCH = { attempt1: ATTEMPT1_ARGS };   // T10 adds `remediation` only via a recorded decision
+const REMEDIATION = resolve(ROOT, 'spikes/project0/launch-remediation.json');
+export const LAUNCH = { attempt1: ATTEMPT1_ARGS, ...(existsSync(REMEDIATION) ? { remediation: JSON.parse(readFileSync(REMEDIATION, 'utf8')) } : {}) };
+// Outer deadlines (ms): Node's independent bound on each session, beyond the page's own 5 s watchdog.
+export const DEADLINE = { G1: 120000, G3: 300000, G4: 120000, G5: 120000, 'derivative-policy': 120000, smoke: 300000, G11: 300000, G13: 300000, timing: 1200000, G8: 300000, G10: 300000, G12: 1200000, visible: 300000, precision: 3600000 };
+const EXPERIMENTS = new Set(['derivative-policy', 'smoke', 'visible', 'precision']);   // not gates: no metric derivation
 
-export async function runGate({ gate, mode = 'headless', args = 'attempt1', campaign = 'dev', timeoutMs = 900000 }) {
+async function environment(context, commandLine, invalidations) {
+  const gpuPage = await context.newPage(); await gpuPage.goto('chrome://gpu'); await gpuPage.waitForTimeout(1500);
+  const chromeGpuText = await gpuPage.locator('body').innerText(); await gpuPage.close();
+  const browserVersion = (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim();
+  const base = { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: process.env.XDG_SESSION_TYPE || 'unknown' };
+  try { return { chromeGpuText, env: environmentIdentity(chromeGpuText, base) }; }
+  catch (e) { invalidations.push(`environment identity: ${e.message}`); return { chromeGpuText, env: { ...base, driver: 'unknown' } }; }
+}
+
+async function waitResult(page, gate, runDir, deadlineMs) {
+  const start = Date.now(); let checkpoints = 0;
+  for (;;) {
+    let state;
+    try { state = await page.evaluate(n => ({ result: window.p0Result ?? null, checkpoints: (window.p0Checkpoints || []).slice(n) }), checkpoints); }
+    catch (e) { return { error: `browser hang or crash: ${e.message}` }; }
+    for (const cp of state.checkpoints) await writeFile(resolve(runDir, `checkpoint-${checkpoints++}.json`), JSON.stringify(cp));
+    if (state.result) return state.result;
+    if (Date.now() - start > deadlineMs) return { error: `browser hang: no result within the ${deadlineMs} ms outer deadline` };
+    await new Promise(r => setTimeout(r, gate === 'G12' ? 15000 : 1000));
+  }
+}
+
+// Writes one record per returned slot — or one incomplete record if the session produced no usable slots.
+async function finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, result, invalidations, fixtures, experiment }) {
+  const records = [], stamp = runDir.split('/').at(-1);
+  const slots = result?.slots?.length ? result.slots : [{ slot: 'incomplete', raw: { error: result?.error ?? 'no result' } }];
+  for (const s of slots) {
+    const slotGate = s.gate ?? gate;
+    const recordInvalidations = [...invalidations, ...(result?.invalidations ?? []), ...(result?.error ? [`page: ${result.error}`] : []), ...(s.slot === 'incomplete' ? ['incomplete: the session produced no result'] : [])];
+    const raw = slotGate === 'G1' ? { ...s.raw, chromeGpuText } : s.raw;
+    let metrics = {};
+    if (!experiment && s.slot !== 'incomplete') { try { metrics = await metricsFor(slotGate, s.slot, raw, fixtures); } catch (e) { recordInvalidations.push(`metrics: ${e.message}`); } }
+    const id = `${slotGate}-${s.slot.replace(/[^A-Za-z0-9.-]/g, '_')}-${stamp}`;
+    const record = { schema: 1, id, gate: slotGate, slot: s.slot, campaign, mode, experiment: Boolean(experiment), identity, invalidations: recordInvalidations, metrics };
+    records.push(await writeRecord(runDir, record, [
+      { name: `${id}.raw.json`, data: JSON.stringify(raw) },
+      { name: `${id}.launch.json`, data: JSON.stringify(launchInfo) },
+      { name: `${id}.chrome-gpu.txt`, data: chromeGpuText ?? '' }]));
+  }
+  return records;
+}
+
+export async function runSession({ gate, mode = 'headless', args = 'attempt1', campaign = 'dev', extra = '' }) {
   if (!LAUNCH[args]) throw new Error(`unknown launch configuration: ${args}`);
+  if (!/^[a-z0-9-]+$/.test(campaign)) throw new Error('campaign identity required');
+  const experiment = EXPERIMENTS.has(gate);
   const fixtures = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
   const fixture = await fixtureIdentity(), implementation = await implementationIdentity();
   const runDir = await newRunDir(`${campaign}-${gate.toLowerCase()}-${mode}`);
-  const server = await ensureServer();
-  const { context, requestedArgs } = await launchChrome({ headless: mode === 'headless', args: LAUNCH[args], profileKind: `${gate.toLowerCase()}-${mode}`, chromium });
+  const invalidations = []; let server, launched, result = null, chromeGpuText = '', identity = null, launchInfo = { args, requestedArgs: LAUNCH[args] };
   try {
-    const commandLine = await effectiveCommandLine(context); assertSandboxed(commandLine);
-    const gpuPage = await context.newPage(); await gpuPage.goto('chrome://gpu'); await gpuPage.waitForTimeout(1500);
-    const chromeGpuText = await gpuPage.locator('body').innerText(); await gpuPage.close();
-    const page = await context.newPage();
-    const pageErrors = []; page.on('pageerror', e => pageErrors.push(e.message)); page.on('console', m => { if (m.type() === 'error') pageErrors.push(m.text()); });
-    await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}`);
-    const result = await page.waitForFunction(() => window.p0Result, null, { timeout: timeoutMs, polling: 1000 }).then(h => h.jsonValue());
-    const browserVersion = (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim();
-    const sessionInvalidations = [];
-    let env;
-    try { env = environmentIdentity(chromeGpuText, { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: process.env.XDG_SESSION_TYPE || 'unknown' }); }
-    catch (error) { env = { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], driver: 'unknown', session: process.env.XDG_SESSION_TYPE || 'unknown' }; sessionInvalidations.push(`environment identity: ${error.message}`); }
-    const identity = { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity({ requestedArgs, mode, commandLine }), ...env };
-    if (result.error) throw new Error(`page: ${result.error}`);
-    const records = [];
-    for (const { slot, raw, invalidations = [] } of result.slots) {
-      const recordInvalidations = [...sessionInvalidations, ...result.invalidations, ...invalidations, ...pageErrors.map(e => `page error: ${e}`)];
-      let metrics = {};
-      // A decoding failure (an unknown status code, a short readback) is invalid evidence, not a measured failure.
-      if (gate !== 'derivative-policy') { try { metrics = metricsFor(gate, slot, raw, fixtures); } catch (error) { recordInvalidations.push(`metrics: ${error.message}`); } }
-      const record = { schema: 1, id: `${gate}-${slot.replace(/[^A-Za-z0-9.-]/g, '_')}-${runDir.split('/').at(-1)}`, gate, slot, identity, invalidations: recordInvalidations, metrics };
-      records.push(await writeRecord(runDir, record, [{ name: `${record.id}.raw.json`, data: JSON.stringify(raw) }, { name: `${record.id}.chrome-gpu.txt`, data: chromeGpuText }]));
-    }
-    return { records, runDir, result };
-  } finally { await context.close(); await server.stop(); }
+    server = await startServer();
+    launched = await launchChrome({ headless: mode === 'headless', args: LAUNCH[args], profileKind: `${gate.toLowerCase()}-${mode}`, chromium });
+    const commandLine = await effectiveCommandLine(launched.context); assertSandboxed(commandLine);
+    launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile };
+    const environmentInfo = await environment(launched.context, commandLine, invalidations);
+    chromeGpuText = environmentInfo.chromeGpuText;
+    identity = { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity({ requestedArgs: launched.requestedArgs, mode, commandLine }), ...environmentInfo.env };
+    const page = await launched.context.newPage();
+    page.on('pageerror', e => invalidations.push(`page error: ${e.message}`));
+    page.on('console', m => { if (m.type() === 'error') invalidations.push(`console error: ${m.text()}`); });
+    await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}&runMode=${mode}${extra}`);
+    result = await waitResult(page, gate, runDir, DEADLINE[gate] ?? 900000);
+  } catch (error) {
+    invalidations.push(`session: ${error.message}`);
+  } finally {
+    await launched?.context.close().catch(e => invalidations.push(`close: ${e.message}`));
+    await server?.stop();
+  }
+  identity ??= { backend: 'webgpu', ...fixture, ...implementation, launchHash: '0'.repeat(64), mode, browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' };
+  const records = await finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, result, invalidations, fixtures, experiment });
+  return { records, runDir, result };
+}
+
+// G2: three fresh processes with fresh empty profiles; navigation first, chrome://gpu only after the measurement.
+export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}) {
+  if (!LAUNCH[args]) throw new Error(`unknown launch configuration: ${args}`);
+  const fixtures = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
+  const fixture = await fixtureIdentity(), implementation = await implementationIdentity();
+  const runDir = await newRunDir(`${campaign}-g2-headed`), records = [];
+  for (let i = 0; i < 3; i++) {
+    const invalidations = []; let server, launched, chromeGpuText = '', identity = null, launchInfo = { args, requestedArgs: LAUNCH[args] };
+    const slots = [];
+    try {
+      server = await startServer();
+      launched = await launchChrome({ headless: false, args: LAUNCH[args], profileKind: `g2-fresh-${i}`, chromium });
+      const page = await launched.context.newPage();
+      page.on('pageerror', e => invalidations.push(`page error: ${e.message}`));
+      await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=G2&runMode=headed`);
+      const first = await waitResult(page, 'G2', runDir, 60000);
+      slots.push({ slot: `fresh-${i}`, raw: { ...(first.slots?.[0]?.raw ?? { error: first.error }), emptyProfile: 1, freshProcess: 1 } });
+      if (i === 2) {
+        await page.reload();
+        const warm = await waitResult(page, 'G2', runDir, 60000);
+        slots.push({ slot: 'warm', raw: warm.slots?.[0]?.raw ?? { error: warm.error } });
+      }
+      const commandLine = await effectiveCommandLine(launched.context); assertSandboxed(commandLine);
+      launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile };
+      const environmentInfo = await environment(launched.context, commandLine, invalidations);
+      chromeGpuText = environmentInfo.chromeGpuText;
+      identity = { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity({ requestedArgs: launched.requestedArgs, mode: 'headed', commandLine }), ...environmentInfo.env };
+    } catch (error) { invalidations.push(`session: ${error.message}`); }
+    finally { await launched?.context.close().catch(() => {}); await server?.stop(); }
+    identity ??= { backend: 'webgpu', ...fixture, ...implementation, launchHash: '0'.repeat(64), mode: 'headed', browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' };
+    records.push(...await finalise({ gate: 'G2', mode: 'headed', campaign, runDir, identity, launchInfo, chromeGpuText, result: { slots, invalidations: [] }, invalidations, fixtures, experiment: false }));
+  }
+  return { records, runDir };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { values } = parseArgs({ options: { gate: { type: 'string' }, mode: { type: 'string', default: 'headless' }, args: { type: 'string', default: 'attempt1' }, campaign: { type: 'string', default: 'dev' } } });
-  const { records, runDir, result } = await runGate(values);
+  const { records, runDir } = values.gate === 'G2' ? await runG2(values) : await runSession(values);
+  for (const r of records) console.log(`${r.gate} ${r.slot}: ${JSON.stringify(r.metrics)}${r.invalidations.length ? ` INVALIDATIONS ${r.invalidations.join('; ')}` : ''}`);
   if (values.gate === 'derivative-policy') {
     const fixtures = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
-    const got = result.slots[0].raw.fits, bad = fixtures.derivativePolicy.filter((v, i) => Boolean(got[i]) !== v.fits);
-    console.log(`derivative policy: ${bad.length} mismatches of ${got.length}`, bad.slice(0, 5));
-    process.exitCode = bad.length ? 1 : 0;
-  } else {
-    for (const r of records) console.log(`${r.gate} ${r.slot}: ${JSON.stringify(r.metrics)}${r.invalidations.length ? ` INVALIDATIONS ${r.invalidations.join('; ')}` : ''}`);
+    const raw = JSON.parse(await readFile(resolve(ROOT, 'artifacts/project0', records[0].artifacts[0].path), 'utf8'));
+    const bad = (raw.fits ?? []).length !== fixtures.derivativePolicy.length ? ['length mismatch'] : fixtures.derivativePolicy.filter((v, i) => Boolean(raw.fits[i]) !== v.fits);
+    console.log(`derivative policy: ${bad.length} mismatches of ${fixtures.derivativePolicy.length}`);
+    process.exitCode = bad.length || records[0].invalidations.length ? 1 : 0;
   }
   console.log(`evidence: ${runDir}`);
 }
 ```
 
-The development runner prints metrics, not verdicts. Verdicts come from `evaluateGate` over a
-campaign manifest in T10. A development record carries the campaign `dev` and is never
-selected for qualification.
+Every outcome, including a launch failure, a page error, an outer-deadline timeout or a
+watchdog stop, ends in `finalise`. It writes a record with explicit invalidations; a session
+never ends without a record. The `campaign` is part of the record **before** `writeRecord`
+hashes and persists it. The effective command line and the launch configuration are
+persisted as a hashed `.launch.json` artefact, not only as `launchHash`.
 
-- [ ] **Step 12: Verify the policy guard on the GPU first (red, then green)**
+- [ ] **Step 11: Commit, after Codex's read-only review, before any GPU run in this task**
+
+```bash
+git add spikes/project0/gpu/alloc.js spikes/project0/gpu/watchdog.js spikes/project0/gpu/fields.wgsl spikes/project0/gpu/arithmetic.wgsl spikes/project0/gpu/trace.wgsl spikes/project0/gpu/webgpu.js spikes/project0/browser/packing.js spikes/project0/browser/drivers/index.js spikes/project0/browser/drivers/checks.js spikes/project0/measure/decode.mjs spikes/project0/measure/arith.mjs spikes/project0/measure/index.mjs spikes/project0/run.mjs spikes/project0/tests/alloc.test.mjs spikes/project0/tests/watchdog.test.mjs spikes/project0/tests/packing.test.mjs spikes/project0/tests/decode.test.mjs spikes/project0/tests/arith-metrics.test.mjs
+git commit -m "Project 0 T6: allocator, watchdog, WGSL arithmetic/ray-list kernels with the exact range guard, strict decoding, registries, runner"
+```
+
+- [ ] **Step 12: Verify the policy guard on the GPU first**
 
 Run: `node spikes/project0/run.mjs --gate derivative-policy`
-- **Before Steps 5–8 exist:** FAIL with a page error that names the missing module
-  (`fields.wgsl` 404, or `p0Result.error`). This is the red step.
-- **After:** `derivative policy: 0 mismatches of <N>`.
+Expected: `derivative policy: 0 mismatches of <N>`, where N is the length of
+`fixtures.derivativePolicy`, and exit code 0.
 
-Any mismatch means the WGSL guard disagrees with the frozen policy vectors. Fix the WGSL; never
-edit the vectors.
+Any mismatch means the WGSL guard disagrees with the frozen policy vectors. Fix the WGSL, then
+commit and rerun. **Never edit the vectors.**
 
 - [ ] **Step 13: Run the G4, G5 and G3 development checks**
 
@@ -4806,186 +5253,270 @@ Run, in order:
 - `node spikes/project0/run.mjs --gate G3`
 
 Expected:
-- **Every run:** a printed metrics line per slot, with the `gatePlan` keys, and an `evidence:`
+- **Every run:** one metrics line per slot, with the `gatePlan` keys, and an `evidence:`
   directory.
 - **A correct implementation shows:**
   - G4 `statusErrors 0`, `indexErrors 0`, `logRRatio` and `deRatio` ≤ 1;
   - G5 plane errors 0, `logRRatio` ≤ 1, off-plane `componentRatio` ≤ 1;
-  - G3 `statusErrors 0`, `edgeErrors 0`, `depthRatio` ≤ 1 for each fixture.
+  - G3 `statusErrors 0`, `edgeErrors 0` and `depthRatio` ≤ 1 per fixture.
 
-**A ratio above 1 or a nonzero error count** is a finding. Diagnose it with the raw file, and
-reproduce it on the CPU with the same effective inputs, before changing anything. Under
-spec §7, a wrong numerical result is not "tuned away", and **tolerances and fixtures are
-never edited.**
-
-- [ ] **Step 14: Commit** (after Codex's read-only review)
-
-```bash
-git add spikes/project0/gpu/fields.wgsl spikes/project0/gpu/arithmetic.wgsl spikes/project0/gpu/trace.wgsl spikes/project0/gpu/webgpu.js spikes/project0/browser/checks.js spikes/project0/browser/main.js spikes/project0/measure.mjs spikes/project0/run.mjs spikes/project0/tests/measure.test.mjs
-git commit -m "Project 0 T6: WGSL arithmetic and ray-list kernels with the exact derivative range guard; G3-G5 development checks"
-```
+**If a ratio exceeds 1, an error count is nonzero, or invalidations appear,** that is a
+finding: diagnose it with the raw file and a CPU reproduction on the same effective inputs.
+Under spec §7, **tolerances and fixtures are never edited.**
 
 ---
 
-### Task T7: Viewport renderer, bounded scheduling, generations and publication
+### Task T7: Submission ledger, band planner, viewport renderer, shading/coverage and presentation
 
 **Owner:** Claude. **Reviewer:** Codex (read-only `review --diff`).
 
 **Files:**
-- Create: `spikes/project0/gpu/scheduler.js`, a pure, DOM-free scheduling policy. It manages
-  generations, adaptive bands, row-to-range splitting, at most two outstanding batches, and
-  stale-completion rejection.
-- Create: `spikes/project0/gpu/view.wgsl`, the camera-mode marcher entry point. It writes the
-  depth, status and normal storage textures.
-- Create: `spikes/project0/gpu/present.wgsl`, holding the shade pass (writes `rgba8unorm`
-  display and counts coverage per workgroup) and the blit render pass.
-- Create: `spikes/project0/gpu/renderer.js`, the WebGPU viewport. It owns resources, binds the
-  scheduler to real queues and publishes frames.
-- Create: `spikes/project0/browser/events.js`, the page-clock event log.
-- Test: `spikes/project0/tests/scheduler.test.mjs`.
+- `spikes/project0/gpu/scheduler.js`, pure modules:
+  - `Ledger`, the device-session submission credits (at most two outstanding across every
+    request, generation and resize);
+  - `Planner`, the bands of one generation, with adaptive sizing and row-to-range splitting.
+- `spikes/project0/gpu/view.wgsl`, the camera-mode marcher entry point, which writes the
+  depth, status and normal textures.
+- `spikes/project0/gpu/present.wgsl`, the shade pass (display texture plus workgroup-aggregated
+  coverage counts) and the blit.
+- `spikes/project0/gpu/renderer.js`, the WebGPU viewport: ledger-bound submission, lifetime
+  and epoch checks, deferred target retirement, reserved readback slots and timestamp queries.
+- `spikes/project0/browser/events.js`, the page-clock event log.
+- `spikes/project0/browser/drivers/common.js`, the shared driver helpers: `session()`,
+  `renderOnce()` and `sleep()`.
+- `spikes/project0/browser/drivers/smoke.js`, the viewport smoke check.
+- Tests: `spikes/project0/tests/scheduler.test.mjs` and `spikes/project0/tests/renderer.test.mjs`.
+  The renderer test uses a deterministic fake device and asserts the **actual** number of
+  `queue.submit` calls.
 
 **Interfaces:**
 - Consumes:
-  - T6: `fields.wgsl`, `trace.wgsl` (`trace_ray`, `Profile`), `prepare()`, `buffer()`,
-    `profileWords()`;
-  - T3/T4: `fixtures.views[name].{camera, profiles, traceOverrides}`, `fixtures.profiles`,
-    `fixtures.display`;
-  - T3: `reference/camera.js` `norm`/`cross` for the camera basis. This is a pure vector
-    utility that the charter permits sharing. The reference kernels are never imported.
-- Produces (used by T8, T9 and T12):
-  - **`Scheduler`**:
-    - `new Scheduler({rows, cols, targetMs = 10, maxOutstanding = 2, initialRows = 8, minRange = 64})`;
-    - `request(scene) → generation` (a number, strictly increasing);
-    - `next() → {generation, row0, rows, col0, cols} | null`: the next band to submit for the
-      current generation, or `null` if it is complete, already pending, or the outstanding
-      limit is reached;
-    - `submitted(band, nowMs)`;
-    - `completed(band, nowMs, epoch) → 'current' | 'stale'`;
-    - `isComplete(generation) → boolean`;
-    - `stats() → {outstandingMax, bandMs: number[], rowsPerBand: number[], splits}`;
-    - `resetEpoch(epoch)`.
-  - **`Renderer`**:
-    - `new Renderer({device, viewport, canvas, fixtures, events, alloc?})`, where `alloc` is
-      `{texture(device, desc), buffer(device, desc)}`. T8's tracker implements it;
-    - `render({view, profile, camera?, label?, override?: {W, H}}) → requestId`. The latest
-      request wins, and the previous generation's unsubmitted bands are dropped. `override` may
-      only change the internal dimensions;
-    - `onPublish(handler)`, where the handler receives
-      `{requestId, generation, label, counts: {total, hit, miss, point, steps, failure}, normalUnavailable, publishedMs}`;
-    - `destroy()`;
-    - `resize({width, height})`.
-  - **`events`**:
-    - `mark(type, fields) → event` with `{type, t: performance.now(), ...fields}`;
-    - `list() → event[]`;
-    - `clear()`;
-    - `harness(fn)` brackets harness work with `performance.mark`s, so that T9 can attribute
-      long tasks.
+  - T5: `acquire`, `currentEpoch`, `onLoss`;
+  - T6: `createAllocator`, `createWatchdog`, `upload`, `profileWords`, `source`, `compile`;
+  - T4: `fixtures.views`, `fixtures.profiles`, `fixtures.shading`;
+  - T3: `reference/camera.js` `norm` and `cross`, pure vector utilities the charter permits sharing.
+- Produces:
+  - `new Ledger({max = 2})`:
+    - `available() → boolean`;
+    - `take(meta) → ticket`;
+    - `release(ticket) → boolean`, which releases exactly once;
+    - `retire(epoch) → number`, which drops the tickets of a retired device epoch;
+    - `outstanding() → number`;
+    - `maxObserved() → number`.
+  - `new Planner({rows, cols, targetMs = 10, initialRows = 8, minRange = 64, carry?})`:
+    - `next() → band | null`, where a band is `{row0, rows, col0, cols, area}`;
+    - `completed(band, ms)`;
+    - `done() → boolean`;
+    - `carry() → {rowsPerBand, colsPerBand}`, so that sizing survives into the next
+      generation;
+    - `stats() → {bandMs, rowsPerBand, splits}`.
+  - `new Renderer({device, viewport, canvas, fixtures, events, alloc, watchdog, epoch = currentEpoch, timestamps = device.features.has('timestamp-query')})`:
+    - `render({view, profile, camera?, label?, override?: {W, H}}) → requestId`. The request
+      event is recorded at function entry. A new request cancels only the previous
+      generation's *unsubmitted* bands;
+    - `onPublish(handler) → unsubscribe`, where the handler receives
+      `{requestId, generation, epoch, label, W, H, counts, publishedMs}`;
+    - `stats() → {outstandingMax, submits, bands: [{requestId, generation, epoch, band, submitMs, doneMs, gpuMs}], planner}`;
+    - `destroy()`.
+  - `events`:
+    - `mark(type, fields) → event` with `{type, t, ...}`;
+    - `list()` and `clear()`;
+    - `harness(fn)`, which brackets harness work with `performance.measure('harness:…')`.
 
-**Coverage counting** never blocks a frame. The shade pass writes six atomic counters per
-generation into a small storage buffer. A three-buffer `MAP_READ` ring copies it after the
-generation's last band, `mapAsync` resolves later, and the publication handler receives the
-counts. A generation whose counts cannot be read, because its ring slot is still mapped, is
-published with `counts: null`. T9 treats that as an invalidated frame, never as a pass.
+    The renderer records these event types: `request`, `submit` (with `requestId`,
+    `generation`, `epoch`, `batch`), `band-done`, `stale-band`, `complete`, `publish` and
+    `suppressed-publication`.
+  - `session(fixtures, status, {alloc?}) → {device, info, epoch, viewport, renderer, alloc, watchdog, losses, close()}`.
+    It installs the unexpected-loss handler and the watchdog *before* the first submission.
+    `close()` unsubscribes, disposes the watchdog, destroys the renderer and the device, and
+    then the allocator's resources.
+  - `renderOnce(renderer, args, {timeoutMs}) → frame`, where a frame is
+    `{requestId, label, W, H, counts, t}`. It always unsubscribes.
 
-- [ ] **Step 1: Write the failing scheduler tests (deterministic fake clock)**
+**Semantics (from Codex's review, adopted):**
+- **The ledger:** outstanding-submission accounting belongs to the device session. It survives
+  request replacement and changes of dimension.
+- **Generations:** a new generation cancels only work not yet submitted.
+- **Submitted batches:** every submitted batch keeps its planner, epoch, generation and batch
+  identity until it completes or the device is retired. A completion releases its own credit
+  even when its generation is obsolete, and then lets the current generation progress.
+- **Device epochs:** only an actual device-epoch transition (`retire`) clears the ledger.
+- **Lifetime checks:** `pump`, `finish`, mapping callbacks and publication all check the
+  renderer's lifetime and the captured device epoch. A destroyed renderer cannot submit, map or
+  publish.
+- **Retired targets:** these stay accounted until their submitted users have drained.
+- **Readback slots:** a slot is reserved *before* its copy is encoded, and only the
+  reservation's owner releases it.
+
+- [ ] **Step 1: Write the failing tests**
 
 ```js
 // spikes/project0/tests/scheduler.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Scheduler } from '../gpu/scheduler.js';
+import { Ledger, Planner } from '../gpu/scheduler.js';
 
-test('never more than two bands outstanding, and every row covered exactly once', () => {
-  const s = new Scheduler({ rows: 360, cols: 640, initialRows: 8 });
-  const g = s.request('a'); const seen = new Uint8Array(360); let t = 0;
-  const pending = [];
-  for (;;) {
-    let band; while ((band = s.next())) { s.submitted(band, t); pending.push(band); assert.ok(pending.length <= 2); }
-    if (!pending.length) break;
-    const done = pending.shift(); t += 5;
-    assert.equal(s.completed(done, t, 0), 'current');
-    if (done.col0 === 0) for (let r = done.row0; r < done.row0 + done.rows; r++) seen[r]++;
+test('the ledger allows at most two outstanding and releases each ticket once', () => {
+  const l = new Ledger({ max: 2 });
+  const a = l.take({ g: 1 }), b = l.take({ g: 1 });
+  assert.equal(l.available(), false); assert.throws(() => l.take({ g: 2 }), /no submission credit/);
+  assert.equal(l.release(a), true); assert.equal(l.release(a), false);
+  assert.equal(l.outstanding(), 1); l.take({ g: 2 }); assert.equal(l.maxObserved(), 2);
+});
+
+test('retiring a device epoch drops only that epoch\'s tickets', () => {
+  const l = new Ledger({ max: 2 });
+  l.take({ epoch: 1 }); l.take({ epoch: 1 });
+  assert.equal(l.retire(1), 2); assert.equal(l.outstanding(), 0); assert.equal(l.available(), true);
+});
+
+test('every row is covered exactly once, and a final short band is exact', () => {
+  for (const rows of [360, 37]) {
+    const p = new Planner({ rows, cols: 64, initialRows: 8 }); const seen = new Uint8Array(rows); let band;
+    while ((band = p.next())) { p.completed(band, 5); if (band.col0 === 0) for (let r = band.row0; r < band.row0 + band.rows; r++) seen[r]++; }
+    assert.ok(p.done()); assert.ok(seen.every(v => v === 1));
   }
-  assert.ok(s.isComplete(g)); assert.ok(seen.every(v => v === 1)); assert.equal(s.stats().outstandingMax, 2);
 });
 
-test('a final short band is exact when rows do not divide evenly', () => {
-  const s = new Scheduler({ rows: 37, cols: 64, initialRows: 8 });
-  s.request('a'); const bands = []; let band;
-  for (;;) { while ((band = s.next())) { s.submitted(band, 0); bands.push(band); } if (!bands.some(b => !b.done)) break; const b = bands.find(x => !x.done); b.done = true; s.completed(b, 1, 0); }
-  assert.equal(bands.reduce((n, b) => n + (b.col0 === 0 ? b.rows : 0), 0), 37);
-  assert.equal(bands.at(-1).row0 + bands.at(-1).rows, 37);
+test('slow bands shrink the band, then split a row into column ranges; the sizing carries over', () => {
+  const p = new Planner({ rows: 64, cols: 1024, initialRows: 8, targetMs: 10, minRange: 64 }); let band;
+  while ((band = p.next())) p.completed(band, 200);
+  assert.ok(p.stats().rowsPerBand.at(-1) <= 1); assert.ok(p.stats().splits > 0);
+  const q = new Planner({ rows: 64, cols: 1024, carry: p.carry() });
+  assert.equal(q.next().rows, 1);
+});
+```
+
+```js
+// spikes/project0/tests/renderer.test.mjs — deterministic fake device: completions and mappings resolve only when the test says so.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+globalThis.GPUBufferUsage ??= { MAP_READ: 1, COPY_SRC: 4, COPY_DST: 8, UNIFORM: 64, STORAGE: 128, QUERY_RESOLVE: 512 };
+globalThis.GPUTextureUsage ??= { COPY_SRC: 1, TEXTURE_BINDING: 4, STORAGE_BINDING: 8, RENDER_ATTACHMENT: 16 };
+globalThis.GPUMapMode ??= { READ: 1 };
+globalThis.navigator ??= {};
+globalThis.navigator.gpu ??= { getPreferredCanvasFormat: () => 'bgra8unorm' };
+const { Renderer } = await import('../gpu/renderer.js');
+const { createAllocator } = await import('../gpu/alloc.js');
+const { createWatchdog } = await import('../gpu/watchdog.js');
+
+function fakeDevice() {
+  const pending = [], maps = [];
+  let submits = 0;
+  const pass = () => ({ setPipeline() {}, setBindGroup() {}, dispatchWorkgroups() {}, draw() {}, end() {} });
+  const device = {
+    features: new Set(),
+    createBuffer: d => ({ size: d.size, destroy() {}, mapAsync: () => new Promise((res, rej) => maps.push({ res, rej })), getMappedRange: () => new ArrayBuffer(d.size), unmap() {} }),
+    createTexture: d => ({ ...d, createView: () => ({}), destroy() { this.dead = true; } }),
+    createBindGroup: () => ({}), createQuerySet: () => ({ destroy() {} }),
+    createCommandEncoder: () => ({ beginComputePass: pass, beginRenderPass: pass, copyBufferToBuffer() {}, resolveQuerySet() {}, finish: () => ({}) }),
+    queue: { submit() { submits++; }, writeBuffer() {}, onSubmittedWorkDone: () => new Promise(res => pending.push(res)) },
+  };
+  return { device, pending, maps, submits: () => submits, completeOne: async () => { pending.shift()?.(); await new Promise(r => setImmediate(r)); }, mapAll: async () => { while (maps.length) maps.shift().res(); await new Promise(r => setImmediate(r)); } };
+}
+const fixtures = { views: { 'bulb-overview': { camera: { origin: [1.92, -1.44, 0.7], target: [0, 0, 0] } } }, profiles: { draft: { W: 64, H: 64, iterations: 64, steps: 256, k: 0.9, floor: 1e-6, factor: 0.5 } } };
+const pipeline = { getBindGroupLayout: () => ({}) };
+const viewport = { bulb: pipeline, sphere: pipeline, shade: pipeline, blit: pipeline };
+const events = { log: [], mark(type, f = {}) { const e = { type, t: performance.now(), ...f }; this.log.push(e); return e; } };
+function make(fake, epoch = () => 1) {
+  const canvas = { width: 1280, height: 720, getContext: () => ({ configure() {}, getCurrentTexture: () => ({ createView: () => ({}) }), canvas }) };
+  return new Renderer({ device: fake.device, viewport, canvas, fixtures, events, alloc: createAllocator({ capBytes: 2 ** 30 }), watchdog: createWatchdog({ every: null }), epoch });
+}
+
+test('replacement requests never exceed two submitted bands while nothing completes', async () => {
+  const fake = fakeDevice(), r = make(fake);
+  for (let i = 0; i < 3; i++) r.render({ view: 'bulb-overview', profile: 'draft' });
+  assert.equal(fake.submits(), 2, 'only two band submissions are allowed with no completions');
+  await fake.completeOne();                          // a stale band completes: its credit frees one submission for the current generation
+  assert.equal(fake.submits(), 3);
+  const submitted = events.log.filter(e => e.type === 'submit');
+  assert.equal(submitted.at(-1).requestId, 3, 'the freed credit goes to the current request');
 });
 
-test('slow completions shrink bands and eventually split a row into column ranges', () => {
-  const s = new Scheduler({ rows: 64, cols: 1024, initialRows: 8, targetMs: 10, minRange: 64 });
-  s.request('slow'); let t = 0, band;
-  for (let i = 0; i < 40 && !s.isComplete(1); i++) {
-    while ((band = s.next())) s.submitted(band, t);
-    t += 200;                                   // every band takes 200 ms: 20x the target
-    for (const b of s.pendingBands()) s.completed(b, t, 0);
-  }
-  const { rowsPerBand, splits } = s.stats();
-  assert.ok(rowsPerBand.at(-1) <= 1, `rows per band should reach 1, got ${rowsPerBand.at(-1)}`);
-  assert.ok(splits > 0, 'a single row must be split into column ranges');
+test('a resize keeps the ledger: dimension changes do not grant fresh credits', async () => {
+  const fake = fakeDevice(), r = make(fake);
+  r.render({ view: 'bulb-overview', profile: 'draft' });
+  r.render({ view: 'bulb-overview', profile: 'draft', override: { W: 32, H: 32 } });
+  assert.equal(fake.submits(), 2);
 });
 
-test('a new request drops the old generation; its late completions are stale', () => {
-  const s = new Scheduler({ rows: 100, cols: 10, initialRows: 10 });
-  s.request('a'); const a1 = s.next(); s.submitted(a1, 0); const a2 = s.next(); s.submitted(a2, 0);
-  const g2 = s.request('b');
-  assert.equal(s.completed(a1, 1, 0), 'stale'); assert.equal(s.completed(a2, 1, 0), 'stale');
-  const b1 = s.next(); assert.equal(b1.generation, g2);
+test('a destroyed renderer neither submits nor publishes', async () => {
+  const fake = fakeDevice(), r = make(fake); let published = 0;
+  r.onPublish(() => published++);
+  r.render({ view: 'bulb-overview', profile: 'draft' });
+  r.destroy();
+  for (let i = 0; i < 10; i++) await fake.completeOne();
+  await fake.mapAll();
+  assert.equal(fake.submits(), 2); assert.equal(published, 0);
 });
 
-test('completions from a previous device epoch are stale even for the current generation', () => {
-  const s = new Scheduler({ rows: 10, cols: 10, initialRows: 10 });
-  s.request('a'); const b = s.next(); s.submitted(b, 0);
-  s.resetEpoch(1);
-  assert.equal(s.completed(b, 1, 0), 'stale');
+test('completions from a retired device epoch never publish', async () => {
+  const fake = fakeDevice(); let epoch = 1; const r = make(fake, () => epoch); let published = 0;
+  r.onPublish(() => published++);
+  r.render({ view: 'bulb-overview', profile: 'draft', override: { W: 8, H: 8 } });     // one band covers the frame
+  epoch = 2;                                                                            // device lost after submission
+  for (let i = 0; i < 5; i++) await fake.completeOne();
+  await fake.mapAll();
+  assert.equal(published, 0);
+  assert.ok(events.log.some(e => e.type === 'stale-band' || e.type === 'suppressed-publication'));
+});
+
+test('onPublish returns an unsubscribe function', async () => {
+  const fake = fakeDevice(), r = make(fake); let calls = 0;
+  const off = r.onPublish(() => calls++); off();
+  r.render({ view: 'bulb-overview', profile: 'draft', override: { W: 8, H: 8 } });
+  for (let i = 0; i < 4; i++) await fake.completeOne();
+  await fake.mapAll(); for (let i = 0; i < 4; i++) await fake.completeOne();
+  assert.equal(calls, 0);
 });
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `node --test spikes/project0/tests/scheduler.test.mjs`
-Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `spikes/project0/gpu/scheduler.js`.
+Run: `node --test spikes/project0/tests/scheduler.test.mjs spikes/project0/tests/renderer.test.mjs`
+Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `gpu/scheduler.js` and `gpu/renderer.js`.
 
 - [ ] **Step 3: Implement `gpu/scheduler.js`**
 
 ```js
-// spikes/project0/gpu/scheduler.js — pure scheduling policy. No DOM, no GPU objects.
-export class Scheduler {
-  constructor({ rows, cols, targetMs = 10, maxOutstanding = 2, initialRows = 8, minRange = 64 }) {
-    Object.assign(this, { rows, cols, targetMs, maxOutstanding, minRange });
-    this.rowsPerBand = initialRows; this.colsPerBand = cols;
-    this.generation = 0; this.epoch = 0; this.pending = new Set();
-    this.log = { outstandingMax: 0, bandMs: [], rowsPerBand: [], splits: 0 };
+// spikes/project0/gpu/scheduler.js — pure scheduling. The Ledger is per device session; the Planner is per generation.
+export class Ledger {
+  constructor({ max = 2 } = {}) { this.max = max; this.tickets = new Set(); this.peak = 0; }
+  available() { return this.tickets.size < this.max; }
+  take(meta) {
+    if (!this.available()) throw new Error('no submission credit: the outstanding limit is reached');
+    const ticket = { ...meta, live: true }; this.tickets.add(ticket);
+    this.peak = Math.max(this.peak, this.tickets.size);
+    return ticket;
   }
-  request(scene) {
-    this.generation++; this.scene = scene; this.row = 0; this.col = 0; this.done = 0;
-    return this.generation;
+  release(ticket) { if (!ticket.live || !this.tickets.has(ticket)) return false; ticket.live = false; this.tickets.delete(ticket); return true; }
+  retire(epoch) { let n = 0; for (const t of [...this.tickets]) if (t.epoch === epoch) { t.live = false; this.tickets.delete(t); n++; } return n; }
+  outstanding() { return this.tickets.size; }
+  maxObserved() { return this.peak; }
+}
+
+export class Planner {
+  constructor({ rows, cols, targetMs = 10, initialRows = 8, minRange = 64, carry = null }) {
+    Object.assign(this, { rows, cols, targetMs, minRange });
+    this.rowsPerBand = Math.min(rows, carry?.rowsPerBand ?? initialRows);
+    this.colsPerBand = Math.min(cols, carry?.colsPerBand ?? cols);
+    this.row = 0; this.col = 0; this.remaining = rows * cols;
+    this.log = { bandMs: [], rowsPerBand: [], splits: 0 };
   }
-  resetEpoch(epoch) { this.epoch = epoch; this.pending.clear(); }
-  pendingBands() { return [...this.pending]; }
   next() {
-    if (this.pending.size >= this.maxOutstanding || this.row >= this.rows) return null;
+    if (this.row >= this.rows) return null;
     const rows = Math.min(this.rowsPerBand, this.rows - this.row);
-    const cols = rows === 1 ? Math.min(this.colsPerBand, this.cols - this.col) : this.cols;
-    const band = { generation: this.generation, epoch: this.epoch, row0: this.row, rows, col0: rows === 1 ? this.col : 0, cols, area: rows * cols };
-    if (rows === 1 && this.col + cols < this.cols) this.col += cols; else { this.row += rows; this.col = 0; }
+    const split = rows === 1 && this.colsPerBand < this.cols;
+    const cols = split ? Math.min(this.colsPerBand, this.cols - this.col) : this.cols;
+    const band = { row0: this.row, rows, col0: split ? this.col : 0, cols, area: rows * cols };
+    if (split && this.col + cols < this.cols) this.col += cols; else { this.row += rows; this.col = 0; }
     return band;
   }
-  submitted(band, nowMs) {
-    band.submitMs = nowMs; this.pending.add(band);
-    this.log.outstandingMax = Math.max(this.log.outstandingMax, this.pending.size);
-  }
-  completed(band, nowMs, epoch) {
-    const wasPending = this.pending.delete(band);
-    if (!wasPending || band.epoch !== this.epoch || epoch !== this.epoch || band.generation !== this.generation) return 'stale';
-    const ms = nowMs - band.submitMs; this.log.bandMs.push(ms);
-    // Adapt the work per band towards targetMs: halve on a slow band, grow by 25% on a fast one.
-    // Below one row, split the row into column ranges no smaller than minRange.
+  // Adapt the work per band towards targetMs: halve when slow; below one row, split the row (not below minRange);
+  // grow by 25% (or re-merge ranges) when much faster than the target.
+  completed(band, ms) {
+    this.log.bandMs.push(ms); this.remaining -= band.area;
     if (ms > this.targetMs) {
       if (this.rowsPerBand > 1) this.rowsPerBand = Math.max(1, Math.floor(this.rowsPerBand / 2));
       else if (this.colsPerBand > this.minRange) { this.colsPerBand = Math.max(this.minRange, Math.floor(this.colsPerBand / 2)); this.log.splits++; }
@@ -4994,22 +5525,17 @@ export class Scheduler {
       else this.rowsPerBand = Math.min(this.rows, Math.ceil(this.rowsPerBand * 1.25));
     }
     this.log.rowsPerBand.push(this.rowsPerBand);
-    this.done += band.area;
-    return 'current';
   }
-  isComplete(generation) { return generation === this.generation && this.done === this.rows * this.cols && this.pending.size === 0; }
-  stats() { return { ...this.log, bandMs: [...this.log.bandMs], rowsPerBand: [...this.log.rowsPerBand] }; }
+  done() { return this.remaining === 0; }
+  carry() { return { rowsPerBand: this.rowsPerBand, colsPerBand: this.colsPerBand }; }
+  stats() { return { bandMs: [...this.log.bandMs], rowsPerBand: [...this.log.rowsPerBand], splits: this.log.splits }; }
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [ ] **Step 4: Write `gpu/view.wgsl` and `gpu/present.wgsl`**
 
-Run: `node --test spikes/project0/tests/scheduler.test.mjs`
-Expected: PASS, `# pass 5`, `# fail 0`.
-
-- [ ] **Step 5: Write `gpu/view.wgsl` (camera mode)**
-
-It is assembled after `fields.wgsl` and `trace.wgsl`, and reuses `trace_ray`, `field` and `prof`.
+`view.wgsl` is assembled after `fields.wgsl` and `trace.wgsl`, and reuses `trace_ray`,
+`field` and `prof`.
 
 ```wgsl
 // spikes/project0/gpu/view.wgsl — A.1 camera rays for one band; writes depth, status, normal.
@@ -5018,7 +5544,7 @@ struct Camera { origin: vec4f, fwd: vec4f, right: vec4f, up: vec4f, size: vec4u,
 @group(1) @binding(1) var depth_out: texture_storage_2d<r32float, write>;
 @group(1) @binding(2) var status_out: texture_storage_2d<r32uint, write>;
 @group(1) @binding(3) var normal_out: texture_storage_2d<rgba16float, write>;
-const NORMAL_UNAVAILABLE: u32 = 256u;   // bit 8 of status; the low byte is the ray status, bits 4..7 the reason
+const NORMAL_UNAVAILABLE: u32 = 256u;   // bit 8 of status; bits 0..3 ray status, bits 4..7 reason
 
 fn normal_at(p: vec3f, eps: f32) -> vec4f {
   var g = vec3f(0.0);
@@ -5037,7 +5563,7 @@ fn normal_at(p: vec3f, eps: f32) -> vec4f {
 fn view_band(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= cam.band.w || id.y >= cam.band.y) { return; }
   let px = cam.band.z + id.x;  let py = cam.band.x + id.y;
-  let w = f32(cam.size.x);  let h = f32(cam.size.y);  let th = 0.57735026918962576;   // tan(30 deg)
+  let w = f32(cam.size.x);  let h = f32(cam.size.y);  let th = 0.57735026918962576;   // tan(30 degrees)
   let sx = (2.0 * (f32(px) + 0.5) / w - 1.0) * th * w / h;
   let sy = (1.0 - 2.0 * (f32(py) + 0.5) / h) * th;
   let d = normalize(cam.fwd.xyz + sx * cam.right.xyz + sy * cam.up.xyz);
@@ -5055,10 +5581,8 @@ fn view_band(@builtin(global_invocation_id) id: vec3u) {
 }
 ```
 
-- [ ] **Step 6: Write `gpu/present.wgsl` (shade with workgroup coverage counts, then blit)**
-
 ```wgsl
-// spikes/project0/gpu/present.wgsl — A.5 shading into rgba8unorm, with coverage counters; and the canvas blit.
+// spikes/project0/gpu/present.wgsl — A.5 shading into rgba8unorm with workgroup-aggregated coverage; and the canvas blit.
 struct Counts { total: atomic<u32>, hit: atomic<u32>, miss: atomic<u32>, point: atomic<u32>, steps: atomic<u32>, failure: atomic<u32>, normal_unavailable: atomic<u32>, _pad: u32 }
 @group(0) @binding(0) var status_in: texture_2d<u32>;
 @group(0) @binding(1) var normal_in: texture_2d<f32>;
@@ -5103,14 +5627,14 @@ struct VOut { @builtin(position) pos: vec4f }
 @fragment fn blit_fs(v: VOut) -> @location(0) vec4f {
   let src = textureDimensions(display_in);
   let c = vec2u(min(vec2f(src) - 1.0, floor(v.pos.xy * vec2f(src) / dst.xy)));
-  return textureLoad(display_in, c, 0);   // nearest neighbour: a draft at half the backing size is shown at exactly 2x
+  return textureLoad(display_in, c, 0);   // nearest neighbour; a draft at half the backing size is shown at exactly 2x
 }
 ```
 
-The blit's destination size is a uniform: the canvas backing size, which A.9 resizes. T9
-asserts the canvas backing size before every trial.
+The shade and blit entry points share bindings 0 and 1 at module scope, but their
+entry-point resource interfaces are disjoint, which WGSL permits.
 
-- [ ] **Step 7: Write `browser/events.js` and `gpu/renderer.js`**
+- [ ] **Step 5: Implement `browser/events.js` and `gpu/renderer.js`**
 
 ```js
 // spikes/project0/browser/events.js — one page clock for every timing event.
@@ -5118,271 +5642,310 @@ const log = [];
 export const mark = (type, fields = {}) => { const e = { type, t: performance.now(), ...fields }; log.push(e); return e; };
 export const list = () => log.slice();
 export const clear = () => { log.length = 0; };
-let harnessDepth = 0;
+let seq = 0;
 export async function harness(fn) {
-  const id = `h${log.length}`; performance.mark(`${id}-start`); harnessDepth++;
-  try { return await fn(); } finally { harnessDepth--; performance.mark(`${id}-end`); performance.measure(`harness:${id}`, `${id}-start`, `${id}-end`); }
+  const id = `h${seq++}`; performance.mark(`${id}-start`);
+  try { return await fn(); } finally { performance.mark(`${id}-end`); performance.measure(`harness:${id}`, `${id}-start`, `${id}-end`); }
 }
 ```
 
 ```js
-// spikes/project0/gpu/renderer.js — WebGPU viewport: bands through the Scheduler, publish on completion.
-import { Scheduler } from './scheduler.js';
-import { profileWords, buffer } from './webgpu.js';
+// spikes/project0/gpu/renderer.js — WebGPU viewport. Submission credit comes from the session Ledger; a Planner per generation.
+import { Ledger, Planner } from './scheduler.js';
+import { upload, profileWords, source, compile } from './webgpu.js';
 import { norm, cross } from '../reference/camera.js';
 import { currentEpoch } from './device.js';
 
-const FIELD = { bulb: 3, sphere: 0 };
-const source = async name => (await fetch(new URL(name, import.meta.url))).text();
-
-export async function prepareViewport(device, onStatus = () => {}) {
-  const code = (await source('./fields.wgsl')) + (await source('./trace.wgsl')) + (await source('./view.wgsl'));
-  const view = device.createShaderModule({ code, label: 'view' });
-  const present = device.createShaderModule({ code: await source('./present.wgsl'), label: 'present' });
-  for (const m of [view, present]) { const e = (await m.getCompilationInfo()).messages.filter(x => x.type === 'error'); if (e.length) throw new Error(e.map(x => `${x.lineNum}:${x.linePos} ${x.message}`).join('; ')); }
+export async function prepareViewport(device, alloc, onStatus = () => {}) {
+  const fields = await source('./fields.wgsl'), trace = await source('./trace.wgsl');
+  const view = await compile(device, fields + trace + await source('./view.wgsl'), 'view');
+  const present = await compile(device, await source('./present.wgsl'), 'present');
   onStatus('preparing viewport pipelines');
   const [bulb, sphere, shade, blit] = await Promise.all([
-    device.createComputePipelineAsync({ layout: 'auto', compute: { module: view, entryPoint: 'view_band', constants: { FIELD: FIELD.bulb } } }),
-    device.createComputePipelineAsync({ layout: 'auto', compute: { module: view, entryPoint: 'view_band', constants: { FIELD: FIELD.sphere } } }),
+    device.createComputePipelineAsync({ layout: 'auto', compute: { module: view, entryPoint: 'view_band', constants: { FIELD: 3 } } }),
+    device.createComputePipelineAsync({ layout: 'auto', compute: { module: view, entryPoint: 'view_band', constants: { FIELD: 0 } } }),
     device.createComputePipelineAsync({ layout: 'auto', compute: { module: present, entryPoint: 'shade' } }),
     device.createRenderPipelineAsync({ layout: 'auto', vertex: { module: present, entryPoint: 'blit_vs' }, fragment: { module: present, entryPoint: 'blit_fs', targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }] }, primitive: { topology: 'triangle-list' } }),
   ]);
-  return { bulb, sphere, shade, blit };
+  return { bulb: alloc.pipeline(bulb), sphere: alloc.pipeline(sphere), shade: alloc.pipeline(shade), blit: alloc.pipeline(blit) };
 }
 
+const RING = 3, QUERY_PAIRS = 8;
+
 export class Renderer {
-  // alloc: {texture(device, desc), buffer(device, desc)}; T8's tracker satisfies it, so every viewport allocation can be accounted.
-  constructor({ device, viewport, canvas, fixtures, events, alloc = { texture: (d, desc) => d.createTexture(desc), buffer: (d, desc) => d.createBuffer(desc) } }) {
-    Object.assign(this, { device, viewport, fixtures, events, alloc, handlers: [], requestSeq: 0, ring: [], ringNext: 0, alive: true });
+  constructor({ device, viewport, canvas, fixtures, events, alloc, watchdog, epoch = currentEpoch, timestamps = device.features.has('timestamp-query') }) {
+    Object.assign(this, { device, viewport, canvas, fixtures, events, alloc, watchdog, epoch, alive: true, seq: 0, generation: 0, batchSeq: 0, job: null, carry: null, handlers: new Set() });
+    this.ledger = new Ledger({ max: 2 });
+    this.bands = [];
+    this.submits = 0;
     this.context = canvas.getContext('webgpu');
     this.context.configure({ device, format: navigator.gpu.getPreferredCanvasFormat(), alphaMode: 'opaque' });
-    for (let i = 0; i < 3; i++) this.ring.push({ buf: alloc.buffer(device, { size: 32, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }), busy: false });
+    this.ring = Array.from({ length: RING }, () => ({ buf: alloc.buffer(device, { size: 32, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }), owner: null }));
     this.counts = alloc.buffer(device, { size: 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
-    this.targets = null;
+    this.timestamps = timestamps ? { set: device.createQuerySet({ type: 'timestamp', count: 2 * QUERY_PAIRS }), resolve: alloc.buffer(device, { size: 16 * QUERY_PAIRS, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC }), next: 0 } : null;
+    this.targets = null; this.retired = [];
   }
-  onPublish(h) { this.handlers.push(h); }
 
-  ensureTargets(W, H) {
+  onPublish(handler) { this.handlers.add(handler); return () => this.handlers.delete(handler); }
+  stats() { return { outstandingMax: this.ledger.maxObserved(), submits: this.submits, bands: this.bands.slice(), planner: this.job?.planner.stats() ?? null }; }
+
+  targetsFor(W, H) {
     if (this.targets?.W === W && this.targets?.H === H) return this.targets;
-    this.targets?.all.forEach(t => t.destroy());
-    const tex = (format, usage) => this.alloc.texture(this.device, { size: [W, H], format, usage });
-    const S = GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING;
-    const t = { W, H, depth: tex('r32float', S), status: tex('r32uint', S), normal: tex('rgba16float', S), display: tex('rgba8unorm', S) };
+    if (this.targets) this.retire(this.targets);
+    const S = GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;
+    const tex = format => this.alloc.texture(this.device, { size: [W, H], format, usage: S });
+    const t = { W, H, users: 0, depth: tex('r32float'), status: tex('r32uint'), normal: tex('rgba16float'), display: tex('rgba8unorm') };
     t.all = [t.depth, t.status, t.normal, t.display];
     return (this.targets = t);
   }
+  retire(t) { t.retired = true; if (t.users === 0) t.all.forEach(x => x.destroy()); else this.retired.push(t); }
+  drained(t) { if (--t.users === 0 && t.retired) { t.all.forEach(x => x.destroy()); this.retired = this.retired.filter(x => x !== t); } }
 
-  // override: e.g. {W, H} for A.9's backing-size-dependent draft dimensions. It never changes iterations, steps or tolerances.
   render({ view, profile, camera, label = view, override = {} }) {
+    const requestId = ++this.seq;
+    this.events.mark('request', { requestId, view, profile, label });                 // at function entry: G7 measures from here
+    if (!this.alive) throw new Error('renderer destroyed');
     if (Object.keys(override).some(k => !['W', 'H'].includes(k))) throw new Error('render override may only set W and H');
     const fx = this.fixtures, v = fx.views[view], p = { ...fx.profiles[profile], ...(v.traceOverrides || {}), ...override };
     const cam = camera || v.camera;
-    const requestId = ++this.requestSeq;
-    this.events.mark('request', { requestId, view, profile, label });
-    const targets = this.ensureTargets(p.W, p.H);
-    if (!this.sched || this.sched.rows !== p.H || this.sched.cols !== p.W) this.sched = new Scheduler({ rows: p.H, cols: p.W });
-    const generation = this.sched.request({ requestId });
-    this.sched.resetEpoch(currentEpoch());
     const f = norm(cam.target.map((x, i) => x - cam.origin[i])), r = norm(cross(f, [0, 0, 1])), u = cross(r, f);
-    this.job = { requestId, generation, label, view, profile: p, pipeline: view === 'sphere' ? this.viewport.sphere : this.viewport.bulb, camera: [cam.origin, f, r, u], targets, admitted: false };
-    this.device.queue.writeBuffer(this.counts, 0, new Uint32Array(8));
+    const camWords = new Float32Array(24), camU = new Uint32Array(camWords.buffer);
+    [cam.origin, f, r, u].forEach((vec, i) => camWords.set(vec, 4 * i)); camU.set([p.W, p.H, 0, 0], 16);
+    this.job = { requestId, generation: ++this.generation, epoch: this.epoch(), label, W: p.W, H: p.H, profile: p,
+      pipeline: view === 'sphere' ? this.viewport.sphere : this.viewport.bulb, camWords, targets: this.targetsFor(p.W, p.H),
+      planner: new Planner({ rows: p.H, cols: p.W, carry: this.carry }), counted: false };
     this.pump();
     return requestId;
   }
 
   pump() {
-    const job = this.job; if (!job || !this.alive) return;
-    let band;
-    while ((band = this.sched.next())) {
-      if (!job.admitted) { job.admitted = true; this.events.mark('admit', { requestId: job.requestId }); }
-      const camWords = new Float32Array(24), camU = new Uint32Array(camWords.buffer);
-      job.camera.forEach((vec, i) => camWords.set(vec, 4 * i));
-      camU.set([job.profile.W, job.profile.H, 0, 0], 16); camU.set([band.row0, band.rows, band.col0, band.cols], 20);
-      const prof = buffer(this.device, new Uint8Array(profileWords(job.profile, 0, 0, 0)), GPUBufferUsage.UNIFORM);
-      const camB = buffer(this.device, camWords, GPUBufferUsage.UNIFORM);
-      const dummy = buffer(this.device, new Float32Array(4), GPUBufferUsage.STORAGE);
-      const pl = job.pipeline;
-      const g0 = this.device.createBindGroup({ layout: pl.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: prof } }, { binding: 1, resource: { buffer: dummy } }] });
-      const g1 = this.device.createBindGroup({ layout: pl.getBindGroupLayout(1), entries: [{ binding: 0, resource: { buffer: camB } }, { binding: 1, resource: job.targets.depth.createView() }, { binding: 2, resource: job.targets.status.createView() }, { binding: 3, resource: job.targets.normal.createView() }] });
-      const enc = this.device.createCommandEncoder(); const pass = enc.beginComputePass();
+    const job = this.job;
+    if (!this.alive || !job || job.epoch !== this.epoch() || this.watchdog.stopped) return;
+    while (this.ledger.available()) {
+      const band = job.planner.next(); if (!band) return;
+      if (!job.counted) { job.counted = true; this.device.queue.writeBuffer(this.counts, 0, new Uint32Array(8)); }
+      const ticket = this.ledger.take({ epoch: job.epoch, generation: job.generation, requestId: job.requestId });
+      const batch = ++this.batchSeq;
+      const camWords = job.camWords.slice(); new Uint32Array(camWords.buffer).set([band.row0, band.rows, band.col0, band.cols], 20);
+      const prof = upload(this.device, this.alloc, profileWords(job.profile, 0, 0, 0), GPUBufferUsage.UNIFORM);
+      const camB = upload(this.device, this.alloc, camWords, GPUBufferUsage.UNIFORM);
+      const dummy = upload(this.device, this.alloc, new Float32Array(4), GPUBufferUsage.STORAGE);
+      const pl = job.pipeline, t = job.targets; t.users++;
+      const g0 = this.alloc.bindGroup(this.device.createBindGroup({ layout: pl.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: prof } }, { binding: 1, resource: { buffer: dummy } }] }));
+      const g1 = this.alloc.bindGroup(this.device.createBindGroup({ layout: pl.getBindGroupLayout(1), entries: [{ binding: 0, resource: { buffer: camB } }, { binding: 1, resource: t.depth.createView() }, { binding: 2, resource: t.status.createView() }, { binding: 3, resource: t.normal.createView() }] }));
+      const ts = this.timestamps ? this.timestamps.next++ % QUERY_PAIRS : null;
+      const enc = this.device.createCommandEncoder();
+      const pass = enc.beginComputePass(ts === null ? {} : { timestampWrites: { querySet: this.timestamps.set, beginningOfPassWriteIndex: 2 * ts, endOfPassWriteIndex: 2 * ts + 1 } });
       pass.setPipeline(pl); pass.setBindGroup(0, g0); pass.setBindGroup(1, g1); pass.dispatchWorkgroups(Math.ceil(band.cols / 8), Math.ceil(band.rows / 8)); pass.end();
-      this.device.queue.submit([enc.finish()]);
-      this.sched.submitted(band, performance.now());
-      const epoch = currentEpoch();
+      if (ts !== null) enc.resolveQuerySet(this.timestamps.set, 2 * ts, 2, this.timestamps.resolve, 16 * ts);
+      const row = { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch, band, submitMs: null, doneMs: null, gpuMs: null, ts };
+      const done = this.watchdog.submitted(`band:${batch}`, { requestId: job.requestId, generation: job.generation, epoch: job.epoch });
+      this.device.queue.submit([enc.finish()]); this.submits++;
+      row.submitMs = performance.now(); this.bands.push(row);
+      this.events.mark('submit', { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch });
       this.device.queue.onSubmittedWorkDone().then(() => {
-        prof.destroy(); camB.destroy(); dummy.destroy();
-        const verdict = this.sched.completed(band, performance.now(), epoch);
-        if (verdict === 'stale') { this.events.mark('stale-band', { generation: band.generation }); return; }
-        if (this.sched.isComplete(job.generation) && this.job === job) this.finish(job); else this.pump();
+        done(); prof.destroy(); camB.destroy(); dummy.destroy(); this.drained(t);
+        row.doneMs = performance.now();
+        this.ledger.release(ticket);                                                      // releases its own credit even if obsolete
+        const current = this.alive && this.job === job && job.epoch === this.epoch();
+        this.events.mark(current ? 'band-done' : 'stale-band', { requestId: job.requestId, generation: job.generation, batch });
+        if (current) {
+          job.planner.completed(band, row.doneMs - row.submitMs); this.carry = job.planner.carry();
+          if (job.planner.done()) return this.finish(job);
+        }
+        this.pump();                                                                      // the current generation may progress
       });
     }
   }
 
   finish(job) {
-    const { device } = this, t = job.targets;
-    const pl = this.viewport.shade;
-    const g = device.createBindGroup({ layout: pl.getBindGroupLayout(0), entries: [{ binding: 0, resource: t.status.createView() }, { binding: 1, resource: t.normal.createView() }, { binding: 2, resource: t.display.createView() }, { binding: 3, resource: { buffer: this.counts } }] });
+    if (!this.alive || job.epoch !== this.epoch() || this.job !== job) return;
+    const { device } = this, t = job.targets; t.users++;
+    const slot = this.ring.find(s => s.owner === null);
+    if (slot) slot.owner = job;                                                           // reserved before the copy is encoded
+    const dstB = upload(device, this.alloc, new Float32Array([this.canvas.width, this.canvas.height, 0, 0]), GPUBufferUsage.UNIFORM);
+    const g = this.alloc.bindGroup(device.createBindGroup({ layout: this.viewport.shade.getBindGroupLayout(0), entries: [{ binding: 0, resource: t.status.createView() }, { binding: 1, resource: t.normal.createView() }, { binding: 2, resource: t.display.createView() }, { binding: 3, resource: { buffer: this.counts } }] }));
+    const blitGroup = this.alloc.bindGroup(device.createBindGroup({ layout: this.viewport.blit.getBindGroupLayout(0), entries: [{ binding: 0, resource: t.display.createView() }, { binding: 1, resource: { buffer: dstB } }] }));
     const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
-    pass.setPipeline(pl); pass.setBindGroup(0, g); pass.dispatchWorkgroups(Math.ceil(t.W / 8), Math.ceil(t.H / 8)); pass.end();
-    const slot = this.ring[this.ringNext]; this.ringNext = (this.ringNext + 1) % 3;
-    const canRead = !slot.busy; if (canRead) enc.copyBufferToBuffer(this.counts, 0, slot.buf, 0, 32);
-    const canvas = this.context.canvas;
-    const dstB = buffer(device, new Float32Array([canvas.width, canvas.height, 0, 0]), GPUBufferUsage.UNIFORM);
-    const blitGroup = device.createBindGroup({ layout: this.viewport.blit.getBindGroupLayout(0), entries: [{ binding: 0, resource: t.display.createView() }, { binding: 1, resource: { buffer: dstB } }] });
+    pass.setPipeline(this.viewport.shade); pass.setBindGroup(0, g); pass.dispatchWorkgroups(Math.ceil(t.W / 8), Math.ceil(t.H / 8)); pass.end();
+    if (slot) enc.copyBufferToBuffer(this.counts, 0, slot.buf, 0, 32);
     const rp = enc.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 1 }, storeOp: 'store' }] });
     rp.setPipeline(this.viewport.blit); rp.setBindGroup(0, blitGroup); rp.draw(3); rp.end();
-    device.queue.submit([enc.finish()]);
-    const epoch = currentEpoch();
-    const complete = () => {
-      dstB.destroy();
+    const done = this.watchdog.submitted(`finish:${job.requestId}`, { requestId: job.requestId, generation: job.generation, epoch: job.epoch });
+    device.queue.submit([enc.finish()]); this.submits++;
+    device.queue.onSubmittedWorkDone().then(() => {
+      done(); dstB.destroy(); this.drained(t);
       this.events.mark('complete', { requestId: job.requestId });
       const publish = counts => {
-        if (epoch !== currentEpoch() || this.job !== job) { this.events.mark('suppressed-publication', { requestId: job.requestId }); return; }
-        const e = this.events.mark('publish', { requestId: job.requestId, generation: job.generation, label: job.label, counts });
-        for (const h of this.handlers) h({ requestId: job.requestId, generation: job.generation, label: job.label, counts, normalUnavailable: counts?.normalUnavailable ?? null, publishedMs: e.t });
+        if (slot && slot.owner === job) slot.owner = null;                                 // only the reservation's owner releases
+        if (!this.alive || job.epoch !== this.epoch() || this.job !== job) { this.events.mark('suppressed-publication', { requestId: job.requestId }); return; }
+        const e = this.events.mark('publish', { requestId: job.requestId, generation: job.generation, label: job.label, W: job.W, H: job.H, counts });
+        for (const h of [...this.handlers]) h({ requestId: job.requestId, generation: job.generation, epoch: job.epoch, label: job.label, W: job.W, H: job.H, counts, publishedMs: e.t });
       };
-      if (!canRead) return publish(null);
-      slot.busy = true;
+      if (!slot || !this.alive || job.epoch !== this.epoch()) return publish(null);
       slot.buf.mapAsync(GPUMapMode.READ).then(() => {
-        const c = new Uint32Array(slot.buf.getMappedRange().slice(0)); slot.buf.unmap(); slot.busy = false;
+        const c = new Uint32Array(slot.buf.getMappedRange().slice(0)); slot.buf.unmap();
         publish({ total: c[0], hit: c[1], miss: c[2], point: c[3], steps: c[4], failure: c[5], normalUnavailable: c[6] });
-      }, () => { slot.busy = false; publish(null); });
-    };
-    device.queue.onSubmittedWorkDone().then(complete);
+      }, () => publish(null));
+    });
   }
 
-  destroy() { this.alive = false; this.targets?.all.forEach(t => t.destroy()); this.ring.forEach(s => s.buf.destroy()); this.counts.destroy(); }
+  // Outside measured windows: read the resolved timestamp pairs and attach gpuMs to the most recent band in each slot.
+  // Without the feature, band timing remains labelled queue-completion.
+  async readTimestamps() {
+    if (!this.timestamps || !this.alive) return { method: 'queue-completion', filled: 0 };
+    const size = 16 * QUERY_PAIRS;
+    const read = this.alloc.buffer(this.device, { size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    try {
+      const enc = this.device.createCommandEncoder(); enc.copyBufferToBuffer(this.timestamps.resolve, 0, read, 0, size); this.device.queue.submit([enc.finish()]);
+      await read.mapAsync(GPUMapMode.READ);
+      const ns = new BigUint64Array(read.getMappedRange().slice(0)); read.unmap();
+      let filled = 0;
+      for (let slot = 0; slot < QUERY_PAIRS; slot++) {
+        const row = [...this.bands].reverse().find(b => b.ts === slot && b.doneMs !== null);
+        if (row && ns[2 * slot + 1] >= ns[2 * slot]) { row.gpuMs = Number(ns[2 * slot + 1] - ns[2 * slot]) / 1e6; filled++; }
+      }
+      return { method: 'timestamp-query', filled };
+    } finally { read.destroy(); }
+  }
+
+  destroy() {
+    if (!this.alive) return;
+    this.alive = false; this.handlers.clear();
+    if (this.targets) this.retire(this.targets);
+    for (const s of this.ring) if (s.owner === null) s.buf.destroy();
+    this.counts.destroy(); this.timestamps?.set.destroy(); this.timestamps?.resolve.destroy();
+  }
 }
 ```
 
-These are the publication semantics T9 measures:
-- `request`: when `render()` is called;
-- `admit`: when the first band is submitted;
-- `complete`: when the shade-and-blit submission's queue work is done;
-- `publish`: when the counts are available and the generation is still current.
+The renderer records band timing from queue completion. `gpuMs` is filled only when
+timestamp queries are granted: `readTimestamps()`, called by T9's drivers outside measured
+windows, reads the resolved pairs back for the most recent band in each of the `QUERY_PAIRS`
+slots. Without the feature, band timing is labelled `queue-completion`. Either way, the query
+buffers are allocated through the session allocator. The query set itself is counted
+separately: it has no byte size in the A.8 accounting.
 
-For timing, publication is that application event (spec §5). Visible output is verified
-separately (T9 Step 6).
-
-- [ ] **Step 8: Add a viewport smoke driver and run it on the GPU**
-
-In `spikes/project0/browser/drivers.js`, create the T9 driver module with a first `smoke` driver:
+- [ ] **Step 6: Write `browser/drivers/common.js` and `browser/drivers/smoke.js`**
 
 ```js
-// spikes/project0/browser/drivers.js — in-page gate drivers (T9 adds G2, G6–G10, G12, G13).
-import { acquire } from '../gpu/device.js';
-import { prepareViewport, Renderer } from '../gpu/renderer.js';
-import * as events from './events.js';
+// spikes/project0/browser/drivers/common.js — shared driver helpers. The loss handler and watchdog exist before any submission.
+import { acquire, destroy, onLoss } from '../../gpu/device.js';
+import { prepareViewport, Renderer } from '../../gpu/renderer.js';
+import { createAllocator } from '../../gpu/alloc.js';
+import { createWatchdog } from '../../gpu/watchdog.js';
+import * as events from '../events.js';
 
-export async function session(fixtures, status) {
-  const { device, info } = await acquire({ requiredFeatures: ['timestamp-query'] });
-  const viewport = await prepareViewport(device, status);
-  const renderer = new Renderer({ device, viewport, canvas: document.getElementById('view'), fixtures, events });
-  return { device, info, viewport, renderer };
+export const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+export async function session(fixtures, status, { alloc = createAllocator({ capBytes: fixtures.resources.capBytes }) } = {}) {
+  const watchdog = createWatchdog(), losses = [];
+  const off = onLoss(info => losses.push(info));
+  const { device, info, epoch } = await acquire({ requiredFeatures: ['timestamp-query'] });
+  const viewport = await prepareViewport(device, alloc, status);
+  const canvas = document.getElementById('view');
+  const renderer = new Renderer({ device, viewport, canvas, fixtures, events, alloc, watchdog });
+  let closed = false;
+  return {
+    device, info, epoch, viewport, renderer, alloc, watchdog, losses, events,
+    close() { if (closed) return; closed = true; off(); watchdog.dispose(); renderer.destroy(); destroy(); alloc.destroyAll(); },
+  };
 }
 
-const once = (renderer, args) => new Promise(resolve => { const id = renderer.render(args); renderer.onPublish(p => { if (p.requestId === id) resolve(p); }); });
+export function frameOf(p) { return { requestId: p.requestId, label: p.label, W: p.W, H: p.H, counts: p.counts, t: p.publishedMs }; }
 
-export async function runGateDriver(gate, fixtures, params, status) {
-  if (gate === 'smoke') {
-    const { device, renderer } = await session(fixtures, status);
-    const out = [];
-    for (const [view, profile] of [['sphere', 'draft'], ['bulb-overview', 'draft'], ['bulb-detail-0.05', 'draft'], ['bulb-stress', 'stress']]) {
-      const t0 = performance.now(); const p = await once(renderer, { view, profile }); out.push({ view, profile, ms: p.publishedMs - t0, counts: p.counts, stats: renderer.sched.stats() });
-    }
-    renderer.destroy(); device.destroy();
-    return { slots: [{ slot: 'smoke', raw: { out } }], invalidations: [] };
-  }
-  throw new Error(`no driver for ${gate}`);
+export function renderOnce(renderer, args, { timeoutMs = 20000 } = {}) {
+  return new Promise((resolve, reject) => {
+    let id = null, off = null;
+    const timer = setTimeout(() => { off?.(); reject(new Error(`no publication within ${timeoutMs} ms`)); }, timeoutMs);
+    off = renderer.onPublish(p => { if (p.requestId === id) { clearTimeout(timer); off(); resolve(frameOf(p)); } });
+    id = renderer.render(args);
+  });
 }
 ```
+
+```js
+// spikes/project0/browser/drivers/smoke.js — development check of the viewport path (not a gate).
+import { session, renderOnce } from './common.js';
+export async function run(gate, fixtures, params, status) {
+  const s = await session(fixtures, status), out = [];
+  try {
+    for (const [view, profile] of [['sphere', 'draft'], ['bulb-overview', 'draft'], ['bulb-detail-0.05', 'draft'], ['bulb-stress', 'stress']]) {
+      const t0 = performance.now(); const frame = await renderOnce(s.renderer, { view, profile });
+      out.push({ view, profile, ms: frame.t - t0, frame, stats: { outstandingMax: s.renderer.stats().outstandingMax, submits: s.renderer.stats().submits } });
+    }
+    return { slots: [{ slot: 'smoke', raw: { out, losses: s.losses, stall: s.watchdog.stall } }], invalidations: [...s.losses.map(l => `device lost: ${l.reason}`), ...(s.watchdog.stall ? ['no observable progress for 5 s'] : [])] };
+  } finally { s.close(); }
+}
+```
+
+- [ ] **Step 7: Run the Node tests to verify they pass**
+
+Run: `node --test spikes/project0/tests/scheduler.test.mjs spikes/project0/tests/renderer.test.mjs`
+Expected: PASS, `# pass 9`, `# fail 0`.
+
+- [ ] **Step 8: Commit** (after Codex's read-only review, before the GPU smoke run)
+
+```bash
+git add spikes/project0/gpu/scheduler.js spikes/project0/gpu/view.wgsl spikes/project0/gpu/present.wgsl spikes/project0/gpu/renderer.js spikes/project0/browser/events.js spikes/project0/browser/drivers/common.js spikes/project0/browser/drivers/smoke.js spikes/project0/tests/scheduler.test.mjs spikes/project0/tests/renderer.test.mjs
+git commit -m "Project 0 T7: device-session submission ledger, band planner, camera marcher, shade/coverage, blit, lifetime-checked renderer"
+```
+
+- [ ] **Step 9: Run the viewport smoke check on the GPU**
 
 Run: `node spikes/project0/run.mjs --gate smoke --mode headed`
 
-`metricsFor` has no `smoke` derivation. `run.mjs` records the invalidation
-`metrics: no metric derivation for smoke/smoke` and still saves the raw file, as intended for
-a development check.
-
 Expected:
-- an `evidence:` directory whose `smoke.raw.json` holds four entries with non-null `counts`;
-- `counts.total` is 230,400 for each 640 × 360 view;
-- `sphere` has `point + steps + failure` = 0;
-- `bulb-stress` has `steps / total` ≥ 0.40;
-- `stats.outstandingMax` ≤ 2.
+- an `evidence:` directory; `smoke` is an experiment, so its record has no metrics and no
+  invalidation for missing metrics;
+- in its raw file, four frames with non-null `counts`, each with `counts.total = W × H`
+  (230,400 for 640 × 360 drafts);
+- `sphere`: `point + steps + failure` = 0;
+- `bulb-stress`: `steps / total` ≥ 0.40;
+- `outstandingMax` ≤ 2 for every frame.
 
-If the coverage fractions fall outside the A.6 ranges, that is a finding to investigate against
-the CPU coverage figures in `fixtures.coverage`. **Never edit the ranges.**
-
-- [ ] **Step 9: Commit** (after Codex's read-only review)
-
-```bash
-git add spikes/project0/gpu/scheduler.js spikes/project0/gpu/view.wgsl spikes/project0/gpu/present.wgsl spikes/project0/gpu/renderer.js spikes/project0/browser/events.js spikes/project0/browser/drivers.js spikes/project0/tests/scheduler.test.mjs
-git commit -m "Project 0 T7: bounded band scheduler, camera-mode marcher, shade/coverage and blit; viewport smoke check"
-```
+Coverage outside A.6 is a finding to investigate against `fixtures.coverage`. **Never edit the
+ranges.**
 
 ---
 
-### Task T8: Resource accounting, the A.8 verification, and loss/recovery (G11, G13)
+### Task T8: The A.8 resource verification (G11) and loss/recovery (G13)
 
 **Owner:** Claude. **Reviewer:** Codex (read-only `review --diff`).
 
 **Files:**
-- `spikes/project0/gpu/resources.js`: a tracked allocator. It counts payload bytes, live
-  textures and buffers, and the peak, and accounts for every allocation the harness makes.
-- `spikes/project0/gpu/lifecycle.js`: the pure loss and recovery policy. It covers interruption,
-  request preservation, epoch-guarded late completions, and stopping automatic retry after a
-  repeated loss.
-- `spikes/project0/gpu/pattern.wgsl`: the A.8 pattern writers, one entry point per storage format.
-- Modify `spikes/project0/gpu/device.js` (T5): synchronous `signalLoss`, `injectLoss()` and `clearLossHandlers()`.
-- Modify `spikes/project0/browser/drivers.js`: adds the `G11` and `G13` drivers.
-- Modify `spikes/project0/measure.mjs`: adds G11/G13 metric derivation.
-- Tests: `spikes/project0/tests/resources.test.mjs` and `spikes/project0/tests/lifecycle.test.mjs`.
+- `spikes/project0/gpu/pattern.wgsl`, the A.8 pattern writers, one entry point per storage format.
+- `spikes/project0/gpu/lifecycle.js`, the pure loss and recovery policy.
+- `spikes/project0/browser/drivers/resources.js`: `prepareResourceCheck()`,
+  `exerciseResources()` and the G11 driver.
+- `spikes/project0/browser/drivers/lifecycle.js`, the G13 driver.
+- `spikes/project0/measure/resources.mjs` and `spikes/project0/measure/lifecycle.mjs`, which
+  recompute the G11 and G13 metrics from raw observations.
+- Tests: `spikes/project0/tests/lifecycle.test.mjs` and
+  `spikes/project0/tests/resources-metrics.test.mjs`.
 
 **Interfaces:**
 - Consumes:
-  - T7: `Renderer` (constructor option `track`), `session()`, `events`;
-  - T5: `acquire`, `destroy`, `onLoss`, `currentEpoch`;
-  - T4: `fixtures.resources.{width, height, entries, tableBytes, capBytes, pattern, readback}`.
+  - T6: `createAllocator`, `createWatchdog`, `upload`;
+  - T7: `session`, `renderOnce`, `frameOf`, `Renderer`;
+  - T5: `acquire`, `injectLoss`, `onLoss`, `currentEpoch`;
+  - T4: `fixtures.resources`, `fixtures.views`, `fixtures.profiles`;
+  - T1: `coverageValid`.
 - Produces:
-  - `BYTES_PER_TEXEL: {r32float: 4, rgba16float: 8, r32uint: 4, rgba32float: 16, rgba8unorm: 4}`;
-  - `createTracker() → {track(resource, bytes, kind), texture(device, desc), buffer(device, desc), inventory() → {bytes, textures, buffers, peakBytes}, release(resource)}`.
-    `track` wraps `destroy()` so that it decrements the counts exactly once;
-  - `textureBytes({size: [w, h], format}) → number`, the payload bytes only (spec A.8 accounting);
-  - `new Lifecycle({maxAutomaticRecoveries = 1, windowMs = 60000, now})`, with:
+  - `prepareResourceCheck(device, alloc) → {pipelines: {[format]: GPUComputePipeline}}`, prepared
+    once and reused;
+  - `exerciseResources(device, alloc, watchdog, fixtures, prepared, status) → raw`. The raw
+    result carries every observation the G11 metrics are recomputed from. The function never
+    acquires or destroys the device, and it releases everything it allocated, on failure too;
+  - `new Lifecycle({epoch, maxAutomaticRecoveries = 1, windowMs = 60000, now})`, with:
     - `begin(request) → job`;
-    - `lost({epoch, reason, injected}) → {action: 'recover' | 'stop', interrupted: job | null}`;
+    - `lost(event) → {action: 'recover' | 'stop' | 'ignore', interrupted}`;
     - `recovered(epoch)`;
-    - `acceptCompletion(job, epoch) → boolean`;
-    - `stats() → {interruptions, recoveries, automaticRetriesAfterRepeat, stopped}`.
+    - `accept(job, epoch) → boolean`;
+    - `succeed(job)`;
+    - `stats()`.
 
 - [ ] **Step 1: Write the failing tests**
-
-```js
-// spikes/project0/tests/resources.test.mjs
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { createTracker, textureBytes, BYTES_PER_TEXEL } from '../gpu/resources.js';
-
-test('A.8 payload bytes match the frozen table', () => {
-  const px = 3840 * 2160;
-  assert.equal(textureBytes({ size: [3840, 2160], format: 'rgba32float' }), 16 * px);
-  const total = ['r32float', 'rgba16float', 'r32uint', 'rgba16float', 'rgba32float', 'rgba8unorm', 'rgba8unorm']
-    .reduce((n, f) => n + BYTES_PER_TEXEL[f] * px, 0) + 2 * 3840 * 4 * 256;
-  assert.equal(total, 405995520);
-});
-
-test('the tracker counts live resources and the peak, and destroy() releases exactly once', () => {
-  const tr = createTracker();
-  const fake = () => ({ destroyed: 0, destroy() { this.destroyed++; } });
-  const a = tr.track(fake(), 100, 'buffer'), b = tr.track(fake(), 50, 'texture');
-  assert.deepEqual(tr.inventory(), { bytes: 150, textures: 1, buffers: 1, peakBytes: 150 });
-  a.destroy(); a.destroy();
-  assert.deepEqual(tr.inventory(), { bytes: 50, textures: 1, buffers: 0, peakBytes: 150 });
-  assert.equal(a.destroyed, 1);
-  b.destroy();
-  assert.deepEqual(tr.inventory(), { bytes: 0, textures: 0, buffers: 0, peakBytes: 150 });
-});
-```
 
 ```js
 // spikes/project0/tests/lifecycle.test.mjs
@@ -5390,110 +5953,152 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Lifecycle } from '../gpu/lifecycle.js';
 
-test('a loss interrupts the job, preserves its request and rejects late completions from the old epoch', () => {
-  let t = 0; const lc = new Lifecycle({ now: () => t });
-  const job = lc.begin({ view: 'bulb-stress', profile: 'settled' });
-  const r = lc.lost({ epoch: 1, reason: 'destroyed', injected: false });
-  assert.equal(r.action, 'recover'); assert.equal(r.interrupted, job);
-  assert.equal(job.state, 'interrupted'); assert.deepEqual(job.request, { view: 'bulb-stress', profile: 'settled' });
-  assert.equal(lc.acceptCompletion(job, 1), false);
-  lc.recovered(2);
-  const again = lc.begin(job.request);
-  assert.equal(lc.acceptCompletion(again, 2), true);
+test('a loss of the current epoch interrupts the job and preserves its request exactly', () => {
+  let t = 0; const lc = new Lifecycle({ epoch: 7, now: () => t });
+  const job = lc.begin({ view: 'bulb-overview', profile: 'settled' });
+  const r = lc.lost({ epoch: 7, reason: 'destroyed', injected: false });
+  assert.equal(r.action, 'recover'); assert.equal(r.interrupted, job); assert.equal(job.state, 'interrupted');
+  assert.deepEqual(job.request, { view: 'bulb-overview', profile: 'settled' });
+  assert.equal(lc.accept(job, 7), false); assert.equal(lc.accept(job, 8), false);
+  lc.recovered(9);
+  assert.equal(lc.accept(lc.begin(job.request), 9), true);
 });
 
-test('a second loss inside the window stops automatic retry', () => {
-  let t = 0; const lc = new Lifecycle({ now: () => t, windowMs: 60000 });
-  lc.begin({ a: 1 }); assert.equal(lc.lost({ epoch: 1, injected: true }).action, 'recover'); lc.recovered(2);
-  t = 1000; lc.begin({ a: 1 });
-  assert.equal(lc.lost({ epoch: 2, injected: true }).action, 'stop');
-  assert.equal(lc.stats().automaticRetriesAfterRepeat, 0); assert.equal(lc.stats().stopped, true);
+test('a loss reported for a different epoch is ignored, not treated as the current device', () => {
+  const lc = new Lifecycle({ epoch: 3, now: () => 0 });
+  lc.begin({ a: 1 });
+  assert.equal(lc.lost({ epoch: 2, reason: 'destroyed' }).action, 'ignore');
 });
 
-test('an interrupted job never reports success', () => {
-  const lc = new Lifecycle({ now: () => 0 });
-  const job = lc.begin({ x: 1 }); lc.lost({ epoch: 1, injected: true });
+test('a second loss inside the window stops automatic retry; an interrupted job never succeeds', () => {
+  let t = 0; const lc = new Lifecycle({ epoch: 1, now: () => t, windowMs: 60000 });
+  const job = lc.begin({ a: 1 }); assert.equal(lc.lost({ epoch: 1, injected: true }).action, 'recover');
   assert.throws(() => lc.succeed(job), /interrupted/);
+  lc.recovered(3); t = 1000; lc.begin({ a: 1 });
+  assert.equal(lc.lost({ epoch: 3, injected: true }).action, 'stop');
+  assert.equal(lc.stats().stopped, true);
+  assert.throws(() => lc.begin({ a: 1 }), /stopped/);
+});
+```
+
+```js
+// spikes/project0/tests/resources-metrics.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { metricsFor } from '../measure/index.mjs';
+const fx = { resources: { tableBytes: 405995520, capBytes: 2 ** 30, entries: [{ kind: 'texture' }, { kind: 'texture' }, { kind: 'texture' }, { kind: 'texture' }, { kind: 'texture' }, { kind: 'texture' }, { kind: 'texture' }, { kind: 'buffer', count: 2, bytes: 7864320 }], readback: { x: [0, 1, 2], y: [0, 1, 2], fullBand: { width: 3840, height: 256, bytesPerRow: 15360 } } },
+  views: { 'bulb-overview': {} }, profiles: { settled: { W: 1280, H: 720 } } };
+const good = { tableBytes: 405995520, before: { bytes: 100, textures: 0, buffers: 1 }, after: { bytes: 100, textures: 0, buffers: 1 }, peakBytes: 406000000,
+  written: Array(7).fill(true), checks: Array.from({ length: 63 }, () => ({ ok: true })), bandOk: true, fullBandBytes: 3932160,
+  cancel: { before: 2, after: 0 }, outstandingMax: 2, errors: [] };
+
+test('G11 metrics are recomputed from the raw observations', async () => {
+  const m = await metricsFor('G11', '4k', good, fx);
+  assert.deepEqual(m, { tableBytes: 405995520, peakBytes: 406000000, texturesWritten: 7, selectedChecks: 63, mismatches: 0, fullBandBytes: 3932160, cancelled: 1, released: 1, outstandingMax: 2 });
+  assert.equal((await metricsFor('G11', '4k', { ...good, after: { bytes: 0, textures: 0, buffers: 0 } }, fx)).released, 0);
+  assert.equal((await metricsFor('G11', '4k', { ...good, cancel: { before: 2, after: 1 } }, fx)).cancelled, 0);
+  assert.equal((await metricsFor('G11', '4k', { ...good, bandOk: false }, fx)).mismatches, 1);
+  await assert.rejects(metricsFor('G11', '4k', { ...good, errors: ['allocation cap exceeded'] }, fx), /allocation cap exceeded/);
+});
+
+const frame = { requestId: 2, label: 'bulb-overview', W: 1280, H: 720, counts: { total: 921600, hit: 250000, miss: 671600, point: 0, steps: 0, failure: 0 } };
+const lifecycleRaw = { request: { view: 'bulb-overview', profile: 'settled' }, preserved: { view: 'bulb-overview', profile: 'settled' }, submittedBeforeLoss: { requestId: 1, generation: 1, epoch: 4 }, loss: { epoch: 4, reason: 'destroyed', injected: false }, decision: 'recover', interrupted: true, publicationsOfLost: 0, latePublications: 0, recovery: { epoch: 6, frame } };
+
+test('G13 metrics require the preserved frozen request and a complete, coverage-valid recovery frame', async () => {
+  assert.deepEqual(await metricsFor('G13', 'intentional', lifecycleRaw, fx), { interrupted: 1, successes: 0, requestPreserved: 1, latePublications: 0, validRecovery: 1 });
+  const partial = structuredClone(lifecycleRaw); partial.recovery.frame.counts.total = 1000;
+  assert.equal((await metricsFor('G13', 'intentional', partial, fx)).validRecovery, 0);
+  const noSubmit = structuredClone(lifecycleRaw); noSubmit.submittedBeforeLoss = null;
+  await assert.rejects(metricsFor('G13', 'intentional', noSubmit, fx), /submission/);
+  assert.deepEqual(await metricsFor('G13', 'repeated', { decision: 'stop', acquisitionsBefore: 3, acquisitionsAfter: 3 }, fx), { automaticRetriesAfterRepeat: 0 });
+  assert.deepEqual(await metricsFor('G13', 'repeated', { decision: 'recover', acquisitionsBefore: 3, acquisitionsAfter: 4 }, fx), { automaticRetriesAfterRepeat: 2 });
 });
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `node --test spikes/project0/tests/resources.test.mjs spikes/project0/tests/lifecycle.test.mjs`
-Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `gpu/resources.js` and `gpu/lifecycle.js`.
+Run: `node --test spikes/project0/tests/lifecycle.test.mjs spikes/project0/tests/resources-metrics.test.mjs`
+Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `gpu/lifecycle.js` and `measure/resources.mjs`.
 
-- [ ] **Step 3: Implement `gpu/resources.js` and `gpu/lifecycle.js`**
-
-```js
-// spikes/project0/gpu/resources.js — payload-byte accounting for every harness allocation (spec A.8).
-export const BYTES_PER_TEXEL = Object.freeze({ r32float: 4, rgba16float: 8, r32uint: 4, rgba32float: 16, rgba8unorm: 4 });
-export function textureBytes({ size: [w, h], format }) {
-  if (!(format in BYTES_PER_TEXEL)) throw new Error(`untracked texture format ${format}`);
-  return w * h * BYTES_PER_TEXEL[format];
-}
-export function createTracker() {
-  const inv = { bytes: 0, textures: 0, buffers: 0, peakBytes: 0 };
-  function track(resource, bytes, kind) {
-    const key = kind === 'texture' ? 'textures' : 'buffers';
-    inv.bytes += bytes; inv[key]++; inv.peakBytes = Math.max(inv.peakBytes, inv.bytes);
-    const original = resource.destroy.bind(resource); let live = true;
-    resource.destroy = () => { if (live) { live = false; inv.bytes -= bytes; inv[key]--; original(); } };
-    return resource;
-  }
-  return {
-    track,
-    texture: (device, desc) => track(device.createTexture(desc), textureBytes(desc), 'texture'),
-    buffer: (device, desc) => track(device.createBuffer(desc), desc.size, 'buffer'),
-    inventory: () => ({ ...inv }),
-  };
-}
-```
+- [ ] **Step 3: Implement `gpu/lifecycle.js`, `measure/resources.mjs` and `measure/lifecycle.mjs`**
 
 ```js
-// spikes/project0/gpu/lifecycle.js — loss/recovery policy (pure; spec G13 and charter §3.10).
+// spikes/project0/gpu/lifecycle.js — loss/recovery policy (pure). Its epoch always mirrors the real device epoch.
 export class Lifecycle {
-  constructor({ maxAutomaticRecoveries = 1, windowMs = 60000, now = () => performance.now() } = {}) {
-    Object.assign(this, { maxAutomaticRecoveries, windowMs, now });
-    this.epoch = 1; this.current = null; this.recoveryTimes = [];
-    this.s = { interruptions: 0, recoveries: 0, automaticRetriesAfterRepeat: 0, stopped: false };
+  constructor({ epoch, maxAutomaticRecoveries = 1, windowMs = 60000, now = () => performance.now() }) {
+    if (!Number.isInteger(epoch)) throw new Error('Lifecycle needs the acquired session epoch');
+    Object.assign(this, { epoch, maxAutomaticRecoveries, windowMs, now });
+    this.current = null; this.recoveryTimes = [];
+    this.s = { interruptions: 0, recoveries: 0, stopped: false };
   }
   begin(request) {
     if (this.s.stopped) throw new Error('automatic recovery stopped after a repeated loss');
     this.current = { request: structuredClone(request), epoch: this.epoch, state: 'running' };
     return this.current;
   }
-  lost({ epoch }) {
-    if (epoch !== this.epoch) return { action: 'ignore', interrupted: null };   // loss of an already-replaced device
-    const interrupted = this.current && this.current.state === 'running' ? this.current : null;
+  lost(event) {
+    if (event.epoch !== this.epoch) return { action: 'ignore', interrupted: null };
+    const interrupted = this.current?.state === 'running' ? this.current : null;
     if (interrupted) { interrupted.state = 'interrupted'; this.s.interruptions++; }
-    this.epoch++;
     const t = this.now(); this.recoveryTimes = this.recoveryTimes.filter(x => t - x < this.windowMs);
     if (this.recoveryTimes.length >= this.maxAutomaticRecoveries) { this.s.stopped = true; return { action: 'stop', interrupted }; }
     this.recoveryTimes.push(t);
     return { action: 'recover', interrupted };
   }
   recovered(epoch) { this.epoch = epoch; this.s.recoveries++; }
-  acceptCompletion(job, epoch) { return job.state === 'running' && job.epoch === this.epoch && epoch === this.epoch; }
+  accept(job, epoch) { return job.state === 'running' && job.epoch === this.epoch && epoch === this.epoch; }
   succeed(job) { if (job.state !== 'running') throw new Error(`cannot succeed: job is ${job.state}`); job.state = 'succeeded'; }
   stats() { return { ...this.s }; }
 }
 ```
 
-`recovered(epoch)` aligns the policy epoch with `device.js`'s epoch after reacquisition.
-`automaticRetriesAfterRepeat` stays 0 because `stop` performs no retry; the G13 driver asserts
-that no `acquire()` follows a `stop`.
+```js
+// spikes/project0/measure/resources.mjs — G11 from raw observations; the page never awards itself a pass.
+export function metrics(gate, slot, raw, fx) {
+  if (gate !== 'G11' || slot !== '4k') throw new Error(`no metric derivation for ${gate}/${slot}`);
+  if (raw.errors?.length) throw new Error(raw.errors.join('; '));
+  const R = fx.resources, textures = R.entries.filter(e => e.kind === 'texture').length, selected = R.readback.x.length * R.readback.y.length * textures;
+  if (!Array.isArray(raw.written) || raw.written.length !== textures) throw new Error('G11: the write workload is incomplete');
+  if (!Array.isArray(raw.checks) || raw.checks.length !== selected) throw new Error(`G11: expected ${selected} selected checks`);
+  const same = (a, b) => a.bytes === b.bytes && a.textures === b.textures && a.buffers === b.buffers;
+  return {
+    tableBytes: raw.tableBytes, peakBytes: raw.peakBytes, texturesWritten: raw.written.filter(Boolean).length, selectedChecks: raw.checks.length,
+    mismatches: raw.checks.filter(c => !c.ok).length + (raw.bandOk ? 0 : 1), fullBandBytes: raw.fullBandBytes,
+    cancelled: raw.cancel.before === 2 && raw.cancel.after === 0 ? 1 : 0, released: same(raw.before, raw.after) ? 1 : 0, outstandingMax: raw.outstandingMax,
+  };
+}
+```
+
+```js
+// spikes/project0/measure/lifecycle.mjs — G13 from raw lifecycle observations.
+import { coverageValid } from '../metrics.js';
+export function metrics(gate, slot, raw, fx) {
+  if (gate !== 'G13') throw new Error(`no metric derivation for ${gate}/${slot}`);
+  if (slot === 'repeated') {
+    if (!['stop', 'recover', 'ignore'].includes(raw.decision)) throw new Error('G13 repeated: no recorded decision');
+    return { automaticRetriesAfterRepeat: (raw.decision === 'stop' ? 0 : 1) + Math.max(0, raw.acquisitionsAfter - raw.acquisitionsBefore) };
+  }
+  if (!['intentional', 'injected'].includes(slot)) throw new Error(`no metric derivation for G13/${slot}`);
+  if (!raw.submittedBeforeLoss) throw new Error('G13: the loss was not preceded by an observed submission of the request');
+  const p = fx.profiles[raw.request.profile], f = raw.recovery?.frame;
+  const complete = f && f.counts && f.W === p.W && f.H === p.H && f.counts.total === p.W * p.H && coverageValid(f.label, f.counts);
+  return {
+    interrupted: raw.interrupted ? 1 : 0, successes: raw.publicationsOfLost, requestPreserved: JSON.stringify(raw.preserved) === JSON.stringify(raw.request) ? 1 : 0,
+    latePublications: raw.latePublications, validRecovery: raw.decision === 'recover' && complete && raw.recovery.epoch > raw.loss.epoch ? 1 : 0,
+  };
+}
+```
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `node --test spikes/project0/tests/resources.test.mjs spikes/project0/tests/lifecycle.test.mjs`
+Run the Step 2 command again.
 Expected: PASS, `# pass 5`, `# fail 0`.
 
 - [ ] **Step 5: Write `gpu/pattern.wgsl`**
 
 ```wgsl
 // spikes/project0/gpu/pattern.wgsl — A.8 verification pattern k = (13x + 17y + r) mod 251.
-// WGSL fixes one storage format per binding, so each format has its own variable and entry point;
-// with layout 'auto' each pipeline's bind group contains only the binding its entry point uses.
+// One format per binding: each format has its own variable and entry point; their resource interfaces are disjoint.
 struct P { r: u32, row0: u32, rows: u32, width: u32 }
 @group(0) @binding(0) var<uniform> p: P;
 fn k(x: u32, y: u32) -> u32 { return (13u * x + 17u * y + p.r) % 251u; }
@@ -5520,208 +6125,185 @@ fn inside(id: vec3u) -> bool { return id.x < p.width && id.y < p.rows; }
   if (!inside(id)) { return; } let y = p.row0 + id.y; textureStore(t_rgba8unorm, vec2u(id.x, y), vec4f(f32(k(id.x, y)) / 255.0)); }
 ```
 
-Several module-scope variables share `@group(0) @binding(1)`. That is valid WGSL, because
-only variables statically used by one entry point enter that entry point's interface.
-
-- [ ] **Step 5b: Make loss handling synchronous in `gpu/device.js` (modifies T5)**
-
-A late completion must never be able to publish between a loss and the epoch change. In the
-`device.lost.then(...)` handler of `acquire`, replace the handler body with one that advances
-the epoch **before** notifying listeners. Then add `injectLoss()`, which routes an injected loss
-through the same path:
+- [ ] **Step 6: Write `browser/drivers/resources.js`**
 
 ```js
-  device.lost.then(info => { if (epoch === state.epoch) signalLoss({ reason: info.reason, message: info.message, injected: false }); });
-```
+// spikes/project0/browser/drivers/resources.js — the A.8 exercise (shared with G12) and the G11 driver. Raw observations only.
+import { source, compile, upload } from '../../gpu/webgpu.js';
+import { session } from './common.js';
 
-```js
-function signalLoss({ reason, message = '', injected }) {
-  const lostEpoch = state.epoch;
-  state.epoch++;                                   // first: every in-flight completion is now stale
-  for (const h of state.lossHandlers) h({ epoch: lostEpoch, reason, message, injected });
-}
-// G13: an unexpected-loss notification delivered through the application's recovery path.
-// The device is then destroyed, so that no late completion can follow (its epoch is already retired).
-export function injectLoss() { signalLoss({ reason: 'unknown', message: 'injected by G13', injected: true }); const d = state.device; state.device = null; d?.destroy(); }
-export const clearLossHandlers = () => { state.lossHandlers = []; };
-```
-
-The T7 `Renderer` suppresses publication when `epoch !== currentEpoch()`, so the first
-statement of `signalLoss` closes the race.
-
-- [ ] **Step 6: Add the G11 driver**
-
-Add to `browser/drivers.js`:
-
-```js
-import { createTracker } from '../gpu/resources.js';
-
-const half = x => Math.fround(x);   // rgba16float stores k + 0.25 exactly for k < 251 (11-bit significand)
-// Shared by G11 and by G12's every-tenth-cycle step. It never acquires or destroys the device itself.
-export async function exerciseResources(device, fixtures, status, tr = createTracker()) {
-  const R = fixtures.resources, S = GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC;
-  const code = await (await fetch(new URL('../gpu/pattern.wgsl', import.meta.url))).text();
-  const module = device.createShaderModule({ code });
-  const textures = R.entries.filter(e => e.kind === 'texture').flatMap(e => Array.from({ length: e.count }, (_, i) => ({ ...e, index: i })));
-  const staging = R.entries.filter(e => e.kind === 'buffer').flatMap(e => Array.from({ length: e.count }, () => tr.buffer(device, { size: e.bytes / e.count, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST })));
-  const before = tr.inventory();     // G12 passes a tracker that already holds the viewport's resources
-  const made = textures.map((e, r) => ({ e, r, tex: tr.texture(device, { size: [R.width, R.height], format: e.format, usage: S }) }));
-  status('G11: writing pattern');
-  let outstanding = [], outstandingMax = 0, written = 0;
-  for (const { e, r, tex } of made) {
-    const pipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: `write_${e.format}` } });
-    for (let row0 = 0; row0 < R.height; row0 += 256) {
-      while (outstanding.length >= 2) await outstanding.shift();
-      const u = tr.buffer(device, { size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-      device.queue.writeBuffer(u, 0, new Uint32Array([r, row0, Math.min(256, R.height - row0), R.width]));
-      const bind = device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: u } }, { binding: 1, resource: tex.createView() }] });
-      const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
-      pass.setPipeline(pipeline); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(Math.ceil(R.width / 16), Math.ceil(Math.min(256, R.height - row0) / 16)); pass.end();
-      device.queue.submit([enc.finish()]);
-      outstanding.push(device.queue.onSubmittedWorkDone().then(() => u.destroy())); outstandingMax = Math.max(outstandingMax, outstanding.length);
-    }
-    written++;
-  }
-  await Promise.all(outstanding);
-  const peakBytes = tr.inventory().peakBytes;
-  status('G11: verifying');
-  const xs = [0, Math.floor(R.width / 2), R.width - 1], ys = [0, Math.floor(R.height / 2), R.height - 1];
-  let checks = 0, mismatches = 0; const [stage] = staging;
-  for (const { e, r, tex } of made) {
-    const enc = device.createCommandEncoder(); let slot = 0;
-    for (const y of ys) for (const x of xs) enc.copyTextureToBuffer({ texture: tex, origin: [x, y] }, { buffer: stage, offset: 256 * slot++ }, [1, 1]);
-    device.queue.submit([enc.finish()]);
-    await stage.mapAsync(GPUMapMode.READ, 0, 256 * 9); const bytes = stage.getMappedRange(0, 256 * 9).slice(0); stage.unmap();
-    slot = 0;
-    for (const y of ys) for (const x of xs) {
-      const kk = (13 * x + 17 * y + r) % 251, at = 256 * slot++;
-      const ok = e.format === 'r32uint' ? new Uint32Array(bytes, at, 1)[0] === kk
-        : e.format === 'rgba8unorm' ? new Uint8Array(bytes, at, 4).every(v => v === kk)
-        : e.format === 'rgba16float' ? [...new Uint16Array(bytes, at, 4)].every(h => f16(h) === half(kk + 0.25))
-        : [...new Float32Array(bytes, at, e.format === 'r32float' ? 1 : 4)].every(v => v === kk + 0.25);
-      checks++; if (!ok) mismatches++;
-    }
-  }
-  // Full 3840 x 256 RGBA8 band from the in-progress display texture (the first rgba8unorm entry).
-  const display = made.find(m => m.e.format === 'rgba8unorm');
-  const band = staging[1], enc = device.createCommandEncoder();
-  enc.copyTextureToBuffer({ texture: display.tex }, { buffer: band, bytesPerRow: R.width * 4 }, [R.width, 256]);
-  device.queue.submit([enc.finish()]);
-  await band.mapAsync(GPUMapMode.READ); const full = new Uint8Array(band.getMappedRange().slice(0)); band.unmap();
-  let bandOk = true;
-  for (let y = 0; y < 256 && bandOk; y++) for (let x = 0; x < R.width; x++) if (full[4 * (y * R.width + x)] !== (13 * x + 17 * y + display.r) % 251) { bandOk = false; break; }
-  if (!bandOk) mismatches++;
-  // Cancellation: a 16-batch rewrite of the first texture is requested; after two submissions it is
-  // cancelled. Batches already submitted may finish, but none may be submitted after the cancel.
-  let cancelFlag = false, submittedAfterCancel = 0, submittedBeforeCancel = 0;
-  const first = made[0], firstPipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: `write_${first.e.format}` } });
-  const cancelJob = (async () => {
-    for (let i = 0; i < 16; i++) {
-      while (outstanding.length >= 2) await outstanding.shift();
-      if (cancelFlag) return;
-      const u = tr.buffer(device, { size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-      device.queue.writeBuffer(u, 0, new Uint32Array([first.r, (i * 128) % R.height, 128, R.width]));
-      const bind = device.createBindGroup({ layout: firstPipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: u } }, { binding: 1, resource: first.tex.createView() }] });
-      const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
-      pass.setPipeline(firstPipeline); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(Math.ceil(R.width / 16), 8); pass.end();
-      device.queue.submit([enc.finish()]);
-      if (cancelFlag) submittedAfterCancel++; else submittedBeforeCancel++;
-      outstanding.push(device.queue.onSubmittedWorkDone().then(() => u.destroy()));
-      outstandingMax = Math.max(outstandingMax, outstanding.length);
-      if (submittedBeforeCancel === 2) cancelFlag = true;           // the cancel request
-    }
-  })();
-  await cancelJob; await Promise.all(outstanding); outstanding = [];
-  const cancelled = submittedBeforeCancel === 2 && submittedAfterCancel === 0 ? 1 : 0;
-  for (const m of made) m.tex.destroy(); for (const s of staging) s.destroy();
-  const after = tr.inventory();
-  return { slots: [{ slot: '4k', raw: { tableBytes: R.tableBytes, peakBytes, texturesWritten: written, selectedChecks: checks, mismatches, fullBandBytes: R.width * 4 * 256, cancelled, released: after.bytes === before.bytes && after.textures === before.textures && after.buffers === before.buffers ? 1 : 0, outstandingMax } }], invalidations: peakBytes > R.capBytes ? ['allocation cap exceeded'] : [] };
-}
-async function g11(fixtures, status) {
-  const dev = await import('../gpu/device.js'); const { device } = await dev.acquire();
-  try { return await exerciseResources(device, fixtures, status); } finally { dev.destroy(); }
-}
+const FORMATS = ['r32float', 'rgba16float', 'r32uint', 'rgba32float', 'rgba8unorm'];
 const f16 = h => { const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, m = h & 1023; return e === 0 ? s * m * 2 ** -24 : e === 31 ? (m ? NaN : s * Infinity) : s * (1 + m / 1024) * 2 ** (e - 15); };
+
+export async function prepareResourceCheck(device, alloc) {
+  const module = await compile(device, await source('./pattern.wgsl'), 'pattern');
+  const pipelines = {};
+  for (const f of FORMATS) pipelines[f] = alloc.pipeline(await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: `write_${f}` } }));
+  return { pipelines };
+}
+
+export async function exerciseResources(device, alloc, watchdog, fx, prepared, status = () => {}) {
+  const R = fx.resources, S = GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC;
+  const raw = { tableBytes: R.tableBytes, before: alloc.inventory(), errors: [], written: [], checks: [], bandOk: false, fullBandBytes: R.readback.fullBand.width * 4 * R.readback.fullBand.height, cancel: { before: 0, after: 0 }, outstandingMax: 0 };
+  const owned = []; let outstanding = [];
+  const submit = async (enc, meta) => {
+    while (outstanding.length >= 2) await outstanding.shift();
+    const done = watchdog.submitted(`g11:${meta}`, { meta });
+    device.queue.submit([enc.finish()]);
+    const p = device.queue.onSubmittedWorkDone().then(done); outstanding.push(p);
+    raw.outstandingMax = Math.max(raw.outstandingMax, outstanding.length);
+  };
+  const writeRows = (tex, format, r, row0, rows) => {
+    const u = upload(device, alloc, new Uint32Array([r, row0, rows, R.width]), GPUBufferUsage.UNIFORM); owned.push(u);
+    const pl = prepared.pipelines[format];
+    const bind = alloc.bindGroup(device.createBindGroup({ layout: pl.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: u } }, { binding: 1, resource: tex.createView() }] }));
+    const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
+    pass.setPipeline(pl); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(Math.ceil(R.width / 16), Math.ceil(rows / 16)); pass.end();
+    return enc;
+  };
+  try {
+    const textures = R.entries.filter(e => e.kind === 'texture');
+    const staging = R.entries.filter(e => e.kind === 'buffer').flatMap(e => Array.from({ length: e.count }, () => { const b = alloc.buffer(device, { size: e.bytesEach, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }); owned.push(b); return b; }));
+    const made = textures.map((e, r) => { const tex = alloc.texture(device, { size: [R.width, R.height], format: e.format, usage: S }); owned.push(tex); return { e, r, tex }; });
+    status('G11: writing pattern');
+    for (const { e, r, tex } of made) {
+      for (let row0 = 0; row0 < R.height; row0 += 256) await submit(writeRows(tex, e.format, r, row0, Math.min(256, R.height - row0)), `${e.name}:${row0}`);
+      raw.written.push(true);
+    }
+    await Promise.all(outstanding); outstanding = [];
+    status('G11: verifying');
+    const [stage, band] = staging;
+    for (const { e, r, tex } of made) {
+      const enc = device.createCommandEncoder(); let slot = 0;
+      for (const y of R.readback.y) for (const x of R.readback.x) enc.copyTextureToBuffer({ texture: tex, origin: [x, y] }, { buffer: stage, offset: 256 * slot++ }, [1, 1]);
+      await submit(enc, `readback:${e.name}`); await Promise.all(outstanding); outstanding = [];
+      await stage.mapAsync(GPUMapMode.READ, 0, 256 * 9); const bytes = stage.getMappedRange(0, 256 * 9).slice(0); stage.unmap();
+      slot = 0;
+      for (const y of R.readback.y) for (const x of R.readback.x) {
+        const k = (13 * x + 17 * y + r) % 251, at = 256 * slot++;
+        const ok = e.format === 'r32uint' ? new Uint32Array(bytes, at, 1)[0] === k
+          : e.format === 'rgba8unorm' ? new Uint8Array(bytes, at, 4).every(v => v === k)
+          : e.format === 'rgba16float' ? [...new Uint16Array(bytes, at, 4)].every(h => f16(h) === k + 0.25)
+          : [...new Float32Array(bytes, at, e.format === 'r32float' ? 1 : 4)].every(v => v === k + 0.25);
+        raw.checks.push({ texture: e.name, x, y, ok });
+      }
+    }
+    const display = made.find(m => m.e.name === 'display');
+    { const enc = device.createCommandEncoder();
+      enc.copyTextureToBuffer({ texture: display.tex }, { buffer: band, bytesPerRow: R.readback.fullBand.bytesPerRow }, [R.readback.fullBand.width, R.readback.fullBand.height]);
+      await submit(enc, 'band'); await Promise.all(outstanding); outstanding = [];
+      await band.mapAsync(GPUMapMode.READ); const full = new Uint8Array(band.getMappedRange().slice(0)); band.unmap();
+      raw.bandOk = true;
+      for (let y = 0; y < R.readback.fullBand.height && raw.bandOk; y++) for (let x = 0; x < R.width; x++) if (full[4 * (y * R.width + x)] !== (13 * x + 17 * y + display.r) % 251) { raw.bandOk = false; break; } }
+    // Cancellation after verification: a 16-batch rewrite is cancelled once two have been submitted. None may follow.
+    let cancel = false;
+    for (let i = 0; i < 16; i++) {
+      if (cancel) break;
+      await submit(writeRows(made[0].tex, made[0].e.format, made[0].r, (i * 128) % R.height, 128), `cancel:${i}`);
+      if (cancel) raw.cancel.after++; else raw.cancel.before++;
+      if (raw.cancel.before === 2) cancel = true;
+    }
+    await Promise.all(outstanding); outstanding = [];
+    raw.peakBytes = alloc.inventory().peakBytes;
+  } catch (error) { raw.errors.push(error.message); }
+  finally {
+    await Promise.allSettled(outstanding);
+    for (const r of owned) r.destroy();
+    raw.after = alloc.inventory();
+    if (watchdog.stall) raw.errors.push(`no observable progress for 5 s: ${JSON.stringify(watchdog.stall.outstanding)}`);
+  }
+  return raw;
+}
+
+export async function run(gate, fx, params, status) {
+  const s = await session(fx, status);
+  try {
+    const prepared = await prepareResourceCheck(s.device, s.alloc);
+    const raw = await exerciseResources(s.device, s.alloc, s.watchdog, fx, prepared, status);
+    return { slots: [{ slot: '4k', raw }], invalidations: s.losses.map(l => `device lost: ${l.reason}`) };
+  } finally { s.close(); }
+}
 ```
 
-`cancelled = 1` means exactly two batches were submitted before the cancel and none after it.
-The cancelled job's remaining fourteen batches were never issued, and its already-submitted
-batches were allowed to drain. The cancellation exercise runs after verification, so it cannot
-disturb the checked texels.
+The allocator refuses any allocation that would exceed `capBytes` *before* it is made. The
+refusal is recorded in `raw.errors`, which makes the record invalid. T10 treats
+`allocation cap exceeded` as a spec §7 abort.
 
-Exceeding the allocation cap is a spec §7 abort condition. It is recorded as an invalidation
-here, and T10 stops the campaign on it.
-
-- [ ] **Step 7: Add the G13 driver**
-
-Add to `browser/drivers.js`:
+- [ ] **Step 7: Write the G13 driver, `browser/drivers/lifecycle.js`**
 
 ```js
-import { Lifecycle } from '../gpu/lifecycle.js';
+// spikes/project0/browser/drivers/lifecycle.js — G13. Real loss events are delivered unchanged; injection happens only
+// after the exact request has been observed submitted; recovery happens only on action 'recover'.
+import { injectLoss, onLoss } from '../../gpu/device.js';
+import { Lifecycle } from '../../gpu/lifecycle.js';
+import { session, frameOf, sleep } from './common.js';
 
-async function g13(fixtures, status) {
-  const dev = await import('../gpu/device.js');
-  const slots = [];
+const REQUEST = Object.freeze({ view: 'bulb-overview', profile: 'settled' });    // a frozen view/profile pairing (A.6)
+
+async function waitFor(pred, ms, what) { const t0 = performance.now(); while (!pred()) { if (performance.now() - t0 > ms) throw new Error(`timed out waiting for ${what}`); await sleep(1); } }
+
+export async function run(gate, fx, params, status) {
+  const slots = []; let acquisitions = 0;
+  const open = async () => { acquisitions++; return session(fx, status); };
   for (const type of ['intentional', 'injected']) {
-    dev.clearLossHandlers();
-    const lc = new Lifecycle();
-    let decision = null;
-    dev.onLoss(info => { decision = lc.lost({ epoch: lc.epoch, reason: info.reason, injected: info.injected }); });   // synchronous
-    let s = await session(fixtures, status);
-    const request = { view: 'bulb-stress', profile: 'settled' };      // long enough to be in flight when the loss arrives
-    const job = lc.begin(request);
-    let successes = 0, latePublications = 0;
-    const firstId = s.renderer.render(request);
-    s.renderer.onPublish(p => { if (p.requestId === firstId) { if (lc.acceptCompletion(job, dev.currentEpoch())) successes++; else latePublications++; } });
-    await new Promise(r => setTimeout(r, 50));                         // bands are in flight
-    if (type === 'intentional') { s.device.destroy(); await new Promise(r => { const wait = () => decision ? r() : setTimeout(wait, 5); wait(); }); }
-    else dev.injectLoss();
-    const interrupted = decision?.interrupted === job && job.state === 'interrupted' ? 1 : 0;
-    await new Promise(r => setTimeout(r, 500));                        // any late callbacks fire now, against a retired epoch
-    s.renderer.destroy();
-    s = await session(fixtures, status); lc.recovered(lc.epoch);
-    const again = lc.begin(job.request);
-    const frame = await new Promise(resolve => { const id = s.renderer.render(again.request); s.renderer.onPublish(p => { if (p.requestId === id) resolve(p); }); });
-    slots.push({ slot: type, raw: { interrupted, successes, requestPreserved: JSON.stringify(again.request) === JSON.stringify(request) ? 1 : 0, latePublications, validRecovery: frame.counts && frame.counts.total > 0 && frame.counts.failure === 0 ? 1 : 0 } });
-    if (type === 'injected') {
-      // The second injected loss lands inside the recovery window, so the policy must say stop, and the driver must not reacquire.
-      const acquiresBefore = dev.currentEpoch();
-      decision = null; dev.injectLoss();
-      let automaticRetriesAfterRepeat = 0;
-      if (decision?.action === 'recover') { automaticRetriesAfterRepeat++; }
-      await new Promise(r => setTimeout(r, 500));
-      if (dev.currentEpoch() !== acquiresBefore + 1) automaticRetriesAfterRepeat++;   // +1 is the loss itself; more would be a reacquire
-      slots.push({ slot: 'repeated', raw: { automaticRetriesAfterRepeat } });
-      s.renderer.destroy();
-    } else { s.renderer.destroy(); s.device.destroy(); }
+    let s = await open();
+    const lc = new Lifecycle({ epoch: s.epoch });
+    let loss = null, decision = null;
+    const off = onLoss(event => { loss = event; decision = lc.lost(event); });     // the original event, unchanged
+    const raw = { request: REQUEST, preserved: null, submittedBeforeLoss: null, loss: null, decision: null, interrupted: false, publicationsOfLost: 0, latePublications: 0, recovery: null };
+    try {
+      const job = lc.begin(REQUEST);
+      const lostId = s.renderer.render(REQUEST);
+      const offPub = s.renderer.onPublish(p => { if (p.requestId === lostId) { if (lc.accept(job, p.epoch)) raw.publicationsOfLost++; else raw.latePublications++; } });
+      await waitFor(() => s.events.list().some(e => e.type === 'submit' && e.requestId === lostId && e.epoch === s.epoch), 10000, 'the request\'s first submission');
+      raw.submittedBeforeLoss = s.events.list().find(e => e.type === 'submit' && e.requestId === lostId);
+      if (type === 'intentional') s.device.destroy();                              // the browser delivers device.lost (reason 'destroyed')
+      else injectLoss();
+      await waitFor(() => decision !== null, 10000, 'the loss notification');
+      raw.loss = loss; raw.decision = decision.action; raw.interrupted = decision.interrupted === job && job.state === 'interrupted';
+      raw.preserved = job.request;
+      await s.device.queue.onSubmittedWorkDone().catch(() => {});                  // drain: any late completion arrives against a retired epoch
+      offPub(); s.close();
+      if (decision.action === 'recover') {
+        s = await open(); lc.recovered(s.epoch);
+        const again = lc.begin(job.request);
+        const frame = await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('recovery render did not publish within 30 s')), 30000);
+          let id = null; const offR = s.renderer.onPublish(p => { if (p.requestId === id) { clearTimeout(timer); offR(); resolve(frameOf(p)); } });
+          id = s.renderer.render(again.request);
+        });
+        raw.recovery = { epoch: s.epoch, frame };
+      }
+      slots.push({ slot: type, raw });
+      if (type === 'injected' && decision.action === 'recover') {
+        // Repeated loss inside the window: the policy must say stop, and no reacquisition may follow.
+        const before = acquisitions; decision = null;
+        lc.begin(REQUEST);
+        injectLoss();
+        await waitFor(() => decision !== null, 10000, 'the repeated loss notification');
+        const repeated = decision.action;
+        if (repeated === 'recover') { s.close(); s = await open(); }             // what a broken policy would do — counted, not hidden
+        await sleep(200);
+        slots.push({ slot: 'repeated', raw: { decision: repeated, acquisitionsBefore: before, acquisitionsAfter: acquisitions } });
+      }
+    } catch (error) {
+      slots.push({ slot: type, raw: { ...raw, error: error.message } });
+    } finally { off(); s.close(); }
   }
   return { slots, invalidations: [] };
 }
 ```
 
-The `intentional` case uses a real `device.destroy()`, and therefore the browser's own
-`device.lost` (reason `destroyed`). The `injected` case uses `injectLoss()`. Both reach the same
-synchronous `signalLoss`. `successes` counts publications of the interrupted request, so it
-must be 0.
+`measure/lifecycle.mjs` recomputes every G13 metric from these raw observations. It requires
+the observed pre-loss submission, the preserved frozen request, the `recover` decision, a
+recovery epoch later than the lost one, and a recovery frame with `counts.total = W × H` that
+passes `coverageValid`. A slot carrying `error` has no recovery and therefore cannot pass.
 
-Then register both drivers in `runGateDriver`: before its final `throw`, insert
-`if (gate === 'G11') return g11(fixtures, status);` and
-`if (gate === 'G13') return g13(fixtures, status);`.
+- [ ] **Step 8: Commit** (after Codex's read-only review, before the GPU runs)
 
-- [ ] **Step 8: Extend `measure.mjs` for G11 and G13**
-
-The driver's raw values *are* the metrics: counts and flags taken from the page's own
-observations. `measure.mjs` validates their shape so that a malformed or partial driver result
-can never pass. Insert into `metricsFor`, before the final `throw`:
-
-```js
-  if (gate === 'G11' || gate === 'G13') {
-    const keys = { G11: ['tableBytes', 'peakBytes', 'texturesWritten', 'selectedChecks', 'mismatches', 'fullBandBytes', 'cancelled', 'released', 'outstandingMax'],
-      G13: slot === 'repeated' ? ['automaticRetriesAfterRepeat'] : ['interrupted', 'successes', 'requestPreserved', 'latePublications', 'validRecovery'] }[gate];
-    for (const k of keys) if (!Number.isFinite(raw[k])) throw new Error(`${gate}/${slot}: missing ${k}`);
-    if (Object.keys(raw).length !== keys.length) throw new Error(`${gate}/${slot}: unexpected fields`);
-    return Object.fromEntries(keys.map(k => [k, raw[k]]));
-  }
+```bash
+git add spikes/project0/gpu/pattern.wgsl spikes/project0/gpu/lifecycle.js spikes/project0/browser/drivers/resources.js spikes/project0/browser/drivers/lifecycle.js spikes/project0/measure/resources.mjs spikes/project0/measure/lifecycle.mjs spikes/project0/tests/lifecycle.test.mjs spikes/project0/tests/resources-metrics.test.mjs
+git commit -m "Project 0 T8: A.8 resource verification with cap-checked allocation (G11), loss and recovery on real epochs (G13)"
 ```
 
 - [ ] **Step 9: Run G11 and G13 on the GPU**
@@ -5732,53 +6314,47 @@ Run:
 
 Expected:
 - **G11:** `tableBytes 405995520`, `peakBytes` at least that and ≤ 1073741824,
-  `texturesWritten 7`, `selectedChecks 63`, `mismatches 0`, `released 1`.
+  `texturesWritten 7`, `selectedChecks 63`, `mismatches 0`, `cancelled 1`, `released 1`.
 - **G13:** for both `intentional` and `injected`, `interrupted 1`, `successes 0`,
   `requestPreserved 1`, `latePublications 0`, `validRecovery 1`. For `repeated`,
   `automaticRetriesAfterRepeat 0`.
 
-Any deviation is a finding to diagnose, never a threshold to edit.
-
-- [ ] **Step 10: Commit** (after Codex's read-only review)
-
-```bash
-git add spikes/project0/gpu/resources.js spikes/project0/gpu/lifecycle.js spikes/project0/gpu/pattern.wgsl spikes/project0/gpu/device.js spikes/project0/browser/drivers.js spikes/project0/measure.mjs spikes/project0/tests/resources.test.mjs spikes/project0/tests/lifecycle.test.mjs
-git commit -m "Project 0 T8: tracked allocations, A.8 pattern verification (G11), loss and recovery policy (G13)"
-```
+A deviation or an invalidation is a finding to diagnose, never a threshold to edit.
 
 ---
 
-### Task T9: In-page timing and workload drivers (G1, G2, G6–G10, G12) and their metric derivation
+### Task T9: In-page timing and workload drivers (G1, G2, G6–G10, G12), visible-output evidence and their metric derivation
 
 **Owner:** Claude. **Reviewer:** Codex (read-only `review --diff`).
 
 **Files:**
-- Create `spikes/project0/browser/paths.js`: motion poses and burst schedules computed from
+- `spikes/project0/browser/paths.js`: motion poses and the burst schedule, computed from
   `fixtures.motion`, `fixtures.bursts` and `fixtures.anchor`. This is an independent
-  implementation, cross-checked against `reference/camera.js` `pose()` in Node.
-- Create `spikes/project0/browser/integrity.js`: trial-validity checks (visibility, focus, DPR,
-  canvas backing size) and the long-task observer.
-- Modify `spikes/project0/browser/drivers.js`: adds the drivers `G1`, `G2`, `timing` (G6+G7+G9),
-  `G8`, `G10` and `G12`.
-- Modify `spikes/project0/browser/main.js`: G2 starts at module evaluation, with no Node round-trip.
-- Modify `spikes/project0/measure.mjs`: adds the G1 parser and the timing-metric derivations.
-- Modify `spikes/project0/run.mjs`: adds the G2 multi-launch, the `timing` fan-out into
-  G6/G7/G9 records, G12 checkpoints, and moves the `chrome://gpu` capture *after* the
-  measurement for G2.
+  implementation, cross-checked against `reference/camera.js` in Node.
+- `spikes/project0/browser/integrity.js`: an integrity observer that covers the whole measured
+  interval, the long-task observer, and the refresh-rate estimate.
+- `spikes/project0/browser/drivers/g1.js`, `g2.js`, `timing.js` (G6, G7 and G9), `g8.js`,
+  `g10.js`, `g12.js` and `visible.js`.
+- `spikes/project0/measure/timing.mjs`: G1, G2, G6–G10 and G12 metrics recomputed from raw
+  events.
 - Tests: `spikes/project0/tests/timing.test.mjs` and `spikes/project0/tests/g1.test.mjs`.
 
 **Interfaces:**
 - Consumes:
-  - T7: `session()`, `Renderer`, `events`, `Scheduler.stats()`;
-  - T8: `createTracker`, `exerciseResources`;
-  - T1: `throughput`, `percentile`, `coverageValid`, `gatePlan`;
+  - T7: `session`, `renderOnce`, `frameOf`, `sleep`, `events`, `Renderer.stats()`,
+    `Renderer.readTimestamps()`;
+  - T8: `prepareResourceCheck`, `exerciseResources`;
+  - T6: `prepare`, `arith` (from `checks.js`), `packRows`;
+  - T1: `throughput`, `percentile`, `coverageValid`;
   - T4: `fixtures.{motion, bursts, anchor, views, profiles, stability, display}`.
 - Produces:
-  - `posesAt(fixtures, view, seconds) → {origin, target}`;
-  - `burstSchedule(fixtures) → [{id, burst, index, offsetMs, camera}]`;
-  - `trialIntegrity(canvas) → string[]`: the reasons, if any, that a trial is invalid;
-  - `observeLongTasks() → {take(startMs, endMs) → {application, harness, unattributed}}`.
-  - `metricsFor` gains these slots, with exactly the `gatePlan` keys:
+  - `posesAt(fixtures, view, seconds) → {origin, target}` and
+    `burstSchedule(fixtures) → [{id, burst, index, offsetMs, camera}]`;
+  - `observeIntegrity(canvas, {allowedBacking}) → {stop() → {events, violations}}`;
+  - `observeLongTasks() → {take(startMs, endMs) → [{ms, kind}]}`;
+  - `refreshHz() → Promise<number>`;
+  - `g1Metrics({adapterInfo, chromeGpuText, probeOk}) → {metrics, invalidations}`.
+  - `measure/timing.mjs` `metrics()` for the slots:
     - `G1/{headed, headless}`;
     - `G2/{fresh-0…2, warm}`;
     - `G6/<view>/<trial>`;
@@ -5787,18 +6363,28 @@ git commit -m "Project 0 T8: tracked allocations, A.8 pattern verification (G11)
     - `G9/warmed`;
     - `G10/<view>`;
     - `G12/sequence`.
-  - `g1Metrics({adapterInfo, chromeGpuText, probeOk}) → {metrics: {nvidia, software, corroborated}, invalidations}`.
 
-**Measurement discipline (applies to every driver here):**
-- **One clock:** every timestamp comes from the page clock (`events.mark`, `performance.now()`).
-- **No harness traffic inside measured windows:** the Node runner makes no `evaluate()` calls
-  inside a measured window. Drivers run their whole schedule themselves and return one result.
-  G12 is the exception: it exposes bounded checkpoints that Node polls between cycles.
-- **Integrity checks:** each trial records `trialIntegrity()` at its start and end. Any
-  reason, such as a hidden window, lost focus, `devicePixelRatio !== 1` or a canvas backing
-  other than 1280 × 720, becomes an invalidation. It is never a silently accepted number.
-- **Frame coverage in Node:** the raw output carries the per-frame `counts`, and Node applies
-  T1's `coverageValid`. A frame with `counts: null` counts as a coverage error.
+    Each returns exactly the `gatePlan` keys. A raw integrity violation, or any malformed
+    shape, throws with `invalidation: true`. `run.mjs` records the reason as an invalidation.
+
+**Measurement discipline:**
+- **One clock:** every timestamp comes from the page clock.
+- **No Node calls in a window:** Node makes no `evaluate()` calls inside a measured window.
+  Drivers run their whole schedule and return one result. G12 exposes bounded checkpoints
+  between cycles.
+- **Continuous integrity:** observation covers each measured interval in full. That includes
+  visibility, focus, DPR and the backing size. G12's intentional resizes are allowed by its
+  frozen backing list; any other change invalidates the affected trial.
+- **Complete frames:** Node requires `counts.total === W × H` at the profile's dimensions before
+  applying coverage thresholds.
+- **Subscriptions:** every temporary `onPublish` subscription is removed in a `finally`.
+- **Request time:** this comes from the renderer's `request` event, recorded at function entry.
+  Timer lateness is recorded *before* `render()` is called. It is reported as application
+  evidence and is not automatically an interference invalidation.
+- **Diagnostics outside windows:** after every trial the driver calls
+  `renderer.readTimestamps()` and records the band `gpuMs` (timestamp query) or `submit → done`
+  (`queue-completion`). It also records the p99 and maximum band duration, with a warning above
+  30 ms. This is a diagnostic, not a gate.
 
 - [ ] **Step 1: Write the failing Node tests**
 
@@ -5809,7 +6395,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { posesAt, burstSchedule } from '../browser/paths.js';
 import { pose, burstRequests } from '../reference/camera.js';
-import { metricsFor } from '../measure.mjs';
+import { metricsFor } from '../measure/index.mjs';
 
 const fixtures = JSON.parse(await readFile(new URL('../fixtures.json', import.meta.url), 'utf8'));
 const close = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 1e-12);
@@ -5825,28 +6411,39 @@ test('harness paths agree with the independent reference poses at every preparat
   mine.forEach((r, i) => { assert.equal(r.offsetMs, ref[i].offsetMs); assert.ok(close(r.camera.origin, ref[i].camera.origin)); });
 });
 
-const frame = (t, label = 'bulb-overview', hit = 0.28) => ({ t, label, counts: { total: 1000, hit: hit * 1000, miss: 1000 - hit * 1000, point: 0, steps: 0, failure: 0 } });
+const draft = fixtures.profiles.draft, px = draft.W * draft.H;
+const frame = (requestId, t, label = 'bulb-overview', total = px) => ({ requestId, t, label, W: draft.W, H: draft.H, counts: { total, hit: Math.round(total * 0.28), miss: total - Math.round(total * 0.28), point: 0, steps: 0, failure: 0 } });
 
-test('G6 metrics: completion-driven publications in a 30 s window, with coverage errors counted per frame', () => {
-  const frames = Array.from({ length: 950 }, (_, i) => frame(1000 + i * 31.5));
-  frames[10].counts = null;
-  const m = metricsFor('G6', 'bulb-overview/0', { windowStart: 1000, frames, pendingMax: 1, outstandingMax: 2, integrity: [] }, fixtures);
+test('G6: completion-driven publications in the 30 s window; incomplete frames are coverage errors', async () => {
+  const frames = Array.from({ length: 950 }, (_, i) => frame(i + 1, 1000 + i * 31.5));
+  frames[10] = frame(11, frames[10].t, 'bulb-overview', px - 1);                 // an internally consistent partial image
+  const m = await metricsFor('G6', 'bulb-overview/0', { windowStart: 1000, frames, pendingMax: 1, outstandingMax: 2, integrity: { violations: [] } }, fixtures);
   assert.deepEqual(Object.keys(m).sort(), ['coverageErrors', 'intervalP95', 'outstandingMax', 'pendingMax', 'published', 'windowMs']);
-  assert.equal(m.windowMs, 30000); assert.equal(m.published, 950);   // last frame at 1000 + 949*31.5 = 30893.5 < 31000
+  assert.equal(m.published, 950);                                                 // last frame at 1000 + 949*31.5 = 30893.5 < 31000
   assert.equal(m.coverageErrors, 1);
+  await assert.rejects(metricsFor('G6', 'bulb-overview/0', { windowStart: 1000, frames, pendingMax: 1, outstandingMax: 2, integrity: { violations: ['window blurred at 12000'] } }, fixtures), /blurred/);
 });
 
-test('G7 latency is the publication of each final request minus its own request time', () => {
-  const finals = Array.from({ length: 20 }, (_, b) => ({ requestId: b, requestedMs: b * 1152, publishedMs: b * 1152 + 40 + b }));
-  const m = metricsFor('G7', '0', { issued: 400, finals, frames: finals.map(f => frame(f.publishedMs)), outstandingMax: 2, integrity: [] }, fixtures);
-  assert.equal(m.requests, 400); assert.equal(m.finals, 20); assert.equal(m.latencyP95, 59);
-  const missing = structuredClone(finals); missing[3].publishedMs = null;
-  assert.throws(() => metricsFor('G7', '0', { issued: 400, finals: missing, frames: [], outstandingMax: 2, integrity: [] }, fixtures), /final request 3 was never published/);
+test('G7: latency from each final request\'s own request event; all 400 issued requests are kept', async () => {
+  const issued = Array.from({ length: 400 }, (_, id) => ({ id, burst: Math.floor(id / 20), index: id % 20, requestId: id + 1, requestedMs: 1000 + id * 10, lateByMs: 0.5 }));
+  const frames = issued.filter(r => r.index === 19).map((r, b) => frame(r.requestId, r.requestedMs + 40 + b));   // latencies 40..59
+  const m = await metricsFor('G7', '0', { issued, frames, outstandingMax: 2, integrity: { violations: [] } }, fixtures);
+  assert.equal(m.requests, 400); assert.equal(m.finals, 20);
+  assert.equal(m.latencyP95, 58);                                                 // nearest rank: ceil(0.95 * 20) = 19th of 40..59
+  await assert.rejects(metricsFor('G7', '0', { issued, frames: frames.slice(1), outstandingMax: 2, integrity: { violations: [] } }, fixtures), /never published/);
 });
 
-test('G9 classifies long tasks as application, harness or unattributed', () => {
-  const m = metricsFor('G9', 'warmed', { windows: 12, longTasks: [{ ms: 60, kind: 'application' }, { ms: 51, kind: 'harness' }, { ms: 40, kind: 'application' }] }, fixtures);
-  assert.deepEqual(m, { windows: 12, applicationOver50: 1, unattributedOver50: 0, harnessRecorded: 1 });
+test('G9 classifies long tasks; unattributed ones are counted separately', async () => {
+  const m = await metricsFor('G9', 'warmed', { windows: 12, longTasks: [{ ms: 60, kind: 'application' }, { ms: 51, kind: 'harness' }, { ms: 40, kind: 'application' }, { ms: 70, kind: 'unattributed' }] }, fixtures);
+  assert.deepEqual(m, { windows: 12, applicationOver50: 1, unattributedOver50: 1, harnessRecorded: 1 });
+});
+
+test('G8: stressSubmitted comes from the exact stress submission event, never a constant', async () => {
+  const sphere = frame(2, 1200, 'sphere');
+  const ok = { stressRequestId: 1, stressSubmit: { requestId: 1, t: 1000 }, sphereRequested: 1050, sphere, stalePublications: 0, outstandingMax: 2, integrity: { violations: [] } };
+  assert.equal((await metricsFor('G8', '0', ok, fixtures)).stressSubmitted, 1);
+  assert.equal((await metricsFor('G8', '0', ok, fixtures)).latencyMs, 150);
+  assert.equal((await metricsFor('G8', '0', { ...ok, stressSubmit: null }, fixtures)).stressSubmitted, 0);
 });
 ```
 
@@ -5854,24 +6451,22 @@ test('G9 classifies long tasks as application, harness or unattributed', () => {
 // spikes/project0/tests/g1.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { g1Metrics } from '../measure.mjs';
+import { g1Metrics } from '../measure/timing.mjs';
 
 const gpuText = ['Graphics Feature Status', 'WebGPU: Hardware accelerated', 'GPU0\tVENDOR= 0x10de, DEVICE=0x26b1 *ACTIVE*',
-  'GL_RENDERER\tANGLE (NVIDIA, Vulkan 1.4.312 (NVIDIA RTX 6000 Ada Generation (0x000026B1)), NVIDIA)', 'Driver vendor\tNVIDIA', 'Driver version\t580.173.02'].join('\n');
+  'Driver vendor\tNVIDIA', 'Driver version\t580.173.02'].join('\n');
 const nvidia = { vendor: 'nvidia', architecture: 'lovelace', device: '0x26b1', description: 'NVIDIA RTX 6000 Ada Generation', isFallbackAdapter: false, fallbackSource: 'adapter.info.isFallbackAdapter' };
 
-test('NVIDIA adapter + same-session hardware-accelerated WebGPU + matching active device corroborates', () => {
+test('an NVIDIA adapter, same-session hardware-accelerated WebGPU and a matching active device corroborate', () => {
   assert.deepEqual(g1Metrics({ adapterInfo: nvidia, chromeGpuText: gpuText, probeOk: true }), { metrics: { nvidia: 1, software: 0, corroborated: 1 }, invalidations: [] });
 });
-
 test('a software adapter is software even when an NVIDIA device is listed elsewhere', () => {
   const r = g1Metrics({ adapterInfo: { ...nvidia, vendor: 'google', description: 'SwiftShader Device (Subzero)', isFallbackAdapter: true }, chromeGpuText: gpuText, probeOk: true });
   assert.equal(r.metrics.software, 1); assert.equal(r.metrics.nvidia, 0);
 });
-
-test('missing or contradictory evidence invalidates rather than failing or passing', () => {
+test('missing or contradictory evidence invalidates', () => {
   assert.ok(g1Metrics({ adapterInfo: { ...nvidia, vendor: '', description: '' }, chromeGpuText: gpuText, probeOk: true }).invalidations.length > 0);
-  assert.ok(g1Metrics({ adapterInfo: nvidia, chromeGpuText: gpuText.replace('Hardware accelerated', 'Software only, hardware acceleration unavailable'), probeOk: true }).metrics.corroborated === 0);
+  assert.equal(g1Metrics({ adapterInfo: nvidia, chromeGpuText: gpuText.replace('Hardware accelerated', 'Software only'), probeOk: true }).metrics.corroborated, 0);
   assert.ok(g1Metrics({ adapterInfo: { ...nvidia, device: '0x2684' }, chromeGpuText: gpuText, probeOk: true }).invalidations.some(r => /contradict/.test(r)));
   assert.ok(g1Metrics({ adapterInfo: nvidia, chromeGpuText: gpuText, probeOk: false }).invalidations.some(r => /probe/.test(r)));
 });
@@ -5880,13 +6475,12 @@ test('missing or contradictory evidence invalidates rather than failing or passi
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `node --test spikes/project0/tests/timing.test.mjs spikes/project0/tests/g1.test.mjs`
-Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `browser/paths.js`, and a `g1Metrics is not a
-function` (or missing export) error.
+Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `browser/paths.js` and `measure/timing.mjs`.
 
-- [ ] **Step 3: Implement `browser/paths.js` (independent of `reference/camera.js`)**
+- [ ] **Step 3: Implement `browser/paths.js` and `measure/timing.mjs`**
 
 ```js
-// spikes/project0/browser/paths.js — A.7 motion from fixture parameters. Written from the spec, not from reference/camera.js.
+// spikes/project0/browser/paths.js — A.7 motion from fixture parameters, written from the spec (not from reference/camera.js).
 const rz = (v, a) => [Math.cos(a) * v[0] - Math.sin(a) * v[1], Math.sin(a) * v[0] + Math.cos(a) * v[1], v[2]];
 export function posesAt(fx, view, s) {
   const { overview, detail } = fx.motion;
@@ -5914,482 +6508,481 @@ export function burstSchedule(fx) {
 }
 ```
 
-The field names follow T4's `fixture-definition.js`:
-`motion.overview.{radius, height, initialAngle, periodSeconds}` and
-`motion.detail.{periodSeconds, amplitudeRadians}`.
+```js
+// spikes/project0/measure/timing.mjs — G1, G2, G6–G10, G12 from raw page events. Shape errors and integrity violations invalidate.
+import { throughput, percentile, coverageValid } from '../metrics.js';
 
-- [ ] **Step 4: Implement `browser/integrity.js`**
+const invalid = message => Object.assign(new Error(message), { invalidation: true });
+function integrityOk(raw) { if (!raw.integrity || !Array.isArray(raw.integrity.violations)) throw invalid('no integrity observation'); if (raw.integrity.violations.length) throw invalid(raw.integrity.violations.join('; ')); }
+function frameOk(f, profile) { return Boolean(f && f.counts && f.W === profile.W && f.H === profile.H && f.counts.total === profile.W * profile.H && coverageValid(f.label, f.counts)); }
+
+export function g1Metrics({ adapterInfo: a, chromeGpuText: text, probeOk }) {
+  const invalidations = [];
+  if (!a || (!a.vendor && !a.description)) invalidations.push('adapter.info is redacted or empty');
+  const desc = `${a?.vendor ?? ''} ${a?.architecture ?? ''} ${a?.description ?? ''}`;
+  const software = a?.isFallbackAdapter === true || /swiftshader|llvmpipe|lavapipe|software/i.test(desc) ? 1 : 0;
+  const nvidia = !software && /nvidia/i.test(desc) ? 1 : 0;
+  const webgpuRow = /^WebGPU:\s*(.+)$/m.exec(text ?? '')?.[1]?.trim();
+  if (!webgpuRow) invalidations.push('chrome://gpu has no WebGPU feature-status row');
+  const active = /VENDOR\s*=\s*0x([0-9a-f]+),\s*DEVICE\s*=\s*0x([0-9a-f]+)[^\n]*\*ACTIVE\*/i.exec(text ?? '');
+  if (!active) invalidations.push('chrome://gpu identifies no active GPU');
+  const driver = /Driver vendor\s+(.+)/.test(text ?? '') && /Driver version\s+(.+)/.test(text ?? '');
+  if (!driver) invalidations.push('chrome://gpu has no driver information');
+  if (active && /^0x[0-9a-f]+$/i.test(a?.device || '') && parseInt(a.device, 16) !== parseInt(active[2], 16)) invalidations.push(`adapter device ${a.device} contradicts the active GPU 0x${active[2]}`);
+  if (!probeOk) invalidations.push('probe dispatch did not complete on the selected adapter');
+  const corroborated = nvidia && webgpuRow === 'Hardware accelerated' && active && active[1].toLowerCase() === '10de' && driver && probeOk && invalidations.length === 0 ? 1 : 0;
+  return { metrics: { nvidia, software, corroborated }, invalidations };
+}
+
+export function metrics(gate, slot, raw, fx) {
+  const draft = fx.profiles.draft, settled = fx.profiles.settled;
+  const coverageErrors = (frames, profile) => frames.filter(f => !frameOk(f, profile)).length;
+  if (raw?.error) throw invalid(`driver error: ${raw.error}`);
+  switch (gate) {
+    case 'G1': { const { metrics: m, invalidations } = g1Metrics(raw); if (invalidations.length) throw invalid(invalidations.join('; ')); return m; }
+    case 'G2': {
+      integrityOk(raw);
+      const prep = raw.statusLog.find(e => e.text.startsWith('preparing'));
+      return { navigationMs: raw.navigationMs, ...(slot === 'warm' ? {} : { emptyProfile: raw.emptyProfile, freshProcess: raw.freshProcess }),
+        preparationVisible: prep && prep.visible && prep.t < raw.navigationMs ? 1 : 0, coverageErrors: coverageErrors([raw.frame], draft), outstandingMax: raw.outstandingMax };
+    }
+    case 'G6': {
+      integrityOk(raw);
+      const t = throughput(raw.frames.map(f => ({ id: f.requestId, time: f.t })), raw.windowStart, raw.windowStart + 30000);
+      const inWindow = raw.frames.filter(f => f.t >= raw.windowStart && f.t < raw.windowStart + 30000);
+      return { ...t, pendingMax: raw.pendingMax, coverageErrors: coverageErrors(inWindow, draft), outstandingMax: raw.outstandingMax };
+    }
+    case 'G7': {
+      integrityOk(raw);
+      if (!Array.isArray(raw.issued) || raw.issued.length !== fx.bursts.burstCount * fx.bursts.requestsPerBurst) throw invalid(`G7 expects ${fx.bursts.burstCount * fx.bursts.requestsPerBurst} issued requests`);
+      const finals = raw.issued.filter(r => r.index === fx.bursts.requestsPerBurst - 1);
+      const latencies = finals.map((r, i) => {
+        const f = raw.frames.find(x => x.requestId === r.requestId);
+        if (!f) throw new Error(`final request ${i} was never published`);
+        return f.t - r.requestedMs;
+      });
+      return { requests: raw.issued.length, finals: finals.length, latencyP95: percentile(latencies, 0.95), coverageErrors: coverageErrors(raw.frames, draft), outstandingMax: raw.outstandingMax };
+    }
+    case 'G8': {
+      integrityOk(raw);
+      const submitted = raw.stressSubmit && raw.stressSubmit.requestId === raw.stressRequestId && raw.stressSubmit.t <= raw.sphereRequested ? 1 : 0;
+      return { stressSubmitted: submitted, latencyMs: raw.sphere ? raw.sphere.t - raw.sphereRequested : Number.MAX_VALUE,
+        stalePublications: raw.stalePublications, coverageErrors: raw.sphere ? coverageErrors([raw.sphere], draft) : 1, outstandingMax: raw.outstandingMax };
+    }
+    case 'G9': {
+      const over = kind => raw.longTasks.filter(t => t.kind === kind && t.ms > 50).length;
+      return { windows: raw.windows, applicationOver50: over('application'), unattributedOver50: over('unattributed'), harnessRecorded: 1 };
+    }
+    case 'G10': {
+      integrityOk(raw);
+      if (!raw.frame) throw new Error(`${slot}: settled frame never published`);
+      return { elapsedMs: raw.frame.t - raw.requestedMs, prepared: raw.prepared, coverageErrors: coverageErrors([raw.frame], settled), outstandingMax: raw.outstandingMax };
+    }
+    case 'G12': {
+      integrityOk(raw);
+      const failures = raw.maintenance.flatMap(m => m.errors);
+      if (failures.length) throw invalid(`resource verification inside G12: ${failures.join('; ')}`);
+      const counts = ['textures', 'buffers'].reduce((n, k) => n + Math.abs(raw.final[k] - raw.baseline[k]), 0);
+      return { cycles: raw.cycles, wallMs: raw.wallMs, deadlineMisses: raw.deadlineMisses, unhandled: raw.unhandled, unplannedLosses: raw.unplannedLosses,
+        countDifferences: counts, byteRelativeDifference: Math.abs(raw.final.bytes - raw.baseline.bytes) / raw.baseline.bytes,
+        baselinePrepared: raw.baselinePrepared, returned1280: raw.returned1280, outstandingMax: raw.outstandingMax };
+    }
+    default: throw new Error(`no metric derivation for ${gate}/${slot}`);
+  }
+}
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run the Step 2 command again.
+Expected: PASS, `# pass 8`, `# fail 0`.
+
+The paths test reads the frozen `fixtures.json`. A disagreement with `reference/camera.js` is
+a harness bug: fix `paths.js`, never the reference or the fixture.
+
+- [ ] **Step 5: Write `browser/integrity.js`**
 
 ```js
-// spikes/project0/browser/integrity.js — trial validity and long-task attribution.
-export function trialIntegrity(canvas) {
-  const reasons = [];
-  if (document.visibilityState !== 'visible') reasons.push(`interference: visibility ${document.visibilityState}`);
-  if (!document.hasFocus()) reasons.push('interference: window not focused');
-  if (devicePixelRatio !== 1) reasons.push(`interference: devicePixelRatio ${devicePixelRatio}`);
-  if (canvas.width !== 1280 || canvas.height !== 720) reasons.push(`interference: canvas backing ${canvas.width}x${canvas.height}`);
-  return reasons;
+// spikes/project0/browser/integrity.js — integrity across the whole measured interval, long tasks, refresh rate.
+export function observeIntegrity(canvas, { allowedBacking = [[1280, 720]] } = {}) {
+  const events = [], violations = [];
+  const t = () => performance.now();
+  if (document.visibilityState !== 'visible') violations.push(`hidden at start (${document.visibilityState})`);
+  if (!document.hasFocus()) violations.push('unfocused at start');
+  if (devicePixelRatio !== 1) violations.push(`devicePixelRatio ${devicePixelRatio}`);
+  const onVis = () => { events.push({ t: t(), type: 'visibility', value: document.visibilityState }); if (document.visibilityState !== 'visible') violations.push(`hidden at ${t().toFixed(0)}`); };
+  const onBlur = () => { events.push({ t: t(), type: 'blur' }); violations.push(`window blurred at ${t().toFixed(0)}`); };
+  const onFocus = () => events.push({ t: t(), type: 'focus' });
+  const mq = matchMedia(`(resolution: ${devicePixelRatio}dppx)`);
+  const onDpr = () => { events.push({ t: t(), type: 'dpr', value: devicePixelRatio }); violations.push(`devicePixelRatio changed to ${devicePixelRatio}`); };
+  document.addEventListener('visibilitychange', onVis); addEventListener('blur', onBlur); addEventListener('focus', onFocus); mq.addEventListener('change', onDpr);
+  let running = true, last = `${canvas.width}x${canvas.height}`;
+  const allowed = new Set(allowedBacking.map(([w, h]) => `${w}x${h}`));
+  const tick = () => {
+    if (!running) return;
+    const now = `${canvas.width}x${canvas.height}`;
+    if (now !== last) { events.push({ t: t(), type: 'backing', value: now }); last = now; }
+    if (!allowed.has(now) && !violations.some(v => v.startsWith(`unexpected backing ${now}`))) violations.push(`unexpected backing ${now}`);
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  return { stop() { running = false; document.removeEventListener('visibilitychange', onVis); removeEventListener('blur', onBlur); removeEventListener('focus', onFocus); mq.removeEventListener('change', onDpr); return { events, violations }; } };
 }
+
 export function observeLongTasks() {
   const tasks = []; new PerformanceObserver(list => tasks.push(...list.getEntries())).observe({ type: 'longtask', buffered: true });
   return {
     take(startMs, endMs) {
       const harness = performance.getEntriesByType('measure').filter(m => m.name.startsWith('harness:'));
-      return tasks.filter(t => t.startTime >= startMs && t.startTime < endMs).map(t => {
-        const overlapsHarness = harness.some(h => h.startTime < t.startTime + t.duration && t.startTime < h.startTime + h.duration);
-        const attributed = t.attribution?.some(a => a.containerType === 'window' || a.name === 'self');
-        return { ms: t.duration, kind: overlapsHarness ? 'harness' : attributed ? 'application' : 'unattributed' };
+      return tasks.filter(x => x.startTime >= startMs && x.startTime < endMs).map(x => {
+        const overlapsHarness = harness.some(h => h.startTime < x.startTime + x.duration && x.startTime < h.startTime + h.duration);
+        const self = x.attribution?.some(a => a.name === 'self' || a.containerType === 'window');
+        return { ms: x.duration, start: x.startTime, kind: overlapsHarness ? 'harness' : self ? 'application' : 'unattributed' };
       });
     },
   };
 }
+
+export function refreshHz(samples = 61) {
+  return new Promise(resolve => {
+    const t = []; const f = now => { t.push(now); if (t.length < samples) requestAnimationFrame(f); else { const d = t.slice(1).map((x, i) => x - t[i]).sort((a, b) => a - b); resolve(1000 / d[Math.floor(d.length / 2)]); } };
+    requestAnimationFrame(f);
+  });
+}
 ```
 
-`'self'` attribution means the task ran in this page's own event loop, which makes it
-application work unless a harness measure overlaps it. Tasks Chrome cannot attribute to this
-frame are `unattributed`, and T1 turns those into invalidations.
-
-- [ ] **Step 5: Add the drivers to `browser/drivers.js`**
+- [ ] **Step 6: Write the drivers**
 
 ```js
-import { posesAt, burstSchedule } from './paths.js';
-import { trialIntegrity, observeLongTasks } from './integrity.js';
-import { createTracker } from '../gpu/resources.js';   // exerciseResources is defined in this module by T8
-import { prepare } from '../gpu/webgpu.js';
-import { arith, pack } from './checks.js';
+// spikes/project0/browser/drivers/g1.js — the dispatch runs on the device created from the very adapter whose identity is judged.
+import { acquire, destroy } from '../../gpu/device.js';
+import { prepare } from '../../gpu/webgpu.js';
+import { createAllocator } from '../../gpu/alloc.js';
+import { createWatchdog } from '../../gpu/watchdog.js';
+import { arith } from './checks.js';
+import { packRows } from '../packing.js';
+export async function run(gate, fx, params, status) {
+  const alloc = createAllocator({ capBytes: fx.resources.capBytes }), watchdog = createWatchdog();
+  const { device, info } = await acquire();
+  let probeOk = false, error = null;
+  try {
+    const pipelines = await prepare(device, alloc, status);
+    const words = await arith(device, alloc, watchdog, pipelines, 'bulb_samples', packRows(fx.arithmetic.bulb, s => [...s.input, 0]), fx.arithmeticProtocol.bulb.iterations, fx.arithmetic.bulb.length);
+    probeOk = words.length === 4 * fx.arithmetic.bulb.length && [...words].every((w, i) => i % 4 !== 0 || w <= 2);
+  } catch (e) { error = e.message; }
+  finally { watchdog.dispose(); alloc.destroyAll(); destroy(); }
+  return { slots: [{ slot: params.get('runMode'), raw: { adapterInfo: info, probeOk, ...(error ? { probeError: error } : {}) } }], invalidations: [] };
+}
+```
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+```js
+// spikes/project0/browser/drivers/g2.js — runs at module evaluation via main.js, so navigationMs is measured from navigation start.
+import { session, renderOnce } from './common.js';
+import { observeIntegrity } from '../integrity.js';
+export async function run(gate, fx, params, status) {
+  const statusLog = [], canvas = document.getElementById('view'), integrity = observeIntegrity(canvas);
+  const say = text => { status(text); statusLog.push({ t: performance.now(), text, visible: document.getElementById('status').offsetParent !== null }); };
+  say('preparing: acquiring GPU');
+  const s = await session(fx, say);
+  try {
+    const frame = await renderOnce(s.renderer, { view: 'bulb-overview', profile: 'draft' });
+    return { slots: [{ slot: 'pending', raw: { navigationMs: frame.t, statusLog, frame, outstandingMax: s.renderer.stats().outstandingMax, integrity: integrity.stop(), losses: s.losses } }], invalidations: [] };
+  } finally { s.close(); }
+}
+```
+
+```js
+// spikes/project0/browser/drivers/timing.js — G6 (9 trials), G7 (3 trials) and G9 (their 12 windows), in one headed session.
+import { session, frameOf, sleep } from './common.js';
+import { posesAt, burstSchedule } from '../paths.js';
+import { observeIntegrity, observeLongTasks, refreshHz } from '../integrity.js';
+import * as events from '../events.js';
+
 const VIEWS = ['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'];
-const frameOf = p => ({ t: p.publishedMs, label: p.label, requestId: p.requestId, counts: p.counts });
 
-// Completion-driven path: at most one pending request; the next pose is issued when the previous draft publishes.
-async function followPath(renderer, fixtures, view, profile, seconds) {
-  const frames = []; const t0 = performance.now(); let pending = 0, pendingMax = 0;
-  await new Promise(resolve => {
-    const issue = () => {
-      const s = (performance.now() - t0) / 1000;
-      if (s >= seconds) return resolve();
-      pending++; pendingMax = Math.max(pendingMax, pending);
-      renderer.render({ view, profile, camera: posesAt(fixtures, view, s), label: view });
-    };
-    renderer.onPublish(p => { if (p.label === view) { pending--; frames.push(frameOf(p)); issue(); } });
-    issue();
-  });
+export async function followPath(renderer, fx, view, profile, seconds, override = {}) {
+  const frames = [], t0 = performance.now(); let pending = 0, pendingMax = 0, off = null;
+  try {
+    await new Promise(resolve => {
+      const issue = () => {
+        const s = (performance.now() - t0) / 1000;
+        if (s >= seconds) return resolve();
+        pending++; pendingMax = Math.max(pendingMax, pending);
+        renderer.render({ view, profile, camera: posesAt(fx, view, s), label: view, override });
+      };
+      off = renderer.onPublish(p => { if (p.label === view) { pending--; frames.push(frameOf(p)); issue(); } });
+      issue();
+    });
+  } finally { off?.(); }
   return { windowStart: t0, frames, pendingMax };
 }
 
-async function timing(fixtures, status) {
+function bandDiagnostics(stats, method) {
+  const ms = stats.bands.map(b => (b.gpuMs ?? (b.doneMs - b.submitMs))).filter(Number.isFinite).sort((a, b) => a - b);
+  const p99 = ms.length ? ms[Math.ceil(0.99 * ms.length) - 1] : null, max = ms.at(-1) ?? null;
+  return { method, bands: ms.length, p99, max, warning: max !== null && max > 30 ? `band duration ${max.toFixed(1)} ms exceeds the 30 ms warning` : null };
+}
+
+export async function run(gate, fx, params, status) {
   const lt = observeLongTasks(), canvas = document.getElementById('view'), slots = [], longTasks = [];
-  let windows = 0;
+  const hz = await refreshHz(); let windows = 0;
   for (const view of VIEWS) for (let trial = 0; trial < 3; trial++) {
-    const s = await session(fixtures, status);                       // fresh renderer per trial so handlers do not accumulate
-    await followPath(s.renderer, fixtures, view, 'draft', 3);          // warm-up, discarded
-    const before = trialIntegrity(canvas);
-    const run = await followPath(s.renderer, fixtures, view, 'draft', 30);
-    const integrity = [...before, ...trialIntegrity(canvas)];
-    longTasks.push(...lt.take(run.windowStart, run.windowStart + 30000)); windows++;
-    slots.push({ slot: `${view}/${trial}`, gate: 'G6', raw: { ...run, outstandingMax: s.renderer.sched.stats().outstandingMax, integrity } });
-    s.renderer.destroy(); s.device.destroy();
+    const s = await session(fx, status);
+    try {
+      await followPath(s.renderer, fx, view, 'draft', 3);                                        // warm-up, discarded
+      const integrity = observeIntegrity(canvas);
+      const r = await followPath(s.renderer, fx, view, 'draft', 30);
+      const observed = integrity.stop();
+      longTasks.push(...lt.take(r.windowStart, r.windowStart + 30000)); windows++;
+      const ts = await s.renderer.readTimestamps();
+      slots.push({ slot: `${view}/${trial}`, gate: 'G6', raw: { ...r, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, diagnostics: bandDiagnostics(s.renderer.stats(), ts.method), losses: s.losses } });
+    } finally { s.close(); events.clear(); }
   }
-  const schedule = burstSchedule(fixtures);
+  const schedule = burstSchedule(fx);
   for (let trial = 0; trial < 3; trial++) {
-    const s = await session(fixtures, status);
-    await followPath(s.renderer, fixtures, 'bulb-overview', 'draft', 3);
-    const before = trialIntegrity(canvas), t0 = performance.now() + 50, issued = [], frames = [];
-    s.renderer.onPublish(p => frames.push(frameOf(p)));
-    await Promise.all(schedule.map(r => new Promise(resolve => setTimeout(() => {
-      const requestId = s.renderer.render({ view: 'bulb-overview', profile: 'draft', camera: r.camera, label: 'bulb-overview' });
-      issued.push({ ...r, requestId, requestedMs: performance.now(), lateByMs: performance.now() - (t0 + r.offsetMs) }); resolve();
-    }, Math.max(0, t0 + r.offsetMs - performance.now())))));
-    await sleep(fixtures.bursts.quietMs);
-    const finals = issued.filter(r => r.index === fixtures.bursts.requestsPerBurst - 1)
-      .map(r => ({ requestId: r.requestId, requestedMs: r.requestedMs, publishedMs: frames.find(f => f.requestId === r.requestId)?.t ?? null }));
-    const late = issued.filter(r => r.lateByMs > 4).length;
-    const integrity = [...before, ...trialIntegrity(canvas), ...(late ? [`interference: ${late} burst requests issued >4 ms late`] : [])];
-    longTasks.push(...lt.take(t0, performance.now())); windows++;
-    slots.push({ slot: String(trial), gate: 'G7', raw: { issued: issued.length, finals, frames, outstandingMax: s.renderer.sched.stats().outstandingMax, integrity } });
-    s.renderer.destroy(); s.device.destroy();
+    const s = await session(fx, status); let off = null;
+    try {
+      await followPath(s.renderer, fx, 'bulb-overview', 'draft', 3);
+      const frames = []; off = s.renderer.onPublish(p => frames.push(frameOf(p)));
+      const integrity = observeIntegrity(canvas), t0 = performance.now() + 50, issued = [];
+      await Promise.all(schedule.map(r => new Promise(resolve => setTimeout(() => {
+        const firedMs = performance.now(), lateByMs = firedMs - (t0 + r.offsetMs);         // recorded before render()
+        const requestId = s.renderer.render({ view: 'bulb-overview', profile: 'draft', camera: r.camera, label: 'bulb-overview' });
+        const requestedMs = events.list().findLast(e => e.type === 'request' && e.requestId === requestId).t;   // function-entry time
+        issued.push({ id: r.id, burst: r.burst, index: r.index, firedMs, lateByMs, requestId, requestedMs }); resolve();
+      }, Math.max(0, t0 + r.offsetMs - performance.now())))));
+      await sleep(fx.bursts.quietMs);
+      const observed = integrity.stop();
+      longTasks.push(...lt.take(t0, performance.now())); windows++;
+      const ts = await s.renderer.readTimestamps();
+      slots.push({ slot: String(trial), gate: 'G7', raw: { issued: issued.sort((a, b) => a.id - b.id), frames, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, diagnostics: bandDiagnostics(s.renderer.stats(), ts.method), losses: s.losses } });
+    } finally { off?.(); s.close(); events.clear(); }
   }
   slots.push({ slot: 'warmed', gate: 'G9', raw: { windows, longTasks } });
   return { slots, invalidations: [] };
 }
+```
 
-async function g8(fixtures, status) {
-  const slots = [];
+```js
+// spikes/project0/browser/drivers/g8.js — replace in-flight stress work, after its exact submission was observed.
+import { session, frameOf, sleep } from './common.js';
+import { observeIntegrity } from '../integrity.js';
+export async function run(gate, fx, params, status) {
+  const slots = [], canvas = document.getElementById('view');
   for (let rep = 0; rep < 10; rep++) {
-    const s = await session(fixtures, status); const frames = [];
-    s.renderer.onPublish(p => frames.push(frameOf(p)));
-    s.renderer.render({ view: 'bulb-stress', profile: 'stress', label: 'bulb-stress' });
-    while (!events.list().some(e => e.type === 'admit')) await sleep(1);   // stress work actually submitted
-    const sphereRequested = performance.now();
-    const sphereId = s.renderer.render({ view: 'sphere', profile: 'draft', label: 'sphere' });
-    while (!frames.some(f => f.requestId === sphereId) && performance.now() - sphereRequested < 5000) await sleep(1);
-    await sleep(500);                                                       // any stale stress publication would arrive now
-    const sphere = frames.find(f => f.requestId === sphereId);
-    slots.push({ slot: String(rep), raw: { stressSubmitted: 1, sphereRequested, sphere: sphere ?? null, stalePublications: frames.filter(f => f.label === 'bulb-stress').length, outstandingMax: s.renderer.sched.stats().outstandingMax } });
-    events.clear(); s.renderer.destroy(); s.device.destroy();
+    const s = await session(fx, status), frames = []; const off = s.renderer.onPublish(p => frames.push(frameOf(p)));
+    try {
+      const integrity = observeIntegrity(canvas);
+      const stressRequestId = s.renderer.render({ view: 'bulb-stress', profile: 'stress', label: 'bulb-stress' });
+      const t0 = performance.now(); let stressSubmit = null;
+      while (!(stressSubmit = s.events.list().find(e => e.type === 'submit' && e.requestId === stressRequestId && e.epoch === s.epoch)) && performance.now() - t0 < 5000) await sleep(1);
+      const sphereRequested = performance.now();
+      const sphereId = s.renderer.render({ view: 'sphere', profile: 'draft', label: 'sphere' });
+      while (!frames.some(f => f.requestId === sphereId) && performance.now() - sphereRequested < 5000) await sleep(1);
+      await s.device.queue.onSubmittedWorkDone();                                            // drain: a stale stress result would publish now
+      await sleep(50);
+      slots.push({ slot: String(rep), raw: { stressRequestId, stressSubmit: stressSubmit ? { requestId: stressSubmit.requestId, t: stressSubmit.t } : null, sphereRequested, sphere: frames.find(f => f.requestId === sphereId) ?? null, stalePublications: frames.filter(f => f.label === 'bulb-stress').length, outstandingMax: s.renderer.stats().outstandingMax, integrity: integrity.stop(), losses: s.losses } });
+    } finally { off(); s.close(); s.events.clear(); }
   }
   return { slots, invalidations: [] };
 }
-
-async function g10(fixtures, status) {
-  const s = await session(fixtures, status), slots = [];
-  for (const view of VIEWS) {
-    const frames = []; s.renderer.onPublish(p => frames.push(frameOf(p)));
-    const t0 = performance.now(); const id = s.renderer.render({ view, profile: 'settled', label: view });
-    while (!frames.some(f => f.requestId === id) && performance.now() - t0 < 20000) await sleep(2);
-    const f = frames.find(x => x.requestId === id);
-    slots.push({ slot: view, raw: { requestedMs: t0, frame: f ?? null, prepared: 1, outstandingMax: s.renderer.sched.stats().outstandingMax } });
-  }
-  s.renderer.destroy(); s.device.destroy();
-  return { slots, invalidations: [] };
-}
 ```
 
-- [ ] **Step 6: Add the G1, G2 and G12 drivers, and register them**
-
 ```js
-// The numerical dispatch runs on the device created from the very adapter whose identity is judged (Codex's G1 rule).
-async function g1(fixtures, status, params) {
-  const dev = await import('../gpu/device.js');
-  const { device, info } = await dev.acquire();
-  let probeOk = false;
+// spikes/project0/browser/drivers/g10.js — settled single frames.
+import { session, renderOnce } from './common.js';
+import { observeIntegrity } from '../integrity.js';
+export async function run(gate, fx, params, status) {
+  const s = await session(fx, status), slots = [], canvas = document.getElementById('view');
   try {
-    const pipelines = await prepare(device, status);
-    const words = await arith(device, pipelines, 'bulb_samples', pack(fixtures.arithmetic.bulb, s => [...s.input, 0]), 64);
-    probeOk = words.length >= 4 * 4096 && [...words.subarray(0, 4 * 4096)].every((w, i) => i % 4 !== 0 || w <= 2);
-  } catch { probeOk = false; }
-  dev.destroy();
-  return { slots: [{ slot: params.get('runMode'), raw: { adapterInfo: info, probeOk } }], invalidations: [] };
-}
-
-// G2 runs at module evaluation (main.js): this measures from navigation start.
-export async function g2(fixtures, status) {
-  const statusLog = [];
-  const say = text => { status(text); statusLog.push({ t: performance.now(), text, visible: document.getElementById('status').offsetParent !== null }); };
-  say('preparing: acquiring GPU');
-  const s = await session(fixtures, say);
-  const p = await new Promise(resolve => { const id = s.renderer.render({ view: 'bulb-overview', profile: 'draft' }); s.renderer.onPublish(x => { if (x.requestId === id) resolve(x); }); });
-  return { slots: [{ slot: 'pending', raw: { navigationMs: p.publishedMs, statusLog, frame: frameOf(p), outstandingMax: s.renderer.sched.stats().outstandingMax } }], invalidations: [] };
-}
-
-async function g12(fixtures, status) {
-  const dev = await import('../gpu/device.js'), canvas = document.getElementById('view'), cfg = fixtures.stability;
-  const tracker = createTracker();
-  let unplannedLosses = 0; dev.onLoss(() => { unplannedLosses++; });
-  let unhandled = 0; addEventListener('error', () => unhandled++); addEventListener('unhandledrejection', () => unhandled++);
-  const s = await session(fixtures, status, tracker);
-  const setBacking = ([w, h]) => { canvas.width = w; canvas.height = h; };
-  const draftAt = () => ({ W: canvas.width / 2, H: canvas.height / 2 });
-  // Baseline: warm every pipeline the sequence uses, then return to 1280x720, drain, release transients.
-  await followPath(s.renderer, fixtures, 'bulb-overview', 'draft', 1);
-  await exerciseResources(s.device, fixtures, status, tracker);
-  setBacking(cfg.baselineBacking); await followPath(s.renderer, fixtures, 'bulb-overview', 'draft', 1);
-  await s.device.queue.onSubmittedWorkDone(); await sleep(200);
-  const baseline = tracker.inventory();
-  window.p0Checkpoints = [];
-  const start = performance.now(); let deadlineMisses = 0;
-  for (let c = 0; c < cfg.cycleCount; c++) {
-    const c0 = start + c * cfg.cycleMs;
-    const runFor = async (view, profile, untilMs) => {
-      const t0 = performance.now();
-      await new Promise(resolve => {
-        const issue = () => { if (performance.now() >= untilMs) return resolve(); s.renderer.render({ view, profile, camera: posesAt(fixtures, view, (performance.now() - t0) / 1000), label: view, override: draftAt() }); };
-        s.renderer.onPublish(p => { if (p.label === view) issue(); }); issue();
-      });
-    };
-    const [, toSphere, toDetail, toMaintenance] = cfg.phaseOffsetsMs;          // [0, 3000, 4000, 7000, 10000]
-    await runFor('bulb-overview', 'draft', c0 + toSphere);
-    await runFor('sphere', 'draft', c0 + toDetail);
-    await runFor('bulb-detail-0.005', 'draft', c0 + toMaintenance);
-    s.renderer.render({ view: 'bulb-stress', profile: 'stress', label: 'bulb-stress', override: draftAt() });
-    while (!events.list().some(e => e.type === 'admit')) await sleep(1);
-    const sphereId = s.renderer.render({ view: 'sphere', profile: 'draft', label: 'sphere', override: draftAt() });
-    await new Promise(resolve => s.renderer.onPublish(p => { if (p.requestId === sphereId) resolve(); }));
-    setBacking(cfg.resizeBacking[c % cfg.resizeBacking.length]);
-    if ((c + 1) % cfg.resourceEvery === 0) await exerciseResources(s.device, fixtures, status, tracker);
-    events.clear();
-    if (performance.now() > c0 + cfg.cycleMs) deadlineMisses++;
-    else await sleep(c0 + cfg.cycleMs - performance.now());
-    window.p0Checkpoints.push({ cycle: c, t: performance.now(), deadlineMisses, unhandled, unplannedLosses, inventory: tracker.inventory() });
-  }
-  const wallMs = performance.now() - start;
-  setBacking(cfg.baselineBacking); await followPath(s.renderer, fixtures, 'bulb-overview', 'draft', 1);
-  await s.device.queue.onSubmittedWorkDone(); await sleep(200);
-  const final = tracker.inventory();
-  const result = { cycles: window.p0Checkpoints.length, wallMs, deadlineMisses, unhandled, unplannedLosses, baseline, final, baselinePrepared: 1, returned1280: canvas.width === 1280 && canvas.height === 720 ? 1 : 0, outstandingMax: s.renderer.sched.stats().outstandingMax };
-  s.renderer.destroy(); s.device.destroy();
-  return { slots: [{ slot: 'sequence', raw: result }], invalidations: [] };
-}
-```
-
-`session(fixtures, status, tracker)` gains an optional third parameter. In T7's `session`,
-pass `alloc: tracker` to the `Renderer` when it is given:
-`new Renderer({ device, viewport, canvas, fixtures, events, ...(tracker ? { alloc: tracker } : {}) })`.
-
-In `runGateDriver`, before the final `throw`, add:
-`if (gate === 'timing') return timing(fixtures, status);`,
-`if (gate === 'G8') return g8(fixtures, status);`, `if (gate === 'G10') return g10(fixtures, status);`
-and `if (gate === 'G12') return g12(fixtures, status);`. `g1` reads `params`, so register it as
-`if (gate === 'G1') return g1(fixtures, status, params);`.
-
-In `browser/main.js`, make G2 start immediately at module evaluation, before any other branch.
-Insert after the `status` constant:
-
-```js
-if (params.get('mode') === 'gate' && params.get('gate') === 'G2') {
-  const fixturesPromise = fetch('../fixtures.json').then(r => r.json());
-  import('./drivers.js').then(async ({ g2 }) => { window.p0Result = await g2(await fixturesPromise, t => { status.textContent = t; }); })
-    .catch(error => { window.p0Result = { error: `${error.name}: ${error.message}` }; });
-}
-```
-
-The existing `mode=gate` branch must skip `G2`: change its condition to
-`params.get('mode') === 'gate' && params.get('gate') !== 'G2'`.
-
-- [ ] **Step 7: Implement the timing derivations and the G1 parser in `measure.mjs`**
-
-Add the imports `throughput`, `percentile` and `coverageValid` from `./metrics.js`. Then insert
-before the final `throw` in `metricsFor`:
-
-```js
-  const coverageErrors = frames => frames.filter(f => !f.counts || !coverageValid(f.label, f.counts)).length;
-  if (gate === 'G6') {
-    if (raw.integrity.length) throw Object.assign(new Error(raw.integrity.join('; ')), { invalidation: true });
-    const t = throughput(raw.frames.map(f => ({ id: f.requestId, time: f.t })), raw.windowStart, raw.windowStart + 30000);
-    const inWindow = raw.frames.filter(f => f.t >= raw.windowStart && f.t < raw.windowStart + 30000);
-    return { ...t, pendingMax: raw.pendingMax, coverageErrors: coverageErrors(inWindow), outstandingMax: raw.outstandingMax };
-  }
-  if (gate === 'G7') {
-    if (raw.integrity.length) throw Object.assign(new Error(raw.integrity.join('; ')), { invalidation: true });
-    raw.finals.forEach((f, i) => { if (f.publishedMs == null) throw new Error(`final request ${i} was never published`); });
-    return { requests: raw.issued, finals: raw.finals.length, latencyP95: percentile(raw.finals.map(f => f.publishedMs - f.requestedMs), 0.95), coverageErrors: coverageErrors(raw.frames), outstandingMax: raw.outstandingMax };
-  }
-  if (gate === 'G8') {
-    return { stressSubmitted: raw.stressSubmitted, latencyMs: raw.sphere ? raw.sphere.t - raw.sphereRequested : Number.MAX_VALUE,
-      stalePublications: raw.stalePublications, coverageErrors: raw.sphere ? coverageErrors([raw.sphere]) : 1, outstandingMax: raw.outstandingMax };
-  }
-  if (gate === 'G9') {
-    const over = kind => raw.longTasks.filter(t => t.kind === kind && t.ms > 50).length;
-    return { windows: raw.windows, applicationOver50: over('application'), unattributedOver50: over('unattributed'), harnessRecorded: 1 };
-  }
-  if (gate === 'G10') {
-    if (!raw.frame) throw new Error(`${slot}: settled frame never published`);
-    return { elapsedMs: raw.frame.t - raw.requestedMs, prepared: raw.prepared, coverageErrors: coverageErrors([raw.frame]), outstandingMax: raw.outstandingMax };
-  }
-  if (gate === 'G2') {
-    const firstPrep = raw.statusLog.find(e => e.text.startsWith('preparing'));
-    return { navigationMs: raw.navigationMs, ...(slot === 'warm' ? {} : { emptyProfile: raw.emptyProfile, freshProcess: raw.freshProcess }),
-      preparationVisible: firstPrep && firstPrep.visible && firstPrep.t < raw.navigationMs ? 1 : 0, coverageErrors: coverageErrors([raw.frame]), outstandingMax: raw.outstandingMax };
-  }
-  if (gate === 'G12') {
-    const counts = ['textures', 'buffers'].reduce((n, k) => n + Math.abs(raw.final[k] - raw.baseline[k]), 0);
-    return { cycles: raw.cycles, wallMs: raw.wallMs, deadlineMisses: raw.deadlineMisses, unhandled: raw.unhandled, unplannedLosses: raw.unplannedLosses,
-      countDifferences: counts, byteRelativeDifference: Math.abs(raw.final.bytes - raw.baseline.bytes) / raw.baseline.bytes,
-      baselinePrepared: raw.baselinePrepared, returned1280: raw.returned1280, outstandingMax: raw.outstandingMax };
-  }
-  if (gate === 'G1') {
-    const { metrics, invalidations } = g1Metrics(raw);
-    if (invalidations.length) throw Object.assign(new Error(invalidations.join('; ')), { invalidation: true });
-    return metrics;
-  }
-```
-
-Then add the G1 parser:
-
-```js
-// G1 (Codex's corroboration rule): judge the *selected* adapter, corroborated by the same session's chrome://gpu.
-export function g1Metrics({ adapterInfo: a, chromeGpuText: text, probeOk }) {
-  const invalidations = [];
-  const desc = `${a.vendor} ${a.architecture} ${a.description}`;
-  if (!a.vendor && !a.description) invalidations.push('adapter.info is redacted or empty');
-  const software = a.isFallbackAdapter === true || /swiftshader|llvmpipe|lavapipe|software/i.test(desc) ? 1 : 0;
-  const nvidia = !software && /nvidia/i.test(desc) ? 1 : 0;
-  const webgpuRow = /^WebGPU:\s*(.+)$/m.exec(text)?.[1]?.trim();
-  if (!webgpuRow) invalidations.push('chrome://gpu has no WebGPU feature-status row');
-  const active = /VENDOR\s*=\s*0x([0-9a-f]+),\s*DEVICE\s*=\s*0x([0-9a-f]+)[^\n]*\*ACTIVE\*/i.exec(text);
-  if (!active) invalidations.push('chrome://gpu identifies no active GPU');
-  const driver = /Driver vendor\s+(.+)/.exec(text) && /Driver version\s+(.+)/.exec(text);
-  if (!driver) invalidations.push('chrome://gpu has no driver information');
-  if (active && /^0x[0-9a-f]+$/i.test(a.device || '') && parseInt(a.device, 16) !== parseInt(active[2], 16)) invalidations.push(`adapter device ${a.device} contradicts the active GPU 0x${active[2]}`);
-  if (!probeOk) invalidations.push('probe dispatch did not complete on the selected adapter');
-  const corroborated = nvidia && webgpuRow === 'Hardware accelerated' && active && active[1].toLowerCase() === '10de' && driver && probeOk && invalidations.length === 0 ? 1 : 0;
-  return { metrics: { nvidia, software, corroborated }, invalidations };
-}
-```
-
-`run.mjs` must treat an error carrying `invalidation: true` exactly like any other
-`metricsFor` failure: it records the reason as an invalidation. The T6 catch block already
-does this.
-
-- [ ] **Step 8: Extend `run.mjs`**
-
-There are four changes:
-- (a) **The `timing` fan-out:** each returned slot carries its own `gate` (G6, G7 or G9). The
-  record uses `slot.gate ?? gate`.
-- (b) **G1:** pass `&runMode=${mode}` in the URL. `raw.chromeGpuText` is the capture from the
-  same session, injected by Node before `metricsFor`.
-- (c) **G2 needs a fresh browser process per slot:**
-  - add `runG2()`, which launches three times, each with `launchChrome` and therefore a new
-    empty profile and process;
-  - navigate *first*, and capture `chrome://gpu` only after `p0Result`, so the capture cannot
-    warm the GPU process before the measurement;
-  - set `emptyProfile: 1` and `freshProcess: 1` from launcher facts: `freshProfile` threw if
-    the directory existed or was not empty, and `launchPersistentContext` started a new
-    process;
-  - then `page.reload()` in the last session gives the `warm` slot.
-- (d) **G12 checkpoints:** while waiting for `p0Result`, poll
-  `window.p0Checkpoints?.length` every 15 s. Write any new checkpoints to
-  `checkpoint-<n>.json` in the run directory. The poll is a bounded `evaluate` of a small array,
-  and G12 has no latency threshold.
-
-```js
-// in runGate, replacing the single waitForFunction for p0Result:
-let result;
-if (gate === 'G12') {
-  let written = 0;
-  for (;;) {
-    result = await page.evaluate(() => window.p0Result ?? null);
-    const cps = await page.evaluate(n => (window.p0Checkpoints || []).slice(n), written);
-    for (const cp of cps) await writeFile(resolve(runDir, `checkpoint-${written++}.json`), JSON.stringify(cp));
-    if (result) break;
-    await new Promise(r => setTimeout(r, 15000));
-  }
-} else result = await page.waitForFunction(() => window.p0Result, null, { timeout: timeoutMs, polling: 1000 }).then(h => h.jsonValue());
-// per slot:
-const slotGate = slotRow.gate ?? gate;
-const raw = slotGate === 'G1' ? { ...slotRow.raw, chromeGpuText } : slotRow.raw;
-```
-
-```js
-export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}) {
-  const fixtures = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
-  const fixture = await fixtureIdentity(), implementation = await implementationIdentity();
-  const runDir = await newRunDir(`${campaign}-g2-headed`), server = await ensureServer(), records = [];
-  try {
-    for (let i = 0; i < 3; i++) {
-      const { context, requestedArgs, profile } = await launchChrome({ headless: false, args: LAUNCH[args], profileKind: `g2-fresh-${i}`, chromium });
-      try {
-        const page = await context.newPage();
-        await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=G2`);
-        const result = await page.waitForFunction(() => window.p0Result, null, { timeout: 60000 }).then(h => h.jsonValue());
-        const slots = [{ slot: `fresh-${i}`, raw: { ...result.slots[0].raw, emptyProfile: 1, freshProcess: 1 } }];
-        if (i === 2) {
-          await page.reload();
-          const warm = await page.waitForFunction(() => window.p0Result, null, { timeout: 60000 }).then(h => h.jsonValue());
-          slots.push({ slot: 'warm', raw: warm.slots[0].raw });
-        }
-        const commandLine = await effectiveCommandLine(context); assertSandboxed(commandLine);   // after the measurement
-        const gpuPage = await context.newPage(); await gpuPage.goto('chrome://gpu'); await gpuPage.waitForTimeout(1500);
-        const chromeGpuText = await gpuPage.locator('body').innerText();
-        const browserVersion = (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim();
-        const identity = { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity({ requestedArgs, mode: 'headed', commandLine }),
-          ...environmentIdentity(chromeGpuText, { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: process.env.XDG_SESSION_TYPE || 'unknown' }) };
-        for (const { slot, raw } of slots) {
-          const invalidations = []; let metrics = {};
-          try { metrics = metricsFor('G2', slot, raw, fixtures); } catch (e) { invalidations.push(`metrics: ${e.message}`); }
-          const record = { schema: 1, id: `G2-${slot}-${runDir.split('/').at(-1)}`, gate: 'G2', slot, identity, invalidations, metrics };
-          records.push(await writeRecord(runDir, record, [{ name: `${record.id}.raw.json`, data: JSON.stringify({ raw, profile }) }]));
-        }
-      } finally { await context.close(); }
+    for (const view of ['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005']) {
+      const integrity = observeIntegrity(canvas), requestedMs = performance.now();
+      let frame = null; try { frame = await renderOnce(s.renderer, { view, profile: 'settled' }, { timeoutMs: 20000 }); } catch {}
+      slots.push({ slot: view, raw: { requestedMs, frame, prepared: 1, outstandingMax: s.renderer.stats().outstandingMax, integrity: integrity.stop(), losses: s.losses } });
     }
-  } finally { await server.stop(); }
-  return { records, runDir };
+  } finally { s.close(); }
+  return { slots, invalidations: [] };
 }
 ```
 
-Then route the CLI: `if (values.gate === 'G2') await runG2(values)`, else `runGate`.
+```js
+// spikes/project0/browser/drivers/g12.js — the A.9 ten-minute sequence with fixed deadlines and bounded checkpoints.
+import { session, renderOnce, sleep } from './common.js';
+import { followPath } from './timing.js';
+import { prepareResourceCheck, exerciseResources } from './resources.js';
+import { observeIntegrity } from '../integrity.js';
+import { onLoss } from '../../gpu/device.js';
+export async function run(gate, fx, params, status) {
+  const cfg = fx.stability, canvas = document.getElementById('view');
+  let unplannedLosses = 0, unhandled = 0;
+  const offLoss = onLoss(() => { unplannedLosses++; });
+  const onErr = () => unhandled++; addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
+  const s = await session(fx, status);
+  const maintenance = [];
+  try {
+    const setBacking = ([w, h]) => { canvas.width = w; canvas.height = h; };
+    const draftAt = () => ({ W: canvas.width * cfg.internalScale, H: canvas.height * cfg.internalScale });
+    // Baseline: prepare and cache every pipeline the sequence uses, exercise once, return to 1280x720, drain, record.
+    const prepared = await prepareResourceCheck(s.device, s.alloc);
+    await followPath(s.renderer, fx, 'bulb-overview', 'draft', 1);
+    await renderOnce(s.renderer, { view: 'sphere', profile: 'draft' });
+    maintenance.push(await exerciseResources(s.device, s.alloc, s.watchdog, fx, prepared, status));
+    setBacking(cfg.baselineBacking); await followPath(s.renderer, fx, 'bulb-overview', 'draft', 1, draftAt());
+    await s.device.queue.onSubmittedWorkDone(); await sleep(200);
+    const baseline = s.alloc.inventory();
+    const integrity = observeIntegrity(canvas, { allowedBacking: [cfg.baselineBacking, ...cfg.resizeBacking] });
+    window.p0Checkpoints = [];
+    const [, toSphere, toDetail, toMaintenance] = cfg.phaseOffsetsMs;
+    const start = performance.now(); let deadlineMisses = 0;
+    for (let c = 0; c < cfg.cycleCount; c++) {
+      const c0 = start + c * cfg.cycleMs;
+      const phase = async (view, untilMs) => { const seconds = Math.max(0, (untilMs - performance.now()) / 1000); if (seconds > 0) await followPath(s.renderer, fx, view, 'draft', seconds, draftAt()); };
+      await phase('bulb-overview', c0 + toSphere);
+      await phase('sphere', c0 + toDetail);
+      await phase('bulb-detail-0.005', c0 + toMaintenance);
+      const stressId = s.renderer.render({ view: 'bulb-stress', profile: 'stress', label: 'bulb-stress', override: draftAt() });
+      while (!s.events.list().some(e => e.type === 'submit' && e.requestId === stressId)) await sleep(1);
+      await renderOnce(s.renderer, { view: 'sphere', profile: 'draft', override: draftAt() });
+      setBacking(cfg.resizeBacking[c % cfg.resizeBacking.length]);
+      if ((c + 1) % cfg.resourceEvery === 0) maintenance.push(await exerciseResources(s.device, s.alloc, s.watchdog, fx, prepared, status));
+      s.events.clear();
+      if (performance.now() > c0 + cfg.cycleMs) deadlineMisses++; else await sleep(c0 + cfg.cycleMs - performance.now());
+      window.p0Checkpoints.push({ cycle: c, t: performance.now(), deadlineMisses, unhandled, unplannedLosses, inventory: s.alloc.inventory(), maintenanceErrors: maintenance.flatMap(m => m.errors) });
+    }
+    const wallMs = performance.now() - start;
+    setBacking(cfg.baselineBacking); await followPath(s.renderer, fx, 'bulb-overview', 'draft', 1, draftAt());
+    await s.device.queue.onSubmittedWorkDone(); await sleep(200);
+    const final = s.alloc.inventory();
+    return { slots: [{ slot: 'sequence', raw: { cycles: window.p0Checkpoints.length, wallMs, deadlineMisses, unhandled, unplannedLosses, baseline, final, baselinePrepared: 1, returned1280: canvas.width === 1280 && canvas.height === 720 ? 1 : 0, outstandingMax: s.renderer.stats().outstandingMax, integrity: integrity.stop(), maintenance: maintenance.map(m => ({ errors: m.errors, checks: m.checks.length, bandOk: m.bandOk })) } }], invalidations: [] };
+  } finally { offLoss(); removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); s.close(); }
+}
+```
 
-- [ ] **Step 9: Run the Node tests to verify they pass**
+```js
+// spikes/project0/browser/drivers/visible.js — visible-output evidence outside measured windows (not a gate).
+import { session, renderOnce } from './common.js';
+async function capture(s, frame) {
+  const { device, renderer } = s, t = renderer.targets, bytesPerRow = Math.ceil(t.W * 4 / 256) * 256;
+  const buf = s.alloc.buffer(device, { size: bytesPerRow * t.H, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+  try {
+    const enc = device.createCommandEncoder(); enc.copyTextureToBuffer({ texture: t.display }, { buffer: buf, bytesPerRow }, [t.W, t.H]); device.queue.submit([enc.finish()]);
+    await buf.mapAsync(GPUMapMode.READ); const src = new Uint8Array(buf.getMappedRange().slice(0)); buf.unmap();
+    const rgba = new Uint8ClampedArray(t.W * t.H * 4); for (let y = 0; y < t.H; y++) rgba.set(src.subarray(y * bytesPerRow, y * bytesPerRow + t.W * 4), y * t.W * 4);
+    const classes = { background: 0, unresolved: 0, failure: 0, unavailableNormal: 0, shaded: 0 };
+    for (let i = 0; i < rgba.length; i += 4) {
+      const [r, g, b] = [rgba[i], rgba[i + 1], rgba[i + 2]];
+      if (r === 255 && g === 0 && b === 255) classes.unresolved++; else if (r === 255 && g === 0 && b === 0) classes.failure++;
+      else if (r === 128 && g === 128 && b === 128) classes.unavailableNormal++; else if (r <= 6 && g <= 6 && b <= 8) classes.background++; else classes.shaded++;
+    }
+    const canvas = new OffscreenCanvas(t.W, t.H); canvas.getContext('2d').putImageData(new ImageData(rgba, t.W, t.H), 0, 0);
+    const png = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer());
+    let bin = ''; for (const x of png) bin += String.fromCharCode(x);
+    return { W: t.W, H: t.H, counts: frame.counts, classes, pngBase64: btoa(bin) };
+  } finally { buf.destroy(); }
+}
+export async function run(gate, fx, params, status) {
+  const s = await session(fx, status), out = {};
+  try {
+    for (const [view, profile] of [['sphere', 'draft'], ['bulb-overview', 'draft'], ['bulb-stress', 'stress']]) out[view] = await capture(s, await renderOnce(s.renderer, { view, profile }));
+    const ok = out.sphere.classes.shaded > 0 && out.sphere.classes.unresolved === 0 && out.sphere.classes.failure === 0 && out['bulb-overview'].classes.shaded > 0 && out['bulb-stress'].classes.unresolved >= 0.4 * out['bulb-stress'].W * out['bulb-stress'].H;
+    return { slots: [{ slot: 'captures', raw: { out, ok } }], invalidations: ok ? [] : ['visible output does not match the expected classes'] };
+  } finally { s.close(); }
+}
+```
 
-Run: `node --test spikes/project0/tests/timing.test.mjs spikes/project0/tests/g1.test.mjs`
-Expected: PASS, `# pass 7`, `# fail 0`.
+The colour classes follow `fixtures.shading`:
+- background (0.02, 0.02, 0.03), which quantises to at most (6, 6, 8);
+- unresolved magenta;
+- failure red;
+- unavailable-normal grey (0.5, quantised to 128);
+- everything else is a shaded surface.
 
-The paths test reads the frozen `fixtures.json`. A disagreement with `reference/camera.js` is a
-harness bug: fix `paths.js`, never the reference or the fixture.
+`visible` is an experiment. Its record has no metrics, and its captures are hashed artefacts
+that T13 includes in the report.
 
-- [ ] **Step 10: Run every driver once, as a development campaign**
+- [ ] **Step 7: Commit** (after Codex's read-only review, before any GPU run)
 
-Each of these runs headed, in the foreground, with no other window covering it:
+```bash
+git add spikes/project0/browser/paths.js spikes/project0/browser/integrity.js spikes/project0/browser/drivers/g1.js spikes/project0/browser/drivers/g2.js spikes/project0/browser/drivers/timing.js spikes/project0/browser/drivers/g8.js spikes/project0/browser/drivers/g10.js spikes/project0/browser/drivers/g12.js spikes/project0/browser/drivers/visible.js spikes/project0/measure/timing.mjs spikes/project0/tests/timing.test.mjs spikes/project0/tests/g1.test.mjs
+git commit -m "Project 0 T9: timing drivers with full-interval integrity, exact submission identities, complete-frame coverage, visible-output evidence"
+```
+
+- [ ] **Step 8: Run every driver once as a development campaign**
+
+Each run is headed, in the foreground, with no other window covering it:
 
 ```bash
 node spikes/project0/run.mjs --gate G1 --mode headed && node spikes/project0/run.mjs --gate G1 --mode headless
 node spikes/project0/run.mjs --gate G2
-node spikes/project0/run.mjs --gate timing --mode headed      # ~6 min: 12 warmed 30 s trials
+node spikes/project0/run.mjs --gate timing --mode headed      # about 6 minutes: 12 warmed 30 s trials
 node spikes/project0/run.mjs --gate G8 --mode headed
 node spikes/project0/run.mjs --gate G10 --mode headed
-node spikes/project0/run.mjs --gate G12 --mode headed         # ~11 min
+node spikes/project0/run.mjs --gate visible --mode headed
+node spikes/project0/run.mjs --gate G12 --mode headed         # about 11 minutes, with checkpoints every 15 s
 ```
 
 Expected:
 - every run prints one metrics line per slot with the `gatePlan` keys, or an explicit
   `INVALIDATIONS` list;
 - every run writes an `evidence:` directory;
-- G12 also writes 60 `checkpoint-*.json` files.
+- G12 also writes `checkpoint-*.json` files.
 
-Development runs are campaign `dev` and never qualify. Do not judge pass or fail here. T10
-runs the qualifying campaign and evaluates it, and in T10 the numbers are what they are.
-
-- [ ] **Step 11: Commit** (after Codex's read-only review)
-
-```bash
-git add spikes/project0/browser/paths.js spikes/project0/browser/integrity.js spikes/project0/browser/drivers.js spikes/project0/browser/main.js spikes/project0/gpu/renderer.js spikes/project0/measure.mjs spikes/project0/run.mjs spikes/project0/tests/timing.test.mjs spikes/project0/tests/g1.test.mjs
-git commit -m "Project 0 T9: in-page timing drivers (G1, G2, G6-G10, G12), integrity invalidations and metric derivation"
-```
+These are development records (campaign `dev`) and never qualify. Do not judge pass or fail
+here: T10 runs and evaluates the qualifying campaign.
 
 ---
 
-### Task T10: Formal WebGPU qualification campaign and the permitted remediation cycle
+### Task T10: Formal WebGPU qualification campaign, selection manifest and the single remediation cycle
 
 **Owner:** Claude runs it. Classification, the remediation decision and every interpretation
 are made **jointly with Codex** under the collaboration protocol, and are logged verbatim.
 
 **Files:**
-- `spikes/project0/qualify.mjs`: loads a campaign, verifies artefact hashes, recomputes every
-  metric from raw artefacts, and evaluates every gate.
-- `spikes/project0/campaign.mjs`: runs the gates in order under one campaign name and writes
-  the selection manifest.
-- `spikes/project0/launch-remediation.json`: created only if the remediation is a launch
+- `spikes/project0/qualify.mjs`, the pure core:
+  - manifest construction and validation;
+  - campaign coherence;
+  - loading reused records;
+  - artefact verification and metric recomputation;
+  - gate evaluation and the backend decision.
+- `spikes/project0/campaign.mjs`: runs the gates in phases (correctness, then performance,
+  then stability), acts on live aborts, and writes the manifest.
+- `spikes/project0/close-remediation.mjs`: recomputes the final decision from the closed
+  selection and the reviewed remediation history, with no hardware.
+- `spikes/project0/launch-remediation.json`: created only if the remediation includes a launch
   change.
 - Test: `spikes/project0/tests/qualify.test.mjs`.
 
 **Interfaces:**
 - Consumes:
-  - T1: `evaluateGate`, `gatePlan`, `decideBackends`, `canonical`;
+  - T1: `evaluateGate`, `decideBackends`, `GATES`, `canonical`;
   - T5: `sha256`, `fixtureIdentity`;
-  - T6/T9: `runGate`, `runG2`, `metricsFor`.
+  - T6/T9: `runSession`, `runG2`, `metricsFor`.
 - Produces:
-  - `buildManifest(records, fixture) → {fixture, trials: {'G/slot': {id, identity}}}`. It
-    throws on duplicate slots, mixed fixture identity, or campaign `dev` records;
-  - `loadCampaign(manifestPath) → {manifest, records}`;
-  - `recompute(records, fixtures, runRoot) → records`. It re-hashes every artefact, rederives
-    metrics from `*.raw.json`, and throws on any hash mismatch or metric difference;
-  - `qualify(manifest, records, fixtures, {remediationClosed}) → {backend: {remediationClosed, gates: {G1..G13: result}}, decision}`;
-  - `ABORTS`, the spec §7 stop conditions. Each is detected from a record as
-    `(record) → reason | null`.
+  - `buildManifest({records, fixture, campaign, args, runDirs, notRun, reuse}) → manifest`;
+  - `checkCoherence(records, manifest) → void`. It throws on mixed backend, environment or
+    launch configuration. Reused records may differ only in implementation identity, and only
+    with a stated reason;
+  - `loadCampaign(manifestPath, {root}) → {manifest, records}`, which includes the reused
+    records from their source manifests;
+  - `recompute(records, fixtures, {root}) → records`. Every selected record must have exactly
+    one `.raw.json`. All artefacts are re-hashed, and the metrics of every uninvalidated record
+    are rederived and must match;
+  - `qualify(manifest, records, fixtures, {remediationClosed}) → {backend, decision}`. A pass
+    or fail comes **only** from `evaluateGate`, applied to that gate's own selected records. A
+    `notRun` entry yields `not run` and never a pass;
+  - `validateStops(notRun, trials)`, applied by both `buildManifest` and `qualify`;
+  - `ABORTS`, the spec §7 stop conditions detected from record invalidations.
 
-**Campaign order.** It runs cheapest first, so that a hard failure stops expensive work early:
-1. G1 headed and headless;
-2. G4, G5, G3;
-3. G11;
-4. G2;
-5. `timing` (G6, G7, G9);
-6. G8;
-7. G10;
-8. G13;
-9. G12.
-
-**Abort conditions (spec §7)** stop the campaign at once. The campaign preserves the smallest
-reproducer, which is the record plus its run directory, and reports. It does **not** retry. The
-conditions are:
-- `unplannedLosses > 0`, or a lost device outside G13;
-- a `page.waitForFunction` timeout, meaning a browser hang;
-- `peakBytes > capBytes`;
-- `software = 1` or an invalidation naming a software adapter;
-- a 5-second stall: a band whose `doneMs - submitMs` exceeds 5000 in any `stats().bandMs`.
-
-Gates not yet run become `not run`, with `blockedBy` set **only** when the stop was caused by a
-measured `fail` (the T1 decision rule). Every other stop is `invalid/inconclusive`.
+**Rules (from Codex's review, adopted):**
+- **`notRun` entries:** a manifest stop entry contains only `status: 'not run'` and a
+  `reason`, plus an optional `blockedBy`. It cannot coexist with selected trials for the same
+  gate. Its `blockedBy` must name a gate whose selected evidence evaluates to `fail`.
+- **Campaign identity:** this is persisted in each record before it is written. A record with
+  no campaign, or with campaign `dev`, `probe` or any experiment, cannot be selected.
+- **Coherence:** the selected records must share the backend, browser version and executable,
+  driver and session, and one launch configuration per mode. Reuse is explicit and justified.
+- **Phases:** the correctness gates are evaluated before any performance work starts. A
+  correctness failure stops the campaign, and the remaining gates are `not run`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -6397,25 +6990,56 @@ measured `fail` (the T1 decision rule). Every other stop is `invalid/inconclusiv
 // spikes/project0/tests/qualify.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildManifest, ABORTS } from '../qualify.mjs';
+import { buildManifest, checkCoherence, qualify, ABORTS } from '../qualify.mjs';
+import { GATES } from '../contract.js';
 
-const identity = { backend: 'webgpu', fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64), implementationCommit: 'd'.repeat(40), implementationHash: 'e'.repeat(64), launchHash: 'f'.repeat(64), browserVersion: 'v', browserExecutable: 'x', driver: 'd', session: 's', mode: 'headed' };
+const identity = { backend: 'webgpu', fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64), implementationCommit: 'd'.repeat(40), implementationHash: 'e'.repeat(64), launchHash: 'f'.repeat(64), browserVersion: 'v', browserExecutable: 'x', driver: 'd', session: 's', mode: 'headless' };
 const fixture = { fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64) };
-const rec = (gate, slot, extra = {}) => ({ schema: 1, id: `${gate}-${slot}-run`, gate, slot, identity, invalidations: [], artifacts: [], metrics: {}, campaign: 'webgpu-1', ...extra });
+const rec = (gate, slot, extra = {}) => ({ schema: 1, id: `${gate}-${slot}-run`, gate, slot, campaign: 'webgpu-1', experiment: false, identity, invalidations: [], artifacts: [], metrics: {}, ...extra });
+const base = { fixture, campaign: 'webgpu-1', args: 'attempt1', runDirs: [] };
 
-test('the manifest selects each slot exactly once and refuses development or mixed evidence', () => {
-  const m = buildManifest([rec('G4', 'bulb-samples'), rec('G5', 'qjulia-plane')], fixture);
+test('the manifest selects each slot once and refuses development, missing-campaign, experiment or mixed-fixture evidence', () => {
+  const m = buildManifest({ ...base, records: [rec('G4', 'bulb-samples'), rec('G5', 'qjulia-plane')] });
   assert.deepEqual(Object.keys(m.trials).sort(), ['G4/bulb-samples', 'G5/qjulia-plane']);
-  assert.throws(() => buildManifest([rec('G4', 'bulb-samples'), rec('G4', 'bulb-samples', { id: 'other' })], fixture), /duplicate/);
-  assert.throws(() => buildManifest([rec('G4', 'bulb-samples', { campaign: 'dev' })], fixture), /development/);
-  assert.throws(() => buildManifest([rec('G4', 'bulb-samples', { identity: { ...identity, fixtureHash: '9'.repeat(64) } })], fixture), /fixture/);
+  assert.throws(() => buildManifest({ ...base, records: [rec('G4', 'bulb-samples'), rec('G4', 'bulb-samples', { id: 'x' })] }), /duplicate/);
+  for (const campaign of ['dev', 'probe', undefined]) assert.throws(() => buildManifest({ ...base, records: [rec('G4', 'bulb-samples', { campaign })] }), /campaign/);
+  assert.throws(() => buildManifest({ ...base, records: [rec('precision', 'precision', { experiment: true })] }), /experiment/);
+  assert.throws(() => buildManifest({ ...base, records: [rec('G4', 'bulb-samples', { identity: { ...identity, fixtureHash: '9'.repeat(64) } })] }), /fixture/);
 });
 
-test('abort conditions are detected from records', () => {
+test('a forged stop entry can never produce a pass, and cannot coexist with selected trials', () => {
+  const forged = { ...base, records: [], notRun: Object.fromEntries(GATES.map(g => [g, { status: 'pass', reason: 'x' }])) };
+  assert.throws(() => buildManifest(forged), /only 'not run'/);
+  const ok = buildManifest({ ...base, records: [], notRun: Object.fromEntries(GATES.map(g => [g, { status: 'not run', reason: 'campaign stopped' }])) });
+  const { decision, backend } = qualify(ok, [], { analytic: {}, arithmetic: { bulb: [], plane: [] } });
+  assert.notEqual(decision.outcome, 'WebGPU selected');
+  assert.ok(Object.values(backend.gates).every(g => g.status === 'not run'));
+  assert.throws(() => buildManifest({ ...base, records: [rec('G4', 'bulb-samples')], notRun: { G4: { status: 'not run', reason: 'x' } } }), /coexist/);
+});
+
+test('blockedBy must name a gate whose evidence failed', () => {
+  const m = buildManifest({ ...base, records: [], notRun: { G6: { status: 'not run', reason: 'stopped', blockedBy: 'G4' } } });
+  assert.throws(() => qualify(m, [], { analytic: {}, arithmetic: { bulb: [], plane: [] } }), /blockedBy G4 is not a measured failure/);
+});
+
+test('coherence: one backend, environment and launch configuration per mode; reuse must be justified', () => {
+  const a = rec('G4', 'bulb-samples'), b = rec('G5', 'qjulia-plane', { identity: { ...identity, driver: 'other' } });
+  assert.throws(() => checkCoherence([a, b], { reuse: [] }), /driver/);
+  const c = rec('G5', 'qjulia-plane', { identity: { ...identity, implementationCommit: '1'.repeat(40) } });
+  assert.throws(() => checkCoherence([a, c], { reuse: [] }), /implementation/);
+  assert.doesNotThrow(() => checkCoherence([a, c], { reuse: [{ gate: 'G5', slot: 'qjulia-plane', reason: 'unaffected by the remediation change set' }] }));
+  const d = rec('G5', 'qjulia-plane', { identity: { ...identity, launchHash: '2'.repeat(64) } });
+  assert.throws(() => checkCoherence([a, d], { reuse: [{ gate: 'G5', slot: 'qjulia-plane', reason: 'r' }] }), /launch/);
+});
+
+test('abort conditions are detected from record invalidations and metrics', () => {
   const reasons = r => ABORTS.map(f => f(r)).filter(Boolean);
   assert.deepEqual(reasons(rec('G12', 'sequence', { metrics: { unplannedLosses: 1 } })), ['unexpected device loss']);
-  assert.deepEqual(reasons(rec('G11', '4k', { metrics: { peakBytes: 2 ** 31 }, invalidations: ['allocation cap exceeded'] })), ['allocation cap exceeded']);
+  assert.deepEqual(reasons(rec('G6', 'bulb-overview/0', { invalidations: ['device lost: unknown'] })), ['unexpected device loss']);
+  assert.deepEqual(reasons(rec('G11', '4k', { invalidations: ['metrics: allocation cap exceeded: 1 + 2 > 1'] })), ['allocation cap exceeded']);
   assert.deepEqual(reasons(rec('G1', 'headed', { metrics: { nvidia: 0, software: 1, corroborated: 0 } })), ['software execution detected']);
+  assert.deepEqual(reasons(rec('G3', 'box', { invalidations: ['no observable progress for 5 s: […]'] })), ['submission stalled for 5 s']);
+  assert.deepEqual(reasons(rec('G6', 'bulb-overview/0', { invalidations: ['page: browser hang: no result within the 1200000 ms outer deadline'] })), ['browser hang']);
   assert.deepEqual(reasons(rec('G6', 'bulb-overview/0', { metrics: { published: 900 } })), []);
 });
 ```
@@ -6428,127 +7052,216 @@ Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `spikes/project0/qualify.mjs`.
 - [ ] **Step 3: Implement `qualify.mjs`**
 
 ```js
-// spikes/project0/qualify.mjs — campaign selection, artefact verification, metric recomputation, gate evaluation.
+// spikes/project0/qualify.mjs — selection, coherence, artefact verification, recomputation and evaluation (pure, no hardware).
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { canonical, GATES } from './contract.js';
 import { evaluateGate } from './gates.js';
 import { decideBackends } from './decision.js';
 import { sha256 } from './evidence.mjs';
-import { metricsFor } from './measure.mjs';
+import { metricsFor } from './measure/index.mjs';
 import { ROOT } from './launch.mjs';
 
-export function buildManifest(records, fixture) {
+const NON_QUALIFYING = new Set(['dev', 'probe', 'precision']);
+
+export function buildManifest({ records, fixture, campaign, args, runDirs = [], notRun = {}, reuse = [] }) {
+  if (!/^[a-z0-9-]+$/.test(campaign || '') || NON_QUALIFYING.has(campaign)) throw new Error('a qualifying campaign name is required');
   const trials = {};
   for (const r of records) {
-    if (r.campaign === 'dev') throw new Error(`development record ${r.id} cannot qualify`);
+    if (r.experiment) throw new Error(`experiment record ${r.id} cannot qualify`);
+    const reused = reuse.find(x => x.gate === r.gate && x.slot === r.slot && x.recordId === r.id);
+    if (!r.campaign || NON_QUALIFYING.has(r.campaign) || (r.campaign !== campaign && !reused)) throw new Error(`record ${r.id}: campaign ${r.campaign ?? '(none)'} is not selectable here`);
     for (const k of ['fixtureHash', 'fixtureCommit', 'specHash']) if (r.identity[k] !== fixture[k]) throw new Error(`record ${r.id}: fixture identity differs`);
     const key = `${r.gate}/${r.slot}`;
     if (trials[key]) throw new Error(`duplicate selection for ${key}`);
     trials[key] = { id: r.id, identity: r.identity };
   }
-  return { fixture, trials };
+  validateStops(notRun, trials);
+  for (const x of reuse) if (!x.reason || !x.fromManifest || !x.recordId) throw new Error(`reuse of ${x.gate}/${x.slot} needs fromManifest, recordId and a reason`);
+  return { fixture, campaign, args, runDirs, trials, notRun, reuse };
+}
+
+// Applied when a manifest is built *and* when one is read back, so an edited manifest file cannot smuggle in a verdict.
+export function validateStops(notRun = {}, trials = {}) {
+  for (const [gate, entry] of Object.entries(notRun)) {
+    if (!GATES.includes(gate)) throw new Error(`notRun.${gate}: unknown gate`);
+    const keys = Object.keys(entry).sort().join(',');
+    if (entry.status !== 'not run' || !['reason,status', 'blockedBy,reason,status'].includes(keys) || !entry.reason) throw new Error(`notRun.${gate}: only 'not run' with a reason (and optional blockedBy) is allowed`);
+    if (Object.keys(trials).some(k => k.startsWith(`${gate}/`))) throw new Error(`notRun.${gate} cannot coexist with selected trials for that gate`);
+  }
+}
+
+export function checkCoherence(records, manifest) {
+  if (!records.length) return;
+  const ref = records[0].identity, byMode = {};
+  for (const r of records) {
+    for (const k of ['backend', 'browserVersion', 'browserExecutable', 'driver', 'session']) if (r.identity[k] !== ref[k]) throw new Error(`incoherent evidence: ${k} differs in ${r.id}`);
+    byMode[r.identity.mode] ??= r.identity.launchHash;
+    if (byMode[r.identity.mode] !== r.identity.launchHash) throw new Error(`incoherent evidence: launch configuration differs in ${r.id}`);
+  }
+  const reused = r => manifest.reuse?.some(x => x.gate === r.gate && x.slot === r.slot && x.reason);
+  const fresh = records.filter(r => !reused(r));
+  const impl = fresh[0]?.identity;
+  for (const r of records) if (impl && !reused(r) && (r.identity.implementationCommit !== impl.implementationCommit || r.identity.implementationHash !== impl.implementationHash)) throw new Error(`incoherent evidence: implementation identity differs in ${r.id} without a justified reuse`);
 }
 
 export const ABORTS = [
   r => (r.metrics?.unplannedLosses > 0 || r.invalidations.some(x => /device lost/.test(x))) ? 'unexpected device loss' : null,
   r => r.invalidations.some(x => /allocation cap exceeded/.test(x)) ? 'allocation cap exceeded' : null,
   r => (r.metrics?.software === 1 || r.invalidations.some(x => /software adapter/.test(x))) ? 'software execution detected' : null,
-  r => r.invalidations.some(x => /browser hang|timeout/i.test(x)) ? 'browser hang' : null,
-  r => r.invalidations.some(x => /no observable progress/.test(x)) ? 'submission stalled for 5 s' : null,
+  r => r.invalidations.some(x => /browser hang/i.test(x)) ? 'browser hang' : null,
+  r => r.invalidations.some(x => /no observable progress for 5 s/.test(x)) ? 'submission stalled for 5 s' : null,
 ];
 
-export async function loadCampaign(manifestPath) {
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-  const root = resolve(ROOT, 'artifacts/project0'), records = [];
-  for (const dir of manifest.runDirs) for (const name of await readdir(join(root, dir))) {
-    if (!name.endsWith('.json') || name.includes('.raw.') || name.startsWith('checkpoint-')) continue;
-    const r = JSON.parse(await readFile(join(root, dir, name), 'utf8'));
-    if (manifest.trials[`${r.gate}/${r.slot}`]?.id === r.id) records.push(r);
+async function recordsIn(root, dir) {
+  const out = [];
+  for (const name of await readdir(join(root, 'artifacts/project0', dir))) {
+    if (!name.endsWith('.json') || name.endsWith('.raw.json') || name.endsWith('.launch.json') || name.startsWith('checkpoint-')) continue;
+    out.push(JSON.parse(await readFile(join(root, 'artifacts/project0', dir, name), 'utf8')));
   }
+  return out;
+}
+
+export async function loadCampaign(manifestPath, { root = ROOT } = {}) {
+  const manifest = JSON.parse(await readFile(resolve(root, manifestPath), 'utf8'));
+  const records = [];
+  for (const dir of manifest.runDirs) for (const r of await recordsIn(root, dir)) if (manifest.trials[`${r.gate}/${r.slot}`]?.id === r.id) records.push(r);
+  for (const x of manifest.reuse ?? []) {
+    const { manifest: source, records: sourceRecords } = await loadCampaign(x.fromManifest, { root });
+    const r = sourceRecords.find(y => y.id === x.recordId && source.trials[`${y.gate}/${y.slot}`]?.id === y.id);
+    if (!r) throw new Error(`reused record ${x.recordId} is not selected in ${x.fromManifest}`);
+    records.push(r);
+  }
+  for (const key of Object.keys(manifest.trials)) if (!records.some(r => `${r.gate}/${r.slot}` === key)) throw new Error(`selected trial ${key} has no record`);
   return { manifest, records };
 }
 
-export async function recompute(records, fixtures) {
-  const root = resolve(ROOT, 'artifacts/project0');
+export async function recompute(records, fixtures, { root = ROOT } = {}) {
   for (const r of records) {
-    for (const a of r.artifacts) if (sha256(await readFile(join(root, a.path))) !== a.sha256) throw new Error(`artifact hash mismatch: ${a.path}`);
-    const rawArtifact = r.artifacts.find(a => a.path.endsWith('.raw.json'));
-    if (!rawArtifact || r.invalidations.length) continue;
-    const raw = JSON.parse(await readFile(join(root, rawArtifact.path), 'utf8'));
-    const again = metricsFor(r.gate, r.slot, raw.raw ?? raw, fixtures);
-    if (canonical(again) !== canonical(r.metrics)) throw new Error(`metrics for ${r.id} do not recompute from its raw artefact`);
+    for (const a of r.artifacts) if (sha256(await readFile(join(root, 'artifacts/project0', a.path))) !== a.sha256) throw new Error(`artefact hash mismatch: ${a.path}`);
+    const raws = r.artifacts.filter(a => a.path.endsWith('.raw.json'));
+    if (raws.length !== 1) throw new Error(`record ${r.id} must have exactly one raw payload`);
+    if (r.invalidations.length) continue;
+    const raw = JSON.parse(await readFile(join(root, 'artifacts/project0', raws[0].path), 'utf8'));
+    const again = await metricsFor(r.gate, r.slot, raw, fixtures);
+    if (canonical(again) !== canonical(r.metrics)) throw new Error(`metrics for ${r.id} do not recompute from its raw payload`);
   }
   return records;
 }
 
 export function qualify(manifest, records, fixtures, { remediationClosed = false } = {}) {
-  const gates = Object.fromEntries(GATES.map(g => [g, manifest.notRun?.[g] ?? evaluateGate(g, records, manifest, fixtures)]));
+  validateStops(manifest.notRun, manifest.trials);
+  const gates = {};
+  for (const g of GATES) if (!manifest.notRun?.[g]) gates[g] = evaluateGate(g, records.filter(r => r.gate === g), manifest, fixtures);
+  for (const [g, entry] of Object.entries(manifest.notRun ?? {})) {
+    if (entry.blockedBy && gates[entry.blockedBy]?.status !== 'fail') throw new Error(`notRun.${g}: blockedBy ${entry.blockedBy} is not a measured failure`);
+    gates[g] = { gate: g, status: 'not run', reason: entry.reason, ...(entry.blockedBy ? { blockedBy: entry.blockedBy } : {}), reasons: [entry.reason], evidenceIds: [] };
+  }
   const backend = { remediationClosed, gates };
   return { backend, decision: decideBackends(backend) };
 }
 ```
 
-Both G1 and the evaluator need the raw `chromeGpuText`. `run.mjs` (T9 Step 8b) stores G1's raw
-together with that capture, so `recompute` sees exactly what `metricsFor` saw.
+`evaluateGate` receives only that gate's selected records, so an invalid record in one gate
+cannot change another gate's result. T1's `validateRecords` still applies in full to each
+gate's own records.
 
-- [ ] **Step 4: Implement `campaign.mjs`**
+- [ ] **Step 4: Implement `campaign.mjs` and `close-remediation.mjs`**
 
 ```js
-// spikes/project0/campaign.mjs — node spikes/project0/campaign.mjs --name webgpu-1 [--args attempt1|remediation] [--gates G1,G4,...]
+// spikes/project0/campaign.mjs — node spikes/project0/campaign.mjs --name webgpu-1 [--args attempt1|remediation] [--gates G1,G4,...] [--reuse <json>]
 import { parseArgs } from 'node:util';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ROOT } from './launch.mjs';
-import { runGate, runG2 } from './run.mjs';
+import { runSession, runG2 } from './run.mjs';
 import { fixtureIdentity } from './evidence.mjs';
-import { buildManifest, ABORTS, recompute, qualify } from './qualify.mjs';
+import { buildManifest, checkCoherence, ABORTS, recompute, qualify, loadCampaign } from './qualify.mjs';
+import { evaluateGate } from './gates.js';
 
-const ORDER = [['G1', 'headed'], ['G1', 'headless'], ['G4', 'headless'], ['G5', 'headless'], ['G3', 'headless'], ['G11', 'headed'], ['G2', 'headed'], ['timing', 'headed'], ['G8', 'headed'], ['G10', 'headed'], ['G13', 'headed'], ['G12', 'headed']];
-const { values } = parseArgs({ options: { name: { type: 'string' }, args: { type: 'string', default: 'attempt1' }, gates: { type: 'string' }, reuse: { type: 'string' } } });
-if (!/^[a-z0-9-]+$/.test(values.name || '') || values.name === 'dev') throw new Error('--name must be a non-dev campaign name');
-const only = values.gates?.split(',');
+const PHASES = [
+  ['correctness', [['G1', 'headed'], ['G1', 'headless'], ['G4', 'headless'], ['G5', 'headless'], ['G3', 'headless'], ['G11', 'headed'], ['G13', 'headed']]],
+  ['performance', [['G2', 'headed'], ['timing', 'headed'], ['G8', 'headed'], ['G10', 'headed']]],
+  ['stability', [['G12', 'headed']]],
+];
+const gatesOf = g => (g === 'timing' ? ['G6', 'G7', 'G9'] : [g]);
+const { values } = parseArgs({ options: { name: { type: 'string' }, args: { type: 'string', default: 'attempt1' }, gates: { type: 'string' }, reuse: { type: 'string', default: '[]' } } });
+const only = values.gates?.split(','), reuse = JSON.parse(values.reuse);
 const fixtures = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
 const fixture = await fixtureIdentity();
-const records = [], runDirs = [], notRun = {}; let stopped = null;
-for (const [gate, mode] of ORDER) {
-  if (only && !only.includes(gate)) continue;
-  if (stopped) { (gate === 'timing' ? ['G6', 'G7', 'G9'] : [gate]).forEach(g => { notRun[g] = { gate: g, status: 'not run', reason: `campaign stopped: ${stopped}`, evidenceIds: [], reasons: [] }; }); continue; }
-  let out;
-  try { out = gate === 'G2' ? await runG2({ args: values.args, campaign: values.name }) : await runGate({ gate, mode, args: values.args, campaign: values.name }); }
-  catch (error) { stopped = `${gate}: ${/Timeout/.test(error.message) ? 'browser hang' : error.message}`; continue; }
-  out.records.forEach(r => { r.campaign = values.name; }); records.push(...out.records); runDirs.push(out.runDir.split('/').at(-1));
-  const abort = out.records.flatMap(r => ABORTS.map(f => f(r)).filter(Boolean));
-  if (abort.length) stopped = `${gate}: ${abort.join(', ')}`;
+const records = [], runDirs = [], notRun = {}; let stopped = null, blockedBy = null;
+const draftManifest = () => buildManifest({ records, fixture, campaign: values.name, args: values.args, runDirs, reuse });
+for (const x of reuse) { const { records: rs } = await loadCampaign(x.fromManifest); const r = rs.find(y => y.id === x.recordId); if (!r) throw new Error(`cannot reuse ${x.recordId}`); await recompute([r], fixtures); records.push(r); }
+for (const [phase, steps] of PHASES) {
+  for (const [gate, mode] of steps) {
+    if (only && !gatesOf(gate).some(g => only.includes(g))) continue;
+    if (reuse.some(x => gatesOf(gate).includes(x.gate))) continue;
+    if (stopped) { for (const g of gatesOf(gate)) notRun[g] ??= { status: 'not run', reason: `campaign stopped: ${stopped}`, ...(blockedBy ? { blockedBy } : {}) }; continue; }
+    const out = gate === 'G2' ? await runG2({ args: values.args, campaign: values.name }) : await runSession({ gate, mode, args: values.args, campaign: values.name });
+    records.push(...out.records); runDirs.push(out.runDir.split('/').at(-1));
+    const abort = out.records.flatMap(r => ABORTS.map(f => f(r)).filter(Boolean));
+    if (abort.length) stopped = `${gate}: ${[...new Set(abort)].join(', ')}`;
+  }
+  if (phase === 'correctness' && !stopped) {
+    // Correctness before benchmarking: a numerical or functional failure is diagnosed before performance work.
+    const m = draftManifest();
+    for (const g of ['G1', 'G3', 'G4', 'G5', 'G11', 'G13']) {
+      if (only && !only.includes(g)) continue;
+      const r = evaluateGate(g, records.filter(x => x.gate === g), m, fixtures);
+      if (r.status !== 'pass') { stopped = `correctness gate ${g} is ${r.status}`; if (r.status === 'fail') blockedBy = g; break; }
+    }
+  }
 }
-const manifest = { ...buildManifest(records, fixture), campaign: values.name, args: values.args, runDirs, notRun, stopped, reuse: values.reuse ? JSON.parse(values.reuse) : [] };
+const manifest = buildManifest({ records, fixture, campaign: values.name, args: values.args, runDirs, notRun, reuse });
+checkCoherence(records, manifest);
 await recompute(records, fixtures);
 const { backend, decision } = qualify(manifest, records, fixtures);
 const dir = resolve(ROOT, 'docs/reports/project0'); await mkdir(dir, { recursive: true });
-await writeFile(resolve(dir, `${values.name}-manifest.json`), JSON.stringify(manifest, null, 2));
+await writeFile(resolve(dir, `${values.name}-manifest.json`), JSON.stringify({ ...manifest, stopped }, null, 2));
 await writeFile(resolve(dir, `${values.name}-gates.json`), JSON.stringify({ backend, decision }, null, 2));
 for (const [g, r] of Object.entries(backend.gates)) console.log(`${g}: ${r.status}${r.reasons?.length ? ` — ${r.reasons.slice(0, 3).join('; ')}` : ''}`);
-console.log(`decision (before remediation is closed): ${decision.outcome} — next: ${decision.next}${stopped ? `\nSTOPPED: ${stopped}` : ''}`);
+console.log(`decision (remediation not yet closed): ${decision.outcome} — next: ${decision.next}${stopped ? `\nSTOPPED: ${stopped}` : ''}`);
 ```
 
-For each `notRun` entry the campaign writes `status: 'not run'` but no `blockedBy`. The joint
-review in Step 7 adds `blockedBy` only where a recorded measured `fail` caused the stop. That
-is a human-reviewed edit, logged and committed, never inferred by the script.
+```js
+// spikes/project0/close-remediation.mjs — node spikes/project0/close-remediation.mjs --manifest docs/reports/project0/<campaign>-manifest.json --history docs/reports/project0/webgpu-remediation.md
+// Closes the backend's single remediation cycle: verifies and recomputes the final selection, then writes the decision. No hardware.
+import { parseArgs } from 'node:util';
+import { readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { ROOT } from './launch.mjs';
+import { sha256 } from './evidence.mjs';
+import { loadCampaign, checkCoherence, recompute, qualify } from './qualify.mjs';
 
-- [ ] **Step 5: Run the tests to verify they pass**
+const { values } = parseArgs({ options: { manifest: { type: 'string' }, history: { type: 'string' } } });
+const fixtures = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
+const history = await readFile(resolve(ROOT, values.history), 'utf8');
+if (!/^## Classification/m.test(history) || !/^## Change set/m.test(history)) throw new Error('the remediation history must contain "## Classification" and "## Change set" sections (use "none" when no remediation was needed)');
+const { manifest, records } = await loadCampaign(values.manifest);
+checkCoherence(records, manifest);
+await recompute(records, fixtures);
+const { backend, decision } = qualify(manifest, records, fixtures, { remediationClosed: true });
+const remediationFile = resolve(ROOT, 'spikes/project0/launch-remediation.json');
+const unsafeFlag = manifest.args === 'remediation' && existsSync(remediationFile) && JSON.parse(await readFile(remediationFile, 'utf8')).includes('--enable-unsafe-webgpu');
+const out = { backend: 'webgpu', manifest: values.manifest, manifestSha256: sha256(await readFile(resolve(ROOT, values.manifest))), history: values.history, historySha256: sha256(history), args: manifest.args, unsafeFlag, decision, gates: backend.gates };
+await writeFile(resolve(ROOT, 'docs/reports/project0/webgpu-decision.json'), JSON.stringify(out, null, 2));
+console.log(`WebGPU remediation closed: ${decision.outcome}${unsafeFlag ? ' — DEPENDS ON --enable-unsafe-webgpu' : ''}`);
+```
+
+- [ ] **Step 5: Run the tests to verify they pass, then the whole suite**
 
 Run: `node --test spikes/project0/tests/qualify.test.mjs`
-Expected: PASS, `# pass 2`, `# fail 0`.
+Expected: PASS, `# pass 5`, `# fail 0`.
 
-Then run the whole Project 0 Node suite:
-`node --test spikes/project0/tests/*.test.mjs`
-Expected: every test passes, `# fail 0`.
+Run: `node --test spikes/project0/tests/*.test.mjs`
+Expected: every test passes, with `# fail 0`.
 
 - [ ] **Step 6: Commit the campaign tooling, then run the qualifying campaign**
 
 ```bash
-git add spikes/project0/qualify.mjs spikes/project0/campaign.mjs spikes/project0/tests/qualify.test.mjs
-git commit -m "Project 0 T10: campaign selection manifest, artefact verification and gate qualification"
+git add spikes/project0/qualify.mjs spikes/project0/campaign.mjs spikes/project0/close-remediation.mjs spikes/project0/tests/qualify.test.mjs
+git commit -m "Project 0 T10: strict selection manifest, coherence, reuse, phased campaign with live aborts, remediation closure"
 node spikes/project0/campaign.mjs --name webgpu-1
 ```
 
@@ -6557,45 +7270,45 @@ Expected, mechanically:
 - the decision line;
 - `docs/reports/project0/webgpu-1-manifest.json` and `webgpu-1-gates.json`.
 
-The plan cannot predict hardware outcomes. Any of `WebGPU selected`, `inconclusive` (pending
-remediation) or `STOPPED` is a valid result of this step. The harness implementation must be
-committed before the run (Step 6 commits first), because `implementationIdentity()` refuses
-uncommitted harness files.
+The plan cannot predict hardware outcomes. Any of `WebGPU selected`, `inconclusive` or
+`STOPPED` is a valid result of this step.
 
 - [ ] **Step 7: Joint review and the single remediation cycle**
 
-1. Archive the plan log, then send Codex a `consult`/`resume` message containing the gate
-   table and the run directories. Log it verbatim.
-2. **If every gate passed:** review the evidence jointly. Set `remediationClosed: true` with the
-   note "no remediation needed", re-run `qualify` (`node -e` over `loadCampaign`/`qualify`, or
-   rerun `campaign.mjs` with `--gates` for no gates), record the outcome, and go to T12.
-3. **Otherwise:** agree jointly on one classification per failed or invalid gate. The
-   classifications are:
+1. **Send the evidence to Codex.** Send a message (`resume`) containing the gate table, the
+   run directories and any `STOPPED` reason. Log the exchange verbatim.
+2. **Classify jointly.** Agree on one classification per failed or invalid gate:
    - *implementation defect*;
    - *launch or configuration problem*;
    - *backend limitation or persistent failure*;
-   - *evidence not collectable*, which is inconclusive.
+   - *evidence not collectable* (inconclusive).
 
-   Write the agreed classifications to `docs/reports/project0/webgpu-remediation.md`, verbatim
-   from the exchange.
-4. **Make one documented change set** addressing the identified failures:
-   - **a code fix:** commit it, with a test that fails without it;
-   - **or a launch change:** create `spikes/project0/launch-remediation.json` with the exact
-     flags. For example `["--enable-gpu", "--use-angle=vulkan", "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan", "--enable-unsafe-webgpu"]`.
-     Add `remediation: JSON.parse(readFileSync('spikes/project0/launch-remediation.json'))`
-     to `LAUNCH` in `run.mjs`, then commit;
-   - **never both, and never twice.**
-5. **Re-run the affected gates and their dependent correctness checks:**
-   `node spikes/project0/campaign.mjs --name webgpu-remediation --args <attempt1|remediation> --gates <list> --reuse '<json list of {gate, slot, fromCampaign, reason}>'`.
-   The original evidence stays.
-   - A launch change re-runs **every** gate, because the configuration identity changed.
-   - Reused trials keep their original identity and must name a reason.
-6. **Close the cycle:**
-   - mark `remediationClosed: true` and record the final `decideBackends` outcome in
-     `docs/reports/project0/webgpu-decision.json`;
-   - if the outcome depends on `--enable-unsafe-webgpu`, write that dependence into the decision
-     file in plain words, for the report.
-7. **Commit:**
+   Write `docs/reports/project0/webgpu-remediation.md` with a `## Classification` section,
+   verbatim from the exchange, and a `## Change set` section. If every gate passed, that
+   section says "none".
+3. **If a change is needed,** make **one documented change set**. It may contain implementation
+   and launch corrections together, when both are justified:
+   - **code fixes:** each comes with a test that fails without it, and the change set is
+     committed;
+   - **launch changes:** `spikes/project0/launch-remediation.json` holds the exact flags. For
+     example, `["--enable-gpu", "--use-angle=vulkan", "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan", "--enable-unsafe-webgpu"]`.
+     `run.mjs` picks it up as `LAUNCH.remediation`.
+
+   This is the backend's only remediation cycle.
+4. **Re-run** the affected gates and their dependent correctness checks:
+   `node spikes/project0/campaign.mjs --name webgpu-remediation --args <attempt1|remediation> --gates <list> --reuse '<[{gate, slot, fromManifest, recordId, reason}]>'`.
+   - A launch change re-runs **every** gate, because the configuration identity changes.
+     `checkCoherence` refuses to reuse across launch configurations.
+   - Reused trials keep their original identity, are verified and recomputed, and must name a
+     reason.
+   - The original manifest stays unchanged.
+5. **Close the cycle:**
+   `node spikes/project0/close-remediation.mjs --manifest docs/reports/project0/<final-campaign>-manifest.json --history docs/reports/project0/webgpu-remediation.md`
+   - This writes `docs/reports/project0/webgpu-decision.json` with the recomputed decision.
+   - It sets `unsafeFlag` automatically when the selection depends on
+     `--enable-unsafe-webgpu`.
+   - When no remediation was needed, the final campaign is `webgpu-1`.
+6. **Commit:**
 
 ```bash
 git add docs/reports/project0/
@@ -6604,8 +7317,8 @@ git commit -m "Project 0 T10: WebGPU qualification evidence, remediation record 
 
 **Outcomes:**
 - **WebGPU selected:** go to T12, then T13.
-- **WebGPU unqualified after the cycle:** go to T11, then stop for the addendum.
-- **Inconclusive:** go to T13 and report it. Do not convert it into a failure.
+- **WebGPU unqualified after the cycle:** go to T11 and stop for the addendum.
+- **Inconclusive:** go to T13 and report it. It is never converted into a failure.
 
 ---
 
@@ -6621,9 +7334,11 @@ executed only if T10 ends with WebGPU unqualified after its remediation cycle.
 
 **Interfaces:**
 - Produces: `BACKEND_METHODS`, the frozen list
-  `['acquire', 'info', 'prepare', 'traceList', 'arith', 'createRenderer', 'exerciseResources', 'injectLoss', 'onLoss', 'currentEpoch', 'destroy']`,
-  and `assertBackend(obj)`. The WebGPU modules satisfy the interface through
-  `gpu/backend-webgpu.js`; the WebGL addendum must satisfy the same list.
+  `['acquire', 'prepare', 'traceList', 'arith', 'prepareViewport', 'createRenderer', 'prepareResourceCheck', 'exerciseResources', 'injectLoss', 'onLoss', 'currentEpoch', 'destroy']`,
+  and `assertBackend(obj)`. Today's WebGPU modules (`gpu/device.js`, `gpu/webgpu.js`,
+  `gpu/renderer.js`, `browser/drivers/checks.js` and `browser/drivers/resources.js`) provide
+  exactly these. The WebGL addendum must provide the same list, with the same semantics: the
+  allocator, the watchdog, the ledger, the epochs and the raw-only results.
 
 - [ ] **Step 1: Write the failing conformance test**
 
@@ -6634,7 +7349,7 @@ import assert from 'node:assert/strict';
 import { BACKEND_METHODS, assertBackend } from '../gpu/backend.js';
 test('the backend interface is frozen and enforced', () => {
   assert.ok(Object.isFrozen(BACKEND_METHODS));
-  assert.throws(() => assertBackend({ acquire() {} }), /missing backend method: info/);
+  assert.throws(() => assertBackend({ acquire() {} }), /missing backend method: prepare/);
   assert.doesNotThrow(() => assertBackend(Object.fromEntries(BACKEND_METHODS.map(m => [m, () => {}]))));
 });
 ```
@@ -6648,7 +7363,7 @@ Expected: FAIL with `ERR_MODULE_NOT_FOUND`.
 
 ```js
 // spikes/project0/gpu/backend.js — the only surface gate drivers may depend on once a second backend exists.
-export const BACKEND_METHODS = Object.freeze(['acquire', 'info', 'prepare', 'traceList', 'arith', 'createRenderer', 'exerciseResources', 'injectLoss', 'onLoss', 'currentEpoch', 'destroy']);
+export const BACKEND_METHODS = Object.freeze(['acquire', 'prepare', 'traceList', 'arith', 'prepareViewport', 'createRenderer', 'prepareResourceCheck', 'exerciseResources', 'injectLoss', 'onLoss', 'currentEpoch', 'destroy']);
 export function assertBackend(obj) {
   for (const m of BACKEND_METHODS) if (typeof obj?.[m] !== 'function') throw new Error(`missing backend method: ${m}`);
   return obj;
@@ -6673,8 +7388,9 @@ Write this table verbatim. Its rows are the spec §6 step 3 list.
 | Timing | timestamp queries if available, else completion + readback, labelled | `EXT_disjoint_timer_query_webgl2` if available, else fence completion + readback, labelled; optional, not a requirement |
 | Readback | `copyTextureToBuffer` + `mapAsync` | `readPixels` into a `PIXEL_PACK_BUFFER` + fence, then `getBufferSubData` after the fence signals |
 | Coverage counts | workgroup atomics in the shade pass | a reduction pass into a small texture, read back asynchronously via PBO + fence |
-| Resource accounting | `createTracker` payload bytes | the same byte accounting per texture/renderbuffer/buffer; the same 1 GiB cap |
-| Loss and recovery | `device.lost`, `device.destroy()`, injected `signalLoss` | `webglcontextlost`/`restored`, `WEBGL_lose_context.loseContext()`, injected `signalLoss` |
+| Resource accounting | `createAllocator` (cap checked before allocation) | the same allocator interface and byte accounting per texture/renderbuffer/buffer; the same 1 GiB cap |
+| Submission bounds | `Ledger` (≤ 2 outstanding per device session) + `createWatchdog` (5 s) | the same `Ledger` and watchdog, driven by fence completion |
+| Loss and recovery | `device.lost`, `device.destroy()`, injected `signalLoss` (epoch advanced first) | `webglcontextlost`/`restored`, `WEBGL_lose_context.loseContext()`, injected `signalLoss` (epoch advanced first) |
 
 Preserved without change: the mathematical workload, output semantics, fixtures, thresholds,
 `gatePlan`, `decideBackends`, and the single remediation cycle.
@@ -6700,107 +7416,165 @@ report to the user.
 
 ---
 
+---
+
 ### Task T12: Precision experiment (A.10/A.11) on the selected backend
 
 **Owner:** Claude writes `compensated.wgsl` and the driver. Codex's T3 references define the
-comparison. The interpretation is joint. This task runs only after a backend is selected. It is
-**not** a backend gate.
+comparison. The interpretation is joint. This task runs only after `webgpu-decision.json`
+records `WebGPU selected`. If WebGL 2 is selected instead, the T11 addendum supplies the
+adapter. It is **not** a backend gate.
 
 **Files:**
-- `spikes/project0/gpu/compensated.wgsl`: the float-float primitives (with the rounding
-  barrier) and the compensated bulb marcher `trace_ff_list`.
-- `spikes/project0/browser/precision.js`: primitive validation, baseline and compensated
-  traces, and the cost protocol.
-- Modify `spikes/project0/measure.mjs`: adds `precisionMetrics`.
-- `spikes/project0/precision.mjs`: the Node entry point.
+- `spikes/project0/gpu/compensated.wgsl`: the float-float primitives and the compensated bulb
+  marcher `trace_ff_list`.
+- `spikes/project0/browser/drivers/precision.js`: primitive validation, baseline and
+  compensated traces, and the matched cost protocol.
+- `spikes/project0/measure/precision.mjs`: `precisionMetrics()`, which recomputes everything
+  from raw results and the frozen fixtures.
+- `spikes/project0/precision.mjs`: the Node entry point. It uses the **selected**
+  configuration and has a dedicated experiment result path.
 - Test: `spikes/project0/tests/precision.test.mjs`.
 
 **Interfaces:**
 - Consumes:
-  - T3/T4: `fixtures.precision.results[d].{distance, originPairs, roundedOrigin, rows[].effectiveDirection, stopReasons}`,
-    `fixtures.primitives`, `fixtures.costProtocol`;
-  - `comparePrecision(set, actual, variant)` from `reference/preparation.js`, which is Codex's
-    comparison, used unchanged;
-  - T6: `traceList`, `profileWords`.
-- Produces: per-distance results
-  `{distance, baseline: {vsRequested, vsBaselineInput}, compensated: {vsRequested, vsCompensatedInput}, costMs: {baseline: {median, min, max}, compensated: {...}}, readbackMs, extraBytes}`
-  plus `primitives: {cases, failures}`.
+  - T3/T4: `fixtures.precision.{distances, results[d], …}`, `fixtures.primitives`,
+    `fixtures.costProtocol`, `fixtures.profiles.precision`;
+  - `comparePrecision(set, actual, variant)` from `reference/preparation.js`, used unchanged;
+  - T6: `traceList`, `upload`, `profileWords`, `source`, `compile`, `decodeTrace`;
+  - T10: `docs/reports/project0/webgpu-decision.json`.
+- Produces `precisionMetrics(fixtures, raw) → {validated, primitiveFailures, rows: [...], observedDisagreementThreshold, firstStop}`.
 
-**Compensated dataflow (A.11, verbatim semantics).**
-- **Float-float pairs:** the camera origin O, the ray parameter t, and the sample position
-  p = O + t·d_ray, computed in pair arithmetic.
-- **The iterate:** the Cartesian iterate is held as pairs between steps. Each step evaluates
-  P₈ on `round_f32(z)` in ordinary f32, then performs `add_ff((P₈, 0), p)`.
-- **Ordinary f32:** r, θ, φ, the trigonometric evaluation, `dr`, the estimator and the normals.
-- **The rounding barrier:** every `two_sum` and `quick_two_sum` multiplies an intermediate by
-  `one`, which is read from a uniform the compiler cannot see (`barrier.one = 1.0`). That
-  prevents reassociation; WGSL permits reassociation and fusion, so this is required. The
-  primitive validation decides whether it worked.
+**Rules:**
+- **Primitives:** Node takes primitive identities, arguments, expected values and tolerances
+  **only** from `fixtures.primitives`. The page returns one `{hi, lo, thenHi, thenLo}` per
+  frozen case, in order. Empty, partial, duplicate or non-finite results invalidate the
+  experiment.
+- **Matched timing:** both implementations use the same timing boundaries. Completed work
+  excludes readback, which is measured separately. All ten measured work and readback samples
+  are kept for each implementation, and medians and ranges are reported. The median of ten is
+  the mean of the 5th and 6th sorted samples.
+- **Incremental bytes:** these are the difference between the two implementations' fully
+  accounted allocator peaks. Each is measured with its own allocator, including alignment,
+  uniforms, staging and shared resources.
+- **Latched stop:** the first A.10 stop latches. Later distances are reported as *not
+  interpreted*, even if their local comparison would pass.
+- **Configuration:** precision runs on the selected configuration (`args` from
+  `webgpu-decision.json`), headed. Unexpected loss, page errors, identity failures or malformed
+  evidence prevent interpretation.
 
-- [ ] **Step 1: Write the failing Node test (decoding + comparison wiring)**
+**About the barrier.** The uniform-dependent expressions (`* barrier.one`) are an experimental
+attempt to preserve the required rounding behaviour. WGSL gives no guarantee that this
+construction prevents all harmful reassociation or fusion. Only the frozen GPU primitive checks
+establish whether this prototype is validated on the selected configuration.
+
+- [ ] **Step 1: Write the failing Node test**
 
 ```js
 // spikes/project0/tests/precision.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { precisionMetrics } from '../measure.mjs';
+import { precisionMetrics, medianOf } from '../measure/precision.mjs';
 
-const fixtures = JSON.parse(await readFile(new URL('../fixtures.json', import.meta.url), 'utf8'));
-test('a perfect GPU echo of the primary CPU result shows no disagreement at the first distance', () => {
-  const set = fixtures.precision.results[0];
-  const echo = set.rows.map(r => ({ id: r.id, status: r.baselineInput.primary.status, reason: r.baselineInput.primary.reason ?? null, t: r.baselineInput.primary.t }));
-  const m = precisionMetrics(set, { baseline: echo, compensated: echo });
-  assert.equal(m.baseline.vsBaselineInput.statusDisagreements, 0);
-  assert.equal(m.baseline.vsBaselineInput.largeDepthErrors, 0);
+const fx = JSON.parse(await readFile(new URL('../fixtures.json', import.meta.url), 'utf8'));
+const f32bits = x => new Uint32Array(new Float32Array([x]).buffer)[0];
+const echo = (set, variant) => set.rows.flatMap(r => { const p = r[variant].primary; const code = { hit: 0, miss: 1, unresolved: 2, failure: 3 }[p.status]; return [code, p.status === 'unresolved' ? (p.reason === 'point' ? 1 : 2) : 0, p.status === 'miss' ? 0 : f32bits(p.t), Math.max(1, p.steps)]; });
+const goodPrims = () => fx.primitives.map(p => { const v = p.value; const hi = Math.fround(v), lo = Math.fround(v - hi); return { hi, lo, thenHi: p.thenValue ?? 0, thenLo: 0 }; });
+const sample = () => Array.from({ length: 10 }, (_, i) => 10 + i);
+const raw = () => ({ primitives: goodPrims(), sets: fx.precision.results.map(set => ({ distance: set.distance, baseline: { words: echo(set, 'baselineInput'), workMs: sample(), readMs: sample(), peakBytes: 1000 }, compensated: { words: echo(set, 'compensatedInput'), workMs: sample(), readMs: sample(), peakBytes: 1500 } })) });
+
+test('a perfect echo of the CPU references shows no disagreement at the first distance, with matched costs', () => {
+  const m = precisionMetrics(fx, raw());
+  assert.equal(m.validated, true);
+  assert.equal(m.rows[0].baseline.vsBaselineInput.statusDisagreements, 0);
+  assert.equal(m.rows[0].baseline.vsBaselineInput.largeDepthErrors, 0);
+  assert.deepEqual(m.rows[0].cost.baseline.workMs, { median: 14.5, min: 10, max: 19, samples: 10 });
+  assert.equal(m.rows[0].extraBytes, 500);
 });
-test('primitive validation fails when the low component is dropped', () => {
-  const p = fixtures.primitives.find(x => x.op === 'two_sum' && 'thenAdd' in x);   // two_sum(1, 2^-25), then add (-1, 0)
-  const dropped = { hi: 1, lo: 0, thenHi: 0, thenLo: 0 };                           // what a reassociated two_sum would return
-  assert.throws(() => precisionMetrics(fixtures.precision.results[0], { primitives: [{ ...p, got: dropped }] }), /primitive two_sum/);
+
+test('medianOf ten samples is the mean of the 5th and 6th sorted samples', () => {
+  assert.equal(medianOf([9, 1, 8, 2, 7, 3, 6, 4, 5, 10]), 5.5);
+});
+
+test('primitive results are judged against the frozen fixture cases only', () => {
+  const r = raw(); r.primitives[0] = { hi: 1, lo: 0, thenHi: 0, thenLo: 0 };          // a reassociated two_sum loses 2^-25
+  assert.equal(precisionMetrics(fx, r).validated, false);
+  const partial = raw(); partial.primitives.pop();
+  assert.throws(() => precisionMetrics(fx, partial), /one result per frozen primitive case/);
+  const nan = raw(); nan.primitives[1].lo = NaN;
+  assert.throws(() => precisionMetrics(fx, nan), /finite/);
+});
+
+test('the first stop latches: later distances are not interpreted', () => {
+  const stopAt = fx.precision.results.findIndex(s => s.stopReasons.length);
+  const m = precisionMetrics(fx, raw());
+  if (stopAt >= 0) assert.ok(m.rows.slice(stopAt).every(row => row.interpreted === false));
+  else assert.equal(m.firstStop, null);
 });
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `node --test spikes/project0/tests/precision.test.mjs`
-Expected: FAIL (`precisionMetrics` is not exported).
+Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `measure/precision.mjs`.
 
-- [ ] **Step 3: Implement `precisionMetrics` in `measure.mjs`**
+- [ ] **Step 3: Implement `measure/precision.mjs`**
 
 ```js
-import { comparePrecision } from './reference/preparation.js';
-export function precisionMetrics(set, { baseline, compensated, primitives = [] }) {
-  // fixtures.primitives: {op, args, value (exact real, as a double), absoluteTolerance, thenAdd?: [hi, lo], thenValue?}.
-  // The reconstructed value hi + lo is summed in double precision, which is exact for two f32 components of these magnitudes.
-  for (const p of primitives) {
-    const got = p.got.hi + p.got.lo;
-    if (!(Math.abs(got - p.value) <= p.absoluteTolerance)) throw new Error(`primitive ${p.op}(${JSON.stringify(p.args)}): got ${got}, expected ${p.value}`);
-    if ('thenAdd' in p) {
-      const then = p.got.thenHi + p.got.thenLo;
-      if (!(Math.abs(then - p.thenValue) <= p.absoluteTolerance)) throw new Error(`primitive ${p.op}: the low component was not retained (then ${then}, expected ${p.thenValue})`);
-    }
-  }
-  const out = {};
-  if (baseline) out.baseline = { vsRequested: comparePrecision(set, baseline, 'requested'), vsBaselineInput: comparePrecision(set, baseline, 'baselineInput') };
-  if (compensated) out.compensated = { vsRequested: comparePrecision(set, compensated, 'requested'), vsCompensatedInput: comparePrecision(set, compensated, 'compensatedInput') };
-  return out;
+// spikes/project0/measure/precision.mjs — A.10/A.11 interpretation, recomputed from raw results and frozen fixtures only.
+import { comparePrecision } from '../reference/preparation.js';
+import { decodeTrace } from './decode.mjs';
+
+export function medianOf(xs) { const v = [...xs].sort((a, b) => a - b), n = v.length; return n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2; }
+const summary = xs => { if (!Array.isArray(xs) || !xs.length || !xs.every(Number.isFinite)) throw new Error('cost samples must be finite numbers'); return { median: medianOf(xs), min: Math.min(...xs), max: Math.max(...xs), samples: xs.length }; };
+
+export function precisionMetrics(fx, raw) {
+  const cases = fx.primitives;
+  if (!Array.isArray(raw.primitives) || raw.primitives.length !== cases.length) throw new Error(`expected one result per frozen primitive case (${cases.length})`);
+  const primitiveFailures = [];
+  raw.primitives.forEach((got, i) => {
+    const p = cases[i];
+    for (const k of ['hi', 'lo', 'thenHi', 'thenLo']) if (typeof got?.[k] !== 'number' || !Number.isFinite(got[k])) throw new Error(`primitive case ${i}: ${k} must be finite`);
+    const value = got.hi + got.lo;
+    if (!(Math.abs(value - p.value) <= p.absoluteTolerance)) primitiveFailures.push(`${p.op}(${JSON.stringify(p.args)}): got ${value}, expected ${p.value}`);
+    if ('thenAdd' in p && !(Math.abs(got.thenHi + got.thenLo - p.thenValue) <= p.absoluteTolerance)) primitiveFailures.push(`${p.op}: the low component was not retained (then ${got.thenHi + got.thenLo}, expected ${p.thenValue})`);
+  });
+  const validated = primitiveFailures.length === 0;
+  if (!Array.isArray(raw.sets) || raw.sets.length !== fx.precision.results.length) throw new Error('one result set per frozen precision distance is required');
+  const steps = fx.profiles.precision.steps; let firstStop = null;
+  const rows = raw.sets.map((s, i) => {
+    const set = fx.precision.results[i];
+    if (s.distance !== set.distance) throw new Error('precision set order differs from the fixture');
+    const baseline = decodeTrace(s.baseline.words, set.rows.length, { maxSteps: steps });
+    const vsRequested = comparePrecision(set, baseline, 'requested'), vsBaselineInput = comparePrecision(set, baseline, 'baselineInput');
+    if (firstStop === null && vsRequested.stopReasons.length) firstStop = { distance: set.distance, reasons: vsRequested.stopReasons };
+    const row = { distance: set.distance, interpreted: firstStop === null, baseline: { vsRequested, vsBaselineInput },
+      cost: { baseline: { workMs: summary(s.baseline.workMs), readMs: summary(s.baseline.readMs) }, compensated: { workMs: summary(s.compensated.workMs), readMs: summary(s.compensated.readMs) } },
+      extraBytes: s.compensated.peakBytes - s.baseline.peakBytes };
+    if (validated) { const comp = decodeTrace(s.compensated.words, set.rows.length, { maxSteps: steps }); row.compensated = { vsRequested: comparePrecision(set, comp, 'requested'), vsCompensatedInput: comparePrecision(set, comp, 'compensatedInput') }; }
+    return row;
+  });
+  const threshold = rows.find(r => r.interpreted && r.baseline.vsRequested.thresholdExceeded === true)?.distance ?? null;
+  return { validated, primitiveFailures, rows, observedDisagreementThreshold: threshold, firstStop };
 }
 ```
 
 - [ ] **Step 4: Run it to verify it passes**
 
 Run: `node --test spikes/project0/tests/precision.test.mjs`
-Expected: PASS, `# pass 2`.
+Expected: PASS, `# pass 4`, `# fail 0`.
 
 - [ ] **Step 5: Write `gpu/compensated.wgsl`**
 
-It is assembled after `fields.wgsl` and `trace.wgsl`, with `FIELD = 3`.
+It is assembled after `fields.wgsl` and `trace.wgsl`, with `FIELD = 3`. `barrier` lives in
+**group 1**, so that the automatic layouts have no empty group.
 
 ```wgsl
 // spikes/project0/gpu/compensated.wgsl — A.11: pairs for O, t, p and the iterate; everything else ordinary f32.
+// The `* barrier.one` factors are an experimental attempt to keep the required rounding; only the primitive checks validate it.
 struct Barrier { one: f32, _a: f32, _b: f32, _c: f32 }
-@group(2) @binding(0) var<uniform> barrier: Barrier;          // one = 1.0, opaque to the compiler
+@group(1) @binding(0) var<uniform> barrier: Barrier;          // one = 1.0, opaque to the compiler
 fn two_sum(a: f32, b: f32) -> vec2f { let s = (a + b) * barrier.one; let bb = (s - a) * barrier.one; return vec2f(s, (a - (s - bb)) + (b - bb)); }
 fn quick_two_sum(a: f32, b: f32) -> vec2f { let s = (a + b) * barrier.one; return vec2f(s, b - (s - a) * barrier.one); }
 fn split(a: f32) -> vec2f { let t = (4097.0 * a) * barrier.one; let hi = t - (t - a) * barrier.one; return vec2f(hi, a - hi); }
@@ -6845,30 +7619,29 @@ fn bulb_eval_ff(p: FF3, cap: u32) -> Eval {
 fn trace_ff_list(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= prof.count) { return; }
   let i = prof.start + id.x; let d = directions_f[i].xyz;
-  let ofx = vec3f(origin_ff[0].x, origin_ff[1].x, origin_ff[2].x) + vec3f(origin_ff[0].y, origin_ff[1].y, origin_ff[2].y);
-  let iv = bound(ofx, d);                                                      // bounding interval in f32 is sufficient
+  let o = vec3f(origin_ff[0].x + origin_ff[0].y, origin_ff[1].x + origin_ff[1].y, origin_ff[2].x + origin_ff[2].y);
+  let iv = bound(o, d);
   var out = vec4u(RAY_MISS, WHY_NONE, 0u, 0u);
   if (iv.z != 0.0 && iv.y >= max(0.0, iv.x)) {
     var t = vec2f(max(0.0, iv.x), 0.0);
     var done = false;
-    for (var step: u32 = 0u; step < prof.steps && !done; step++) {
-      if (t.x > iv.y) { out = vec4u(RAY_MISS, WHY_NONE, 0u, step); done = true; break; }
+    for (var step: u32 = 0u; step < prof.steps; step++) {
+      if (t.x + t.y > iv.y) { out = vec4u(RAY_MISS, WHY_NONE, 0u, step); done = true; break; }
       let p = FF3(add_ff(origin_ff[0], mul_ff_f32(t, d.x)), add_ff(origin_ff[1], mul_ff_f32(t, d.y)), add_ff(origin_ff[2], mul_ff_f32(t, d.z)));
       let e = bulb_eval_ff(p, prof.iterations);
-      if (e.status == ST_BUDGET) { out = vec4u(RAY_UNRESOLVED, WHY_POINT, bitcast<u32>(t.x + t.y), step + 1u); done = true; break; }
-      if (e.status == ST_FAILURE) { out = vec4u(RAY_FAILURE, WHY_NONE, bitcast<u32>(t.x + t.y), step + 1u); done = true; break; }
       let tt = t.x + t.y;
+      if (e.status == ST_BUDGET) { out = vec4u(RAY_UNRESOLVED, WHY_POINT, bitcast<u32>(tt), step + 1u); done = true; break; }
+      if (e.status == ST_FAILURE) { out = vec4u(RAY_FAILURE, WHY_NONE, bitcast<u32>(tt), step + 1u); done = true; break; }
       if (e.de < max(prof.floor, prof.factor * prof.alpha * tt)) { out = vec4u(RAY_HIT, WHY_NONE, bitcast<u32>(tt), step + 1u); done = true; break; }
       t = add_ff(t, vec2f(prof.k * e.de, 0.0));
     }
-    if (!done) { out = select(vec4u(RAY_UNRESOLVED, WHY_STEPS, bitcast<u32>(t.x + t.y), prof.steps), vec4u(RAY_MISS, WHY_NONE, 0u, prof.steps), t.x > iv.y); }
+    if (!done) { out = select(vec4u(RAY_UNRESOLVED, WHY_STEPS, bitcast<u32>(t.x + t.y), prof.steps), vec4u(RAY_MISS, WHY_NONE, 0u, prof.steps), t.x + t.y > iv.y); }
   }
   results_ff[i] = out;
 }
 
-// Primitive validation. Case i uses prim_in[2i] = (a.hi, a.lo, b.hi, b.lo) and prim_in[2i+1] = (op, then.hi, then.lo, 0),
-// op 0 = two_sum(a.hi, b.hi), 1 = add_ff(a, b), 2 = mul_ff_f32(a, b.hi). The produced pair is then fed to add_ff(r, then):
-// the follow-on consumes the actual produced pair, as the fixture requires. Output: (hi, lo, then.hi, then.lo).
+// Primitive validation. Case i: prim_in[2i] = (a.hi, a.lo, b.hi, b.lo), prim_in[2i+1] = (op, then.hi, then.lo, 0);
+// op 0 = two_sum(a.hi, b.hi), 1 = add_ff(a, b), 2 = mul_ff_f32(a, b.hi). The produced pair feeds add_ff(r, then).
 @group(0) @binding(5) var<storage, read> prim_in: array<vec4f>;
 @group(0) @binding(6) var<storage, read_write> prim_out: array<vec4f>;
 @compute @workgroup_size(1)
@@ -6880,151 +7653,143 @@ fn primitives(@builtin(workgroup_id) wg: vec3u) {
 }
 ```
 
-The `then` lane implements the mandatory follow-on: `two_sum(1, 2⁻²⁵)` then `add_ff(·, (−1, 0))`
-must leave 2⁻²⁵. Cases without `thenAdd` pass `(0, 0)`, and their `then` lane is ignored. The
-driver dispatches one workgroup per case (`dispatchWorkgroups(cases)`).
+`trace_ff_list` uses group 0 (`prof` at binding 0, and bindings 2–4) and group 1
+(`barrier`). `primitives` uses group 0 (bindings 5–6) and group 1. Neither leaves an empty
+group in its automatic layout.
 
-- [ ] **Step 6: Write `browser/precision.js` and `precision.mjs`, then run**
+- [ ] **Step 6: Write `browser/drivers/precision.js` and `precision.mjs`**
 
 ```js
-// spikes/project0/browser/precision.js — A.10 baseline, A.11 compensated prototype, primitive validation, cost protocol.
-import { acquire } from '../gpu/device.js';
-import { prepare, buffer, readBack, traceList, profileWords } from '../gpu/webgpu.js';
-import { createTracker } from '../gpu/resources.js';
+// spikes/project0/browser/drivers/precision.js — raw results only; Node interprets against the frozen fixtures.
+import { acquire, destroy, onLoss } from '../../gpu/device.js';
+import { prepare, upload, readBack, traceList, profileWords, source, compile } from '../../gpu/webgpu.js';
+import { createAllocator } from '../../gpu/alloc.js';
+import { createWatchdog } from '../../gpu/watchdog.js';
 
-const src = async n => (await fetch(new URL(`../gpu/${n}`, import.meta.url))).text();
+const pair = v => (Array.isArray(v) ? v : [v, 0]);
+const OP = { two_sum: 0, add_ff: 1, mul_ff_f32: 2 };
 
-export async function runPrecision(fixtures, status) {
-  const { device } = await acquire();
-  const pipelines = await prepare(device, status);
-  const code = (await src('fields.wgsl')) + (await src('trace.wgsl')) + (await src('compensated.wgsl'));
-  const module = device.createShaderModule({ code, label: 'compensated' });
-  const errors = (await module.getCompilationInfo()).messages.filter(m => m.type === 'error');
-  if (errors.length) throw new Error(`compensated.wgsl: ${errors.map(e => `${e.lineNum}:${e.linePos} ${e.message}`).join('; ')}`);
-  const ff = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: 'trace_ff_list', constants: { FIELD: 3 } } });
-  const prim = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: 'primitives', constants: { FIELD: 3 } } });
-  const barrier = buffer(device, new Float32Array([1, 0, 0, 0]), GPUBufferUsage.UNIFORM);
-
-  // 1. Primitives — every case, with the produced pair fed into its follow-on.
-  const OP = { two_sum: 0, add_ff: 1, mul_ff_f32: 2 };
-  const pair = v => Array.isArray(v) ? v : [v, 0];
-  const cases = fixtures.primitives;
-  const pin = new Float32Array(8 * cases.length);
-  cases.forEach((c, i) => { const a = pair(c.args[0]), b = pair(c.args[1]), t = c.thenAdd ? pair(c.thenAdd) : [0, 0]; pin.set([a[0], a[1], b[0], b[1], OP[c.op], t[0], t[1], 0], 8 * i); });
-  const pinB = buffer(device, pin, GPUBufferUsage.STORAGE), poutB = device.createBuffer({ size: 16 * cases.length, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
-  { const enc = device.createCommandEncoder(), pass = enc.beginComputePass();
-    pass.setPipeline(prim);
-    pass.setBindGroup(0, device.createBindGroup({ layout: prim.getBindGroupLayout(0), entries: [{ binding: 5, resource: { buffer: pinB } }, { binding: 6, resource: { buffer: poutB } }] }));
-    pass.setBindGroup(2, device.createBindGroup({ layout: prim.getBindGroupLayout(2), entries: [{ binding: 0, resource: { buffer: barrier } }] }));
-    pass.dispatchWorkgroups(cases.length); pass.end(); device.queue.submit([enc.finish()]); }
-  const pout = new Float32Array(await readBack(device, poutB, 16 * cases.length));
-  const primitives = cases.map((c, i) => ({ ...c, got: { hi: pout[4 * i], lo: pout[4 * i + 1], thenHi: pout[4 * i + 2], thenLo: pout[4 * i + 3] } }));
-
-  // 2. Baseline and compensated traces of the same 4,096 rays per distance, plus 3 warm-ups + 10 timed evaluations each.
-  const tracker = createTracker(), sets = [];
-  const ffTrace = async (set, directions) => {
-    const n = set.rows.length, start = performance.now();
-    const o = tracker.track(buffer(device, new Float32Array(set.originPairs.flat()), GPUBufferUsage.STORAGE), 32, 'buffer');
-    const d = tracker.track(buffer(device, directions, GPUBufferUsage.STORAGE), directions.byteLength, 'buffer');
-    const r = tracker.track(device.createBuffer({ size: 16 * n, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC }), 16 * n, 'buffer');
-    const inflight = [];
+async function ffTrace({ device, alloc, watchdog, pipeline, barrier, profile, originPairs, directions, n }) {
+  const owned = []; const keep = b => (owned.push(b), b);
+  try {
+    const o = keep(upload(device, alloc, new Float32Array(originPairs.flat()), GPUBufferUsage.STORAGE));
+    const d = keep(upload(device, alloc, directions, GPUBufferUsage.STORAGE));
+    const r = keep(alloc.buffer(device, { size: 16 * n, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC }));
+    const g1 = alloc.bindGroup(device.createBindGroup({ layout: pipeline.getBindGroupLayout(1), entries: [{ binding: 0, resource: { buffer: barrier } }] }));
+    const inflight = []; const t0 = performance.now();
     for (let s0 = 0; s0 < n; s0 += 512) {
       while (inflight.length >= 2) await inflight.shift();
-      const u = buffer(device, new Uint8Array(profileWords(fixtures.profiles.precision, s0, Math.min(512, n - s0), 0)), GPUBufferUsage.UNIFORM);
+      if (watchdog.stopped) throw new Error('no observable progress for 5 s: experiment stopped by the watchdog');
+      const count = Math.min(512, n - s0);
+      const u = upload(device, alloc, profileWords(profile, s0, count, 0), GPUBufferUsage.UNIFORM);
+      const g0 = alloc.bindGroup(device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: u } }, { binding: 2, resource: { buffer: o } }, { binding: 3, resource: { buffer: d } }, { binding: 4, resource: { buffer: r } }] }));
       const enc = device.createCommandEncoder(), pass = enc.beginComputePass();
-      pass.setPipeline(ff);
-      pass.setBindGroup(0, device.createBindGroup({ layout: ff.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: u } }, { binding: 2, resource: { buffer: o } }, { binding: 3, resource: { buffer: d } }, { binding: 4, resource: { buffer: r } }] }));
-      pass.setBindGroup(2, device.createBindGroup({ layout: ff.getBindGroupLayout(2), entries: [{ binding: 0, resource: { buffer: barrier } }] }));
-      pass.dispatchWorkgroups(Math.ceil(Math.min(512, n - s0) / 64)); pass.end(); device.queue.submit([enc.finish()]);
-      inflight.push(device.queue.onSubmittedWorkDone().then(() => u.destroy()));
+      pass.setPipeline(pipeline); pass.setBindGroup(0, g0); pass.setBindGroup(1, g1); pass.dispatchWorkgroups(Math.ceil(count / 64)); pass.end();
+      const done = watchdog.submitted(`ff:${s0}`, { s0 });
+      device.queue.submit([enc.finish()]);
+      inflight.push(device.queue.onSubmittedWorkDone().then(() => { done(); u.destroy(); }));
     }
     await Promise.all(inflight);
-    const workMs = performance.now() - start, r0 = performance.now();
-    const words = new Uint32Array(await readBack(device, r, 16 * n));
-    const readMs = performance.now() - r0;
-    for (const b of [o, d, r]) b.destroy();
-    return { words, workMs, readMs };
-  };
-  for (const set of fixtures.precision.results) {
-    status(`precision d=${set.distance}`);
-    const n = set.rows.length;
-    const directions = new Float32Array(4 * n); set.rows.forEach((row, i) => directions.set([...row.effectiveDirection, 0], 4 * i));
-    const flatDir = new Float32Array(3 * n); set.rows.forEach((row, i) => flatDir.set(row.effectiveDirection, 3 * i));
-    const flatOrigin = new Float32Array(3 * n); for (let i = 0; i < n; i++) flatOrigin.set(set.roundedOrigin, 3 * i);
-    const base = async () => { const t0 = performance.now(); const { words } = await traceList({ device, pipelines, field: 'bulb', profile: fixtures.profiles.precision, origins: flatOrigin, directions: flatDir }); return { words, workMs: performance.now() - t0 }; };
-    const runs = { baseline: [], compensated: [] }; let baseline, compensated;
-    for (let k = 0; k < fixtures.costProtocol.warmups + fixtures.costProtocol.measured; k++) {
-      const b = await base(), c = await ffTrace(set, directions);
-      if (k >= fixtures.costProtocol.warmups) { runs.baseline.push(b.workMs); runs.compensated.push(c.workMs); }
-      baseline = b.words; compensated = c;
+    const workMs = performance.now() - t0;
+    const { bytes, ms } = await readBack(device, alloc, r, 16 * n);
+    return { words: new Uint32Array(bytes), workMs, readMs: ms };
+  } finally { for (const b of owned) b.destroy(); }
+}
+
+export async function run(gate, fx, params, status) {
+  const losses = []; const off = onLoss(i => losses.push(i));
+  const watchdog = createWatchdog();
+  const { device } = await acquire();
+  const shared = createAllocator({ capBytes: fx.resources.capBytes });
+  try {
+    const pipelines = await prepare(device, shared, status);
+    const module = await compile(device, (await source('./fields.wgsl')) + (await source('./trace.wgsl')) + (await source('./compensated.wgsl')), 'compensated');
+    const ff = shared.pipeline(await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: 'trace_ff_list', constants: { FIELD: 3 } } }));
+    const prim = shared.pipeline(await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: 'primitives', constants: { FIELD: 3 } } }));
+    const barrier = upload(device, shared, new Float32Array([1, 0, 0, 0]), GPUBufferUsage.UNIFORM);
+    // 1. Primitive cases, in fixture order.
+    const pin = new Float32Array(8 * fx.primitives.length);
+    fx.primitives.forEach((c, i) => { const a = pair(c.args[0]), b = pair(c.args[1]), t = c.thenAdd ? pair(c.thenAdd) : [0, 0]; pin.set([a[0], a[1], b[0], b[1], OP[c.op], t[0], t[1], 0], 8 * i); });
+    const pinB = upload(device, shared, pin, GPUBufferUsage.STORAGE), poutB = shared.buffer(device, { size: 16 * fx.primitives.length, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+    { const enc = device.createCommandEncoder(), pass = enc.beginComputePass(); pass.setPipeline(prim);
+      pass.setBindGroup(0, device.createBindGroup({ layout: prim.getBindGroupLayout(0), entries: [{ binding: 5, resource: { buffer: pinB } }, { binding: 6, resource: { buffer: poutB } }] }));
+      pass.setBindGroup(1, device.createBindGroup({ layout: prim.getBindGroupLayout(1), entries: [{ binding: 0, resource: { buffer: barrier } }] }));
+      pass.dispatchWorkgroups(fx.primitives.length); pass.end(); device.queue.submit([enc.finish()]); }
+    const pout = new Float32Array((await readBack(device, shared, poutB, 16 * fx.primitives.length)).bytes);
+    const primitives = fx.primitives.map((_, i) => ({ hi: pout[4 * i], lo: pout[4 * i + 1], thenHi: pout[4 * i + 2], thenLo: pout[4 * i + 3] }));
+    // 2. Per distance: matched baseline and compensated runs, each with its own allocator for incremental bytes.
+    const sets = [];
+    for (const set of fx.precision.results) {
+      status(`precision d=${set.distance}`);
+      const n = set.rows.length;
+      const dir3 = new Float32Array(3 * n), dir4 = new Float32Array(4 * n), org3 = new Float32Array(3 * n);
+      set.rows.forEach((row, i) => { dir3.set(row.effectiveDirection, 3 * i); dir4.set([...row.effectiveDirection, 0], 4 * i); org3.set(set.roundedOrigin, 3 * i); });
+      const result = { distance: set.distance, baseline: { workMs: [], readMs: [] }, compensated: { workMs: [], readMs: [] } };
+      const baseAlloc = createAllocator({ capBytes: fx.resources.capBytes }), compAlloc = createAllocator({ capBytes: fx.resources.capBytes });
+      for (let k = 0; k < fx.costProtocol.warmups + fx.costProtocol.measured; k++) {
+        const b = await traceList({ device, alloc: baseAlloc, watchdog, pipelines, field: 'bulb', profile: fx.profiles.precision, origins: org3, directions: dir3, label: `precision-base:${set.distance}` });
+        const c = await ffTrace({ device, alloc: compAlloc, watchdog, pipeline: ff, barrier, profile: fx.profiles.precision, originPairs: set.originPairs, directions: dir4, n });
+        if (k >= fx.costProtocol.warmups) { result.baseline.workMs.push(b.workMs); result.baseline.readMs.push(b.readMs); result.compensated.workMs.push(c.workMs); result.compensated.readMs.push(c.readMs); }
+        result.baseline.words = Array.from(b.words); result.compensated.words = Array.from(c.words);
+      }
+      result.baseline.peakBytes = baseAlloc.inventory().peakBytes; result.compensated.peakBytes = compAlloc.inventory().peakBytes;
+      sets.push(result);
     }
-    const stats = xs => { const v = [...xs].sort((a, b) => a - b); return { median: v[Math.floor(v.length / 2)], min: v[0], max: v.at(-1) }; };
-    sets.push({ distance: set.distance, baseline: Array.from(baseline), compensated: Array.from(compensated.words), costMs: { baseline: stats(runs.baseline), compensated: stats(runs.compensated) }, readbackMs: compensated.readMs, extraBytes: 32 + directions.byteLength + 16 * n });
-  }
-  barrier.destroy(); device.destroy();
-  return { slots: [{ slot: 'precision', raw: { primitives, sets } }], invalidations: [] };
+    return { slots: [{ slot: 'precision', raw: { primitives, sets, losses, stall: watchdog.stall } }], invalidations: [...losses.map(l => `device lost: ${l.reason}`), ...(watchdog.stall ? ['no observable progress for 5 s'] : [])] };
+  } finally { off(); watchdog.dispose(); shared.destroyAll(); destroy(); }
 }
 ```
 
-The driver returns raw words, and Node decodes them with T6's `decodeTrace`. The baseline uses T6's
-`traceList`, which includes its own readback inside `workMs`. The report labels
-baseline `workMs` as "completed work including readback" and compensated `workMs` as
-"completed work, readback separate". It never compares them as if they measured the same
-interval. `readbackMs` is reported for the compensated path only.
-
-Register the driver in `runGateDriver`, before the final `throw`:
-`if (gate === 'precision') return (await import('./precision.js')).runPrecision(fixtures, status);`.
-
 ```js
-// spikes/project0/precision.mjs — node spikes/project0/precision.mjs ; headed, on the selected backend.
+// spikes/project0/precision.mjs — node spikes/project0/precision.mjs ; on the selected configuration, headed.
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ROOT } from './launch.mjs';
-import { runGate } from './run.mjs';
-import { decodeTrace, precisionMetrics } from './measure.mjs';
+import { runSession } from './run.mjs';
+import { precisionMetrics } from './measure/precision.mjs';
 
-const fixtures = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
-const { result, runDir } = await runGate({ gate: 'precision', mode: 'headed', campaign: 'precision' });
-const { primitives, sets } = result.slots[0].raw;
-let primitiveFailure = null;
-try { precisionMetrics(fixtures.precision.results[0], { primitives }); } catch (e) { primitiveFailure = e.message; }
-const rows = sets.map((s, i) => {
-  const set = fixtures.precision.results[i];
-  if (set.distance !== s.distance) throw new Error('precision set order mismatch');
-  const m = precisionMetrics(set, { baseline: decodeTrace(s.baseline), ...(primitiveFailure ? {} : { compensated: decodeTrace(s.compensated) }) });
-  return { distance: s.distance, ...m, costMs: s.costMs, readbackMs: s.readbackMs, extraBytes: s.extraBytes };
-});
-const threshold = rows.find(r => r.baseline.vsRequested.thresholdExceeded === true)?.distance ?? null;
-const out = { validated: !primitiveFailure, primitiveFailure, observedDisagreementThreshold: threshold, rows, runDir };
+const decision = JSON.parse(await readFile(resolve(ROOT, 'docs/reports/project0/webgpu-decision.json'), 'utf8'));
+if (decision.decision.outcome !== 'WebGPU selected') throw new Error(`precision runs only on a selected backend (decision: ${decision.decision.outcome})`);
+const fx = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
+const { records, runDir } = await runSession({ gate: 'precision', mode: 'headed', args: decision.args, campaign: 'precision' });
+const record = records[0];
+const out = { record: record.id, runDir: runDir.split('/').at(-1), args: decision.args, invalidations: record.invalidations };
+if (record.invalidations.length || record.slot !== 'precision') {
+  out.interpretable = false;                                      // loss, page error, identity failure or a stopped watchdog
+} else {
+  const raw = JSON.parse(await readFile(resolve(ROOT, 'artifacts/project0', record.artifacts.find(a => a.path.endsWith('.raw.json')).path), 'utf8'));
+  try { Object.assign(out, { interpretable: true, ...precisionMetrics(fx, raw) }); } catch (e) { out.interpretable = false; out.invalidations = [...out.invalidations, `malformed precision evidence: ${e.message}`]; }
+}
 await mkdir(resolve(ROOT, 'docs/reports/project0'), { recursive: true });
 await writeFile(resolve(ROOT, 'docs/reports/project0/precision.json'), JSON.stringify(out, null, 2));
-if (primitiveFailure) console.log(`UNVALIDATED: ${primitiveFailure} (compensation not interpreted)`);
-for (const r of rows) console.log(`d=${r.distance}: baseline exceeded=${r.baseline.vsRequested.thresholdExceeded} (${r.baseline.vsRequested.stopReasons.join(', ') || 'interpretable'})${r.compensated ? `, compensated exceeded=${r.compensated.vsRequested.thresholdExceeded}` : ''}, median ms base=${r.costMs.baseline.median.toFixed(2)} ff=${r.costMs.compensated.median.toFixed(2)}`);
-console.log(`observed disagreement threshold against the CPU reference: ${threshold ?? 'not reached within tested distances'}`);
+if (!out.interpretable) console.log(`NOT INTERPRETABLE: ${out.invalidations.join('; ')}`);
+else {
+  if (!out.validated) console.log(`UNVALIDATED (compensation not interpreted): ${out.primitiveFailures.join('; ')}`);
+  for (const r of out.rows) console.log(`d=${r.distance}: ${r.interpreted ? '' : '(not interpreted) '}baseline exceeded=${r.baseline.vsRequested.thresholdExceeded}${r.compensated ? `, compensated exceeded=${r.compensated.vsRequested.thresholdExceeded}` : ''}, work median ms base=${r.cost.baseline.workMs.median.toFixed(2)} ff=${r.cost.compensated.workMs.median.toFixed(2)}, extra bytes ${r.extraBytes}`);
+  console.log(`observed disagreement threshold against the CPU reference: ${out.observedDisagreementThreshold ?? 'not reached within tested distances'}${out.firstStop ? `; first stop at d=${out.firstStop.distance} (${out.firstStop.reasons.join(', ')})` : ''}`);
+}
 ```
 
-`metricsFor` has no `precision` derivation. `run.mjs` therefore records the invalidation
-`metrics: no metric derivation for precision/precision`, which is correct: precision is not a
-gate. `precision.mjs` derives its own results from the raw slot.
+- [ ] **Step 7: Commit, run, interpret jointly, and commit the result**
 
-Run: `node spikes/project0/precision.mjs`
+```bash
+git add spikes/project0/gpu/compensated.wgsl spikes/project0/browser/drivers/precision.js spikes/project0/measure/precision.mjs spikes/project0/precision.mjs spikes/project0/tests/precision.test.mjs
+git commit -m "Project 0 T12: compensated prototype and precision experiment with matched costs and fixture-only validation"
+node spikes/project0/precision.mjs
+```
+
 Expected:
-- if an `UNVALIDATED: primitive …` line appears, the experiment is **unvalidated**. Record
-  that, and do not interpret compensation;
-- otherwise there is one line per distance, with the baseline and compensated
-  `thresholdExceeded` (or `null` with the stop reasons) and the median costs;
-- in both cases a final line names the observed disagreement threshold.
+- **`NOT INTERPRETABLE: …`:** recorded as such. Do not invent a result.
+- **`UNVALIDATED`:** the compensation is not interpreted, and the baseline is still reported.
+- **Otherwise:** one line per distance, then the observed disagreement threshold.
 
 A measured absence of improvement from compensation is a valid outcome.
 
-- [ ] **Step 7: Joint interpretation and commit**
-
-Send the per-distance table to Codex, log it, and agree the wording of the precision section.
-Then:
+Send the table to Codex, log the exchange, and agree the wording of the precision section. Then:
 
 ```bash
-git add spikes/project0/gpu/compensated.wgsl spikes/project0/browser/precision.js spikes/project0/precision.mjs spikes/project0/measure.mjs spikes/project0/tests/precision.test.mjs docs/reports/project0/precision.json
-git commit -m "Project 0 T12: compensated prototype and precision experiment results"
+git add docs/reports/project0/precision.json
+git commit -m "Project 0 T12: precision experiment results"
 ```
 
 ---
@@ -7034,80 +7799,213 @@ git commit -m "Project 0 T12: compensated prototype and precision experiment res
 **Owner:** Claude and Codex jointly.
 
 **Files:**
-- `spikes/project0/report.mjs`
-- `docs/reports/<date>-project0-qualification.md`
-- `docs/reports/<date>-project0-results.json`
-- Test: `spikes/project0/tests/report.test.mjs`
+- `spikes/project0/report.mjs`: `renderReport()` plus an executable CLI. The CLI loads,
+  validates and recomputes everything, writes the report, and exits nonzero on any
+  inconsistency.
+- `docs/reports/<date>-project0-qualification.md` and `docs/reports/<date>-project0-results.json`.
+- Test: `spikes/project0/tests/report.test.mjs`. It renders the report, then invokes the CLI
+  against a synthetic evidence tree and checks that forged or damaged evidence is rejected.
 
-- [ ] **Step 1: Write the failing test (the report recomputes, never trusts)**
+**Interfaces:**
+- Consumes:
+  - T10: `loadCampaign`, `checkCoherence`, `recompute`, `qualify`, and the
+    `webgpu-decision.json` written by `close-remediation.mjs`;
+  - T12: `precision.json` and `precisionMetrics`;
+  - T5: `sha256`.
+- Produces:
+  - `renderReport({decision, backend, precision, unsafeFlag}) → markdown`. It throws if the
+    decision does not follow from the gate statuses;
+  - `buildReport({root, decisionPath, date}) → {markdown, results}`;
+  - the CLI `node spikes/project0/report.mjs --decision <path> [--date YYYY-MM-DD]`. `P0_ROOT`
+    overrides the repository root, which the integration test uses.
+
+- [ ] **Step 1: Write the failing tests**
 
 ```js
 // spikes/project0/tests/report.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { ROOT } from '../launch.mjs';
 import { renderReport } from '../report.mjs';
+import { sha256 } from '../evidence.mjs';
+import { canonical, GATES } from '../contract.js';
+
+const run = promisify(execFile);
+const pass = Object.fromEntries(GATES.map(g => [g, { status: 'pass', reasons: [] }]));
+
 test('the report restates the mechanical decision and refuses inconsistent inputs', () => {
-  const gates = Object.fromEntries(Array.from({ length: 13 }, (_, i) => [`G${i + 1}`, { status: 'pass', reasons: [] }]));
-  const md = renderReport({ decision: { outcome: 'WebGPU selected' }, backend: { gates, remediationClosed: true }, precision: null, unsafeFlag: false });
+  const md = renderReport({ decision: { outcome: 'WebGPU selected' }, backend: { gates: pass, remediationClosed: true }, precision: null, unsafeFlag: false });
   assert.match(md, /Outcome: \*\*WebGPU selected\*\*/);
-  assert.throws(() => renderReport({ decision: { outcome: 'WebGPU selected' }, backend: { gates: { ...gates, G8: { status: 'fail', reasons: ['x'] } }, remediationClosed: true } }), /decision does not follow/);
-  assert.match(renderReport({ decision: { outcome: 'WebGPU selected' }, backend: { gates, remediationClosed: true }, unsafeFlag: true }), /depends on `--enable-unsafe-webgpu`/);
+  assert.throws(() => renderReport({ decision: { outcome: 'WebGPU selected' }, backend: { gates: { ...pass, G8: { status: 'fail', reasons: ['x'] } }, remediationClosed: true } }), /decision does not follow/);
+  assert.match(renderReport({ decision: { outcome: 'WebGPU selected' }, backend: { gates: pass, remediationClosed: true }, unsafeFlag: true }), /depends on `--enable-unsafe-webgpu`/);
+});
+
+// A synthetic evidence tree: one valid G4 record; every other gate 'not run'. The honest decision is inconclusive.
+async function tree() {
+  const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
+  const root = await mkdtemp(join(base, 'p0-report-test-'));
+  const eligible = () => Array.from({ length: 4096 }, (_, id) => ({ id, eligible: true, reference: { status: 'budget', index: null, logR: null, de: null } }));
+  const fixtures = { analytic: {}, arithmetic: { bulb: eligible(), plane: eligible() }, profiles: { g3: { steps: 512 } },
+    arithmeticProtocol: { bulb: { iterations: 64, tolerances: { logR: 1e-4, de: 1e-3 } }, plane: { iterations: 128, tolerances: { logR: 1e-5 } } } };
+  await mkdir(join(root, 'spikes/project0'), { recursive: true });
+  await writeFile(join(root, 'spikes/project0/fixtures.json'), JSON.stringify(fixtures));
+  const identity = { backend: 'webgpu', fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64), implementationCommit: 'd'.repeat(40), implementationHash: 'e'.repeat(64), launchHash: 'f'.repeat(64), browserVersion: 'v', browserExecutable: 'x', driver: 'd', session: 's', mode: 'headless' };
+  const raw = JSON.stringify({ words: Array.from({ length: 4 * 4096 }, (_, i) => (i % 4 === 0 ? 1 : 0)) });
+  await mkdir(join(root, 'artifacts/project0/run1'), { recursive: true });
+  await writeFile(join(root, 'artifacts/project0/run1/G4-r.raw.json'), raw);
+  const metrics = { samples: 4096, eligible: 4096, diagnostics: 0, statusErrors: 0, indexErrors: 0, logRRatio: 0, deRatio: 0 };
+  const record = { schema: 1, id: 'G4-r', gate: 'G4', slot: 'bulb-samples', campaign: 'm', mode: 'headless', experiment: false, identity, invalidations: [], metrics, artifacts: [{ path: 'run1/G4-r.raw.json', sha256: sha256(raw) }] };
+  await writeFile(join(root, 'artifacts/project0/run1/G4-r.json'), canonical(record));
+  const manifest = { fixture: { fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64) }, campaign: 'm', args: 'attempt1', runDirs: ['run1'],
+    trials: { 'G4/bulb-samples': { id: 'G4-r', identity } }, notRun: Object.fromEntries(GATES.filter(g => g !== 'G4').map(g => [g, { status: 'not run', reason: 'synthetic' }])), reuse: [] };
+  await mkdir(join(root, 'docs/reports/project0'), { recursive: true });
+  const mText = JSON.stringify(manifest), hText = '## Classification\nnone\n## Change set\nnone\n';
+  await writeFile(join(root, 'docs/reports/project0/m-manifest.json'), mText);
+  await writeFile(join(root, 'docs/reports/project0/history.md'), hText);
+  const decision = { backend: 'webgpu', manifest: 'docs/reports/project0/m-manifest.json', manifestSha256: sha256(mText), history: 'docs/reports/project0/history.md', historySha256: sha256(hText), args: 'attempt1', unsafeFlag: false, decision: { outcome: 'inconclusive' } };
+  await writeFile(join(root, 'docs/reports/project0/webgpu-decision.json'), JSON.stringify(decision));
+  return { root, decision };
+}
+const cli = root => run(process.execPath, [resolve(ROOT, 'spikes/project0/report.mjs'), '--decision', 'docs/reports/project0/webgpu-decision.json', '--date', '2026-10-18'], { env: { ...process.env, P0_ROOT: root } });
+
+test('the CLI writes both outputs from verified, recomputed evidence', async () => {
+  const { root } = await tree();
+  try {
+    await cli(root);
+    assert.match(await readFile(join(root, 'docs/reports/2026-10-18-project0-qualification.md'), 'utf8'), /Outcome: \*\*inconclusive\*\*/);
+    const results = JSON.parse(await readFile(join(root, 'docs/reports/2026-10-18-project0-results.json'), 'utf8'));
+    assert.equal(results.gates.G4.status, 'pass'); assert.equal(results.records[0].id, 'G4-r');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('the CLI rejects altered artefacts, missing raw evidence, forged stop entries and a decision that does not follow', async () => {
+  for (const damage of [
+    async ({ root }) => writeFile(join(root, 'artifacts/project0/run1/G4-r.raw.json'), '{"words":[]}'),
+    async ({ root }) => { const p = join(root, 'artifacts/project0/run1/G4-r.json'); const r = JSON.parse(await readFile(p, 'utf8')); r.artifacts = []; await writeFile(p, canonical(r)); },
+    async ({ root, decision }) => { const p = join(root, 'docs/reports/project0/m-manifest.json'); const m = JSON.parse(await readFile(p, 'utf8')); m.notRun.G5 = { status: 'pass', reason: 'forged' }; const t = JSON.stringify(m); await writeFile(p, t); decision.manifestSha256 = sha256(t); await writeFile(join(root, 'docs/reports/project0/webgpu-decision.json'), JSON.stringify(decision)); },
+    async ({ root, decision }) => { decision.decision.outcome = 'WebGPU selected'; await writeFile(join(root, 'docs/reports/project0/webgpu-decision.json'), JSON.stringify(decision)); },
+  ]) {
+    const t = await tree();
+    try { await damage(t); await assert.rejects(cli(t.root)); } finally { await rm(t.root, { recursive: true, force: true }); }
+  }
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [ ] **Step 2: Run them to verify they fail**
 
 Run: `node --test spikes/project0/tests/report.test.mjs`
-Expected: FAIL with `ERR_MODULE_NOT_FOUND`.
+Expected: FAIL with `ERR_MODULE_NOT_FOUND` naming `spikes/project0/report.mjs`.
 
 - [ ] **Step 3: Implement `report.mjs`**
 
 ```js
-// spikes/project0/report.mjs — renders the qualification report from verified, recomputed evidence.
+// spikes/project0/report.mjs — renders the qualification report from verified, recomputed evidence; exits nonzero on any inconsistency.
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+import { parseArgs } from 'node:util';
 import { decideBackends } from './decision.js';
+import { ROOT } from './launch.mjs';
+import { sha256 } from './evidence.mjs';
+import { canonical } from './contract.js';
+import { loadCampaign, checkCoherence, recompute, qualify } from './qualify.mjs';
+import { precisionMetrics } from './measure/precision.mjs';
+
 export function renderReport({ decision, backend, webgl = null, precision = null, unsafeFlag = false }) {
   const again = decideBackends(backend, webgl);
   if (again.outcome !== decision.outcome) throw new Error(`decision does not follow from the gate statuses (${again.outcome} vs ${decision.outcome})`);
   const rows = Object.entries(backend.gates).map(([g, r]) => `| ${g} | ${r.status} | ${(r.reasons || []).join('; ').replace(/\|/g, '\\|') || '—'} |`);
-  return [`# Project 0 — Space Backend Qualification Report`, '', `Outcome: **${decision.outcome}**`, '',
+  const precisionText = !precision ? 'Not run: no backend was selected, or the experiment could not run safely (see the decision record).'
+    : !precision.interpretable ? `Not interpretable: ${precision.invalidations.join('; ')}`
+    : [`Primitive validation: ${precision.validated ? 'passed' : `**failed** — compensation not interpreted (${precision.primitiveFailures.join('; ')})`}.`,
+       `Observed disagreement threshold against the CPU reference: ${precision.observedDisagreementThreshold ?? 'not reached within the tested distances'}${precision.firstStop ? `; interpretation stopped at d=${precision.firstStop.distance} (${precision.firstStop.reasons.join(', ')})` : ''}.`,
+       '', '| d | interpreted | baseline exceeded | compensated exceeded | work median ms (base / ff) | extra bytes |', '|---|---|---|---|---|---|',
+       ...precision.rows.map(r => `| ${r.distance} | ${r.interpreted} | ${r.baseline.vsRequested.thresholdExceeded} | ${r.compensated?.vsRequested.thresholdExceeded ?? '—'} | ${r.cost.baseline.workMs.median.toFixed(2)} / ${r.cost.compensated.workMs.median.toFixed(2)} | ${r.extraBytes} |`)].join('\n');
+  return ['# Project 0 — Space Backend Qualification Report', '', `Outcome: **${decision.outcome}**`, '',
     unsafeFlag ? '> **The selection depends on `--enable-unsafe-webgpu`.** Space would require a Chrome flag that ordinary users do not set. This is the user\'s decision to accept or reject.\n' : '',
-    '| Gate | Status | Reasons |', '|---|---|---|', ...rows, '',
-    '## Precision experiment (not a backend gate)', '', precision ? precision : 'Not run: no backend was selected, or the experiment could not run safely (see the decision record).', ''].join('\n');
+    '| Gate | Status | Reasons |', '|---|---|---|', ...rows, '', '## Precision experiment (not a backend gate)', '', precisionText, ''].join('\n');
+}
+
+export async function buildReport({ root, decisionPath, date }) {
+  const decision = JSON.parse(await readFile(resolve(root, decisionPath), 'utf8'));
+  if (sha256(await readFile(resolve(root, decision.manifest))) !== decision.manifestSha256) throw new Error('the manifest changed after the decision was recorded');
+  if (sha256(await readFile(resolve(root, decision.history))) !== decision.historySha256) throw new Error('the remediation history changed after the decision was recorded');
+  const fixtures = JSON.parse(await readFile(resolve(root, 'spikes/project0/fixtures.json'), 'utf8'));
+  const { manifest, records } = await loadCampaign(decision.manifest, { root });
+  checkCoherence(records, manifest);
+  await recompute(records, fixtures, { root });
+  const { backend, decision: recomputed } = qualify(manifest, records, fixtures, { remediationClosed: true });
+  if (recomputed.outcome !== decision.decision.outcome) throw new Error(`recorded decision ${decision.decision.outcome} does not follow from the evidence (${recomputed.outcome})`);
+  let precision = null;
+  const precisionPath = resolve(root, 'docs/reports/project0/precision.json');
+  if (existsSync(precisionPath)) {
+    precision = JSON.parse(await readFile(precisionPath, 'utf8'));
+    if (precision.interpretable) {
+      const dir = join(root, 'artifacts/project0', precision.runDir);
+      const record = JSON.parse(await readFile(join(dir, `${precision.record}.json`), 'utf8'));
+      const rawArtifact = record.artifacts.find(a => a.path.endsWith('.raw.json'));
+      const bytes = await readFile(join(root, 'artifacts/project0', rawArtifact.path));
+      if (sha256(bytes) !== rawArtifact.sha256) throw new Error('precision raw artefact hash mismatch');
+      const again = precisionMetrics(fixtures, JSON.parse(bytes));
+      if (canonical(again.rows) !== canonical(precision.rows) || again.validated !== precision.validated) throw new Error('precision results do not recompute from their raw evidence');
+    }
+  }
+  const markdown = renderReport({ decision: decision.decision, backend, precision, unsafeFlag: decision.unsafeFlag });
+  const results = { date, decision: decision.decision, unsafeFlag: decision.unsafeFlag, args: decision.args, gates: Object.fromEntries(Object.entries(backend.gates).map(([g, r]) => [g, { status: r.status, reasons: r.reasons }])),
+    records: records.map(r => ({ id: r.id, gate: r.gate, slot: r.slot, metrics: r.metrics, identity: r.identity, artifacts: r.artifacts })), precision: precision?.interpretable ? { validated: precision.validated, observedDisagreementThreshold: precision.observedDisagreementThreshold, firstStop: precision.firstStop } : null };
+  return { markdown, results };
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const { values } = parseArgs({ options: { decision: { type: 'string' }, date: { type: 'string', default: new Date().toISOString().slice(0, 10) } } });
+  const root = process.env.P0_ROOT ? resolve(process.env.P0_ROOT) : ROOT;
+  try {
+    const { markdown, results } = await buildReport({ root, decisionPath: values.decision, date: values.date });
+    await mkdir(resolve(root, 'docs/reports'), { recursive: true });
+    await writeFile(resolve(root, `docs/reports/${values.date}-project0-qualification.md`), markdown);
+    await writeFile(resolve(root, `docs/reports/${values.date}-project0-results.json`), JSON.stringify(results, null, 2));
+    console.log(`report written: docs/reports/${values.date}-project0-qualification.md (${results.decision.outcome})`);
+  } catch (error) { console.error(`REPORT REFUSED: ${error.message}`); process.exitCode = 1; }
 }
 ```
 
-`node spikes/project0/report.mjs <campaign>` (a CLI wrapper in the same file) does five things:
-1. Loads the final manifest with `loadCampaign`.
-2. Runs `recompute`, so every artefact hash and metric is verified.
-3. Runs `qualify` with the closed remediation flag.
-4. Reads `precision.json` and the `unsafe` note from `webgpu-decision.json`.
-5. Writes the markdown skeleton and a compact `-results.json`: per-trial metrics, identities
-   and artefact hashes, with no raw traces.
+- [ ] **Step 4: Run the tests to verify they pass**
 
-The narrative sections are written jointly afterwards: the environment, the remediation
-history, the interpretation and the limitations.
+Run: `node --test spikes/project0/tests/report.test.mjs`
+Expected: PASS, `# pass 3`, `# fail 0`.
 
-- [ ] **Step 4: Run it, review it jointly and hand it to the user**
+- [ ] **Step 5: Commit the report tool, generate the report, review it jointly, hand it to the user**
 
 ```bash
-node --test spikes/project0/tests/report.test.mjs        # Expected: PASS, # pass 1
-node spikes/project0/report.mjs webgpu-remediation        # or webgpu-1 when no remediation ran
+git add spikes/project0/report.mjs spikes/project0/tests/report.test.mjs
+git commit -m "Project 0 T13: report CLI that verifies, recomputes and refuses inconsistent evidence"
+node spikes/project0/report.mjs --decision docs/reports/project0/webgpu-decision.json
 ```
 
-1. Claude drafts the narrative. Codex reviews it as co-author (READY / NOT READY), and the
-   exchange is logged verbatim.
-2. Archive both logs to `docs/codesign/`.
-3. Commit:
+Expected:
+- `report written: docs/reports/<date>-project0-qualification.md (<outcome>)`;
+- or `REPORT REFUSED: …`, which is a finding to resolve, never to bypass.
+
+1. **The narrative sections.** Claude drafts them: the environment, the remediation history,
+   the visible-output captures (the `visible` experiment's record), the interpretation and the
+   limitations.
+2. **Codex reviews** the report as co-author (READY / NOT READY), and the exchange is logged
+   verbatim.
+3. **Archive** both logs to `docs/codesign/`.
+4. **Commit:**
 
 ```bash
-git add spikes/project0/report.mjs spikes/project0/tests/report.test.mjs docs/reports/ docs/codesign/
+git add docs/reports/ docs/codesign/
 git commit -m "Project 0 T13: qualification report, results summary and co-design log"
 ```
 
-4. Present the outcome to the user:
+5. **Present** the outcome to the user:
    - the mechanically derived decision;
    - any dependence on `--enable-unsafe-webgpu`;
    - the precision finding;
    - the next step: the Project 1a/1b specs after a selected backend, or resolving the reported
      limitation after a no-go or inconclusive outcome.
-
