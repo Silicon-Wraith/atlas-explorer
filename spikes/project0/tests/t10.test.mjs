@@ -483,3 +483,98 @@ test('fix round 1, finding 8: the timing invocation is reused or rerun whole; a 
   assert.deepEqual([...whole.recomputed[0]].sort(), timing.map(r => r.id).sort(), 'the whole reused invocation is verified together, so G9 finds its companions');
   assert.ok(!whole.calls.includes('session timing headed'), 'and the timing invocation is not rerun');
 });
+
+// --- Fix round 2 (Codex T10 r2) ---------------------------------------------------------------------------------------------------------------
+test('fix round 2, finding 10: a checkpoint file that is listed but cannot be read, or reads as nothing, never reconciles', async () => {
+  const log = cycleLog(-1), ok = checkpointsOf(log, () => 0), raw = { cycleLog: log, deadlineMisses: 0 };
+  assert.ok(Q.checkpointProblems(raw, { ...ok, 7: undefined }, fx).length, 'a listed checkpoint whose payload is undefined');
+  if (process.getuid?.() === 0) return;                                                    // root reads a mode-000 file; the unit case above still holds
+  const root = await scratch();
+  try {
+    const files = Object.fromEntries(Object.entries(ok).map(([n, c]) => [`checkpoint-${n}.json`, c]));
+    const g12 = await put(root, 'c', rec('G12', 'sequence', { identity: { ...identity, mode: 'headed' } }), raw, { sidecar: complete('G12'), files });
+    const bindings = await bind(root, 'c');
+    const { chmod } = await import('node:fs/promises');
+    await chmod(join(root, 'artifacts/project0/c/checkpoint-7.json'), 0o000);              // listed by readdir, unreadable (EACCES)
+    await assert.rejects(Q.recompute([g12], fx, { root, manifest: { requestedArgs: ARGS, bindings } }), /checkpoint-7\.json/);
+    const res = await Q.recompute([g12], fx, { root, manifest: { requestedArgs: ARGS, bindings }, collect: true });
+    assert.match(res.errors[g12.id] ?? '', /checkpoint-7\.json/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('fix round 2, finding 11: a gate covered by a named attempt can never be notRun (build, load and qualify), timing attempts covering G6, G7 and G9', async () => {
+  const inc = (gate, mode = 'headed') => rec(gate, 'incomplete', { identity: { ...identity, mode }, invalidations: ['session: browser hang: x', 'incomplete: the session produced no result'] });
+  const g1 = inc('G1'), timing = inc('timing');
+  assert.throws(() => Q.buildManifest({ ...base, records: [], attempts: [g1], notRun: { G1: { status: 'not run', reason: 'stopped' } } }), /attempt/);
+  for (const g of ['G6', 'G7', 'G9']) assert.throws(() => Q.buildManifest({ ...base, records: [], attempts: [timing], notRun: { [g]: { status: 'not run', reason: 'stopped' } } }), /attempt/, g);
+  // Codex's case: an incomplete G1, a measured G4 failure, and notRun.G1 blockedBy G4 edited in after build
+  const failedG4 = g4({ metrics: { ...G4_PASS, logRRatio: 2 } });
+  const m = Q.buildManifest({ ...base, records: [failedG4], attempts: [g1] });
+  const edited = { ...m, notRun: { G1: { status: 'not run', reason: 'stopped', blockedBy: 'G4' } } };
+  assert.throws(() => Q.qualify(edited, [failedG4], fx, { raws: { [failedG4.id]: {}, [g1.id]: {} }, attempts: [g1] }), /attempt/);
+  const root = await scratch();
+  try {
+    const a = await put(root, 'r', g1, {});
+    const file = { ...Q.buildManifest({ ...base, runDirs: ['r'], records: [], attempts: [a] }), notRun: { G1: { status: 'not run', reason: 'stopped' } } };
+    await writeFile(join(root, 'm.json'), JSON.stringify(file));
+    await assert.rejects(Q.loadCampaign('m.json', { root }), /attempt/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('fix round 2, finding 12: every originating record that can support qualification must match its own campaign\'s preflight, including a mixed reused source', async () => {
+  const root = await scratch();
+  try {
+    const other = { ...identity, implementationCommit: '1'.repeat(40) };
+    const writePreflight = async dir => { await mkdir(join(root, 'artifacts/project0', dir), { recursive: true }); await writeFile(join(root, 'artifacts/project0', dir, 'integrity-preflight.json'), JSON.stringify(preflightRecord())); return bind(root, dir); };
+    // own records: the first matches, a later one does not
+    const a = g4(), b = pass('G5', 'qjulia-plane', 'headless', { identity: other });
+    const own = { ...Q.buildManifest({ ...base, records: [a, b] }), preflight: { runDir: 'pf', ...implementation }, bindings: await writePreflight('pf') };
+    await assert.rejects(Q.verifyPreflight(own, [a, b], { root }), /implementation/);
+    // a mixed source campaign: A matches the source preflight, the reused B does not
+    const A = await put(root, 's1', g4({ campaign: 'webgpu-0' }), {});
+    const B = await put(root, 's1', pass('G5', 'qjulia-plane', 'headless', { campaign: 'webgpu-0', identity: other }), {});
+    const source = { ...base, campaign: 'webgpu-0', runDirs: ['s1'], trials: { [`${A.gate}/${A.slot}`]: { id: A.id, identity: A.identity }, [`${B.gate}/${B.slot}`]: { id: B.id, identity: B.identity } },
+      notRun: {}, reuse: [], attempts: {}, preflight: { runDir: 'pfs', ...implementation }, bindings: await writePreflight('pfs') };
+    await writeFile(join(root, 'src.json'), JSON.stringify(source));
+    const reuse = [{ gate: B.gate, slot: B.slot, fromManifest: 'src.json', recordId: B.id, reason: 'unaffected by the change set' }];
+    const final = { ...Q.buildManifest({ ...base, records: [B], reuse }), preflight: { runDir: 'pf', ...implementation }, bindings: await writePreflight('pf') };
+    await assert.rejects(Q.verifyPreflight(final, [B], { root }), /reused source src\.json.*implementation/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('fix round 2, finding 13: collected verification errors make the campaign\'s exit status non-zero; a measured failure does not', async () => {
+  const { runCampaign, exitStatus } = await import('../campaign.mjs');
+  const g4id = CORRECT['G4 headed'][0].id;
+  const rejected = fakes(CORRECT, { recompute: async records => ({ records, launches: [], raws: Object.fromEntries(records.map(r => [r.id, rawFor(r)])), errors: { [g4id]: 'artefact hash mismatch: x' } }) });
+  const bad = await runCampaign({ name: 'webgpu-1' }, rejected.d);
+  assert.equal(bad.failure, null);
+  assert.ok(bad.verificationErrors.some(x => x.includes('artefact hash mismatch')));
+  assert.ok(rejected.report.manifest.verificationErrors.length, 'and the report records them');
+  assert.equal(exitStatus(bad), 1);
+  const measured = fakes({ ...CORRECT, 'G4 headed': [pass('G4', 'bulb-samples', 'headed', { metrics: { ...G4_PASS, logRRatio: 2 } })] });
+  const failedGate = await runCampaign({ name: 'webgpu-1' }, measured.d);
+  assert.equal(failedGate.backend.gates.G4.status, 'fail');
+  assert.equal(exitStatus(failedGate), 0, 'a measured hardware failure is a result, not a tooling error');
+  const thrown = await runCampaign({ name: 'webgpu-1' }, fakes(CORRECT, { recompute: async () => { throw new Error('x'); } }).d);
+  assert.equal(exitStatus(thrown), 1);
+});
+
+test('fix round 2, concern 3: a refusal may skip the report only before any qualification gate is attempted, and keeps the failed preflight\'s diagnostics', async () => {
+  const { runCampaign } = await import('../campaign.mjs');
+  // a failed preflight: refused, no gate, no report, and the refusal names the preserved preflight evidence
+  const failing = fakes({}, { runPreflight: async () => ({ pass: false, record: preflightRecord(implementation, { pass: false }), runDir: '/x/20261020T000000000Z-dev-integrity-preflight-headed' }) });
+  await assert.rejects(runCampaign({ name: 'webgpu-1' }, failing.d), /20261020T000000000Z-dev-integrity-preflight-headed/);
+  assert.ok(!failing.calls.some(c => c.startsWith('session') || c === 'g2' || c.startsWith('report')), 'no gate and no report');
+  // a reuse source that fails verification: refused before any gate, no report
+  const src = fakes({}, { loadCampaign: async () => ({ manifest: { trials: {} }, records: [g4({ campaign: 'webgpu-0' })], attempts: [] }), verifyPreflight: async () => { throw new Error('source preflight missing'); } });
+  await assert.rejects(runCampaign({ name: 'webgpu-remediation', reuse: JSON.stringify([{ gate: 'G4', slot: 'bulb-samples', fromManifest: 's.json', recordId: g4().id, reason: 'r' }]) }, src.d), /source preflight missing/);
+  assert.ok(!src.calls.some(c => c.startsWith('session') || c === 'g2' || c.startsWith('report')));
+  // once a gate has been attempted, a runner that throws still leaves a report, failing closed
+  const late = fakes(CORRECT, { runSession: async o => { late.calls.push(`session ${o.gate} ${o.mode}`); if (o.gate === 'G4') throw new Error('runner crashed'); return { records: CORRECT[`${o.gate} ${o.mode}`] ?? [], runDir: `/x/${o.gate}-${o.mode}` }; } });
+  const out = await runCampaign({ name: 'webgpu-1' }, late.d);
+  assert.ok(late.calls.includes('report webgpu-1'), 'a report after an attempted gate');
+  assert.match(out.stopped, /runner crashed/);
+  assert.ok(!late.calls.includes('session G5 headed'), 'and nothing runs after it');
+  assert.notEqual(out.backend.gates.G4.status, 'pass');
+  assert.equal(out.decision.outcome, 'inconclusive');
+});

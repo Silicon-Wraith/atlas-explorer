@@ -51,7 +51,7 @@ export async function runCampaign(values, d) {
   const bindings = {}, bindingErrors = [];
   const bindDir = async dir => { try { Object.assign(bindings, await d.bindAuxiliary(dir)); } catch (e) { bindingErrors.push(`auxiliary evidence of ${dir} could not be bound: ${e.message}`); } };
   await bindDir(preflight.runDir);
-  const selected = [], attempts = [], runDirs = [], attempted = new Set(); let stopped = null, blockedBy = null;
+  const selected = [], attempts = [], runDirs = [], attempted = new Set(), gateErrors = {}; let stopped = null, blockedBy = null;
   const reusedKeys = new Set(reuse.map(x => `${x.gate}/${x.slot}`));
   // Reused records: each source campaign is loaded once, its preflight verified (R1, finding 7), its records verified together (so a reused
   // timing invocation keeps G9 beside its companions, finding 8), and its bindings for those records carried over.
@@ -77,7 +77,15 @@ export async function runCampaign(values, d) {
       if (required.every(k => reusedKeys.has(k))) continue;                                // fully supplied by valid reuse
       if (stopped) continue;
       gatesOf(gate).forEach(g => attempted.add(g));
-      const out = gate === 'G2' ? await d.runG2({ args, campaign: values.name }) : await d.runSession({ gate, mode, args, campaign: values.name });
+      // R2 (concern 3): once a gate is attempted, nothing ends the campaign without a report; a runner that throws stops it, failing closed.
+      let out;
+      try { out = gate === 'G2' ? await d.runG2({ args, campaign: values.name }) : await d.runSession({ gate, mode, args, campaign: values.name }); }
+      catch (e) {
+        const message = `the ${gate} ${mode} runner failed: ${e.message}`;
+        stopped = `${gate}: ${message}`;
+        for (const g of gatesOf(gate)) (gateErrors[g] ??= []).push(message);
+        continue;
+      }
       const dir = out.runDir.split('/').at(-1);
       runDirs.push(dir);
       await bindDir(dir);
@@ -96,7 +104,7 @@ export async function runCampaign(values, d) {
         const m = draft();
         const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest: m, collect: true });
         for (const g of CORRECTNESS) {
-          const r = verdictOf(g, { records: selected, attempts, manifest: m, fixtures, raws, rejected, errors: bindingErrors });
+          const r = verdictOf(g, { records: selected, attempts, manifest: m, fixtures, raws, rejected, errors: bindingErrors, gateErrors });
           if (r.status !== 'pass') { stopped = `correctness gate ${g} is ${r.status}`; if (r.status === 'fail') blockedBy = g; break; }
         }
       } catch (e) { stopped = `correctness verification failed: ${e.message}`; }
@@ -110,7 +118,7 @@ export async function runCampaign(values, d) {
   }
   // R1 (finding 4): verification never prevents the report. A record that fails verification makes its gate invalid/inconclusive; any other
   // failure here leaves every attempted gate invalid/inconclusive and the decision inconclusive, with the failure recorded.
-  let manifest = null, backend, decision, failure = null;
+  let manifest = null, backend, decision, failure = null, verificationErrors = [];
   try {
     manifest = buildManifest({ records: selected, fixture, campaign: values.name, args, requestedArgs, runDirs, notRun, reuse, preflight, attempts, bindings });
     const errors = [...bindingErrors];
@@ -118,7 +126,9 @@ export async function runCampaign(values, d) {
     // cannot pass and keeps its own identity.
     try { checkCoherence(selected.filter(r => !r.invalidations.length), manifest); } catch (e) { errors.push(e.message); }
     const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest, collect: true });
-    ({ backend, decision } = qualify(manifest, selected, fixtures, { raws, attempts, rejected, errors }));
+    ({ backend, decision } = qualify(manifest, selected, fixtures, { raws, attempts, rejected, errors, gateErrors }));
+    // R2 (finding 13): every collected verification or invocation error is a tooling error, reported and reflected in the exit status
+    verificationErrors = [...errors, ...Object.entries(gateErrors).flatMap(([g, ms]) => ms.map(x => `${g}: ${x}`)), ...Object.entries(rejected).map(([id, x]) => `${id}: ${x}`)];
   } catch (e) {
     failure = e.message;
     const evidence = g => [...selected, ...attempts].filter(r => gatesOf(r.gate).includes(g)).map(r => r.id);
@@ -129,12 +139,15 @@ export async function runCampaign(values, d) {
   }
   const manifestDoc = { ...(manifest ?? { fixture, campaign: values.name, args, requestedArgs, runDirs, notRun, reuse, preflight, bindings,
     selected: selected.map(r => r.id), attempts: Object.fromEntries(attempts.map(a => [a.id, { gate: a.gate, slot: a.slot, identity: a.identity }])) }),
-    stopped, ...(failure ? { verificationFailure: failure } : {}) };
+    stopped, verificationErrors, ...(failure ? { verificationFailure: failure } : {}) };
   await d.writeReport(values.name, manifestDoc, { backend, decision, ...(failure ? { verificationFailure: failure } : {}) });
   for (const [g, r] of Object.entries(backend.gates)) d.log(`${g}: ${r.status}${r.reasons?.length ? ` — ${r.reasons.slice(0, 3).join('; ')}` : ''}`);
   d.log(`decision (remediation not yet closed): ${decision.outcome} — next: ${decision.next}${stopped ? `\nSTOPPED: ${stopped}` : ''}${failure ? `\nVERIFICATION FAILURE: ${failure}` : ''}`);
-  return { manifest, backend, decision, stopped, failure };
+  return { manifest, backend, decision, stopped, failure, verificationErrors };
 }
+
+// R2 (finding 13): non-zero when verification or an invocation failed, or the report fell back; a measured gate failure is a result, exit 0.
+export const exitStatus = result => (result.failure || result.verificationErrors?.length ? 1 : 0);
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { values } = parseArgs({ options: { name: { type: 'string' }, args: { type: 'string', default: 'attempt1' }, gates: { type: 'string' }, reuse: { type: 'string', default: '[]' } } });
@@ -142,7 +155,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const { runIntegrityPreflight } = await import('./integrity-preflight.mjs');
   const { fixtureIdentity, implementationIdentity } = await import('./evidence.mjs');
   const dir = resolve(ROOT, 'docs/reports/project0');
-  const { failure } = await runCampaign(values, {
+  const result = await runCampaign(values, {
     LAUNCH, runSession, runG2, runPreflight: runIntegrityPreflight, implementationIdentity, fixtureIdentity, loadCampaign, recompute, log: console.log,
     verifyPreflight: (manifest, records) => verifyPreflight(manifest, records), bindAuxiliary: runDir => auxiliaryHashes(runDir),
     readFixtures: async () => JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8')),
@@ -152,5 +165,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       await writeFile(resolve(dir, `${name}-gates.json`), JSON.stringify(gates, null, 2));
     },
   });
-  process.exitCode = failure ? 1 : 0;
+  process.exitCode = exitStatus(result);
 }

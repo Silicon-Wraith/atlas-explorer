@@ -94,6 +94,8 @@ export function validateAttempts(manifest, attempts = []) {
     for (const k of ['fixtureHash', 'fixtureCommit', 'specHash']) if (a.identity?.[k] !== manifest.fixture[k]) throw new Error(`attempt ${a.id}: fixture identity differs`);
     if (!Array.isArray(a.invalidations) || !a.invalidations.length) throw new Error(`attempt ${a.id} carries no invalidation`);
   }
+  // R2 (finding 11): an attempted gate is never `not run`; a timing attempt covers G6, G7 and G9.
+  for (const [id, e] of Object.entries(named)) for (const g of gatesOf(e.gate)) if (manifest.notRun?.[g]) throw new Error(`attempt ${id} covers ${g}, which cannot be recorded as not run`);
 }
 
 // T10: `preflight` ({runDir, implementationCommit, implementationHash}) names the passing integrity preflight the campaign ran first.
@@ -224,7 +226,7 @@ export function checkpointProblems(raw, checkpoints, fx) {
   let preceding = 0;
   for (let n = 0; n < count; n++) {
     const c = log[n], cp = checkpoints[n], lastEnd = c?.phases?.at?.(-1)?.endMs;
-    if (cp !== undefined) {                                                         // R1 (finding 1): a present file must hold a complete payload
+    if (Object.hasOwn(checkpoints, n)) {                                            // R1 (finding 1), R2 (finding 10): a listed file must hold a complete payload
       if (!cp || typeof cp !== 'object' || Array.isArray(cp)) p.push(`checkpoint ${n} is not a checkpoint object (${JSON.stringify(cp)})`);
       else {
         if (!Number.isInteger(cp.cycle) || cp.cycle !== n) p.push(`checkpoint ${n} names cycle ${cp.cycle}`);
@@ -264,10 +266,12 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
   const launches = [], raws = {}, errors = {};
   const at = path => join(root, 'artifacts/project0', path);
   const fail = (r, e) => { if (!collect) throw e; errors[r.id] = e.message; };
-  // An auxiliary file is read only if its exact bytes are bound by the manifest; a missing file reads as undefined.
-  const readBound = async path => {
+  // An auxiliary file is read only if its exact bytes are bound by the manifest. R2 (finding 10): only an absent optional file reads as undefined;
+  // any other read error, or an absent required file (a listed checkpoint), is refused.
+  const readBound = async (path, { required = false } = {}) => {
     let bytes;
-    try { bytes = await readFile(at(path)); } catch { return undefined; }
+    try { bytes = await readFile(at(path)); }
+    catch (e) { if (e?.code === 'ENOENT' && !required) return undefined; throw new Error(`${path}: cannot be read (${e?.code ?? e?.message})`); }
     const want = manifest?.bindings?.[path];
     if (want !== sha256(bytes)) throw new Error(`${path}: ${want ? 'its bytes differ from the hash bound in the manifest' : 'not bound by the manifest'}`);
     return JSON.parse(bytes);
@@ -306,7 +310,7 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
         const checkpoints = {};
         for (const name of await readdir(at(dir))) {
           if (!name.startsWith('checkpoint-')) continue;
-          const m = /^checkpoint-(0|[1-9]\d*)\.json$/.exec(name), payload = await readBound(join(dir, name));
+          const m = /^checkpoint-(0|[1-9]\d*)\.json$/.exec(name), payload = await readBound(join(dir, name), { required: true });
           checkpoints[m ? m[1] : name] = m ? payload : null;
         }
         const problems = checkpointProblems(raws[r.id], checkpoints, fixtures);
@@ -342,23 +346,24 @@ export function gateVerdict(gate, rows, manifest, fixtures, raws) {
 // (`rejected`, from recompute's collected errors), a campaign-wide verification error (`errors`, e.g. coherence or binding), or an attempt of an
 // invocation that covers the gate makes it invalid/inconclusive, with those reasons, the checked verdict's reasons, and the attempts' ids. A
 // verification problem is never a measured failure.
-export function verdictOf(gate, { records, attempts = [], manifest, fixtures, raws, rejected = {}, errors = [] }) {
+// R2: `gateErrors` ({gate: [message]}) are failures of one gate's invocation (a runner that threw).
+export function verdictOf(gate, { records, attempts = [], manifest, fixtures, raws, rejected = {}, errors = [], gateErrors = {} }) {
   const rows = records.filter(r => r.gate === gate), verdict = gateVerdict(gate, rows, manifest, fixtures, raws);
   const tried = attempts.filter(a => gatesOf(a.gate).includes(gate));
-  const bad = [...rows, ...tried].filter(r => rejected[r.id]).map(r => `verification: ${r.id}: ${rejected[r.id]}`);
+  const bad = [...(gateErrors[gate] ?? []).map(e => `invocation: ${e}`), ...[...rows, ...tried].filter(r => rejected[r.id]).map(r => `verification: ${r.id}: ${rejected[r.id]}`)];
   if (!bad.length && !tried.length && !errors.length) return verdict;
   return { gate, status: 'invalid/inconclusive',
     reasons: [...new Set([...errors.map(e => `verification: ${e}`), ...bad, ...tried.flatMap(a => a.invalidations.map(x => `attempt ${a.id}: ${x}`)), ...verdict.reasons])],
     evidenceIds: [...verdict.evidenceIds, ...tried.map(a => a.id)] };
 }
 
-export function qualify(manifest, records, fixtures, { remediationClosed = false, raws, attempts = [], rejected = {}, errors = [] } = {}) {
+export function qualify(manifest, records, fixtures, { remediationClosed = false, raws, attempts = [], rejected = {}, errors = [], gateErrors = {} } = {}) {
   validateStops(manifest.notRun, manifest.trials);
   validateSelection(manifest, records, gatePlan(fixtures));
   validateReuse(manifest);
   validateAttempts(manifest, attempts);
   const gates = {};
-  for (const g of GATES) if (!manifest.notRun?.[g]) gates[g] = verdictOf(g, { records, attempts, manifest, fixtures, raws, rejected, errors });
+  for (const g of GATES) if (!manifest.notRun?.[g]) gates[g] = verdictOf(g, { records, attempts, manifest, fixtures, raws, rejected, errors, gateErrors });
   for (const [g, entry] of Object.entries(manifest.notRun ?? {})) {
     if (entry.blockedBy && gates[entry.blockedBy]?.status !== 'fail') throw new Error(`notRun.${g}: blockedBy ${entry.blockedBy} is not a measured failure`);
     gates[g] = { gate: g, status: 'not run', reason: entry.reason, ...(entry.blockedBy ? { blockedBy: entry.blockedBy } : {}), reasons: [entry.reason], evidenceIds: [] };
@@ -405,10 +410,13 @@ export function preflightProblems(record, implementation, requestedArgs) {
 export async function verifyPreflight(manifest, records, { root = ROOT, seen = new Set() } = {}) {
   const pf = manifest.preflight;
   if (!pf?.runDir || !/^[A-Za-z0-9.-]+$/.test(pf.runDir)) throw new Error('the manifest names no integrity preflight');
+  // R2 (finding 12): every record this campaign produced that can support qualification (uninvalidated, not reused) is at the preflight's
+  // implementation; reused records are checked the same way against their own source campaign's preflight, recursively, below.
   const reused = r => manifest.reuse?.some(x => x.gate === r.gate && x.slot === r.slot && x.recordId === r.id);
-  const own = records.find(r => !reused(r))?.identity ?? pf;
-  const implementation = { implementationCommit: own.implementationCommit, implementationHash: own.implementationHash };
-  if (pf.implementationCommit !== implementation.implementationCommit || pf.implementationHash !== implementation.implementationHash) throw new Error('the manifest\'s integrity preflight is not at the selected records\' implementation');
+  const implementation = { implementationCommit: pf.implementationCommit, implementationHash: pf.implementationHash };
+  for (const r of records) if (!reused(r) && Array.isArray(r.invalidations) && !r.invalidations.length
+    && (r.identity?.implementationCommit !== implementation.implementationCommit || r.identity?.implementationHash !== implementation.implementationHash))
+    throw new Error(`record ${r.id} was produced at implementation ${r.identity?.implementationCommit}, not at its campaign's integrity preflight's ${implementation.implementationCommit}`);
   const path = `${pf.runDir}/integrity-preflight.json`;
   let bytes;
   try { bytes = await readFile(join(root, 'artifacts/project0', path)); }
