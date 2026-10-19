@@ -223,3 +223,112 @@ test('r3/7: a pump failure in the timestamp copy\'s completion handler rejects t
     assert.equal(r.ledger.outstanding(), 1, 'the copy released its own credit; the band still holds its own');
   });
 });
+
+// T7 fix round 4 (Codex T7 r4, finding 9): an exception thrown by a band's or a finish's completion handler (here the pump's next band
+// hitting the allocation cap) is observed, never an unhandled rejection. In the live epoch it latches {kind: 'driver-error'} with the
+// original message, whose invalidation keeps the cap text, so the shared classifier stops on 'allocation cap exceeded'. The credit, the
+// watchdog registration and the resources already settled are not settled again; a finish's ring reservation is released after the latch.
+const { stopReasonsOf } = await import('../session-utils.mjs');
+// Counts every successful credit release and every watchdog settlement, per registration id, so a repeated settlement shows.
+function instrument(r, watchdog) {
+  const releases = [], settles = [];
+  const release = r.ledger.release.bind(r.ledger);
+  r.ledger.release = ticket => { const ok = release(ticket); if (ok) releases.push(ticket); return ok; };
+  const submitted = watchdog.submitted.bind(watchdog);
+  watchdog.submitted = (id, meta) => { const done = submitted(id, meta); return () => { settles.push(id); done(); }; };
+  return { releases, settles };
+}
+// The real allocator, which reaches its cap at the next buffer request: the remaining allowance is taken just before that request (after the
+// completion's own cleanup has freed its buffers and any retired targets), so the real `allocation cap exceeded` error is thrown in the pump.
+function capOnNextBuffer(device) {
+  const real = createAllocator({ capBytes: 2 ** 30 }); let armed = false;
+  const alloc = { ...real, buffer: (dev, d) => {
+    if (armed) { armed = false; real.buffer(device, { size: 2 ** 30 - real.inventory().bytes, usage: 0 }); }
+    return real.buffer(dev, d);
+  } };
+  return { alloc, arm: () => { armed = true; } };
+}
+
+test('r4/9a: a band completion handler whose pump hits the allocation cap aborts promptly with the cap text, and nothing more is submitted', async () => {
+  await noUnhandled(async () => {
+    let clock = 0; const stalls = [];
+    const watchdog = createWatchdog({ every: null, stallMs: 10, now: () => clock, onStall: s => stalls.push(s) });
+    const fake = fakeDevice(), abort = createAbort(), cap = capOnNextBuffer(fake.device), { r, events } = make(fake, { abort, watchdog, alloc: cap.alloc });
+    const { releases, settles } = instrument(r, watchdog); let published = 0;
+    r.onPublish(() => published++);
+    const waiter = abort.race(new Promise(() => {})).then(() => 'resolved', e => e.message);
+    r.render(LARGE);
+    assert.equal(fake.submits(), 2);
+    cap.arm();
+    await fake.completeOne();                                                                           // band 1 completes; its pump throws
+    assert.equal(abort.aborted, true, 'the handler failure latches the abort');
+    assert.equal(abort.reason.kind, 'driver-error');
+    assert.match(abort.invalidation(), /^driver error: allocation cap exceeded: /);
+    assert.deepEqual(stopReasonsOf([abort.invalidation()]), ['allocation cap exceeded']);
+    assert.match(await waiter, /allocation cap exceeded/, 'the waiting driver is woken');
+    assert.ok(events.log.some(e => e.type === 'handler-failed' && e.kind === 'band' && e.live === true));
+    assert.equal(r.ledger.outstanding(), 1, 'only the other band still holds its own credit');
+    await fake.completeOne();
+    assert.equal(r.ledger.outstanding(), 0); assert.equal(fake.submits(), 2, 'nothing is submitted after the failure');
+    assert.equal(releases.length, 2, 'each band released its credit exactly once'); assert.equal(new Set(releases).size, 2);
+    assert.deepEqual(settles.sort(), ['band:1', 'band:2'], 'each watchdog registration settled exactly once');
+    clock = 1000; watchdog.check(); assert.equal(stalls.length, 0);
+    assert.equal(published, 0);
+  });
+});
+
+test('r4/9b: a finish completion handler whose pump hits the allocation cap aborts, releases its ring reservation, and submits nothing more', async () => {
+  await noUnhandled(async () => {
+    let clock = 0; const stalls = [];
+    const watchdog = createWatchdog({ every: null, stallMs: 10, now: () => clock, onStall: s => stalls.push(s) });
+    const fake = fakeDevice(), abort = createAbort(), cap = capOnNextBuffer(fake.device), { r, events } = make(fake, { abort, watchdog, alloc: cap.alloc });
+    const { releases, settles } = instrument(r, watchdog); let published = 0;
+    r.onPublish(() => published++);
+    const waiter = abort.race(new Promise(() => {})).then(() => 'resolved', e => e.message);
+    r.render(SMALL); await fake.completeOne();                                                          // band done: the finish is submitted
+    assert.ok(r.ring.some(s => s.owner !== null), 'the finish holds a reservation');
+    r.render(LARGE);                                                                                    // the finish and one band hold both credits
+    assert.equal(fake.submits(), 3);
+    cap.arm();
+    await fake.completeOne();                                                                           // the finish completes; its pump throws
+    assert.equal(abort.aborted, true); assert.equal(abort.reason.kind, 'driver-error');
+    assert.match(abort.invalidation(), /^driver error: allocation cap exceeded: /);
+    assert.deepEqual(stopReasonsOf([abort.invalidation()]), ['allocation cap exceeded']);
+    assert.match(await waiter, /allocation cap exceeded/);
+    assert.ok(events.log.some(e => e.type === 'handler-failed' && e.kind === 'finish' && e.live === true));
+    assert.ok(r.ring.every(s => s.owner === null), 'the finish released its reservation');
+    await fake.completeOne(); await fake.mapAll();
+    assert.equal(r.ledger.outstanding(), 0); assert.equal(fake.submits(), 3, 'nothing is submitted after the failure');
+    assert.equal(releases.length, 3); assert.equal(new Set(releases).size, 3, 'every credit was released exactly once');
+    assert.deepEqual(settles.sort(), ['band:1', 'band:3', 'finish:1'], 'each watchdog registration settled exactly once (the finish took batch 2)');
+    clock = 1000; watchdog.check(); assert.equal(stalls.length, 0);
+    assert.equal(published, 0);
+  });
+});
+
+// The device epoch retires while the handler runs (the allocator throws as the device is lost): the old renderer only cleans up, and a
+// replacement renderer sharing the session's abort is not aborted and still publishes.
+function epochEndingAlloc(alloc, retire) {
+  let armed = false;
+  return { arm: () => { armed = true; }, alloc: { ...alloc, buffer: (device, d) => { if (armed) { armed = false; retire(); throw new Error('allocation cap exceeded: device lost mid-pump'); } return alloc.buffer(device, d); } } };
+}
+for (const kind of ['band', 'finish']) {
+  test(`r4/9c-${kind}: a ${kind} handler failure in a retired epoch cleans up without aborting the replacement session`, async () => {
+    await noUnhandled(async () => {
+      let epoch = 1; const abort = createAbort(), base = createAllocator({ capBytes: 2 ** 30 });
+      const ea = epochEndingAlloc(base, () => { epoch = 2; });
+      const fake = fakeDevice(), { r, events } = make(fake, { abort, alloc: ea.alloc, epoch: () => epoch });
+      if (kind === 'band') { r.render(LARGE); ea.arm(); await fake.completeOne(); }
+      else { r.render(SMALL); await fake.completeOne(); r.render(LARGE); ea.arm(); await fake.completeOne(); }
+      assert.equal(abort.aborted, false, 'a retired epoch never aborts the session');
+      assert.ok(events.log.some(e => e.type === 'handler-failed' && e.kind === kind && e.live === false));
+      assert.ok(r.ring.every(s => s.owner === null), 'no reservation is left held');
+      await fake.completeOne(); await fake.mapAll();
+      assert.equal(r.ledger.outstanding(), 0);
+      const fake2 = fakeDevice(), { r: r2 } = make(fake2, { abort, epoch: () => epoch }); const published = [];
+      r2.onPublish(p => published.push(p));
+      const id = r2.render(SMALL); await fake2.completeOne(); await fake2.completeOne(); await fake2.mapAll();
+      assert.deepEqual(published.map(p => p.requestId), [id], 'the replacement session publishes');
+    });
+  });
+}

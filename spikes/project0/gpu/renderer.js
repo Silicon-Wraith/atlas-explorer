@@ -48,10 +48,25 @@ export class Renderer {
 
   // Every submission's completion settles its own credit, watchdog registration and resources exactly once, whether the completion
   // promise fulfils or rejects (Codex T7 r1, finding 4); then exactly one of onDone or onFail runs.
-  settle(completion, ticket, done, cleanup, onDone, onFail) {
+  // The handlers' own promise ends in a terminal rejection handler (Codex T7 r4, finding 9): an exception they throw, or one from an
+  // asynchronous chain onDone returns (a finish's mapping), goes to handlerFailed() and then to `rescue`, which releases what the handler
+  // still owned (a finish's ring reservation). The credit, watchdog and resource settlement above has already run and is not repeated.
+  settle(completion, ticket, done, cleanup, onDone, onFail, { kind, job, rescue = () => {} } = {}) {
     let settled = false;
     const once = () => { if (settled) return false; settled = true; done(); cleanup(); this.ledger.release(ticket); return true; };
-    completion.then(() => { if (once()) onDone(); }, error => { if (once()) onFail(error); });
+    completion.then(() => { if (once()) return onDone(); }, error => { if (once()) return onFail(error); }).catch(error => {
+      this.handlerFailed(job, kind, error);
+      try { rescue(); } catch (again) { this.handlerFailed(job, kind, again); }   // terminal: nothing escapes as an unhandled rejection
+    });
+  }
+  // A completion handler threw (e.g. the pump's next band hit the allocation cap). In the live device epoch this latches the session abort
+  // {kind: 'driver-error', message} with the original message, so its invalidation keeps text such as `allocation cap exceeded` for the
+  // shared stop classifier; an abort already latched is kept. A destroyed renderer or a retired epoch only records the event, so a
+  // replacement session sharing the abort is never aborted by its predecessor. Recorded as the event `handler-failed`.
+  handlerFailed(job, kind, error) {
+    const live = this.epochLive(), message = error?.message ?? String(error);
+    this.events.mark('handler-failed', { requestId: job?.requestId, generation: job?.generation, epoch: this.deviceEpoch, kind, live, message });
+    if (live && this.abort.abort) this.abort.abort({ kind: 'driver-error', message });
   }
   // A rejected completion of the current generation ends the experiment (the waiting driver is woken); retired work is only recorded.
   failed(job, kind, error) {
@@ -138,7 +153,7 @@ export class Renderer {
           if (job.planner.done()) this.pendingFinish = job;
         }
         this.pump();
-      }, error => { this.failed(job, 'band', error); this.pump(); });
+      }, error => { this.failed(job, 'band', error); this.pump(); }, { kind: 'band', job });
     }
   }
 
@@ -161,12 +176,14 @@ export class Renderer {
     device.queue.submit([enc.finish()]); this.submits++;
     this.events.mark('submit', { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch: ++this.batchSeq, kind: 'finish' });
     const suppressed = () => { this.events.mark('suppressed-publication', { requestId: job.requestId }); };
+    // If a handler below throws, settle()'s terminal handler latches the abort first and only then calls release() (rescue), whose pump
+    // therefore submits nothing (Codex T7 r4, finding 9). The mapping chain is returned, so its handlers' exceptions are observed too.
     this.settle(device.queue.onSubmittedWorkDone(), ticket, done, () => { dstB.destroy(); this.drained(t); }, () => {
       this.events.mark('complete', { requestId: job.requestId });
       this.pump();                                                                        // the released credit may serve a newer request
       if (!this.current(job)) { release(); return suppressed(); }
       const abortRace = this.abort.race ? this.abort : { race: p => p };
-      mapWithin(slot.buf, abortRace, this.mapDeadlineMs ?? 5000).then(() => {
+      return mapWithin(slot.buf, abortRace, this.mapDeadlineMs ?? 5000).then(() => {
         const c = new Uint32Array(slot.buf.getMappedRange().slice(0)); slot.buf.unmap();
         release();
         if (!this.current(job)) return suppressed();
@@ -174,12 +191,14 @@ export class Renderer {
         const e = this.events.mark('publish', { requestId: job.requestId, generation: job.generation, label: job.label, W: job.W, H: job.H, counts });
         for (const h of [...this.handlers]) h({ requestId: job.requestId, generation: job.generation, epoch: job.epoch, label: job.label, view: job.view, W: job.W, H: job.H, counts, publishedMs: e.t });
       }, error => {
-        release();                                                                        // the reservation is released on every outcome
-        // A current generation's mapping failure ends the experiment and wakes the waiting driver; a retired one stays suppressed.
-        if (this.current(job) && this.abort.abort) this.abort.abort({ kind: 'harness', message: error.message });
-        else suppressed();
+        // A current generation's mapping failure ends the experiment and wakes the waiting driver; a retired one stays suppressed. The abort
+        // is latched before the reservation's release can pump; the reservation is released on every outcome.
+        const current = this.current(job);
+        if (current && this.abort.abort) this.abort.abort({ kind: 'harness', message: error.message });
+        release();
+        if (!current) suppressed();
       });
-    }, error => { release(); if (!this.failed(job, 'finish', error)) suppressed(); this.pump(); });
+    }, error => { const current = this.failed(job, 'finish', error); release(); if (!current) suppressed(); this.pump(); }, { kind: 'finish', job, rescue: release });
   }
 
   // Timestamp copies wait for ledger credit with priority over bands; once the renderer can no longer submit, they are refused.

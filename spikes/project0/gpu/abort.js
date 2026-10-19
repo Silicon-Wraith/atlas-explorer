@@ -1,8 +1,10 @@
 // spikes/project0/gpu/abort.js — one abort signal per experiment. Every wait on queue completion, mapping, publication or
 // driver progress races it, so a stall or an unexpected loss ends the experiment without waiting for GPU promises to settle.
-// The invalidation text T5's shared stop classifier recognises, for a structured abort reason.
+// The invalidation text T5's shared stop classifier recognises, for a structured abort reason. `driver-error` (T7 r4: a renderer completion
+// handler threw) keeps the original message, e.g. `driver error: allocation cap exceeded: ...`, which STOPS classifies by that text.
+// The first abort latched is kept: a later abort() call never replaces its reason.
 export function invalidationFor(reason) {
-  return reason.kind === 'stall' ? `no observable progress for 5 s: ${JSON.stringify(reason.outstanding ?? [])}` : reason.kind === 'device-lost' ? `device lost: ${reason.message ?? 'unknown'}` : reason.kind === 'harness' ? `harness readback timeout: ${reason.message ?? ''}` : reason.kind === 'harness-timeout' ? `harness timeout: ${reason.message ?? ''}` : `aborted: ${reason.kind}`;
+  return reason.kind === 'stall' ? `no observable progress for 5 s: ${JSON.stringify(reason.outstanding ?? [])}` : reason.kind === 'device-lost' ? `device lost: ${reason.message ?? 'unknown'}` : reason.kind === 'harness' ? `harness readback timeout: ${reason.message ?? ''}` : reason.kind === 'harness-timeout' ? `harness timeout: ${reason.message ?? ''}` : reason.kind === 'driver-error' ? `driver error: ${reason.message ?? 'unknown'}` : `aborted: ${reason.kind}`;
 }
 
 export function createAbort() {

@@ -29,3 +29,20 @@ test('a longer abort kind sharing the submission-failed prefix is not the submis
   assert.deepEqual(stopReasonsOf(['driver error: aborted: submission-failed']), ['submission completion rejected'], 'a wrapped invalidation still matches');
   assert.deepEqual(stopReasonsOf(['aborted: submission-failed (band completion rejected: x)']), ['submission completion rejected'], 'the abort error message form still matches');
 });
+
+// T7 fix round 4 (Codex T7 r4, finding 9): a completion handler's exception latches {kind: 'driver-error', message}. Its invalidation keeps the
+// original text, so the existing 'allocation cap exceeded' matcher recognises a cap failure; STOPS gains no entry for driver errors.
+test('a driver-error abort renders "driver error: <message>" and the cap text is classified as the allocation-cap stop', () => {
+  const abort = createAbort();
+  abort.abort({ kind: 'driver-error', message: 'allocation cap exceeded: 1073741824 + 48 > 1073741824' });
+  assert.equal(abort.invalidation(), 'driver error: allocation cap exceeded: 1073741824 + 48 > 1073741824');
+  assert.deepEqual(stopReasonsOf([abort.invalidation()]), ['allocation cap exceeded']);
+  assert.deepEqual(stopReasonsOf(['driver error: TypeError: x is undefined']), [], 'another driver error is not a stop');
+});
+
+test('an abort already latched is kept: a later driver-error does not replace it', () => {
+  const abort = createAbort();
+  abort.abort({ kind: 'stall', outstanding: [] });
+  abort.abort({ kind: 'driver-error', message: 'allocation cap exceeded: late' });
+  assert.equal(abort.reason.kind, 'stall'); assert.match(abort.invalidation(), /no observable progress for 5 s/);
+});
