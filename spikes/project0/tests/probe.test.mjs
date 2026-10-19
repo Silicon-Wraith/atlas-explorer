@@ -137,3 +137,11 @@ test('a capture never starts with less than its allowance left in the mode windo
   assert.ok(record.invalidations.some(x => /harness timeout: chrome:\/\/gpu capture skipped/.test(x)), record.invalidations.join('; '));
   assert.equal(record.slot, 'incomplete'); assert.match(out.stopped, /harness timeout/); assert.equal(h.launches, 1);
 });
+
+test('every probe record carries an explicit timing method: correctness-only when complete, not-measured with a reason when incomplete', async () => {
+  const ok = harness(); await runProbeInvocation(ok.d);
+  assert.deepEqual(ok.h.written.map(w => w.record.timingMethod), [{ kind: 'correctness-only' }, { kind: 'correctness-only' }]);
+  const hung = harness({ gpuHang: true, deps: { stepMs: 40, modeMs: 400 } }); await runProbeInvocation(hung.d);
+  const tm = hung.h.written[0].record.timingMethod;
+  assert.equal(hung.h.written[0].record.slot, 'incomplete'); assert.equal(tm.kind, 'not-measured'); assert.match(tm.reason, /incomplete/);
+});

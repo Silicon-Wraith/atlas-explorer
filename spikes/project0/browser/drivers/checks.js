@@ -1,6 +1,7 @@
 // spikes/project0/browser/drivers/checks.js — G3/G4/G5 and policy drivers: raw readbacks only, never a verdict.
 import { acquire, destroy, onLoss } from '../../gpu/device.js';
-import { prepare, upload, readBack, traceList, dispatchOnce } from '../../gpu/webgpu.js';
+import { prepare, upload, readBack, traceList, dispatchOnce, TRACE_LIST_TIMING } from '../../gpu/webgpu.js';
+const CORRECTNESS_ONLY = { kind: 'correctness-only' };   // the evidence timing-method contract (evidence.mjs): no timing measured
 import { createAllocator } from '../../gpu/alloc.js';
 import { createWatchdog } from '../../gpu/watchdog.js';
 import { experiment } from '../../gpu/abort.js';
@@ -34,20 +35,20 @@ export async function run(gate, fx, params, status) {
         const field = slot.startsWith('menger') ? 'menger' : slot;
         const boxes = fixture.boxes.length ? packBoxes(fixture.boxes) : new Float32Array(4);
         const { words, workMs } = await traceList({ device, alloc, watchdog, abort, pipelines, field, profile: fx.profiles.g3, origins: Float32Array.from(fixture.effectiveOrigins), directions: Float32Array.from(fixture.effectiveDirections), boxes, label: `G3/${slot}` });
-        slots.push({ slot, raw: { words: Array.from(words.subarray(0, 4 * fixture.rays.length)), workMs } });
+        slots.push({ slot, raw: { words: Array.from(words.subarray(0, 4 * fixture.rays.length)), workMs }, timingMethod: TRACE_LIST_TIMING });
       }
     } else if (gate === 'G4') {
       const words = await arith(device, alloc, watchdog, abort, pipelines, 'bulb_samples', packRows(fx.arithmetic.bulb, s => [...s.input, 0]), fx.arithmeticProtocol.bulb.iterations, fx.arithmetic.bulb.length);
-      slots.push({ slot: 'bulb-samples', raw: { words: Array.from(words) } });
+      slots.push({ slot: 'bulb-samples', raw: { words: Array.from(words) }, timingMethod: CORRECTNESS_ONLY });
     } else if (gate === 'G5') {
       const plane = await arith(device, alloc, watchdog, abort, pipelines, 'qjulia_plane', packRows(fx.arithmetic.plane, s => s.input), fx.arithmeticProtocol.plane.iterations, fx.arithmetic.plane.length);
-      slots.push({ slot: 'qjulia-plane', raw: { words: Array.from(plane) } });
+      slots.push({ slot: 'qjulia-plane', raw: { words: Array.from(plane) }, timingMethod: CORRECTNESS_ONLY });
       const { q, C } = fx.arithmetic.offplane;
       const orbit = new Float32Array((await arith(device, alloc, watchdog, abort, pipelines, 'qjulia_offplane', Float32Array.from([...q, ...C]), 0, 8)).buffer);
-      slots.push({ slot: 'qjulia-offplane', raw: { orbit: Array.from(orbit) } });
+      slots.push({ slot: 'qjulia-offplane', raw: { orbit: Array.from(orbit) }, timingMethod: CORRECTNESS_ONLY });
     } else if (gate === 'derivative-policy') {
       const words = await arith(device, alloc, watchdog, abort, pipelines, 'derivative_policy', packRows(fx.derivativePolicy, v => [v.grow, v.dr, 0, 0]), 0, fx.derivativePolicy.length);
-      slots.push({ slot: 'vectors', raw: { fits: fx.derivativePolicy.map((_, i) => words[4 * i]) } });
+      slots.push({ slot: 'vectors', raw: { fits: fx.derivativePolicy.map((_, i) => words[4 * i]) }, timingMethod: CORRECTNESS_ONLY });
     } else throw new Error(`checks.js has no driver for ${gate}`);
     return { slots, invalidations: [] };
   } catch (error) {

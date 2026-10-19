@@ -4,7 +4,7 @@
 import { chromium } from 'playwright';
 import { resolve } from 'node:path';
 import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText } from './launch.mjs';
-import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord } from './evidence.mjs';
+import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord, CORRECTNESS_ONLY, notMeasured } from './evidence.mjs';
 import { bounded, boundedStart, waitResult, stopReasons } from './session-utils.mjs';
 
 export async function runProbeInvocation(deps = {}) {
@@ -50,7 +50,8 @@ export async function runProbeInvocation(deps = {}) {
       state.final = true;   // finalisation: no snapshot arriving from here on can change the record
       identity ??= { launchHash: '0'.repeat(64), mode, browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' };
       const incomplete = state.expired || cleanupFailed || stopReasons({ invalidations, metrics: { software: resultMetrics.software ? 1 : 0 } }).length > 0 || (!probe.info && !probe.readback) || !chromeGpuText;   // expiry or an unfinished required step is never a completed slot
-      const record = { schema: 1, id: `probe-${mode}`, gate: 'probe', slot: incomplete ? 'incomplete' : mode, campaign: 'probe', mode, experiment: true, identity: { backend: 'webgpu', ...fixture, ...implementation, ...identity }, invalidations, metrics: { probeOk: probe.ok === true && !incomplete ? 1 : 0, ...(resultMetrics.software ? { software: 1 } : {}) } };
+      const record = { schema: 1, id: `probe-${mode}`, gate: 'probe', slot: incomplete ? 'incomplete' : mode, campaign: 'probe', mode, experiment: true, identity: { backend: 'webgpu', ...fixture, ...implementation, ...identity }, invalidations, metrics: { probeOk: probe.ok === true && !incomplete ? 1 : 0, ...(resultMetrics.software ? { software: 1 } : {}) },
+        timingMethod: incomplete ? notMeasured('incomplete: the probe mode did not complete') : CORRECTNESS_ONLY };   // the probe measures no time
       records.push(await d.writeRecord(runDir, record, [
         { name: `probe-${mode}.raw.json`, data: JSON.stringify(probe) },
         { name: `probe-${mode}.launch.json`, data: JSON.stringify(launchInfo) },

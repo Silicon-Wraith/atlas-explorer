@@ -1,10 +1,10 @@
 // spikes/project0/tests/evidence.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, mkdir, readdir } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, readdir, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { ROOT } from '../launch.mjs';
-import { sha256, fixtureIdentity, launchIdentity, environmentIdentity, writeRecord } from '../evidence.mjs';
+import { sha256, fixtureIdentity, launchIdentity, environmentIdentity, writeRecord, validateTimingMethod, CORRECTNESS_ONLY, notMeasured } from '../evidence.mjs';
 
 test('sha256 is the lowercase hex digest', () => {
   assert.equal(sha256('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
@@ -49,7 +49,7 @@ test('writeRecord refuses artefact names that collide with each other or with th
     const record = { id: 'probe-headed' };
     await assert.rejects(writeRecord(dir, record, [{ name: 'probe-headed.json', data: '{}' }]), /collides with the record/);
     await assert.rejects(writeRecord(dir, record, [{ name: 'a.raw.json', data: '1' }, { name: 'a.raw.json', data: '2' }]), /duplicate artefact/);
-    await writeRecord(dir, { id: 'ok' }, [{ name: 'ok.raw.json', data: '{"x":1}' }]);
+    await writeRecord(dir, { id: 'ok', slot: 'vectors', timingMethod: CORRECTNESS_ONLY }, [{ name: 'ok.raw.json', data: '{"x":1}' }]);
     assert.deepEqual((await readdir(dir)).sort(), ['ok.json', 'ok.raw.json']);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
@@ -123,4 +123,34 @@ test('a GPU record followed by an unrelated label has a missing value', () => {
 });
 test('a driver field value never swallows the next field', () => {
   assert.throws(() => driverOf(rec(0, 'VENDOR= 0x10de, DRIVER_VENDOR= DRIVER_VERSION=580.173.2.0 *ACTIVE*')), /driver vendor/);
+});
+
+// T6 fix round 3: every record carries a producer-supplied timing method; the shared writer validates it and never guesses.
+const QUEUE = { kind: 'queue-completion', clock: 'page.performance.now', unit: 'ms', field: 'workMs', start: 'before the first batch is prepared', end: 'after the final onSubmittedWorkDone promise resolves', readbackIncluded: false, timestampQueriesUsed: false };
+test('the timing-method contract: measured, correctness-only and not-measured descriptors', () => {
+  validateTimingMethod(QUEUE, { slot: 'sphere' });
+  validateTimingMethod({ ...QUEUE, kind: 'timestamp-query', clock: 'gpu.timestamp-query', unit: 'ns', field: 'gpuNs', timestampQueriesUsed: true }, { slot: 'x' });
+  validateTimingMethod(CORRECTNESS_ONLY, { slot: 'bulb-samples' });
+  validateTimingMethod(notMeasured('incomplete: the session produced no result'), { slot: 'incomplete' });
+  const bad = [
+    [undefined, 'sphere', /missing/], [null, 'sphere', /missing/], ['queue-completion', 'sphere', /missing/], [{}, 'sphere', /kind/],
+    [{ ...QUEUE, timestampQueriesUsed: true }, 'sphere', /inconsistent/], [{ ...QUEUE, kind: 'timestamp-query' }, 'sphere', /inconsistent/],
+    [(({ end, ...r }) => r)(QUEUE), 'sphere', /end/], [{ ...QUEUE, unit: '' }, 'sphere', /unit/], [{ ...QUEUE, readbackIncluded: 'no' }, 'sphere', /readbackIncluded/],
+    [{ ...QUEUE, extra: 1 }, 'sphere', /unexpected field extra/], [{ kind: 'correctness-only', field: 'workMs' }, 'vectors', /unexpected field field/],
+    [{ kind: 'not-measured' }, 'incomplete', /reason/], [{ kind: 'not-measured', reason: '' }, 'incomplete', /reason/],
+    [CORRECTNESS_ONLY, 'incomplete', /incomplete record/], [QUEUE, 'incomplete', /incomplete record/],
+  ];
+  for (const [tm, slot, why] of bad) assert.throws(() => validateTimingMethod(tm, { slot }), e => /^timing method: /.test(e.message) && why.test(e.message), `${JSON.stringify(tm)} on ${slot}`);
+});
+
+test('writeRecord rejects a missing or inconsistent timing method before writing anything', async () => {
+  const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
+  const dir = await mkdtemp(join(base, 'p0-evidence-test-'));
+  try {
+    await assert.rejects(writeRecord(dir, { id: 'a', slot: 'sphere' }, [{ name: 'a.raw.json', data: '{}' }]), /^Error: timing method: missing/);
+    await assert.rejects(writeRecord(dir, { id: 'b', slot: 'incomplete', timingMethod: CORRECTNESS_ONLY }, [{ name: 'b.raw.json', data: '{}' }]), /^Error: timing method: .*incomplete record/);
+    assert.deepEqual(await readdir(dir), [], 'nothing is written for a rejected record');
+    await writeRecord(dir, { id: 'c', slot: 'sphere', timingMethod: QUEUE }, [{ name: 'c.raw.json', data: '{}' }]);
+    assert.deepEqual(JSON.parse(await readFile(join(dir, 'c.json'), 'utf8')).timingMethod, QUEUE);
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });

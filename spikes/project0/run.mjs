@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText as captureChromeGpuText } from './launch.mjs';
-import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord } from './evidence.mjs';
+import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord, validateTimingMethod, notMeasured } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
 import { bounded, boundedStart, waitResult, stopReasons } from './session-utils.mjs';
 
@@ -47,8 +47,11 @@ export async function finalise({ gate, mode, campaign, runDir, identity, launchI
     }
     let metrics = {};
     if (!experiment && s.slot !== 'incomplete') { try { metrics = await metricsFor(slotGate, s.slot, raw, fixtures); } catch (e) { recordInvalidations.push(`metrics: ${e.message}`); } }
+    // The producer (the page driver) supplies each slot's timing method; a missing or invalid one invalidates the record and is never guessed.
+    let timingMethod = s.slot === 'incomplete' ? notMeasured('incomplete: the session produced no result') : s.timingMethod;
+    try { validateTimingMethod(timingMethod, s); } catch (e) { recordInvalidations.push(e.message); timingMethod = notMeasured(e.message); }
     const id = `${slotGate}-${s.slot.replace(/[^A-Za-z0-9.-]/g, '_')}-${stamp}`;
-    const record = { schema: 1, id, gate: slotGate, slot: s.slot, campaign, mode, experiment: Boolean(experiment), identity, invalidations: recordInvalidations, metrics };
+    const record = { schema: 1, id, gate: slotGate, slot: s.slot, campaign, mode, experiment: Boolean(experiment), identity, invalidations: recordInvalidations, metrics, timingMethod };
     records.push(await write(runDir, record, [
       { name: `${id}.raw.json`, data: JSON.stringify(raw) },
       { name: `${id}.launch.json`, data: JSON.stringify(launchInfo) },
@@ -73,6 +76,14 @@ async function stopServer(server, invalidations) {
 async function arrived(resource, state, dispose, live) {
   if (state.expired) { await Promise.resolve().then(() => dispose(resource)).catch(() => {}); live(); }
   return resource;
+}
+
+// Page diagnostics: a console error keeps its original text and gains its source location; an HTTP error response (which `requestfailed`
+// never reports) is recorded with its status and URL. Nothing is filtered.
+function watchPage(page, note) {
+  page.on('pageerror', e => note(`page error: ${e.message}`));
+  page.on('console', m => { if (m.type() === 'error') { const l = m.location?.() ?? {}; note(`console error: ${m.text()}${l.url ? ` (at ${l.url}:${l.lineNumber}:${l.columnNumber})` : ''}`); } });
+  page.on('response', r => { if (r.status() >= 400) note(`http error: ${r.status()} ${r.url()}`); });
 }
 
 const fallbackIdentity = (fixture, implementation, mode) => ({ backend: 'webgpu', ...fixture, ...implementation, launchHash: '0'.repeat(64), mode, browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' });
@@ -104,8 +115,7 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
       const page = await launched.context.newPage();
       if (state.expired) page.close().catch(() => {});                                          // a late page is closed, never navigated
       live();
-      page.on('pageerror', e => note(`page error: ${e.message}`));
-      page.on('console', m => { if (m.type() === 'error') note(`console error: ${m.text()}`); });
+      watchPage(page, note);
       await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}&runMode=${mode}${extra}`); live();
       const result = await d.waitResult(page, { gate, runDir, deadlineMs }); live();
       outcome = result;
@@ -144,17 +154,16 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
         const page = await launched.context.newPage();
         if (state.expired) page.close().catch(() => {});                                        // a late page is closed, never navigated
         live();
-        page.on('pageerror', e => note(`page error: ${e.message}`));
-        page.on('console', m => { if (m.type() === 'error') note(`console error: ${m.text()}`); });
+        watchPage(page, note);
         await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=G2&runMode=headed`); live();
         const first = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result; live();
         const firstInvalidations = [...(first.invalidations ?? []), ...(first.error ? [`page: ${first.error}`] : [])];
-        slots.push({ slot: `fresh-${i}`, raw: { ...(first.slots?.[0]?.raw ?? { error: first.error }), emptyProfile: 1, freshProcess: 1 }, invalidations: firstInvalidations });
+        slots.push({ slot: `fresh-${i}`, raw: { ...(first.slots?.[0]?.raw ?? { error: first.error }), emptyProfile: 1, freshProcess: 1 }, invalidations: firstInvalidations, timingMethod: first.slots?.[0]?.timingMethod });
         const stopNow = stopReasons({ invalidations: [...invalidations, ...firstInvalidations] }).length > 0;
         if (i === 2 && !stopNow) {                                                            // never reload after a stop
           live(); await page.reload(); live();
           const warm = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result; live();
-          slots.push({ slot: 'warm', raw: warm.slots?.[0]?.raw ?? { error: warm.error }, invalidations: [...(warm.invalidations ?? []), ...(warm.error ? [`page: ${warm.error}`] : [])] });
+          slots.push({ slot: 'warm', raw: warm.slots?.[0]?.raw ?? { error: warm.error }, invalidations: [...(warm.invalidations ?? []), ...(warm.error ? [`page: ${warm.error}`] : [])], timingMethod: warm.slots?.[0]?.timingMethod });
         }
         const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
         launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode: 'headed' };

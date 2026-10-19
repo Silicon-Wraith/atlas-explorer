@@ -243,3 +243,53 @@ for (const runner of ['runSession', 'runG2']) {
     } finally { await rm(dir, { recursive: true, force: true }); }
   });
 }
+
+// Fix round 3 (Codex T6 r4): console errors keep their location, HTTP error responses are recorded, the harness declares an empty icon,
+// and every runner record carries the producer's timing method.
+test('the harness page declares an empty icon, so Chrome makes no favicon request', async () => {
+  assert.match(await readFile(resolve(ROOT, 'spikes/project0/index.html'), 'utf8'), /<link rel="icon" href="data:,">/);
+});
+
+test('runSession records console errors with their location and HTTP error responses with status and URL', async () => {
+  const dir = await scratch(), c = { gotos: 0 }, handlers = {};
+  const page = { on: (event, fn) => { handlers[event] = fn; }, close: async () => {},
+    goto: async () => {
+      c.gotos++;
+      handlers.response?.({ status: () => 200, url: () => 'http://x/spikes/project0/index.html' });
+      handlers.response?.({ status: () => 404, url: () => 'http://x/missing.js' });
+      handlers.console?.({ type: () => 'error', text: () => 'Failed to load resource: the server responded with a status of 404 (Not Found)', location: () => ({ url: 'http://x/missing.js', lineNumber: 0, columnNumber: 0 }) });
+      handlers.console?.({ type: () => 'log', text: () => 'fine', location: () => ({ url: 'http://x/a.js', lineNumber: 1, columnNumber: 2 }) });
+    } };
+  const launchChrome = async () => ({ context: { newPage: async () => page, close: async () => {} }, requestedArgs: ['--enable-gpu'], profile: '/p' });
+  try {
+    const { records } = await runSession({ gate: 'derivative-policy' }, { ...baseDeps(dir, launchChrome, c),
+      waitResult: async () => ({ result: { slots: [{ slot: 'vectors', raw: { fits: [] }, timingMethod: { kind: 'correctness-only' } }], invalidations: [] } }) });
+    assert.equal(c.gotos, 1);
+    assert.deepEqual(records[0].invalidations, [
+      'http error: 404 http://x/missing.js',
+      'console error: Failed to load resource: the server responded with a status of 404 (Not Found) (at http://x/missing.js:0:0)']);
+    assert.deepEqual(records[0].timingMethod, { kind: 'correctness-only' });
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('finalise passes each slot\'s timing method through; a missing one is an invalidation, never a guess; an incomplete record is not-measured', async () => {
+  const dir = await scratch();
+  try {
+    const identity = { backend: 'webgpu', ...fixture, ...implementation, launchHash: 'f'.repeat(64), mode: 'headed', browserVersion: 'v', browserExecutable: 'x', driver: 'd', session: 's' };
+    const { TRACE_LIST_TIMING } = await import('../gpu/webgpu.js');
+    const common = { gate: 'G3', mode: 'headed', campaign: 'dev', runDir: dir, identity, launchInfo: {}, chromeGpuText: '', invalidations: [], fixtures: {}, experiment: true };
+    const [measured, missing] = await finalise({ ...common, outcome: { result: { slots: [{ slot: 'sphere', raw: { workMs: 1 }, timingMethod: TRACE_LIST_TIMING }, { slot: 'box', raw: { workMs: 2 } }], invalidations: [] } } });
+    assert.deepEqual(measured.timingMethod, TRACE_LIST_TIMING); assert.deepEqual(measured.invalidations, []);
+    assert.equal(missing.timingMethod.kind, 'not-measured'); assert.match(missing.timingMethod.reason, /timing method: missing/);
+    assert.ok(missing.invalidations.some(x => /^timing method: missing/.test(x)), JSON.stringify(missing.invalidations));
+    const [inconsistent] = await finalise({ ...common, outcome: { result: { slots: [{ slot: 'menger-1', raw: {}, timingMethod: { ...TRACE_LIST_TIMING, timestampQueriesUsed: true } }], invalidations: [] } } });
+    assert.ok(inconsistent.invalidations.some(x => /^timing method: .*inconsistent/.test(x)));
+    const [incomplete] = await finalise({ ...common, outcome: null });
+    assert.equal(incomplete.slot, 'incomplete'); assert.equal(incomplete.timingMethod.kind, 'not-measured'); assert.match(incomplete.timingMethod.reason, /incomplete/);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('the ray-list timing descriptor states what workMs measures: queue completion on the page clock, from before batch preparation', async () => {
+  const { TRACE_LIST_TIMING } = await import('../gpu/webgpu.js');
+  assert.deepEqual(TRACE_LIST_TIMING, { kind: 'queue-completion', clock: 'page.performance.now', unit: 'ms', field: 'workMs', start: 'before the first batch is prepared', end: 'after the final onSubmittedWorkDone promise resolves', readbackIncluded: false, timestampQueriesUsed: false });
+});
