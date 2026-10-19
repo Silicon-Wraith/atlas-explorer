@@ -58,3 +58,25 @@ The runs left two records, `artifacts/project0/20261019T2103*-dev-integrity-pref
 **Disposition:** these were accidental RED-test browser runs, and the records are failed
 development diagnostics. They are excluded from the passing-preflight evidence and from T10's
 qualification inputs, and are kept unchanged. No fixture reset or remediation follows from them.
+
+## E4 — T9 development campaign dispositions (joint: Claude + Codex, Codex run 20261019T220140Z-2319)
+
+1. **Timing invocation `20261019T214231975Z`.** G7/0 request 141 was issued 7.90 ms late, against
+   the 4 ms limit. Earlier callbacks ran a steady ~3.3–3.5 ms late, so timer scheduling (the
+   early-callback rearm path) is the diagnostic target. The cause is recorded as **unknown**.
+   - The run is accepted as incomplete development evidence. There is no ad hoc rerun: any rerun
+     goes through T10's remediation rules.
+   - The limit is not relaxed, and the late request is not reclassified as external interference.
+   - G7/1, G7/2 and G9 remain outstanding.
+2. **G6 records.** The nine G6 records keep the invocation-level invalidation, as `finalise`
+   propagates it by design. They are described as "completed observations carrying a later
+   invocation failure", and they are not qualifying evidence in any case.
+3. **G12 `bindGroups`.** The count is cumulative bind-group creations (alloc.js increments it on
+   creation and never decrements it), so its growth is not a leak. The only claim made is that the
+   tracked bytes, textures and buffers returned to baseline.
+4. **G1.** Headed remains inconclusive (E-T9 ruling). The headless run is a `requestDevice` failure
+   ("A valid external Instance reference no longer exists"), recorded as "no usable device/probe"
+   with the exact error. Both limitations carry into T10.
+5. **G2 `preparationVisible`.** The sensor is defective: it uses `offsetParent` on the
+   fixed-position `#status` element. It must be repaired and reviewed before the qualifying GPU
+   campaign. The existing G2 development evidence is kept unchanged.
