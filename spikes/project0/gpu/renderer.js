@@ -25,7 +25,11 @@ const noAbort = { aborted: false };
 export class Renderer {
   constructor({ device, viewport, canvas, fixtures, events, alloc, watchdog, abort = noAbort, epoch = currentEpoch, timestamps = device.features.has('timestamp-query') }) {
     Object.assign(this, { device, viewport, canvas, fixtures, events, alloc, watchdog, abort, epoch, alive: true, seq: 0, generation: 0, batchSeq: 0, job: null, carry: null, pendingFinish: null, handlers: new Set() });
+    // A renderer belongs to the device epoch it was constructed in (Codex T7 r1, finding 3): after that epoch retires it refuses new
+    // requests, and a replacement device needs a replacement renderer.
+    this.deviceEpoch = epoch();
     this.ledger = new Ledger({ max: 2 });
+    this.waiters = [];                                                                    // timestamp copies waiting for ledger credit
     this.bands = []; this.submits = 0;
     this.context = canvas.getContext('webgpu');
     this.context.configure({ device, format: navigator.gpu.getPreferredCanvasFormat(), alphaMode: 'opaque' });
@@ -37,7 +41,24 @@ export class Renderer {
 
   onPublish(handler) { this.handlers.add(handler); return () => this.handlers.delete(handler); }
   stats() { return { outstandingMax: this.ledger.maxObserved(), submits: this.submits, bands: this.bands.slice(), planner: this.job?.planner.stats() ?? null }; }
-  live(job) { return this.alive && !this.abort.aborted && job.epoch === this.epoch(); }
+  epochLive() { return this.alive && !this.abort.aborted && this.epoch() === this.deviceEpoch; }
+  live(job) { return this.epochLive() && job.epoch === this.deviceEpoch; }
+  current(job) { return this.job === job && this.live(job); }
+
+  // Every submission's completion settles its own credit, watchdog registration and resources exactly once, whether the completion
+  // promise fulfils or rejects (Codex T7 r1, finding 4); then exactly one of onDone or onFail runs.
+  settle(completion, ticket, done, cleanup, onDone, onFail) {
+    let settled = false;
+    const once = () => { if (settled) return false; settled = true; done(); cleanup(); this.ledger.release(ticket); return true; };
+    completion.then(() => { if (once()) onDone(); }, error => { if (once()) onFail(error); });
+  }
+  // A rejected completion of the current generation ends the experiment (the waiting driver is woken); retired work is only recorded.
+  failed(job, kind, error) {
+    const current = this.current(job), message = error?.message ?? String(error);
+    this.events.mark('submission-failed', { requestId: job.requestId, generation: job.generation, epoch: job.epoch, kind, current, message });
+    if (current && this.abort.abort) this.abort.abort({ kind: 'submission-failed', message: `${kind} completion rejected: ${message}` });
+    return current;
+  }
 
   targetsFor(W, H) {
     if (this.targets?.W === W && this.targets?.H === H) return this.targets;
@@ -55,13 +76,14 @@ export class Renderer {
     const requestId = ++this.seq;
     this.events.mark('request', { requestId, view, profile, label });                 // at function entry: G7 measures from here
     if (!this.alive) throw new Error('renderer destroyed');
+    if (this.epoch() !== this.deviceEpoch) throw new Error(`renderer device epoch ${this.deviceEpoch} has retired (current epoch ${this.epoch()}): a replacement device needs a replacement renderer`);
     if (Object.keys(override).some(k => !['W', 'H'].includes(k))) throw new Error('render override may only set W and H');
     const fx = this.fixtures, v = fx.views[view], p = { ...fx.profiles[profile], ...(v.traceOverrides || {}), ...override };
     const cam = camera || v.camera;
     const f = norm(cam.target.map((x, i) => x - cam.origin[i])), r = norm(cross(f, [0, 0, 1])), u = cross(r, f);
     const camWords = new Float32Array(24), camU = new Uint32Array(camWords.buffer);
     [cam.origin, f, r, u].forEach((vec, i) => camWords.set(vec, 4 * i)); camU.set([p.W, p.H, 0, 0], 16);
-    this.job = { requestId, generation: ++this.generation, epoch: this.epoch(), label, view, W: p.W, H: p.H, profile: p,
+    this.job = { requestId, generation: ++this.generation, epoch: this.deviceEpoch, label, view, W: p.W, H: p.H, profile: p,
       pipeline: view === 'sphere' ? this.viewport.sphere : this.viewport.bulb, camWords, targets: this.targetsFor(p.W, p.H),
       planner: new Planner({ rows: p.H, cols: p.W, carry: this.carry }), counted: false };
     this.pendingFinish = null;
@@ -69,11 +91,18 @@ export class Renderer {
     return requestId;
   }
 
-  // Called on every credit release and every new request: a waiting finish goes first, then the current generation's bands.
+  // Called on every credit or reservation release and every new request: waiting timestamp copies first, then a waiting finish, then the
+  // current generation's bands.
   pump() {
+    this.serveWaiters();
     const job = this.job;
     if (!job || !this.live(job) || this.watchdog.stopped) return;
-    if (this.pendingFinish === job) { if (this.ledger.available()) { this.pendingFinish = null; this.finish(job); } return; }
+    if (this.pendingFinish === job) {
+      // A finish is admitted only with both a credit and a readback reservation (Codex T7 r1, finding 1), so it never publishes without counts.
+      const slot = this.ledger.available() ? this.ring.find(s => s.owner === null) : null;
+      if (slot) { this.pendingFinish = null; this.finish(job, slot); }
+      return;
+    }
     while (this.ledger.available()) {
       const band = job.planner.next(); if (!band) return;
       if (!job.counted) { job.counted = true; this.device.queue.writeBuffer(this.counts, 0, new Uint32Array(8)); }
@@ -96,88 +125,108 @@ export class Renderer {
       this.device.queue.submit([enc.finish()]); this.submits++;
       row.submitMs = performance.now(); this.bands.push(row);
       this.events.mark('submit', { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch, kind: 'band' });
-      this.device.queue.onSubmittedWorkDone().then(() => {
-        done(); prof.destroy(); camB.destroy(); dummy.destroy(); this.drained(t);
-        row.doneMs = performance.now();
-        this.ledger.release(ticket);                                                      // releases its own credit even if obsolete
-        const current = this.job === job && this.live(job);
+      this.settle(this.device.queue.onSubmittedWorkDone(), ticket, done, () => { prof.destroy(); camB.destroy(); dummy.destroy(); this.drained(t); }, () => {
+        row.doneMs = performance.now();                                                   // its own credit is released even if obsolete
+        const current = this.current(job);
         this.events.mark(current ? 'band-done' : 'stale-band', { requestId: job.requestId, generation: job.generation, batch });
         if (current) {
           job.planner.completed(band, row.doneMs - row.submitMs); this.carry = job.planner.carry();
           if (job.planner.done()) this.pendingFinish = job;
         }
         this.pump();
-      });
+      }, error => { this.failed(job, 'band', error); this.pump(); });
     }
   }
 
-  finish(job) {
-    if (this.job !== job || !this.live(job)) return;
+  finish(job, slot) {
+    if (!this.current(job)) return;
     const { device } = this, t = job.targets; t.users++;
     const ticket = this.ledger.take({ epoch: job.epoch, generation: job.generation, requestId: job.requestId, kind: 'finish' });
-    const slot = this.ring.find(s => s.owner === null);
-    if (slot) slot.owner = job;                                                           // reserved before the copy is encoded
+    slot.owner = job;                                                                     // reserved before the copy is encoded
+    // Only the reservation's owner releases it, on every outcome; a freed slot wakes a waiting finish, or is destroyed after destroy().
+    const release = () => { if (slot.owner !== job) return; slot.owner = null; if (this.alive) this.pump(); else slot.buf.destroy(); };
     const dstB = upload(device, this.alloc, new Float32Array([this.canvas.width, this.canvas.height, 0, 0]), GPUBufferUsage.UNIFORM);
     const g = this.alloc.bindGroup(device.createBindGroup({ layout: this.viewport.shade.getBindGroupLayout(0), entries: [{ binding: 0, resource: t.status.createView() }, { binding: 1, resource: t.normal.createView() }, { binding: 2, resource: t.display.createView() }, { binding: 3, resource: { buffer: this.counts } }] }));
     const blitGroup = this.alloc.bindGroup(device.createBindGroup({ layout: this.viewport.blit.getBindGroupLayout(0), entries: [{ binding: 0, resource: t.display.createView() }, { binding: 1, resource: { buffer: dstB } }] }));
     const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
     pass.setPipeline(this.viewport.shade); pass.setBindGroup(0, g); pass.dispatchWorkgroups(Math.ceil(t.W / 8), Math.ceil(t.H / 8)); pass.end();
-    if (slot) enc.copyBufferToBuffer(this.counts, 0, slot.buf, 0, 32);
+    enc.copyBufferToBuffer(this.counts, 0, slot.buf, 0, 32);
     const rp = enc.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 1 }, storeOp: 'store' }] });
     rp.setPipeline(this.viewport.blit); rp.setBindGroup(0, blitGroup); rp.draw(3); rp.end();
     const done = this.watchdog.submitted(`finish:${job.requestId}`, { requestId: job.requestId, generation: job.generation, epoch: job.epoch });
     device.queue.submit([enc.finish()]); this.submits++;
     this.events.mark('submit', { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch: ++this.batchSeq, kind: 'finish' });
-    device.queue.onSubmittedWorkDone().then(() => {
-      done(); dstB.destroy(); this.drained(t);
-      this.ledger.release(ticket);
+    const suppressed = () => { this.events.mark('suppressed-publication', { requestId: job.requestId }); };
+    this.settle(device.queue.onSubmittedWorkDone(), ticket, done, () => { dstB.destroy(); this.drained(t); }, () => {
       this.events.mark('complete', { requestId: job.requestId });
-      const publish = counts => {
-        if (slot && slot.owner === job) slot.owner = null;                                 // only the reservation's owner releases
-        if (this.job !== job || !this.live(job)) { this.events.mark('suppressed-publication', { requestId: job.requestId }); return; }
-        const e = this.events.mark('publish', { requestId: job.requestId, generation: job.generation, label: job.label, W: job.W, H: job.H, counts });
-        for (const h of [...this.handlers]) h({ requestId: job.requestId, generation: job.generation, epoch: job.epoch, label: job.label, view: job.view, W: job.W, H: job.H, counts, publishedMs: e.t });
-      };
       this.pump();                                                                        // the released credit may serve a newer request
-      if (!slot || !this.live(job)) return publish(null);
+      if (!this.current(job)) { release(); return suppressed(); }
       const abortRace = this.abort.race ? this.abort : { race: p => p };
       mapWithin(slot.buf, abortRace, this.mapDeadlineMs ?? 5000).then(() => {
         const c = new Uint32Array(slot.buf.getMappedRange().slice(0)); slot.buf.unmap();
-        publish({ total: c[0], hit: c[1], miss: c[2], point: c[3], steps: c[4], failure: c[5], normalUnavailable: c[6] });
+        release();
+        if (!this.current(job)) return suppressed();
+        const counts = { total: c[0], hit: c[1], miss: c[2], point: c[3], steps: c[4], failure: c[5], normalUnavailable: c[6] };
+        const e = this.events.mark('publish', { requestId: job.requestId, generation: job.generation, label: job.label, W: job.W, H: job.H, counts });
+        for (const h of [...this.handlers]) h({ requestId: job.requestId, generation: job.generation, epoch: job.epoch, label: job.label, view: job.view, W: job.W, H: job.H, counts, publishedMs: e.t });
       }, error => {
-        if (slot.owner === job) slot.owner = null;                                        // the reservation is released on every outcome
+        release();                                                                        // the reservation is released on every outcome
         // A current generation's mapping failure ends the experiment and wakes the waiting driver; a retired one stays suppressed.
-        if (this.job === job && this.live(job) && this.abort.abort) this.abort.abort({ kind: 'harness', message: error.message });
-        else this.events.mark('suppressed-publication', { requestId: job.requestId });
+        if (this.current(job) && this.abort.abort) this.abort.abort({ kind: 'harness', message: error.message });
+        else suppressed();
       });
-    });
+    }, error => { release(); if (!this.failed(job, 'finish', error)) suppressed(); this.pump(); });
   }
 
-  // Outside measured windows: read the resolved timestamp pairs, attaching gpuMs to the most recent band in each slot.
+  // Timestamp copies wait for ledger credit with priority over bands; once the renderer can no longer submit, they are refused.
+  serveWaiters() {
+    if (!this.waiters.length) return;
+    if (!this.epochLive()) { for (const w of this.waiters.splice(0)) w.reject(new Error('timestamp readback abandoned: the renderer can no longer submit')); return; }
+    while (this.waiters.length && this.ledger.available()) this.waiters.shift().resolve(this.ledger.take({ epoch: this.deviceEpoch, kind: 'timestamp-readback' }));
+  }
+
+  // Outside measured windows: read the resolved timestamp pairs back. The copy is a submission like any other (Codex T7 r1, finding 2): it
+  // takes ledger credit, so it counts towards the two outstanding, and its snapshot's identity is fixed when the copy is encoded: each slot
+  // describes the last band submitted before it (queue order), never a band submitted while the readback is still mapping.
   async readTimestamps() {
     if (!this.timestamps || !this.alive) return { method: 'queue-completion', filled: 0 };
     const size = QUERY_STRIDE * QUERY_PAIRS;
-    const read = this.alloc.buffer(this.device, { size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     const abort = this.abort.race ? this.abort : { race: p => p, throwIfAborted() {} };
+    abort.throwIfAborted();
+    const check = () => { if (!this.epochLive()) throw new Error(`timestamp readback abandoned: the renderer was destroyed or aborted, or its device epoch ${this.deviceEpoch} retired`); };
+    check();
+    const ticket = this.ledger.available() && !this.waiters.length ? this.ledger.take({ epoch: this.deviceEpoch, kind: 'timestamp-readback' })
+      : await abort.race(new Promise((resolve, reject) => this.waiters.push({ resolve, reject })));
+    let read = null, done = () => {}, submitted = false, settled = false;
+    const settle = () => { if (settled) return; settled = true; done(); this.ledger.release(ticket); this.pump(); };
     try {
-      await dispatchOnce(this.device, this.watchdog, abort, enc => enc.copyBufferToBuffer(this.timestamps.resolve, 0, read, 0, size), 'timestamp-readback');
+      check();
+      const owners = Array.from({ length: QUERY_PAIRS }, (_, slot) => this.bands.findLast(b => b.ts === slot) ?? null);
+      read = this.alloc.buffer(this.device, { size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+      const enc = this.device.createCommandEncoder(); enc.copyBufferToBuffer(this.timestamps.resolve, 0, read, 0, size);
+      done = this.watchdog.submitted('timestamp-readback', { label: 'timestamp-readback', epoch: this.deviceEpoch });
+      this.device.queue.submit([enc.finish()]); this.submits++; submitted = true;
+      await abort.race(this.device.queue.onSubmittedWorkDone().finally(settle));        // credit and watchdog settle on either outcome
+      check();
       await mapWithin(read, abort, this.mapDeadlineMs ?? 5000);
+      check();
       const ns = new BigUint64Array(read.getMappedRange().slice(0)); read.unmap();
       let filled = 0;
       for (let slot = 0; slot < QUERY_PAIRS; slot++) {
-        const base = (QUERY_STRIDE / 8) * slot;
-        const row = [...this.bands].reverse().find(b => b.ts === slot && b.doneMs !== null);
-        if (row && ns[base + 1] >= ns[base]) { row.gpuMs = Number(ns[base + 1] - ns[base]) / 1e6; filled++; }
+        const base = (QUERY_STRIDE / 8) * slot, row = owners[slot];
+        if (row && row.doneMs !== null && ns[base + 1] >= ns[base]) { row.gpuMs = Number(ns[base + 1] - ns[base]) / 1e6; filled++; }
       }
       return { method: 'timestamp-query', filled };
-    } finally { read.destroy(); }
+    } catch (error) { if (!submitted) settle(); throw error; }
+    finally { read?.destroy(); }
   }
 
   destroy() {
     if (!this.alive) return;
     this.alive = false; this.handlers.clear();
+    for (const w of this.waiters.splice(0)) w.reject(new Error('renderer destroyed'));
     if (this.targets) this.retire(this.targets);
-    for (const s of this.ring) if (s.owner === null) s.buf.destroy();
+    for (const s of this.ring) if (s.owner === null) s.buf.destroy();                    // a reserved slot is destroyed by its owner's release
     this.counts.destroy(); this.timestamps?.set.destroy(); this.timestamps?.resolve.destroy();
   }
 }
