@@ -3,15 +3,15 @@
 // filesystem fixture lives under artifacts/runtime.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, rm, readdir, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { ROOT } from '../launch.mjs';
 import { sha256, launchIdentity, fixtureIdentity } from '../evidence.mjs';
-import { CORRECTNESS_ONLY } from '../timing-contract.js';
-import { evaluateGate } from '../gates.js';
+import { CORRECTNESS_ONLY, EXPECTED_TIMING, notMeasured } from '../timing-contract.js';
+import { evaluateGate, gatePlan } from '../gates.js';
 import { STOPS } from '../session-utils.mjs';
 import { WINDOW_PLANS } from '../supervision-plan.js';
-import { evaluatePreflight } from '../integrity-preflight.mjs';
+import { evaluatePreflight, runIntegrityPreflight } from '../integrity-preflight.mjs';
 
 const Q = await import('../qualify.mjs');   // namespace import: a missing export fails its own test, not the whole file
 const identity = { backend: 'webgpu', fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64), implementationCommit: 'd'.repeat(40), implementationHash: 'e'.repeat(64), launchHash: 'f'.repeat(64), browserVersion: 'v', browserExecutable: 'x', driver: 'd', session: 's', mode: 'headless' };
@@ -27,15 +27,22 @@ const g4 = (extra = {}) => rec('G4', 'bulb-samples', { metrics: G4_PASS, timingM
 async function scratch() { const dir = resolve(ROOT, 'artifacts/runtime'); await mkdir(dir, { recursive: true }); return mkdtemp(join(dir, 'p0-t10-')); }
 const launchOf = mode => ({ requestedArgs: ['--enable-gpu'], commandLine: 'chrome --enable-gpu --user-data-dir=/p', profile: '/p', mode });
 // Writes a record's raw and launch artefacts (and optionally its supervision sidecar and other files) into <root>/artifacts/project0/<dir>.
-async function put(root, dir, record, raw, { sidecar, files = {} } = {}) {
+async function put(root, dir, record, raw, { sidecar, files = {}, launch: launchInfo } = {}) {
   const d = join(root, 'artifacts/project0', dir); await mkdir(d, { recursive: true });
-  const rawText = typeof raw === 'string' ? raw : JSON.stringify(raw), launch = launchOf(record.identity.mode), lt = JSON.stringify(launch);
+  const rawText = typeof raw === 'string' ? raw : JSON.stringify(raw), launch = launchInfo ?? launchOf(record.identity.mode), lt = JSON.stringify(launch);
   await writeFile(join(d, `${record.id}.raw.json`), rawText); await writeFile(join(d, `${record.id}.launch.json`), lt);
   const r = { ...record, identity: { ...record.identity, ...launchIdentity(launch) }, artifacts: [{ path: `${dir}/${record.id}.raw.json`, sha256: sha256(rawText) }, { path: `${dir}/${record.id}.launch.json`, sha256: sha256(lt) }] };
   await writeFile(join(d, `${record.id}.json`), JSON.stringify(r));
   if (sidecar !== undefined) await writeFile(join(d, record.gate === 'G2' ? `supervision-${record.slot}.json` : 'supervision.json'), JSON.stringify(sidecar));
   for (const [name, data] of Object.entries(files)) await writeFile(join(d, name), typeof data === 'string' ? data : JSON.stringify(data));
   return r;
+}
+// The manifest bindings of a run directory's auxiliary evidence (fix round 1, finding 5), computed independently of qualify.mjs.
+const AUX = /^(supervision[A-Za-z0-9.-]*|checkpoint-\d+|integrity-preflight)\.json$/;
+async function bind(root, dir) {
+  const out = {};
+  for (const name of await readdir(join(root, 'artifacts/project0', dir))) if (AUX.test(name)) out[`${dir}/${name}`] = sha256(await readFile(join(root, 'artifacts/project0', dir, name)));
+  return out;
 }
 // A complete supervision sidecar for an invocation's window plan, in the shape session-utils persists.
 const complete = (gate, { windows = WINDOW_PLANS[gate] ?? [] } = {}) => ({ plan: (WINDOW_PLANS[gate] ?? []).map(w => w.name), complete: true, failure: null,
@@ -106,7 +113,7 @@ test('recompute: a clean record without a complete supervision sidecar is refuse
     const none = await put(root, 'a', g4(), {});
     await assert.rejects(Q.recompute([none], fx, { root, manifest: m }), /supervision/);
     const failed = await put(root, 'b', g4(), {}, { sidecar: { ...complete('G4'), failure: 'browser hang: x', complete: false } });
-    await assert.rejects(Q.recompute([failed], fx, { root, manifest: m }), /supervision/);
+    await assert.rejects(Q.recompute([failed], fx, { root, manifest: { ...m, bindings: await bind(root, 'b') } }), /supervision/);
     const kept = await put(root, 'c', g4({ invalidations: ['page: browser hang: x'] }), {});
     assert.equal((await Q.recompute([kept], fx, { root, manifest: m })).launches.length, 1);
   } finally { await rm(root, { recursive: true, force: true }); }
@@ -141,7 +148,7 @@ test('recompute: a clean G12 record whose checkpoint files do not reconcile is r
   try {
     const log = cycleLog(-1), cps = checkpointsOf(log, () => 0), files = Object.fromEntries(Object.entries(cps).filter(([n]) => n !== '59').map(([n, c]) => [`checkpoint-${n}.json`, c]));
     const r = await put(root, 'g12', rec('G12', 'sequence', { identity: { ...identity, mode: 'headed' } }), { cycleLog: log, deadlineMisses: 0 }, { sidecar: complete('G12'), files });
-    await assert.rejects(Q.recompute([r], fx, { root, manifest: { requestedArgs: ['--enable-gpu'] } }), /do not reconcile with its cycleLog/);
+    await assert.rejects(Q.recompute([r], fx, { root, manifest: { requestedArgs: ['--enable-gpu'], bindings: await bind(root, 'g12') } }), /do not reconcile with its cycleLog/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -164,7 +171,7 @@ test('recompute: a clean G9 record whose sources have no validated companion is 
   try {
     const raw = { sources: [{ gate: 'G6', slot: 'bulb-overview/0', windowStart: 1000, windowEnd: 31000 }] };
     const r = await put(root, 't', rec('G9', 'warmed', { identity: { ...identity, mode: 'headed' } }), raw, { sidecar: complete('timing') });
-    await assert.rejects(Q.recompute([r], fx, { root, manifest: { requestedArgs: ['--enable-gpu'] } }), /not bound to validated companions/);
+    await assert.rejects(Q.recompute([r], fx, { root, manifest: { requestedArgs: ['--enable-gpu'], bindings: await bind(root, 't') } }), /not bound to validated companions/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -196,17 +203,19 @@ test('loadFixtures accepts the frozen fixtures.json under its own identity and r
 });
 
 // --- 8. The integrity preflight ----------------------------------------------------------------------------------------------------------------
+const ARGS = ['--enable-gpu'];
 const pageLoad = () => ({ transport: 'p0Push', sameTaskRevert: { violations: ['unexpected backing 800x720 at 21'] }, undeliveredAtStop: { violations: ['unexpected backing 640x720 at 23'] },
   allowedResizes: { violations: [], events: [{ deliberate: true }, { deliberate: true }, { deliberate: true }] },
   statusVisibility: { position: 'fixed', offsetParentNull: true, visible: true, controls: { visibleFixed: true, displayNone: false, visibilityHidden: false, zeroSize: false, opacityZero: false, offscreen: false } } });
 const preflightRecord = (impl = implementation, over = {}) => {
   const first = { slots: [{ raw: pageLoad() }] }, reload = { slots: [{ raw: pageLoad() }] };
   const { assertions } = evaluatePreflight({ first: first.slots[0].raw, reload: reload.slots[0].raw, evaluates: 0 });
-  return { schema: 1, kind: 'integrity-preflight', pass: true, assertions, evaluates: 0, mode: 'headed', errors: [], implementation: impl, first, reload, ...over };
+  return { schema: 1, kind: 'integrity-preflight', pass: true, assertions, evaluates: 0, mode: 'headed', errors: [], implementation: impl,
+    launch: { commandLine: 'chrome --enable-gpu --user-data-dir=/p', profile: '/p', requestedArgs: [...ARGS] }, first, reload, ...over };
 };
 
-test('preflight: a passing seven-assertion record at the exact implementation, recomputed from its saved page results', () => {
-  const p = Q.preflightProblems;
+test('preflight: a passing seven-assertion record at the exact implementation and launch configuration, recomputed from its saved page results', () => {
+  const p = (r, i, a = ARGS) => Q.preflightProblems(r, i, a);
   assert.deepEqual(p(preflightRecord(), implementation), []);
   assert.ok(p(preflightRecord(), { ...implementation, implementationCommit: '1'.repeat(40) }).length, 'another commit');
   assert.ok(p(preflightRecord(), { ...implementation, implementationHash: '1'.repeat(64) }).length, 'another implementation hash');
@@ -221,24 +230,57 @@ test('preflight: a passing seven-assertion record at the exact implementation, r
   assert.ok(p(null, implementation).length);
 });
 
-test('verifyPreflight (read side): the manifest names a passing preflight whose implementation is the selected records\'', async () => {
+test('fix round 1, finding 9: the preflight runs with, records and is checked against the campaign\'s own launch configuration', async () => {
+  const remediation = ['--enable-gpu', '--use-angle=vulkan', '--enable-unsafe-webgpu'];
+  assert.ok(Q.preflightProblems(preflightRecord(), implementation, remediation).length, 'an attempt-1 preflight does not support a remediation campaign');
+  const unsandboxed = preflightRecord(implementation, { launch: { commandLine: 'chrome --enable-gpu --no-sandbox', profile: '/p', requestedArgs: [...ARGS] } });
+  assert.ok(Q.preflightProblems(unsandboxed, implementation, ARGS).length, 'an unsandboxed preflight');
+  // integrity-preflight.mjs launches with the configuration it is given (fakes only: no browser)
+  let launchedWith = null;
+  const page = { on() {}, evaluate: async () => {}, goto: async () => {}, reload: async () => {}, bringToFront: async () => {}, close: async () => {} };
+  const raw = pageLoad();
+  await runIntegrityPreflight({ args: remediation, totalMs: 2000, deps: {
+    startServer: async () => ({ url: 'http://x', stop: async () => {} }),
+    launchChrome: async o => { launchedWith = o.args; return { context: { newPage: async () => page, close: async () => {} }, requestedArgs: [...o.args], profile: '/p' }; },
+    effectiveCommandLine: async () => `chrome ${remediation.join(' ')}`, newRunDir: async () => '/unused/run', implementationIdentity: async () => implementation,
+    installTransport: async () => ({}), waitResult: async () => ({ result: { slots: [{ raw }] } }), writeFile: async () => {} } });
+  assert.deepEqual(launchedWith, remediation);
+  const { runCampaign } = await import('../campaign.mjs');
+  const f = fakes(CORRECT, { LAUNCH: { attempt1: ARGS, remediation }, runPreflight: async o => { f.calls.push(`preflight ${o.args.join(' ')}`); return { pass: true, record: preflightRecord(implementation, { launch: { commandLine: `chrome ${o.args.join(' ')}`, profile: '/p', requestedArgs: [...o.args] } }), runDir: '/x/pf' }; } });
+  await runCampaign({ name: 'webgpu-remediation', args: 'remediation', gates: 'G1' }, f.d);
+  assert.equal(f.calls[0], `preflight ${remediation.join(' ')}`);
+});
+
+test('verifyPreflight (read side): the manifest names and binds a passing preflight at the selected records\' implementation and configuration', async () => {
   const root = await scratch();
   try {
     await mkdir(join(root, 'artifacts/project0/pf'), { recursive: true });
-    await writeFile(join(root, 'artifacts/project0/pf/integrity-preflight.json'), JSON.stringify(preflightRecord()));
-    const manifest = { reuse: [], preflight: { runDir: 'pf', ...implementation } }, records = [g4()];
+    const file = join(root, 'artifacts/project0/pf/integrity-preflight.json');
+    await writeFile(file, JSON.stringify(preflightRecord()));
+    const manifest = { reuse: [], requestedArgs: ARGS, preflight: { runDir: 'pf', ...implementation }, bindings: await bind(root, 'pf') }, records = [g4()];
     await Q.verifyPreflight(manifest, records, { root });
-    await assert.rejects(Q.verifyPreflight({ reuse: [] }, records, { root }), /preflight/);
+    await assert.rejects(Q.verifyPreflight({ ...manifest, preflight: undefined }, records, { root }), /preflight/);
     await assert.rejects(Q.verifyPreflight(manifest, [g4({ identity: { ...identity, implementationCommit: '1'.repeat(40) } })], { root }), /preflight/);
     await assert.rejects(Q.verifyPreflight({ ...manifest, preflight: { ...manifest.preflight, runDir: 'missing' } }, records, { root }), /preflight/);
+    await assert.rejects(Q.verifyPreflight({ ...manifest, requestedArgs: ['--other'] }, records, { root }), /preflight/, 'another launch configuration');
+    // finding 5: changed bytes that still satisfy every semantic check are refused by the binding
+    await writeFile(file, JSON.stringify(preflightRecord(), null, 2));
+    await assert.rejects(Q.verifyPreflight(manifest, records, { root }), /bound/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 // --- 9. The campaign, with injected fakes only (never a browser) ---------------------------------------------------------------------------
+const plan = gatePlan(fx);
+// A record whose metrics sit exactly on each rule's bound (so it passes) and whose descriptor is its gate's registered one.
+const pass = (gate, slot, mode = 'headed', extra = {}) => rec(gate, slot, { identity: { ...identity, mode }, metrics: Object.fromEntries(Object.entries(plan[gate][slot]).map(([k, [, a]]) => [k, a])), timingMethod: EXPECTED_TIMING[gate][0], ...extra });
+const CORRECT = { 'G1 headed': [pass('G1', 'headed')], 'G1 headless': [pass('G1', 'headless', 'headless')], 'G4 headed': [pass('G4', 'bulb-samples')],
+  'G5 headed': [pass('G5', 'qjulia-plane'), pass('G5', 'qjulia-offplane')], 'G3 headed': [pass('G3', 'sphere')], 'G11 headed': [pass('G11', '4k')],
+  'G13 headed': ['intentional', 'injected', 'repeated'].map(s => pass('G13', s)) };
+const rawFor = r => (r.timingMethod?.field ? { [r.timingMethod.field]: 1 } : {});
 function fakes(sessions = {}, over = {}) {
-  const calls = [], report = {};
+  const calls = [], report = {}, recomputed = [];
   const d = {
-    LAUNCH: { attempt1: ['--enable-gpu'] },
+    LAUNCH: { attempt1: ARGS },
     runSession: async o => { calls.push(`session ${o.gate} ${o.mode}`); return { records: sessions[`${o.gate} ${o.mode}`] ?? [], runDir: `/x/${o.gate}-${o.mode}` }; },
     runG2: async () => { calls.push('g2'); return { records: [], runDir: '/x/g2' }; },
     runPreflight: async o => { calls.push(`preflight ${o.mode}`); return { pass: true, record: preflightRecord(), runDir: '/x/pf' }; },
@@ -246,23 +288,40 @@ function fakes(sessions = {}, over = {}) {
     fixtureIdentity: async () => fixture,
     readFixtures: async () => fx,
     loadCampaign: async () => { throw new Error('no reuse here'); },
-    recompute: async records => ({ records, launches: [], raws: Object.fromEntries(records.map(r => [r.id, {}])) }),
+    verifyPreflight: async () => {},
+    bindAuxiliary: async dir => ({ [`${dir}/supervision.json`]: '1'.repeat(64) }),
+    recompute: async records => { recomputed.push(records.map(r => r.id)); return { records, launches: [], raws: Object.fromEntries(records.map(r => [r.id, rawFor(r)])), errors: {} }; },
     writeReport: async (name, manifest, gates) => { calls.push(`report ${name}`); Object.assign(report, { manifest, gates }); },
     log: () => {},
     ...over };
-  return { d, calls, report };
+  return { d, calls, report, recomputed };
 }
 
-test('campaign: modes per invocation, G2 headed through runG2, correctness before performance before stability', async () => {
-  const { PHASES } = await import('../campaign.mjs');
+test('campaign: G3, G4 and G5 headed (fix round 1, Codex ruling), G1 in both modes, G2 headed through runG2 after every correctness invocation', async () => {
+  const { PHASES, runCampaign } = await import('../campaign.mjs');
   assert.deepEqual(PHASES.map(([phase, steps]) => [phase, steps.map(s => s.join(' '))]), [
-    ['correctness', ['G1 headed', 'G1 headless', 'G4 headless', 'G5 headless', 'G3 headless', 'G11 headed', 'G13 headed']],
+    ['correctness', ['G1 headed', 'G1 headless', 'G4 headed', 'G5 headed', 'G3 headed', 'G11 headed', 'G13 headed']],
     ['performance', ['G2 headed', 'timing headed', 'G8 headed', 'G10 headed']],
     ['stability', ['G12 headed']]]);
+  const { d, calls } = fakes(CORRECT);
+  await runCampaign({ name: 'webgpu-1' }, d);
+  assert.deepEqual(calls.slice(0, 10), ['preflight headed', 'session G1 headed', 'session G1 headless', 'session G4 headed', 'session G5 headed', 'session G3 headed', 'session G11 headed', 'session G13 headed', 'g2', 'session timing headed']);
+});
+
+test('fix round 1, finding 3: --gates names the rerun set; it never waives the correctness prerequisites (reused correctness evidence is evaluated)', async () => {
   const { runCampaign } = await import('../campaign.mjs');
-  const { d, calls } = fakes();
-  await runCampaign({ name: 'webgpu-1', gates: 'G2' }, d);
-  assert.deepEqual(calls, ['preflight headed', 'g2', 'report webgpu-1'], 'G2 is the headed runG2 invocation, after the preflight');
+  const bare = fakes();
+  const out = await runCampaign({ name: 'webgpu-1', gates: 'G2' }, bare.d);
+  assert.ok(!bare.calls.includes('g2'), 'no performance work without passing correctness evidence');
+  assert.match(out.stopped, /correctness gate G1/);
+  assert.ok(bare.calls.includes('report webgpu-1'));
+  // the same request with every correctness slot supplied by verified reuse opens the performance phase
+  const records = Object.values(CORRECT).flat(), source = { campaign: 'webgpu-1', trials: Object.fromEntries(records.map(r => [`${r.gate}/${r.slot}`, { id: r.id }])) };
+  const reuse = records.map(r => ({ gate: r.gate, slot: r.slot, fromManifest: 'docs/reports/project0/webgpu-1-manifest.json', recordId: r.id, reason: 'unaffected by the change set' }));
+  const reused = fakes({}, { loadCampaign: async () => ({ manifest: source, records, attempts: [] }) });
+  await runCampaign({ name: 'webgpu-remediation', gates: 'G2', reuse: JSON.stringify(reuse) }, reused.d);
+  assert.ok(reused.calls.includes('g2'));
+  assert.ok(!reused.calls.some(c => c.startsWith('session G')), 'reused correctness slots are not rerun');
 });
 
 test('campaign: refuses to start without its dependencies, under a non-qualifying name, or without a passing preflight at this implementation', async () => {
@@ -281,17 +340,146 @@ test('campaign: refuses to start without its dependencies, under a non-qualifyin
   assert.equal(stale.calls.filter(c => !c.startsWith('preflight')).length, 0, 'a preflight of another implementation does not count');
 });
 
-test('campaign: the correctness verdict is the checked one, so an unchecked pass cannot open the performance phase; the manifest names the preflight', async () => {
+test('campaign: the correctness verdict is the checked one, so an unchecked pass cannot open the performance phase; the manifest names and binds the preflight', async () => {
   const { runCampaign } = await import('../campaign.mjs');
-  const bare = g4(); delete bare.timingMethod;
-  const stopped = fakes({ 'G4 headless': [bare] });
-  const out = await runCampaign({ name: 'webgpu-1', gates: 'G4,G8' }, stopped.d);
-  assert.ok(!stopped.calls.includes('session G8 headed'), 'G8 never runs');
+  const bare = pass('G4', 'bulb-samples'); delete bare.timingMethod;
+  const stopped = fakes({ ...CORRECT, 'G4 headed': [bare] });
+  const out = await runCampaign({ name: 'webgpu-1' }, stopped.d);
+  assert.ok(!stopped.calls.includes('g2'), 'no performance work');
   assert.match(out.stopped, /correctness gate G4 is invalid\/inconclusive/);
   assert.equal(stopped.report.manifest.notRun.G8.status, 'not run');
-  const clean = fakes({ 'G4 headless': [g4()] });
-  const ok = await runCampaign({ name: 'webgpu-1', gates: 'G4,G8' }, clean.d);
-  assert.ok(clean.calls.includes('session G8 headed'), 'a checked pass opens the performance phase');
+  const clean = fakes(CORRECT);
+  const ok = await runCampaign({ name: 'webgpu-1' }, clean.d);
+  assert.ok(clean.calls.includes('g2'), 'a checked pass opens the performance phase');
   assert.equal(ok.backend.gates.G4.status, 'pass');
   assert.deepEqual(clean.report.manifest.preflight, { runDir: 'pf', ...implementation });
+  assert.equal(clean.report.manifest.bindings['pf/supervision.json'], '1'.repeat(64), 'the preflight directory\'s auxiliary evidence is bound');
+  assert.equal(clean.report.manifest.bindings['G4-headed/supervision.json'], '1'.repeat(64), 'and every invocation\'s');
+});
+
+// --- Fix round 1 (Codex T10 r1) ---------------------------------------------------------------------------------------------------------------
+test('fix round 1, finding 1: a null, non-object or incomplete checkpoint payload never reconciles', () => {
+  const log = cycleLog(-1), ok = checkpointsOf(log, () => 0), raw = { cycleLog: log, deadlineMisses: 0 };
+  assert.ok(Q.checkpointProblems(raw, Object.fromEntries(Object.keys(ok).map(n => [n, null])), fx).length, 'all 60 payloads null');
+  for (const bad of [null, false, 0, '', [], { t: ok[5].t, deadlineMisses: 0 }, { cycle: 5, deadlineMisses: 0 }, { cycle: 5, t: ok[5].t }])
+    assert.ok(Q.checkpointProblems(raw, { ...ok, 5: bad }, fx).length, `checkpoint 5 = ${JSON.stringify(bad)}`);
+});
+
+test('fix round 1, finding 2: an invocation that produced only a synthesized incomplete slot keeps its evidence in the manifest and in its gate\'s verdict', async () => {
+  const { runCampaign } = await import('../campaign.mjs');
+  const incomplete = rec('G1', 'incomplete', { identity: { ...identity, mode: 'headed' }, timingMethod: notMeasured('incomplete: the session produced no result'),
+    invalidations: ['session: browser hang: launch exceeded 60000 ms', 'incomplete: the session produced no result'] });
+  const f = fakes({ ...CORRECT, 'G1 headed': [incomplete] });
+  const out = await runCampaign({ name: 'webgpu-1' }, f.d);
+  assert.ok(f.report.manifest.attempts[incomplete.id], 'the attempt is named in the manifest');
+  assert.ok(out.backend.gates.G1.evidenceIds.includes(incomplete.id), 'and in G1\'s evidence');
+  assert.ok(out.backend.gates.G1.reasons.some(x => x.includes('session: browser hang: launch exceeded 60000 ms')), 'with its original reason');
+  assert.equal(out.backend.gates.G1.status, 'invalid/inconclusive');
+  assert.ok(f.recomputed.at(-1).includes(incomplete.id), 'the attempt is verified with the selection');
+  // read side: an attempt is never a selected slot, and must be the manifest's own
+  const m = Q.buildManifest({ ...base, records: [], attempts: [incomplete] });
+  assert.equal(Q.qualify(m, [], fx, { raws: { [incomplete.id]: {} }, attempts: [incomplete] }).backend.gates.G1.status, 'invalid/inconclusive');
+  assert.throws(() => Q.qualify(m, [], fx, { raws: {}, attempts: [{ ...incomplete, id: 'other' }] }), /attempt/);
+  assert.throws(() => Q.buildManifest({ ...base, records: [], attempts: [{ ...incomplete, campaign: 'dev' }] }), /campaign/);
+});
+
+test('fix round 1, finding 4: a verification failure still writes a report; the affected gates are invalid/inconclusive, never measured failures', async () => {
+  const { runCampaign } = await import('../campaign.mjs');
+  const g4id = CORRECT['G4 headed'][0].id;
+  const rejected = fakes(CORRECT, { recompute: async records => ({ records, launches: [], raws: Object.fromEntries(records.map(r => [r.id, rawFor(r)])), errors: { [g4id]: `artefact hash mismatch: x/${g4id}.raw.json` } }) });
+  const out = await runCampaign({ name: 'webgpu-1' }, rejected.d);
+  assert.ok(rejected.calls.includes('report webgpu-1'));
+  assert.equal(out.backend.gates.G4.status, 'invalid/inconclusive');
+  assert.ok(out.backend.gates.G4.reasons.some(x => /verification: .*artefact hash mismatch/.test(x)));
+  const thrown = fakes(CORRECT, { recompute: async () => { throw new Error('artefact hash mismatch: unexpected'); } });
+  const failed = await runCampaign({ name: 'webgpu-1' }, thrown.d);
+  assert.ok(thrown.calls.includes('report webgpu-1'), 'an exception in verification still reports');
+  assert.match(thrown.report.manifest.verificationFailure, /artefact hash mismatch/);
+  assert.equal(failed.decision.outcome, 'inconclusive');
+  assert.ok(Object.values(failed.backend.gates).every(g => g.status !== 'pass' && g.status !== 'fail'), 'no gate passes or fails on unverified evidence');
+  // the real recompute collects per-record failures when asked
+  const root = await scratch();
+  try {
+    const r = await put(root, 'h', g4({ invalidations: ['x'] }), {});
+    r.artifacts[0] = { ...r.artifacts[0], sha256: '9'.repeat(64) };
+    const res = await Q.recompute([r], fx, { root, manifest: { requestedArgs: ARGS }, collect: true });
+    assert.match(res.errors[r.id], /artefact hash mismatch/);
+    await assert.rejects(Q.recompute([r], fx, { root, manifest: { requestedArgs: ARGS } }), /artefact hash mismatch/, 'and throws when not');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('fix round 1, finding 5: supervision and checkpoint bytes are bound by the manifest; semantically valid edits are refused', async () => {
+  const root = await scratch();
+  try {
+    const m = { requestedArgs: ARGS };
+    const sup = await put(root, 's', g4(), {}, { sidecar: complete('G4') });
+    const bindings = await bind(root, 's');
+    await writeFile(join(root, 'artifacts/project0/s/supervision.json'), JSON.stringify(complete('G4'), null, 1));   // same meaning, other bytes
+    await assert.rejects(Q.recompute([sup], fx, { root, manifest: { ...m, bindings } }), /bound/);
+    await assert.rejects(Q.recompute([sup], fx, { root, manifest: m }), /bound/, 'an unbound sidecar');
+    const log = cycleLog(-1), cps = checkpointsOf(log, () => 0), files = Object.fromEntries(Object.entries(cps).map(([n, c]) => [`checkpoint-${n}.json`, c]));
+    const g12 = await put(root, 'c', rec('G12', 'sequence', { identity: { ...identity, mode: 'headed' } }), { cycleLog: log, deadlineMisses: 0 }, { sidecar: complete('G12'), files });
+    const b12 = await bind(root, 'c');
+    await writeFile(join(root, 'artifacts/project0/c/checkpoint-7.json'), JSON.stringify({ ...cps[7], t: cps[7].t + 1 }));   // still within its window
+    await assert.rejects(Q.recompute([g12], fx, { root, manifest: { ...m, bindings: b12 } }), /checkpoint-7\.json.*bound/);
+    // the binding helper hashes exactly the auxiliary files
+    await writeFile(join(root, 'artifacts/project0/c/integrity-preflight.json'), '{}');
+    const aux = await Q.auxiliaryHashes('c', { root });
+    assert.deepEqual(Object.keys(aux).sort(), Object.keys(await bind(root, 'c')).sort());
+    assert.ok(!Object.keys(aux).some(k => k.endsWith('.raw.json') || k.endsWith('.launch.json') || k.endsWith(`${g12.id}.json`)));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('fix round 1, finding 6: a saved launch with --no-sandbox or --disable-gpu-watchdog, or missing a requested flag, is refused at read time', async () => {
+  const root = await scratch();
+  try {
+    const m = { requestedArgs: ['--enable-gpu', '--use-angle=vulkan'] };
+    const launch = commandLine => ({ requestedArgs: [...m.requestedArgs], commandLine: `${commandLine} --user-data-dir=/p`, profile: '/p', mode: 'headless' });
+    const ok = await put(root, 'a', g4({ invalidations: ['x'] }), {}, { launch: launch('chrome --enable-gpu --use-angle=vulkan') });
+    assert.equal((await Q.recompute([ok], fx, { root, manifest: m })).launches.length, 1);
+    const ns = await put(root, 'b', g4({ invalidations: ['x'] }), {}, { launch: launch('chrome --enable-gpu --use-angle=vulkan --no-sandbox') });
+    await assert.rejects(Q.recompute([ns], fx, { root, manifest: m }), /sandbox/);
+    const wd = await put(root, 'c', g4({ invalidations: ['x'] }), {}, { launch: launch('chrome --enable-gpu --use-angle=vulkan --disable-gpu-watchdog') });
+    await assert.rejects(Q.recompute([wd], fx, { root, manifest: m }), /watchdog/);
+    const absent = await put(root, 'd', g4({ invalidations: ['x'] }), {}, { launch: launch('chrome --enable-gpu') });
+    await assert.rejects(Q.recompute([absent], fx, { root, manifest: m }), /absent from the effective command line/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('fix round 1, finding 7: reuse prerequisites are checked on read, and each source campaign\'s own preflight is verified', async () => {
+  const old = g4({ campaign: 'webgpu-0' });
+  const reuse = [{ gate: 'G4', slot: 'bulb-samples', fromManifest: 'src.json', recordId: old.id, reason: 'unaffected by the change set' }];
+  const m = Q.buildManifest({ ...base, records: [old], reuse });
+  assert.equal(Q.qualify(m, [old], fx, { raws: { [old.id]: {} } }).backend.gates.G4.status, 'pass');
+  const noReason = { ...m, reuse: [{ ...reuse[0], reason: undefined }] };
+  assert.throws(() => Q.qualify(noReason, [old], fx, { raws: { [old.id]: {} } }), /reuse/);
+  assert.throws(() => Q.qualify({ ...m, reuse: [{ ...reuse[0], fromManifest: undefined }] }, [old], fx, { raws: { [old.id]: {} } }), /reuse/);
+  const root = await scratch();
+  try {
+    const r = await put(root, 's1', old, {});
+    await mkdir(join(root, 'artifacts/project0/pfs'), { recursive: true });
+    await writeFile(join(root, 'artifacts/project0/pfs/integrity-preflight.json'), JSON.stringify(preflightRecord(implementation, { pass: false })));
+    const source = { ...base, campaign: 'webgpu-0', runDirs: ['s1'], trials: { 'G4/bulb-samples': { id: r.id, identity: r.identity } }, notRun: {}, reuse: [], attempts: {},
+      preflight: { runDir: 'pfs', ...implementation }, bindings: await bind(root, 'pfs') };
+    await writeFile(join(root, 'src.json'), JSON.stringify(source));
+    await mkdir(join(root, 'artifacts/project0/pf'), { recursive: true });
+    await writeFile(join(root, 'artifacts/project0/pf/integrity-preflight.json'), JSON.stringify(preflightRecord()));
+    const final = { ...Q.buildManifest({ ...base, records: [r], reuse }), preflight: { runDir: 'pf', ...implementation }, bindings: await bind(root, 'pf') };
+    await assert.rejects(Q.verifyPreflight(final, [r], { root }), /pfs/, 'the source campaign\'s failed preflight is found');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('fix round 1, finding 8: the timing invocation is reused or rerun whole; a partial timing reuse is refused before any work', async () => {
+  const { runCampaign } = await import('../campaign.mjs');
+  const timing = [...WINDOW_PLANS.timing.map(w => w.name), 'G9/warmed'].map(k => { const [gate, ...slot] = k.split('/'); return pass(gate, slot.join('/')); });
+  const entry = r => ({ gate: r.gate, slot: r.slot, fromManifest: 'src.json', recordId: r.id, reason: 'unaffected by the change set' });
+  const partial = fakes(CORRECT);
+  await assert.rejects(runCampaign({ name: 'webgpu-remediation', reuse: JSON.stringify([entry(timing[0])]) }, partial.d), /timing invocation/);
+  assert.deepEqual(partial.calls, [], 'nothing runs, not even the preflight');
+  assert.throws(() => Q.buildManifest({ ...base, records: [{ ...timing[0], campaign: 'webgpu-0' }], reuse: [entry(timing[0])] }), /timing invocation/, 'and on read/build');
+  const source = { campaign: 'webgpu-0', trials: Object.fromEntries(timing.map(r => [`${r.gate}/${r.slot}`, { id: r.id }])) };
+  const whole = fakes(CORRECT, { loadCampaign: async () => ({ manifest: source, records: timing, attempts: [] }) });
+  await runCampaign({ name: 'webgpu-remediation', reuse: JSON.stringify(timing.map(entry)) }, whole.d);
+  assert.deepEqual([...whole.recomputed[0]].sort(), timing.map(r => r.id).sort(), 'the whole reused invocation is verified together, so G9 finds its companions');
+  assert.ok(!whole.calls.includes('session timing headed'), 'and the timing invocation is not rerun');
 });

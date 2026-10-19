@@ -33,7 +33,9 @@ export function evaluatePreflight({ first, reload, evaluates }) {
 // Fix round 3 (Codex T9 r3, finding 5): the outer deadline latches `expired`; every step re-checks it after each await (`live`), and a server,
 // browser or page that arrives after expiry is disposed at once and never used (the run.mjs/probe.mjs pattern). A failed first load ends the run
 // before any reload. Dependencies are injectable so the stop paths are tested without a browser.
-export async function runIntegrityPreflight({ mode = 'headed', totalMs = 120000, deps = {} } = {}) {
+// T10 fix round 1 (Codex T10 r1, finding 9): `args` is the launch configuration of the campaign the preflight supports (attempt-1 by default);
+// its requested and effective flags are persisted in `launch` and checked by qualify.mjs preflightProblems.
+export async function runIntegrityPreflight({ mode = 'headed', args = ATTEMPT1_ARGS, totalMs = 120000, deps = {} } = {}) {
   const d = { startServer, launchChrome, effectiveCommandLine, newRunDir, implementationIdentity, installTransport, waitResult, writeFile, chromium, ...deps };
   process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
   const runDir = await d.newRunDir(`dev-integrity-preflight-${mode}`), evidence = { mode, errors: [] }, state = { expired: false };
@@ -45,7 +47,7 @@ export async function runIntegrityPreflight({ mode = 'headed', totalMs = 120000,
   try {
     await bounded((async () => {
       server = await arrived(await d.startServer(), r => r.stop()); live();
-      launched = await arrived(await d.launchChrome({ headless: mode === 'headless', args: ATTEMPT1_ARGS, profileKind: `integrity-preflight-${mode}`, chromium: d.chromium }), r => r.context.close()); live();
+      launched = await arrived(await d.launchChrome({ headless: mode === 'headless', args, profileKind: `integrity-preflight-${mode}`, chromium: d.chromium }), r => r.context.close()); live();
       const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
       evidence.launch = { commandLine, profile: launched.profile, requestedArgs: launched.requestedArgs };
       const page = await arrived(await launched.context.newPage(), p => p.close()); live();
