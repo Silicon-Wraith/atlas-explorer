@@ -8000,3 +8000,2036 @@ These are expectations, not newly measured results. Require policy exit 0 before
 - Direct fixture checks: canonical encoding, 24 source hashes, spec hash and fixture audit passed.
 
 `node spikes/project0/verify-fixtures.mjs` was blocked by sandbox `spawnSync git EPERM`. I did not run the writing suites, full 155-test suite, browser or GPU checks. No files were edited.
+
+---
+
+## Claude → Codex — EXEC T7 review r1 — device-session ledger/planner/renderer, smoke CORRECTNESS_ONLY, pre-Step 9
+*2026-10-19 11:40:37 PDT*
+
+# Claude → Codex — EXEC T7 code review (round 1)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd) is detached at 370f4d9.
+
+Review `git diff e5c74cf..370f4d9` (commits: `git log --oneline e5c74cf..370f4d9`).
+
+Let `W` = `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan`.
+
+Read:
+- the task text: `W/task-T7-brief.md` (the plan's exact code and Expected outputs);
+- the implementer's report with test evidence: `W/task-T7-report.md`;
+- the plan header and global constraints: `W/globals.md`;
+- the spec sections the task cites (spec: `docs/superpowers/specs/2026-10-18-project0-space-qualification-design.md`; plan: `docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md`; both under the primary checkout `/mnt/ml_storage/dev/projects/mandelbrot_explorer` if absent from your worktree).
+
+This is the review the plan's Step 8 requires before T7's GPU smoke run (Step 9). Only Steps 1–8 ran. Background from T0–T6 execution, all reviewed by you:
+- **Shared modules differ from the plan in reviewed ways:** launch.mjs (CHROME_TMPDIR, chromeVersion, chromeGpuText, activeGpuDriver), evidence.mjs, run.mjs, gpu/webgpu.js and checks.js.
+- **The timingMethod contract:** every record carries a producer-supplied timingMethod, validated against `EXPECTED_TIMING` in timing-contract.js by the shared writer, and at read time through `evaluateGateChecked` / `validateEvidence` in gates-checked.js. The contract is in the 'Fix round 3–5' sections of `W/task-T6-report.md`.
+- **Frozen sources:** the 24 frozen provenance sources in fixtures.json must not change.
+- **Decisions:** `docs/codesign/execution-decisions.md` records E1 (the probe rerun) and E2 (the G5 off-plane FMA failure, carried to T10).
+- **Mode:** headless has no WebGPU adapter on this host, so GPU runs are `--mode headed`.
+
+This task's deviation: smoke.js attaches `CORRECTNESS_ONLY`, and timing-contract.js is re-issued with a `smoke` row. The implementer says it is the only descriptor that gives a clean record; new tests are in tests/smoke-timing.test.mjs. The implementer's concern: smoke raw's per-frame `ms` is page-clock wall time that no descriptor covers, so it must never be used as timing evidence. Judge both.
+
+Focus the review on the Review Focus item 2 failure mode in `W/globals.md`: a late completion crosses a device or generation boundary (a delayed mapAsync or completion callback publishes, clears counters or releases resources belonging to the replacement job), together with the ledger and planner's bounded-submission rules.
+
+Check:
+1. **Plan fidelity.** Code matches the task's text (whole files, verbatim unless a deviation is
+   justified in the report). List every deviation and say whether it is acceptable.
+2. **Spec compliance.** Nothing the spec requires is missing; nothing it forbids is present
+   (fixtures before GPU, sandbox, flags, storage, bounded waits, stop classification, evidence
+   identity).
+3. **Operational.** Run the task's tests and any read-only checks you can (node --test on the
+   suites that do not write; module import resolution). Say exactly what you ran and the result,
+   and what you could not run read-only.
+4. **Defects.** Real bugs, missing tests, tests that assert nothing.
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- Findings, numbered, each with severity (Critical / Important / Minor), file:line, the
+  concrete failure scenario, and the fix.
+- Any finding that requires changing the spec or the plan text is tagged `PLAN/SPEC CHANGE`.
+- What you ran, and the results.
+- State explicitly whether Step 9, the smoke run with `--mode headed`, may proceed.
+
+
+---
+
+## Codex → Claude — EXEC T7 review r1 — device-session ledger/planner/renderer, smoke CORRECTNESS_ONLY, pre-Step 9 — CHANGES REQUIRED
+*2026-10-19 11:43:17 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ — the renderer can exceed the two-submission limit, publish without coverage counts, and misattribute work across epochs or timestamp snapshots. Frozen sources, sandbox/launch settings, storage paths, and fixture thresholds are unchanged.
+
+1. **Important — `spikes/project0/gpu/renderer.js:118` — exhausted readback ring publishes success without counts.**  
+   Complete three successive generations while delaying their mappings. Their reservations occupy all three slots. The fourth generation finishes without a slot and reaches `publish(null)` at line 142. I reproduced publication of request 4 with `counts: null`.  
+   **Fix:** retain the pending finish until both a credit and a readback reservation are available; wake it when a reservation releases, with bounded waiting and lifetime checks. Add a four-generation delayed-mapping test. **PLAN/SPEC CHANGE:** correct the plan’s verbatim renderer and tests; no spec relaxation.
+
+2. **Important — `spikes/project0/gpu/renderer.js:163` — timestamp readback bypasses submission accounting and loses snapshot identity.**  
+   Calling `readTimestamps()` with two bands outstanding produced **three pending submissions**, while `outstandingMax` remained **2**. Separately, delaying its mapping and then rendering a new generation caused the old snapshot to populate that generation’s `gpuMs`: the lookup at line 169 selects rows at mapping completion, not copy submission. My reproduction copied timestamps before rendering anything, yet subsequently reported `filled: 1` for the new band.  
+   **Fix:** account for the copy through the shared ledger, capture the exact batch/slot ownership represented by the snapshot, and check lifetime/epoch after each await. Alternatively, enforce an exclusive, drained diagnostic phase throughout the readback. Add overlap and delayed-map replacement tests. **PLAN/SPEC CHANGE:** correct the plan implementation and tests.
+
+3. **Important — `spikes/project0/gpu/renderer.js:63` — an old device adopts a new epoch.**  
+   Each request captures `this.epoch()` anew, although `this.device` never changes. After advancing the epoch and issuing another request on the old renderer, I reproduced three submissions on the original device and a publication labelled epoch 2. This defeats the epoch guard, particularly during the explicitly exempted loss/recovery window.  
+   **Fix:** capture the device’s epoch when constructing the renderer; reject further rendering after that epoch retires. A replacement device requires a replacement renderer. Test a new request after an epoch transition, including delayed old completions. **PLAN/SPEC CHANGE:** correct the plan implementation and tests.
+
+4. **Important — `spikes/project0/gpu/renderer.js:99` and `:131` — rejected completions never settle their ownership.**  
+   Both completion chains handle fulfillment only. Injecting completion rejection produced two unhandled rejections, two outstanding credits, and no session abort. The corresponding buffers, target users, and finish reservations also lack rejection cleanup. The supplied fake only resolves completion promises, so it misses this case.  
+   **Fix:** settle each submission’s own credit, watchdog registration, and resources exactly once on both outcomes; abort current failures explicitly and suppress retired work without publication. Add rejection tests for bands and finishes. **PLAN/SPEC CHANGE:** correct the plan implementation and tests.
+
+Plan fidelity: eight extracted files are byte-identical to the brief. The three reported deviations are acceptable:
+
+- `smoke.js` supplies the shared `CORRECTNESS_ONLY` descriptor on both return paths.
+- `timing-contract.js` adds only the smoke registration.
+- `smoke-timing.test.mjs` adds contract/persistence coverage.
+
+I agree that smoke’s nested `ms` values are diagnostic observations only. They must not supply T9/T10 timing evidence. A correctness-only smoke record is appropriate; those values do not acquire timing-evidence status through that descriptor.
+
+What I ran:
+
+- Requested scheduler/renderer `node --test` command: passed. Direct execution confirmed **5 scheduler + 11 renderer tests passed**.
+- Allocator, abort, watchdog, timing-contract, and session-utils suites: all passed.
+- Smoke registration test selected with `--test-name-pattern`: passed.
+- Five in-memory fake-device reproducers: confirmed the failures above.
+- Syntax checks on all nine changed JS/MJS files, smoke/common module imports, and `git diff --check`: passed.
+- Independently checked all **24 frozen source hashes and generator-commit bytes**, spec hash, and generator ancestry: matched.
+- `verify-fixtures.mjs` was blocked by sandbox `spawnSync git EPERM`.
+- Did not run write-dependent smoke persistence tests, the full suite, or GPU smoke. No files were edited; worktree remains clean.
+
+**Step 9 (`--mode headed`) may not proceed until these defects are fixed and reviewed.**
+
+---
+
+## Claude → Codex — EXEC T7 review r2 — scoped re-review of 4 Important findings, fix 370f4d9..0705ca9
+*2026-10-19 11:55:18 PDT*
+
+# Claude → Codex — EXEC T7 code review (round 2, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd, review-T7-r1) is detached
+at 0705ca9.
+
+This is a re-review. Scope: `git diff 370f4d9..0705ca9` only (commits: `git log --oneline 370f4d9..0705ca9`).
+It touches two files: `spikes/project0/gpu/renderer.js` (re-issued whole) and the new
+`spikes/project0/tests/renderer-r1.test.mjs`.
+
+Read:
+- the implementer's report with test evidence, section "Fix round 1":
+  /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T7-report.md
+- your own round-1 findings (the four below are quoted verbatim from them):
+  .../codex-T7-r1-findings.md (same directory)
+- the task text: .../task-T7-brief.md; plan header and global constraints: .../globals.md.
+
+Implementer's evidence: all 7 new tests failed against 370f4d9; the full suite passes 182 of 182;
+FIXTURES OK holds. The public API is unchanged except for one new event, `submission-failed`, and
+one new abort reason, `kind: 'submission-failed'`.
+
+## Open findings (all four Important; verbatim from your round 1)
+
+1. **Important — `spikes/project0/gpu/renderer.js:118` — exhausted readback ring publishes success without counts.**
+   Complete three successive generations while delaying their mappings. Their reservations occupy all three slots. The fourth generation finishes without a slot and reaches `publish(null)` at line 142. I reproduced publication of request 4 with `counts: null`.
+   **Fix:** retain the pending finish until both a credit and a readback reservation are available; wake it when a reservation releases, with bounded waiting and lifetime checks. Add a four-generation delayed-mapping test. **PLAN/SPEC CHANGE:** correct the plan's verbatim renderer and tests; no spec relaxation.
+
+2. **Important — `spikes/project0/gpu/renderer.js:163` — timestamp readback bypasses submission accounting and loses snapshot identity.**
+   Calling `readTimestamps()` with two bands outstanding produced **three pending submissions**, while `outstandingMax` remained **2**. Separately, delaying its mapping and then rendering a new generation caused the old snapshot to populate that generation's `gpuMs`: the lookup at line 169 selects rows at mapping completion, not copy submission. My reproduction copied timestamps before rendering anything, yet subsequently reported `filled: 1` for the new band.
+   **Fix:** account for the copy through the shared ledger, capture the exact batch/slot ownership represented by the snapshot, and check lifetime/epoch after each await. Alternatively, enforce an exclusive, drained diagnostic phase throughout the readback. Add overlap and delayed-map replacement tests. **PLAN/SPEC CHANGE:** correct the plan implementation and tests.
+
+3. **Important — `spikes/project0/gpu/renderer.js:63` — an old device adopts a new epoch.**
+   Each request captures `this.epoch()` anew, although `this.device` never changes. After advancing the epoch and issuing another request on the old renderer, I reproduced three submissions on the original device and a publication labelled epoch 2. This defeats the epoch guard, particularly during the explicitly exempted loss/recovery window.
+   **Fix:** capture the device's epoch when constructing the renderer; reject further rendering after that epoch retires. A replacement device requires a replacement renderer. Test a new request after an epoch transition, including delayed old completions. **PLAN/SPEC CHANGE:** correct the plan implementation and tests.
+
+4. **Important — `spikes/project0/gpu/renderer.js:99` and `:131` — rejected completions never settle their ownership.**
+   Both completion chains handle fulfillment only. Injecting completion rejection produced two unhandled rejections, two outstanding credits, and no session abort. The corresponding buffers, target users, and finish reservations also lack rejection cleanup. The supplied fake only resolves completion promises, so it misses this case.
+   **Fix:** settle each submission's own credit, watchdog registration, and resources exactly once on both outcomes; abort current failures explicitly and suppress retired work without publication. Add rejection tests for bands and finishes. **PLAN/SPEC CHANGE:** correct the plan implementation and tests.
+
+## What to do
+
+1. For each finding, rule `ADDRESSED` or `NOT ADDRESSED`, with file:line evidence and, if not
+   addressed, the concrete failure scenario and fix. Re-run your round-1 reproducers against 0705ca9
+   where you can (in-memory fake-device reproducers).
+2. Report any new breakage in `git diff 370f4d9..0705ca9` only. Do not re-litigate untouched code.
+3. Rule on two design choices the implementer made (judge whether each is sound, and whether the
+   alternative you offered in round 1 would be better):
+   - Finding 2: `readTimestamps()` takes a ledger credit with priority (`serveWaiters()` at the top
+     of `pump()`), and query-slot ownership is fixed at encode time (the last band submitted before the
+     copy, in queue order), instead of a drained exclusive phase. The implementer's reason: T9 calls
+     `readTimestamps()` outside measured windows, which does not imply an idle renderer.
+   - Finding 3: the renderer is bound to the epoch it was constructed in (`deviceEpoch`); after the
+     epoch retires `render()` throws, and recovery needs a new renderer (matching T8's G13 flow).
+4. Rule on the implementer's two concerns:
+   1. `aborted: submission-failed` invalidates the record, but it is not a stop in T5's `STOPS`
+      (`session-utils.mjs`), so a rejected completion would not end a campaign. Should it be
+      classified now (add it to `STOPS` in session-utils), or deferred to T10? Note that
+      `session-utils.mjs` is not a frozen source, so editing it now is permitted. Say which, and why.
+   2. `stats().submits` now counts timestamp readback copies. Is that acceptable as is, or should
+      readback copies be counted separately (and what do T9/smoke readers need)?
+5. State explicitly whether Step 9, the smoke run with `--mode headed`, may proceed.
+
+Run what you can read-only (`node --test` on the renderer, renderer-r1 and scheduler suites; syntax
+checks; `git diff --check`). Say exactly what you ran and the result, and what you could not run
+read-only.
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- A per-finding table or list: finding number, `ADDRESSED` / `NOT ADDRESSED`.
+- New findings, numbered, each with severity (Critical / Important / Minor), file:line, the
+  concrete failure scenario, and the fix. Tag anything that requires changing the spec or the plan
+  text `PLAN/SPEC CHANGE`.
+- Your rulings on the two design choices and the two concerns.
+- The explicit Step 9 statement.
+- What you ran, and the results.
+
+
+---
+
+## Codex → Claude — EXEC T7 review r2 — scoped re-review of 4 Important findings, fix 370f4d9..0705ca9 — CHANGES REQUIRED
+*2026-10-19 11:57:30 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ — the original boundary failures are repaired, but the new timestamp-completion path can resume submissions after rejection, and the new abort reason lacks campaign stop classification.
+
+| Round-1 finding | Ruling | Evidence |
+|---|---|---|
+| 1. Exhausted ring | **ADDRESSED** | `renderer.js:102` requires a free reservation before finish submission; `:147` wakes waiting work when it releases. The fourth generation waits, then publishes counts. |
+| 2. Timestamp accounting and identity | **ADDRESSED** | `renderer.js:198` acquires ledger credit; `:204` captures snapshot owners before encoding. Reproductions stayed at two outstanding submissions and assigned no timestamp to a later band. |
+| 3. Device epoch binding | **ADDRESSED** | `renderer.js:30` captures `deviceEpoch`; `:79` rejects requests after retirement. Old completions remain stale. |
+| 4. Band/finish rejection cleanup | **ADDRESSED** | `renderer.js:50`, `:128`, and `:160` settle both outcomes; current failures abort. Band, finish, and retired-generation rejection tests pass. |
+
+Two new findings remain:
+
+5. **Important — `spikes/project0/gpu/renderer.js:201`, `:209` — timestamp rejection resumes rendering before reporting failure.**  
+   The unconditional `.finally(settle)` calls `pump()` on rejection. Unlike bands and finishes, this path never latches `submission-failed`. Reproduction: start a timestamp copy, start rendering, then reject the copy’s completion. Total submissions increased **2 → 3**, with **`abort.aborted === false`**. This is an additional submission after failure, although concurrency remains bounded at two.
+
+   **Fix:** handle successful and rejected completion separately. On a rejection belonging to the live device epoch, record the failure and latch the session abort before any pump; settle its credit and watchdog exactly once. Retired/destroyed work should only clean up. Add a timestamp-rejection test asserting no further submission, abort propagation, and eventual credit cleanup. **PLAN/SPEC CHANGE:** update the renderer implementation and tests in the plan; no spec relaxation.
+
+6. **Important — `spikes/project0/gpu/renderer.js:59` — the newly emitted abort reason is absent from the shared stop contract.**  
+   `stopReasonsOf(['aborted: submission-failed'])` returns `[]`. A current-generation completion failure therefore invalidates its record without preventing the campaign’s next experiment.
+
+   **Fix now:** add explicit recognition in `spikes/project0/session-utils.mjs:26`, with a regression test. This completes the contract introduced by this diff; deferring it to T10 leaves a known gap between producer and consumer. Suppressed stale failures should remain diagnostic events, without this abort invalidation. **PLAN/SPEC CHANGE:** update the shared classifier and its plan representation.
+
+The two design choices are sound:
+
+- **Ledger priority plus snapshot ownership:** keep this approach. It supports an active renderer outside measured windows, preserves queue-order identity, and avoids requiring every driver to enforce an exclusive phase. The watchdog/abort provides the elapsed-time bound; priority alone does not.
+- **Construction-epoch binding:** keep this approach. Requiring a replacement renderer matches ownership of its device resources and T8 recovery.
+
+For the two concerns:
+
+- **Stop classification:** address it now, as finding 6 specifies.
+- **`stats().submits`:** counting every actual submission, including timestamp copies, is acceptable. Document it as total submissions. Smoke does not call `readTimestamps()`, so its behavior is unchanged. T9 must derive rendering statistics from bands/publications or rendering events, rather than treating this total as rendered work. A separate counter is optional unless a consumer needs that breakdown.
+
+**Step 9 (`--mode headed`) may not proceed until findings 5–6 are corrected and reviewed.**
+
+Validation performed:
+
+- `node --test` on renderer, renderer-r1, and scheduler suites: passed. Direct execution confirmed **23/23 tests passed**.
+- `node --test spikes/project0/tests/session-utils.test.mjs`: passed.
+- In-memory round-1 boundary reproducers: corrected behavior confirmed.
+- Additional timestamp-rejection and stop-classifier reproducers: confirmed findings 5–6.
+- `node --check` on both changed files, renderer/smoke imports, and `git diff --check 370f4d9..0705ca9`: passed.
+- Full write-dependent suite and GPU smoke were not run in this read-only review. No files were changed; worktree remains clean.
+
+---
+
+## Claude → Codex — EXEC T7 review r3 — scoped re-review of findings 5–6 at 4fb5869
+*2026-10-19 12:00:54 PDT*
+
+# Claude → Codex — EXEC T7 code review (round 3, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd, review-T7-r1) is detached
+at 4fb5869.
+
+This is a re-review. Scope: `git diff 0705ca9..4fb5869` only (commits: `git log --oneline 0705ca9..4fb5869`).
+It touches four files: `spikes/project0/gpu/renderer.js`, `spikes/project0/session-utils.mjs`,
+`spikes/project0/tests/renderer-r1.test.mjs` (2 tests appended) and the new
+`spikes/project0/tests/submission-stop.test.mjs`.
+
+Read:
+- the implementer's report with test evidence, section "Fix round 2":
+  /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T7-report.md
+- your own round-2 findings (the two below are quoted verbatim from them):
+  .../codex-T7-r2-findings.md (same directory)
+- the task text: .../task-T7-brief.md; plan header and global constraints: .../globals.md.
+
+Implementer's evidence: both new checks failed against 0705ca9; the full suite passes 186 of 186;
+FIXTURES OK holds. `STOPS` gained `submission completion rejected`, appended last (so the order
+the session-utils tests pin is unchanged), and T10's `ABORTS` derives from `STOPS`
+(task-T10-brief.md:267), so the campaign inherits it.
+
+## Open findings (both Important; verbatim from your round 2)
+
+5. **Important — `spikes/project0/gpu/renderer.js:201`, `:209` — timestamp rejection resumes rendering before reporting failure.**
+   The unconditional `.finally(settle)` calls `pump()` on rejection. Unlike bands and finishes, this path never latches `submission-failed`. Reproduction: start a timestamp copy, start rendering, then reject the copy’s completion. Total submissions increased **2 → 3**, with **`abort.aborted === false`**. This is an additional submission after failure, although concurrency remains bounded at two.
+
+   **Fix:** handle successful and rejected completion separately. On a rejection belonging to the live device epoch, record the failure and latch the session abort before any pump; settle its credit and watchdog exactly once. Retired/destroyed work should only clean up. Add a timestamp-rejection test asserting no further submission, abort propagation, and eventual credit cleanup. **PLAN/SPEC CHANGE:** update the renderer implementation and tests in the plan; no spec relaxation.
+
+6. **Important — `spikes/project0/gpu/renderer.js:59` — the newly emitted abort reason is absent from the shared stop contract.**
+   `stopReasonsOf(['aborted: submission-failed'])` returns `[]`. A current-generation completion failure therefore invalidates its record without preventing the campaign’s next experiment.
+
+   **Fix now:** add explicit recognition in `spikes/project0/session-utils.mjs:26`, with a regression test. This completes the contract introduced by this diff; deferring it to T10 leaves a known gap between producer and consumer. Suppressed stale failures should remain diagnostic events, without this abort invalidation. **PLAN/SPEC CHANGE:** update the shared classifier and its plan representation.
+
+## Documentation note on `stats().submits` (your round-2 ruling)
+
+You ruled that counting every actual submission, timestamp copies included, is acceptable if
+documented as total submissions, that T9 must derive rendering statistics from bands/publications
+or rendering events, and that a separate counter is optional. The implementer documented it in
+renderer.js as counting every queue submission, timestamp readback copies included, with rendered
+work described by `bands` and the events, and added no separate counter. Please confirm the
+documentation is adequate.
+
+## What to do
+
+1. For each of findings 5 and 6, reply **ADDRESSED** or **NOT ADDRESSED**, with evidence
+   (file:line, what you ran).
+2. Review `git diff 0705ca9..4fb5869` only for any new breakage (including the classifier regex
+   matching too much or too little, double settlement of credit/watchdog, a pump that can still
+   run after the abort latch, and tests that assert nothing).
+3. State explicitly whether **Step 9, the smoke run with `--mode headed`, may proceed**.
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- Per-finding rulings for 5 and 6, then any new findings numbered from 7, each with severity
+  (Critical / Important / Minor), file:line, the concrete failure scenario, and the fix.
+- Any finding that requires changing the spec or the plan text is tagged `PLAN/SPEC CHANGE`.
+- The explicit Step 9 statement.
+- What you ran, and the results.
+
+
+---
+
+## Codex → Claude — EXEC T7 review r3 — scoped re-review of findings 5–6 at 4fb5869 — VERDICT: CHANGES REQUIRED
+*2026-10-19 12:03:00 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ — findings 5–6 are repaired, but a newly detached promise lets an allocation-cap failure become unhandled while timestamp readback reports success.
+
+- **5 — ADDRESSED.** `spikes/project0/gpu/renderer.js:214–219` latches the abort before pumping on rejection. My reproduction stayed at **2 submissions**, drained to **0 credits**, and recorded `submission-failed`. Rejection after epoch retirement cleaned up without aborting.
+- **6 — ADDRESSED.** `spikes/project0/session-utils.mjs:35` classifies the emitted invalidation. Both new classifier tests pass. I also verified that T10’s planned `ABORTS` derives from `STOPS`.
+
+New findings:
+
+7. **Important — `spikes/project0/gpu/renderer.js:214`, `:221` — completion-handler exceptions escape the awaited operation.**  
+   The promise returned by `completion.then(...)` is discarded; the function awaits the original `completion`. If the success handler’s `pump()` throws, that exception becomes unhandled while `readTimestamps()` continues successfully.
+
+   Reproduction: start timestamp readback and rendering, fill the allocator’s remaining allowance, then complete the timestamp copy. At **4fb5869**, readback returns `{method:'timestamp-query', filled:0}` alongside an unhandled `allocation cap exceeded` error. The same reproduction at **0705ca9** rejects readback with that error and produces no unhandled rejection.
+
+   **Fix:** await/race the promise returned by the completion handlers, preserving rejection cleanup and abort-before-pump ordering. Add a regression asserting that a pump allocation failure rejects readback through the caller’s normal failure path. **PLAN/SPEC CHANGE:** update the renderer’s plan code and tests.
+
+8. **Minor — `spikes/project0/session-utils.mjs:35` — classifier matches longer, unrelated abort kinds.**  
+   `stopReasonsOf(['aborted: submission-failed-other'])` currently returns `['submission completion rejected']`. The negative test checks a different prefix, so misses this boundary.
+
+   **Fix:** require the complete abort-kind token, while retaining any intended error-wrapper support; test a longer prefixed kind. This does not block smoke independently. **PLAN/SPEC CHANGE:** update the classifier’s plan code and tests.
+
+The `stats().submits` documentation at `renderer.js:43` is adequate: it explicitly includes timestamp copies and directs rendering analysis to bands and events. No separate counter is required.
+
+**Step 9 (`--mode headed`) may not proceed until finding 7 is corrected and reviewed.**
+
+What I ran:
+
+- `node --test` on renderer, renderer-r1, scheduler, submission-stop, and session-utils suites: passed. Direct execution confirmed **32/32 tests passed**.
+- In-memory rejection, retired-epoch, classifier-boundary, and allocation-cap reproducers; compared the allocation case against **0705ca9**.
+- `node --check` on all four changed files and `git diff --check 0705ca9..4fb5869`: passed.
+- Full write-dependent suite and GPU smoke were not run. No files changed; worktree remains clean.
+
+---
+
+## Claude → Codex — EXEC T7 review r4 — scoped re-review of findings 7-8, credit ordering, settle() concern
+*2026-10-19 12:06:34 PDT*
+
+# Claude → Codex — EXEC T7 code review (round 4, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd) is detached at 0f90f27.
+
+Review `git diff 4fb5869..0f90f27` (commits: `git log --oneline 4fb5869..0f90f27`). This is a
+scoped re-review: FIX_BASE is 4fb5869, the commit you reviewed in round 3.
+
+Read:
+- the task text: `.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T7-brief.md`;
+- the implementer's report with test evidence, section "Fix round 3":
+  `.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T7-report.md`;
+- your round-3 findings: `.superpowers/sdd/2026-10-18-project0-space-qualification-plan/codex-T7-r3-findings.md`;
+- the plan header and global constraints: `.superpowers/sdd/2026-10-18-project0-space-qualification-plan/globals.md`.
+
+(Paths are relative to the implementation worktree
+`/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0`; your cwd is a detached review
+copy of the code at 0f90f27, so read the `.superpowers` files by those absolute paths.)
+
+## Open findings from round 3 (verbatim)
+
+7. **Important — `spikes/project0/gpu/renderer.js:214`, `:221` — completion-handler exceptions escape the awaited operation.**
+   The promise returned by `completion.then(...)` is discarded; the function awaits the original `completion`. If the success handler's `pump()` throws, that exception becomes unhandled while `readTimestamps()` continues successfully.
+
+   Reproduction: start timestamp readback and rendering, fill the allocator's remaining allowance, then complete the timestamp copy. At **4fb5869**, readback returns `{method:'timestamp-query', filled:0}` alongside an unhandled `allocation cap exceeded` error. The same reproduction at **0705ca9** rejects readback with that error and produces no unhandled rejection.
+
+   **Fix:** await/race the promise returned by the completion handlers, preserving rejection cleanup and abort-before-pump ordering. Add a regression asserting that a pump allocation failure rejects readback through the caller's normal failure path. **PLAN/SPEC CHANGE:** update the renderer's plan code and tests.
+
+8. **Minor — `spikes/project0/session-utils.mjs:35` — classifier matches longer, unrelated abort kinds.**
+   `stopReasonsOf(['aborted: submission-failed-other'])` currently returns `['submission completion rejected']`. The negative test checks a different prefix, so misses this boundary.
+
+   **Fix:** require the complete abort-kind token, while retaining any intended error-wrapper support; test a longer prefixed kind. This does not block smoke independently. **PLAN/SPEC CHANGE:** update the classifier's plan code and tests.
+
+## Implementer's claims (verify, do not trust)
+
+- Both new tests (for 7 and 8) fail against 4fb5869; the suite passes 188 of 188; FIXTURES OK holds.
+- One more defect was found by the finding-7 test and fixed: `pump()` took a band's credit
+  before allocating the band's buffers, so hitting the allocation cap leaked the credit. Buffers
+  are now allocated first, released if any allocation fails, and the credit is taken after that.
+
+## Implementer's open concern (needs your ruling)
+
+Bands and finishes have the same flaw as finding 7: their `settle()` discards the promise from
+their completion handlers, so if `pump()` throws (on the allocation cap, say), the page gets an
+unhandled rejection and no abort. Fixing it means choosing an abort reason. Today
+`invalidationFor` (`gpu/abort.js`, a T5 file that is not frozen) renders unknown kinds as
+`aborted: <kind>`, and STOPS recognises the cap only by its text (`allocation cap exceeded`).
+
+The controller proposes: `settle()`'s handler-promise rejection latches the abort with a reason
+whose invalidation text preserves the original error message, for example a `driver-error` kind
+that `invalidationFor` maps to `driver error: <message>`, so STOPS recognises
+`allocation cap exceeded`. Add tests for bands and for finishes.
+
+## Check
+
+1. For findings 7 and 8: **ADDRESSED** or **NOT ADDRESSED**, each with evidence (what you ran).
+2. Any new breakage in `git diff 4fb5869..0f90f27` only, including the credit-ordering fix
+   (buffer allocation, release on partial failure, credit taken last; check for leaks or
+   double release on every path, and that the retired-epoch and abort-before-pump behaviours
+   from rounds 2 and 3 are preserved).
+3. A ruling on the concern: is it blocking for the Step 9 smoke run? If it is blocking, give the
+   exact fix (file, function, abort kind, invalidation text, which STOPS/classifier entries
+   change, and the tests for bands and finishes). If the controller's proposal is wrong or
+   incomplete, say how. If it is not blocking, say what must be recorded instead.
+4. An explicit statement of whether Step 9, the smoke run with `--mode headed`, may proceed, and
+   under what conditions.
+5. Operational: run what you can read-only (node --test on the renderer, renderer-r1, scheduler,
+   submission-stop and session-utils suites; `node --check`; `git diff --check`), and say what
+   you could not run.
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- Per-finding status for 7 and 8, then new findings, numbered, each with severity
+  (Critical / Important / Minor), file:line, the concrete failure scenario, and the fix.
+- Any finding that requires changing the spec or the plan text is tagged `PLAN/SPEC CHANGE`.
+- The ruling on the concern, and the Step 9 statement.
+- What you ran, and the results.
+
+
+---
+
+## Codex → Claude — EXEC T7 review r4 — scoped re-review of findings 7-8, credit ordering, settle() concern — CHANGES REQUIRED
+*2026-10-19 12:08:49 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ — the scoped fixes are sound, but the explicitly raised band/finish concern leaves allocation-cap failures without a session abort.
+
+- **7 — ADDRESSED.** `spikes/project0/gpu/renderer.js:219` now retains the handlers’ promise, and `:227` awaits it. The allocation-cap reproduction rejects readback without an unhandled rejection. Timestamp rejection still aborts before further submission; retired-epoch rejection only cleans up.
+- **8 — ADDRESSED.** `spikes/project0/session-utils.mjs:36` rejects longer kinds ending in `-other`, `x`, or `_2`, while accepting the canonical, wrapped, and parenthesized forms.
+
+The allocation-ordering change also passes independent checks: failures at the first, second, and third band-buffer allocations restore buffer accounting and leave only the already-submitted band’s credit outstanding. I found no new regression in this diff.
+
+9. **Important — `spikes/project0/gpu/renderer.js:54`, `:140`, `:166` — band/finish handler exceptions remain unhandled.**  
+   This is the **explicitly requested existing concern**, not a newly introduced regression. I reproduced:
+   - A band-handler allocation failure: unhandled rejection, `abort.aborted === false`.
+   - A finish-handler failure using the real allocator cap: unhandled rejection, no abort, and **one readback reservation left held** because `pump()` throws before `release()`.
+
+   **PLAN/SPEC CHANGE:** repair the completion-handler error path and add its tests; no spec relaxation.
+
+The controller’s proposed `driver-error` reason is appropriate, but catching the promise alone is incomplete. The required fix is:
+
+- **`gpu/renderer.js`, `settle()`:** observe the promise returned by its completion handlers with a terminal rejection handler. For an error in the live device epoch, latch `{kind: 'driver-error', message: error?.message ?? String(error)}`. Do not repeat already-completed credit, watchdog, or resource settlement.
+- **`gpu/renderer.js`, `finish()`:** provide exception cleanup that releases its own ring reservation even when the completion handler throws before mapping. Latch the abort **before** release can call `pump()`. Observe any asynchronous handler chain routed through this mechanism. Retired/destroyed epochs must clean up without aborting a replacement session.
+- **`gpu/abort.js`, `invalidationFor()`:** render this kind as **`driver error: <original message>`**. Preserve an already-latched abort.
+- **`session-utils.mjs`, `STOPS`:** **no entry change is needed**. Its existing `allocation cap exceeded` matcher recognizes the preserved message. No blanket campaign-stop rule for every driver error is required.
+
+Tests must cover both band and finish handler failures, asserting: no unhandled rejection; prompt abort/waiter rejection; preserved cap text and `allocation cap exceeded` stop classification; no subsequent submissions; exact credit/watchdog cleanup; and, for finishes, reservation release. Include retired-epoch cleanup without a replacement-session abort.
+
+**This concern blocks Step 9. The headed smoke run may proceed only after that repair and its regression tests receive review approval.**
+
+What I ran:
+
+- Requested `node --test` suites: renderer, renderer-r1, scheduler, submission-stop, session-utils. Direct execution confirmed **34/34 passed**.
+- In-memory timestamp, partial-allocation, band-handler, finish-handler, and classifier reproducers described above.
+- `node --check` on all four changed files; renderer/smoke imports; `git diff --check 4fb5869..0f90f27`: passed.
+- Full write-dependent suite, fixture-verifier rerun, and GPU smoke were not run. No files changed; worktree remains clean.
+
+---
+
+## Claude → Codex — EXEC T7 review r5 — scoped re-review of finding 9 (completion-handler errors latch driver-error)
+*2026-10-19 12:15:54 PDT*
+
+# Claude → Codex — EXEC T7 code review (round 5, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd) is detached at 2d3fd5a.
+
+Review `git diff 0f90f27..2d3fd5a` only (commits: `git log --oneline 0f90f27..2d3fd5a`).
+FIX_BASE = 0f90f27, HEAD = 2d3fd5a.
+
+A fresh implementer did fix round 4. See the "Fix round 4" section of
+`.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T7-report.md`
+(in the project0 worktree, `$W` = `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan`).
+Reported evidence: 5 tests failed against 0f90f27, the suite passes 194 of 194, and FIXTURES OK holds.
+Also read the plan header and global constraints: `$W/globals.md`.
+
+## Open finding (verbatim from your round 4 reply, `$W/codex-T7-r4-findings.md`)
+
+9. **Important — `spikes/project0/gpu/renderer.js:54`, `:140`, `:166` — band/finish handler exceptions remain unhandled.**
+   This is the **explicitly requested existing concern**, not a newly introduced regression. I reproduced:
+   - A band-handler allocation failure: unhandled rejection, `abort.aborted === false`.
+   - A finish-handler failure using the real allocator cap: unhandled rejection, no abort, and **one readback reservation left held** because `pump()` throws before `release()`.
+
+   **PLAN/SPEC CHANGE:** repair the completion-handler error path and add its tests; no spec relaxation.
+
+The controller's proposed `driver-error` reason is appropriate, but catching the promise alone is incomplete. The required fix is:
+
+- **`gpu/renderer.js`, `settle()`:** observe the promise returned by its completion handlers with a terminal rejection handler. For an error in the live device epoch, latch `{kind: 'driver-error', message: error?.message ?? String(error)}`. Do not repeat already-completed credit, watchdog, or resource settlement.
+- **`gpu/renderer.js`, `finish()`:** provide exception cleanup that releases its own ring reservation even when the completion handler throws before mapping. Latch the abort **before** release can call `pump()`. Observe any asynchronous handler chain routed through this mechanism. Retired/destroyed epochs must clean up without aborting a replacement session.
+- **`gpu/abort.js`, `invalidationFor()`:** render this kind as **`driver error: <original message>`**. Preserve an already-latched abort.
+- **`session-utils.mjs`, `STOPS`:** **no entry change is needed**. Its existing `allocation cap exceeded` matcher recognizes the preserved message. No blanket campaign-stop rule for every driver error is required.
+
+Tests must cover both band and finish handler failures, asserting: no unhandled rejection; prompt abort/waiter rejection; preserved cap text and `allocation cap exceeded` stop classification; no subsequent submissions; exact credit/watchdog cleanup; and, for finishes, reservation release. Include retired-epoch cleanup without a replacement-session abort.
+
+**This concern blocks Step 9. The headed smoke run may proceed only after that repair and its regression tests receive review approval.**
+
+## What to judge
+
+1. **A different test fixture.** Your pre-filled-allocator reproduction does not trigger the
+   failure for bands and finishes, because cleanup frees buffers before the pump runs. The new
+   tests instead wrap the real allocator so the cap is hit at the pump's first allocation,
+   which keeps the real error text. Is this fixture a faithful and sufficient substitute?
+2. **A new behaviour, flagged by the implementer as intended.** A driver `onPublish` callback
+   that throws now latches `driver-error`; before, it was an unhandled rejection. Is this
+   acceptable, and is it tested?
+3. **Two existing finish failure paths** now latch the abort before releasing the reservation.
+   Check ordering and that nothing regresses.
+
+Coverage question: the destroyed-renderer case has no dedicated test; the retired-epoch case is
+tested. Is that acceptable?
+
+## Reply format
+
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- Finding 9: `ADDRESSED` or `NOT ADDRESSED`, with reasons.
+- Any new breakage in `git diff 0f90f27..2d3fd5a`, numbered, with severity (Critical / Important /
+  Minor), file:line, the concrete failure scenario and the fix. Tag anything requiring a spec or
+  plan change `PLAN/SPEC CHANGE`.
+- An explicit statement: **may Step 9 (the smoke run with `--mode headed`) proceed, yes or no.**
+- What you ran, and the results (node --test on suites that do not write; node --check; imports),
+  and what you could not run read-only.
+
+
+---
+
+## Codex → Claude — EXEC T7 review r5 — scoped re-review of finding 9 (completion-handler errors latch driver-error) — CHANGES REQUIRED
+*2026-10-19 12:17:57 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+**Finding 9: NOT ADDRESSED fully.** Error propagation, reservation cleanup, and stop classification work for isolated completions, but the abort can still arrive after another submission.
+
+**Important — `spikes/project0/gpu/renderer.js:57` — the terminal `.catch()` leaves a scheduling window.** When two completion promises resolve together:
+
+- First handler hits the allocation cap and rejects its returned promise.
+- The already-queued second handler runs before `.catch()` latches the abort, and submits another band.
+
+Using the new allocator fixture, I reproduced **2 → 3 submissions** for two band completions, and **3 → 4 submissions** for a finish plus band completion. The abort eventually latches; the extra work was already submitted.
+
+**Fix:** catch synchronous handler exceptions inside the completion callback and latch `driver-error` immediately, before returning to the microtask queue. Then perform owner-specific rescue. Retain terminal observation for asynchronous failures. Add tests resolving both outstanding completions synchronously before yielding, asserting no additional submission, correct cleanup, and preserved stop classification. **PLAN/SPEC CHANGE.**
+
+No separate new finding beyond this remaining part of finding 9.
+
+My rulings on the requested details:
+
+- **Allocator fixture:** a valid deterministic failure-injection fixture, with real allocator error text. It needs the concurrent-completion schedules above to establish the claimed behavior. The report’s blanket statement about prefilled allocators is inaccurate: the original finish reproduction still triggers when replacement rendering retains the same target dimensions. That reproduction now aborts and releases its reservation correctly.
+- **Throwing `onPublish`:** converting this into `driver-error` is acceptable. There is no dedicated committed test, but my in-memory probe confirmed the abort, preserved message, released reservation, and absence of unhandled rejection. Add a regression test alongside the intended behavior change.
+- **Existing finish failure paths:** both now latch their respective abort before reservation release. That ordering is correct.
+- **Destroyed-renderer coverage:** the missing dedicated test is not independently blocking. The shared lifetime guard is appropriate, and my destroyed-band and destroyed-finish probes both cleaned up without aborting. The committed retired-epoch tests also pass.
+
+**May Step 9 (`--mode headed`) proceed? No.** Close the concurrent-completion ordering gap and obtain review approval first.
+
+What I ran:
+
+- `node --test` on renderer, renderer-r1, scheduler, submission-stop, session-utils, and abort suites; direct execution confirmed **46/46 passed**.
+- In-memory probes for concurrent completions, the original prefilled finish failure, throwing publication callbacks, and destroyed-renderer cleanup.
+- `node --check` on all four changed files, renderer/smoke imports, and `git diff --check 0f90f27..2d3fd5a`: passed.
+- Full write-dependent suite, fixture-verifier rerun, and GPU smoke were not run. No files changed; worktree remains clean.
+
+---
+
+## Claude → Codex — EXEC T7 review r6 — final scoped re-review of finding 9 (fix round 5)
+*2026-10-19 12:20:47 PDT*
+
+# Claude → Codex — EXEC T7 code review (round 6, final scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (the round-1 directory, review-T7-r1)
+is detached at f18d626.
+
+Review `git diff 2d3fd5a..f18d626` only (commits: `git log --oneline 2d3fd5a..f18d626`).
+FIX_BASE = 2d3fd5a, HEAD = f18d626.
+
+A fix round 5 was done. See the "Fix round 5" section of
+`.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T7-report.md`
+(in the project0 worktree, `$W` = `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan`).
+Reported evidence:
+- Three new tests failed against 2d3fd5a: band+band 3 vs 2, finish+band 4 vs 3, and timestamp copy + band 3 vs 2. The last is a case you did not report; the implementer found it and closed it the same way.
+- The onPublish regression test is new (it passes at 2d3fd5a, as it covers behaviour you already accepted).
+- The suite passes 198 of 198, and FIXTURES OK holds.
+- The fix is a `guard()` that latches `driver-error` synchronously inside the throwing callback, before a finish's reservation is released, with the terminal catch kept for asynchronous failures.
+
+Also read the plan header and global constraints: `$W/globals.md`.
+
+## Open finding (verbatim from your round 5 reply, `$W/codex-T7-r5-findings.md`)
+
+**Finding 9: NOT ADDRESSED fully.** Error propagation, reservation cleanup, and stop classification work for isolated completions, but the abort can still arrive after another submission.
+
+**Important — `spikes/project0/gpu/renderer.js:57` — the terminal `.catch()` leaves a scheduling window.** When two completion promises resolve together:
+
+- First handler hits the allocation cap and rejects its returned promise.
+- The already-queued second handler runs before `.catch()` latches the abort, and submits another band.
+
+Using the new allocator fixture, I reproduced **2 → 3 submissions** for two band completions, and **3 → 4 submissions** for a finish plus band completion. The abort eventually latches; the extra work was already submitted.
+
+**Fix:** catch synchronous handler exceptions inside the completion callback and latch `driver-error` immediately, before returning to the microtask queue. Then perform owner-specific rescue. Retain terminal observation for asynchronous failures. Add tests resolving both outstanding completions synchronously before yielding, asserting no additional submission, correct cleanup, and preserved stop classification. **PLAN/SPEC CHANGE.**
+
+## What to judge
+
+1. Is the remaining part of finding 9 ADDRESSED or NOT ADDRESSED? Check the concurrent-completion schedules (band+band, finish+band), cleanup, and stop classification, and that the new tests really exercise those schedules.
+2. The timestamp-copy case (`readTimestamps()` fulfilment pump, wrapped with `handlerFailed(null, 'timestamp-readback', error)` and then rethrown). Is it correct, and does the readback still reject through the caller's failure path?
+3. Is the ordering right in every guarded path (abort latched before a finish's `release`), and are retired or destroyed epochs still cleaned up without aborting a replacement session?
+
+## Reply format
+
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- Finding 9: `ADDRESSED` or `NOT ADDRESSED`, with reasons.
+- Any new breakage in `git diff 2d3fd5a..f18d626`, numbered, with severity (Critical / Important / Minor), file:line, the concrete failure scenario and the fix. Tag anything requiring a spec or plan change `PLAN/SPEC CHANGE`.
+- This is T7's last review round. State explicitly: **may Step 9 (the smoke run with `--mode headed`) proceed, yes or no**, and what you expect that run to show.
+- What you ran and the results (node --test on suites that do not write; node --check; imports), and what you could not run read-only.
+
+
+---
+
+## Codex → Claude — EXEC T7 review r6 — final scoped re-review of finding 9 (fix round 5) — APPROVED
+*2026-10-19 12:22:24 PDT*
+
+VERDICT: APPROVED
+
+**Finding 9: ADDRESSED.** The synchronous guards close the scheduling window.
+
+- `spikes/project0/gpu/renderer.js:59–65` catches handler exceptions and latches the abort before reservation rescue or another queued completion runs.
+- Independent concurrent-completion probes confirmed **band+band: 2 → 2 submissions**, **finish+band: 3 → 3**, and **timestamp+band: 2 → 2**. All credits and watchdog registrations settled exactly once; finish reservations released.
+- `renderer.js:248` correctly handles the timestamp-copy case: it latches `driver-error` synchronously and rethrows. Readback rejects with the cap text, and the existing classifier reports `allocation cap exceeded`.
+- Finish mapping handlers are guarded too. Retired and destroyed renderer probes cleaned up without aborting the replacement session.
+- The new tests genuinely queue both completion handlers before yielding. Their submission-count assertions exercise the previously failing schedules.
+
+**No new breakage found in `git diff 2d3fd5a..f18d626`.**
+
+**May Step 9 proceed? Yes:** run `node spikes/project0/run.mjs --gate smoke --mode headed` from the clean, reviewed implementation.
+
+Expected results:
+
+- Saved development evidence with `timingMethod: correctness-only`, empty metrics, and no unexplained invalidations.
+- Four frames with non-null counts and `counts.total === W × H`—230,400 for these 640×360 profiles.
+- Sphere: `point + steps + failure === 0`.
+- Bulb stress: `steps / total >= 0.40`.
+- Every frame: `outstandingMax <= 2`.
+
+Investigate coverage outside the frozen ranges; do not change those ranges. Smoke’s per-frame `ms` remains diagnostic only.
+
+What I ran:
+
+- `node --test` on renderer, renderer-r1, scheduler, submission-stop, session-utils, and abort suites. Direct execution confirmed **50/50 tests passed**.
+- Independent concurrent-completion, exact-settlement, stop-classification, readback-rejection, retired-epoch, and destroyed-renderer probes: passed.
+- `node --check` on both changed files, renderer/smoke imports, and `git diff --check 2d3fd5a..f18d626`: passed.
+- Full write-dependent suite, fixture-verifier rerun, and GPU smoke were not run in this read-only review. No files changed; worktree remains clean.
+
+---
+
+## Claude → Codex — EXEC T8 review r1 — A.8 resource verification (G11) and loss/recovery (G13) before Step 9 GPU
+*2026-10-19 12:36:27 PDT*
+
+# Claude → Codex — EXEC T8 code review (round 1)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd) is detached at c4c3b44.
+
+Review `git diff f18d626..c4c3b44` (commits: `git log --oneline f18d626..c4c3b44`).
+
+This is the review the plan's Step 8 requires before T8's GPU runs (G11 and G13, Step 9, `--mode headed`). Reviewed background from T0–T7:
+- **The timingMethod contract:** timing-contract.js `EXPECTED_TIMING`, the writer validation, and `evaluateGateChecked`/`validateEvidence` in gates-checked.js. See the Fix rounds 3–5 sections of `$W/task-T6-report.md`.
+- **The renderer (T7) differs from the plan:** it is epoch-bound; failure aborts have kinds `submission-failed` and `driver-error`, where `driver error: <msg>` keeps the original text; STOPS gained `submission completion rejected`; and `readTimestamps` takes a ledger credit. See the Fix rounds 1–5 sections of `$W/task-T7-report.md`.
+- **Frozen sources:** the 24 frozen provenance sources in fixtures.json must not change.
+- **Decisions:** `docs/codesign/execution-decisions.md` holds E1 and E2.
+
+This task's deviations, per the implementer:
+- the G11 and G13 drivers supply `correctness-only`, with rows added to timing-contract.js, because no rule in either gate bounds a duration;
+- the Step 7b fake's renderer is now epoch-bound, with every assertion kept.
+
+Judge the implementer's concerns:
+1. A watchdog stall on the lost G13 session goes unrecorded if the loss notification arrives more than ~5 s after the last submission. This is the brief's code.
+2. G13 raw keeps two page-clock timestamps, which must never be used as timing evidence.
+3. G11 `peakBytes` covers the whole session, not just the exercise.
+4. G11's `run()` path can only be tested on the GPU.
+
+Focus on Review Focus items 2 and 3 in globals.md: late completions crossing a device or generation boundary, and the byte layout and padding of the A.8 readback.
+
+State explicitly whether Step 9 may proceed.
+
+Paths (W = `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan`; the implementation worktree is `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0`, where the `$W/...` and `docs/...` files above live; your cwd is a detached checkout of the same commit):
+
+Read:
+- the task text: `$W/task-T8-brief.md` (the plan's exact code and Expected outputs);
+- the implementer's report with test evidence: `$W/task-T8-report.md`;
+- the plan header and global constraints: `$W/globals.md`;
+- the spec sections the task cites.
+
+Check:
+1. **Plan fidelity.** Code matches the task's text (whole files, verbatim unless a deviation is
+   justified in the report). List every deviation and say whether it is acceptable.
+2. **Spec compliance.** Nothing the spec requires is missing; nothing it forbids is present
+   (fixtures before GPU, sandbox, flags, storage, bounded waits, stop classification, evidence
+   identity).
+3. **Operational.** Run the task's tests and any read-only checks you can (node --test on the
+   suites that do not write; module import resolution). Say exactly what you ran and the result,
+   and what you could not run read-only.
+4. **Defects.** Real bugs, missing tests, tests that assert nothing.
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- Findings, numbered, each with severity (Critical / Important / Minor), file:line, the
+  concrete failure scenario, and the fix.
+- Any finding that requires changing the spec or the plan text is tagged `PLAN/SPEC CHANGE`.
+- What you ran, and the results.
+- A final line stating explicitly whether Step 9 may proceed.
+
+
+---
+
+## Codex → Claude — EXEC T8 review r1 — A.8 resource verification (G11) and loss/recovery (G13) before Step 9 GPU — CHANGES REQUIRED
+*2026-10-19 12:38:33 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ Two abort-handling defects violate §7 and the plan’s live-abort requirement. The changes otherwise preserve scope, frozen sources, launch settings and evidence identity.
+
+1. **Important — PLAN/SPEC CHANGE — `spikes/project0/browser/drivers/lifecycle.js:14,40–41,68`: G13 discards session aborts and continues recovery.**  
+   `waitFor` checks unexpected losses but never checks the session abort. The drain likewise ignores it, and closing/replacing `s` loses its invalidation. A watchdog stall before the expected loss notification can therefore be followed by recovery, further acquisitions and an empty invalidation list.
+
+   I reproduced this with an injected session abort: the driver opened **four sessions**, returned all three slots and reported `invalidations: []`.
+
+   **Fix:** Race polling and drains against the owning session’s abort; check it before closing/replacing that session and before recording success. Stop immediately with its original classified reason. Add delayed-loss and drain-time-abort tests asserting no further acquisition. This corrects the brief’s code; no spec relaxation is needed.
+
+2. **Important — PLAN/SPEC CHANGE — `spikes/project0/browser/drivers/resources.js:82–85`: error cleanup can wait forever despite a subsequent abort.**  
+   If encoding/allocation throws while earlier submissions remain pending, `finally` enters `Promise.allSettled(outstanding)` while `abort.aborted` is false. A later watchdog abort cannot interrupt that wait. Resources remain unreleased and available raw evidence is not returned.
+
+   I reproduced two pending submissions followed by an encoding failure and a latched stall: the exercise remained pending with **zero resources destroyed**.
+
+   **Fix:** Make cleanup abortable, with resource destruction in an unconditional cleanup path. Preserve both the original error and any stop reason encountered during cleanup. Add a regression test with unresolved GPU promises. This also corrects the brief rather than changing the spec.
+
+3. **Minor — `spikes/project0/tests/resources-metrics.test.mjs:10`: no test exercises A.8 copy layout or decoding.**  
+   These tests supply precomputed `ok` flags. Incorrect copy offsets, channel decoding or final-band dispatch would leave them green.
+
+   **Fix:** Test `exerciseResources` with a fake device recording copies and dispatches and supplying mapped source-format bytes. Assert all 63 sample locations, 256-byte slot spacing, mixed-format decoding, the final 112-row write band, full-band stride and cleanup. Include corrupted-byte controls.
+
+The implementer’s other concerns are acceptable:
+
+- G13’s two page-clock timestamps are diagnostic event fields. Neither metric derivation uses them as timing evidence; `correctness-only` is appropriate.
+- Session-wide G11 `peakBytes` is correct: the cap includes baseline, staging and overlapping allocations.
+- Real GPU execution is necessary for operational validation, but G11 orchestration and readback logic **can** also be tested with fakes.
+
+Plan fidelity: six extracted files are byte-identical. All deviations are accounted for and acceptable: the two timing-contract registrations; descriptors on G11 and all G13 slot paths; the epoch-bound sequence fake and descriptor assertions; and the additional timing tests. No unexplained deviation was found.
+
+For the requested review focus, T7’s epoch/generation guards remain intact and recovery obtains a fresh renderer. The frozen A.8 layout is internally consistent: 256-byte sample offsets accommodate every source format; the selected mapping covers 2,304 bytes; the full-band stride is 15,360 bytes, already 256-byte aligned; and each staging buffer holds 3,932,160 bytes. Generic padded-width support is not required by this frozen fixture.
+
+Validation performed:
+
+- `node --test` on lifecycle, resources-metrics, lifecycle-sequence, renderer, renderer-r1, alloc, abort, watchdog, packing and decode suites: passed.
+- Executed those files directly as well: **53 tests passed**, including all nine brief tests.
+- Two in-memory failure reproductions above confirmed the defects.
+- `node --check` on all ten changed JS/MJS files, both driver imports and `git diff --check`: passed.
+- Independently hashed all **24 frozen sources**: no mismatches. Working tree remains clean.
+- `verify-fixtures.mjs` was blocked by sandbox `spawnSync git EPERM`.
+- Did not run the writing timing suite, full suite, or GPU checks. The reported 213-test result is not independently confirmed here.
+
+**Step 9 may not proceed until findings 1 and 2 are fixed and reviewed.**
+
+---
+
+## Claude → Codex — EXEC T8 review r2 — scoped re-review of fix round 1 (0a45be1), Step 9 go/no-go
+*2026-10-19 12:44:10 PDT*
+
+# Claude → Codex — EXEC T8 code review (round 2, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd) is detached at 0a45be1.
+
+This is a resume of your round-1 review (run 20261019T193627Z-ce05). Review ONLY
+`git diff c4c3b44..0a45be1` (commits: `git log --oneline c4c3b44..0a45be1`): one fix commit,
+0a45be1, touching `spikes/project0/browser/drivers/lifecycle.js`,
+`spikes/project0/browser/drivers/resources.js`, `spikes/project0/tests/lifecycle-sequence.test.mjs`
+and the new `spikes/project0/tests/resources-exercise.test.mjs`.
+
+Read:
+- the task text: `$W/task-T8-brief.md`;
+- the implementer's report, section "Fix round 1": `$W/task-T8-report.md`;
+- the plan header and global constraints: `$W/globals.md`.
+
+W = `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan`
+(the implementation worktree is `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0`, where
+those files live; your cwd is a detached checkout of 0a45be1).
+
+## Open findings (verbatim from your round 1, `$W/codex-T8-r1-findings.md`)
+
+1. **Important — PLAN/SPEC CHANGE — `spikes/project0/browser/drivers/lifecycle.js:14,40–41,68`: G13 discards session aborts and continues recovery.**
+   `waitFor` checks unexpected losses but never checks the session abort. The drain likewise ignores it, and closing/replacing `s` loses its invalidation. A watchdog stall before the expected loss notification can therefore be followed by recovery, further acquisitions and an empty invalidation list.
+
+   I reproduced this with an injected session abort: the driver opened **four sessions**, returned all three slots and reported `invalidations: []`.
+
+   **Fix:** Race polling and drains against the owning session's abort; check it before closing/replacing that session and before recording success. Stop immediately with its original classified reason. Add delayed-loss and drain-time-abort tests asserting no further acquisition. This corrects the brief's code; no spec relaxation is needed.
+
+2. **Important — PLAN/SPEC CHANGE — `spikes/project0/browser/drivers/resources.js:82–85`: error cleanup can wait forever despite a subsequent abort.**
+   If encoding/allocation throws while earlier submissions remain pending, `finally` enters `Promise.allSettled(outstanding)` while `abort.aborted` is false. A later watchdog abort cannot interrupt that wait. Resources remain unreleased and available raw evidence is not returned.
+
+   I reproduced two pending submissions followed by an encoding failure and a latched stall: the exercise remained pending with **zero resources destroyed**.
+
+   **Fix:** Make cleanup abortable, with resource destruction in an unconditional cleanup path. Preserve both the original error and any stop reason encountered during cleanup. Add a regression test with unresolved GPU promises. This also corrects the brief rather than changing the spec.
+
+3. **Minor — `spikes/project0/tests/resources-metrics.test.mjs:10`: no test exercises A.8 copy layout or decoding.**
+   These tests supply precomputed `ok` flags. Incorrect copy offsets, channel decoding or final-band dispatch would leave them green.
+
+   **Fix:** Test `exerciseResources` with a fake device recording copies and dispatches and supplying mapped source-format bytes. Assert all 63 sample locations, 256-byte slot spacing, mixed-format decoding, the final 112-row write band, full-band stride and cleanup. Include corrupted-byte controls.
+
+## Implementer's fix report (summary; the full text is in `$W/task-T8-report.md`, "Fix round 1")
+
+- The three G13 abort tests and the G11 hang test FAILED against c4c3b44 (red first), and pass at 0a45be1.
+- The A.8 layout tests pass on the brief's code as well, because the brief's readback code is correct; their failing evidence is the corrupted-byte controls.
+- Full suite: 219 of 219 pass. `FIXTURES OK` holds. No frozen source, WGSL file or other module changed.
+
+## Asked of you
+
+1. For each of the three findings, state **ADDRESSED** or **NOT ADDRESSED**, with the file:line evidence. Judge whether the tests would actually fail on a regression (not only whether they pass).
+2. List any **new breakage** introduced in `git diff c4c3b44..0a45be1` only (do not re-review the rest of T8). Pay attention to: the error text of the existing lossBeforeArm test; a stall that arrives during cleanup masking or being masked by the original error; `abort.race` leaving timers or listeners pending; resources destroyed twice or while a submission is still in flight; and whether the fake in the new tests is faithful enough that the controls could not pass vacuously.
+3. State explicitly whether **Step 9 (G11 and G13 on the GPU, `--mode headed`) may proceed**, and what you expect that run to show (per gate: the expected pass/fail result, the expected invalidations, and any signal that would indicate a real defect rather than a hardware finding).
+4. Re-run what you can read-only (the changed suites with `node --test`, `node --check`, `git diff --check`, the hash check of the 24 frozen sources) and say exactly what you ran and what you could not.
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- Per-finding ADDRESSED / NOT ADDRESSED, then any new findings, numbered, each with severity (Critical / Important / Minor), file:line, the concrete failure scenario, and the fix. Tag any finding that requires changing the spec or the plan text `PLAN/SPEC CHANGE`.
+- The explicit Step 9 statement and expected GPU result.
+- What you ran, and the results.
+
+
+---
+
+## Codex → Claude — EXEC T8 review r2 — scoped re-review of fix round 1 (0a45be1), Step 9 go/no-go — VERDICT: APPROVED
+*2026-10-19 12:46:15 PDT*
+
+VERDICT: APPROVED
+
+Spec compliance: ✅ The scoped changes restore the required abort behavior without relaxing the spec. Frozen sources, WGSL, timing descriptors and launch configuration are unchanged.
+
+1. **ADDRESSED — Important — PLAN/SPEC CHANGE — `spikes/project0/browser/drivers/lifecycle.js:18–19,45,51,62`.**  
+   Polling, draining and the repeated-loss observation now respect the owning session’s abort. Checks precede replacement or success recording, and line 69 preserves the classified reason. The existing `lossBeforeArm` error remains “unexpected loss.”
+
+   The three new tests fail against c4c3b44 and pass against 0a45be1. Their aborts latch at wait entry; I additionally tested asynchronous aborts during polling, draining and observation. All returned promptly with the correct invalidation and acquisition count.
+
+2. **ADDRESSED — Important — PLAN/SPEC CHANGE — `spikes/project0/browser/drivers/resources.js:80–90`.**  
+   Cleanup races the abort and destroys owned resources unconditionally. The original error and subsequent stall are both retained, without duplicate stop text.
+
+   The regression test at `tests/resources-exercise.test.mjs:145` fails against c4c3b44 and passes now: two unresolved submissions, encoding failure, later abort, complete resource release, and both errors preserved. Destroying resources after submission is permitted; this does not claim cancellation of submitted work. Allocator destruction remains idempotent.
+
+3. **ADDRESSED — Minor — `spikes/project0/tests/resources-exercise.test.mjs:98–141`.**  
+   Tests now exercise actual driver dispatches, copy descriptors and decoding: all 63 samples, 256-byte offsets, mixed formats, the final 112-row band and full-band stride. Corruption controls assert specific mismatch counts and failed maintenance validation.
+
+   These are meaningful controls, not precomputed passing observations. The fake models bytes and submitted operations sufficiently for this scope; shader execution and browser validation remain GPU-check responsibilities.
+
+**No new breakage found in the scoped diff.** Losing sleep timers can remain pending briefly—up to the bounded two-second drain deadline—but only resolve promises; they cannot resume the stopped sequence. Loss subscriptions are removed on exit. No new cross-session publication or double-release path was found.
+
+**Step 9 may proceed**, using the two prescribed `--mode headed` commands. Expected outcomes:
+
+| Gate | Expected result | Expected invalidations |
+|---|---|---|
+| G11 | Pass: table bytes 405,995,520; peak within the approved range; 7 textures, 63 checks, zero mismatches; full band 3,932,160 bytes; cancellation/release successful; at most two outstanding submissions. | `[]` |
+| G13 | Pass: both loss types interrupt without success or late publication, preserve the request and recover validly; repeated loss causes zero automatic retries. | `[]` |
+
+All slots should carry `correctness-only`. Missing descriptors, swallowed stops, continued acquisition after an abort, stale publications, incorrect copy descriptors or leaked inventory indicate implementation/evidence defects. A stall, unexpected loss or byte mismatch requires diagnosis; it is not automatically attributable to hardware. Preserve the evidence and thresholds.
+
+Validation performed:
+
+- `node --test spikes/project0/tests/lifecycle-sequence.test.mjs spikes/project0/tests/resources-exercise.test.mjs`: passed.
+- Direct execution of both suites: **9/9 tests passed**.
+- Current tests against previous drivers, loaded entirely in memory: **three G13 regressions and one G11 regression failed as expected**.
+- Three supplemental asynchronous-abort checks: passed.
+- `node --check` on all four changed files: passed.
+- `git diff --check c4c3b44..0a45be1`: passed.
+- SHA-256 comparison of all **24 frozen sources**: zero mismatches.
+
+No files were edited. GPU runs and the writing portions of the full suite were not run; the reported **219/219** result remains implementer evidence.
+
+---
+
+## Claude → Codex — EXEC T9 review r1 — timing drivers, G1 identity, waitResult polling, G10 measured
+*2026-10-19 13:09:03 PDT*
+
+# Claude → Codex — EXEC T9 code review (round 1)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd) is detached at 6dda1a9.
+
+Review `git diff 0a45be1..6dda1a9` (commits: `git log --oneline 0a45be1..6dda1a9`; they are 1365703 and 6dda1a9).
+
+Let `$W` = `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan`.
+
+Read:
+- the task text: `$W/task-T9-brief.md` (the plan's exact code and Expected outputs);
+- the implementer's report with test evidence: `$W/task-T9-report.md`;
+- the plan header and global constraints: `$W/globals.md`;
+- the spec sections the task cites (`docs/superpowers/specs/2026-10-18-project0-space-qualification-design.md`; plan: `docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md`).
+
+This is a new Codex session. This is the review the plan's Step 7 requires before T9's development campaign on the GPU (Step 8, `--mode headed`). Reviewed background:
+- the timingMethod contract (`$W/task-T6-report.md`, Fix rounds 3–5);
+- the T7 renderer changes (`$W/task-T7-report.md`, Fix rounds 1–5);
+- T8's abort-racing pattern (`$W/task-T8-report.md`, Fix round 1);
+- the Chrome 151 chrome://gpu format and launch.mjs `activeGpuDriver` (`$W/task-T5-report.md`, Fix rounds 3–5);
+- the 24 frozen provenance sources must not change;
+- `docs/codesign/execution-decisions.md` (E1, E2).
+
+Controller ruling applied in this task: the brief's g1Metrics parsed the old 'Driver vendor/version' rows, so it now uses `activeGpuDriver`.
+
+Check the timing descriptors chosen per gate carefully against what each driver actually measures:
+- G1 and visible are correctness-only;
+- G2 `navigationMs`, G6/G7 `observedMs`, G8 `latencyMs`, G9 `longestTaskMs`, G10 `elapsedMs` and G12 `wallMs` are all measured on the page clock with `timestampQueriesUsed: false`;
+- readback is included for all of them except G9;
+- G6–G10 now record a top-level raw number, while metrics are still derived from events.
+
+Rule on the implementer's concerns, which may need joint decisions:
+1. **G1 will be inconclusive on this host,** because Chrome 151 reports `adapter.info.device` as an empty string and the brief's rule treats missing identity as inconclusive. The probe evidence (`artifacts/project0/20261019T172743628Z-probe/`, read-only) shows vendor nvidia, architecture lovelace, device and description empty, with chrome://gpu GPU0 `DEVICE=0x26b1 [ANGLE (NVIDIA, Vulkan 1.4.312 (NVIDIA NVIDIA RTX 6000 Ada Generation (0x000026B1)), NVIDIA-580.173.2.0)] *ACTIVE*`. Is corroboration from chrome://gpu's active record legitimate under spec G1? Or is this an inconclusive result that goes to T10, or a USER DECISION?
+2. **T6's `waitResult` polls `page.evaluate`** every 1 s (every 15 s for G12), including inside the G6/G7 measured windows, which violates the rule that Node makes no calls inside a measured window. What is the fix?
+3. **G10 is measured,** because gates.js bounds `elapsedMs` to 0–2000 ms.
+
+Focus also on Review Focus item 5 (interference produces invalidations).
+
+State explicitly whether Step 8 may proceed.
+
+Check:
+1. **Plan fidelity.** Code matches the task's text (whole files, verbatim unless a deviation is
+   justified in the report). List every deviation and say whether it is acceptable.
+2. **Spec compliance.** Nothing the spec requires is missing; nothing it forbids is present
+   (fixtures before GPU, sandbox, flags, storage, bounded waits, stop classification, evidence
+   identity).
+3. **Operational.** Run the task's tests and any read-only checks you can (node --test on the
+   suites that do not write; module import resolution). Say exactly what you ran and the result,
+   and what you could not run read-only.
+4. **Defects.** Real bugs, missing tests, tests that assert nothing.
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- Findings, numbered, each with severity (Critical / Important / Minor), file:line, the
+  concrete failure scenario, and the fix.
+- Any finding that requires changing the spec or the plan text is tagged `PLAN/SPEC CHANGE`.
+- Explicit rulings on concerns 1, 2 and 3, and an explicit statement on whether Step 8 may proceed.
+- What you ran, and the results.
+
+
+---
+
+## Codex → Claude — EXEC T9 review r1 — timing drivers, G1 identity, waitResult polling, G10 measured — CHANGES REQUIRED
+*2026-10-19 13:11:45 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ Timing-window isolation, continuous integrity detection, failure handling, and software-execution stop classification have gaps. The diff preserves project boundaries, launch configuration, and all 24 frozen provenance sources.
+
+**Findings**
+
+1. **Important — `spikes/project0/session-utils.mjs:46`: Node polls inside measured windows.**  
+   `waitResult()` repeatedly calls `page.evaluate()`, including during G6/G7 and G12. Increasing `pollMs` does not guarantee isolation and weakens responsiveness detection.
+
+   **Fix:** install the result/checkpoint transport before navigation; let the page push completion and bounded checkpoints outside measured windows. Keep Node-owned deadlines and crash handling without periodic page evaluations. Test that no Node evaluation occurs between window start and end. **PLAN/SPEC CHANGE:** repair the plan’s runner implementation; retain its measurement constraint.
+
+2. **Important — `spikes/project0/browser/integrity.js:14`: backing-size sampling misses interference.**  
+   Backing dimensions are checked only on animation frames, with no initial or final check. I reproduced both an invalid initial backing followed by immediate `stop()`, and a temporary invalid size restored before the next animation frame. Both returned `violations: []`.
+
+   **Fix:** validate initial/final state and observe backing mutations, retaining intermediate changes and draining pending observations before stopping. Account explicitly for G12’s intentional resize operations. Add direct observer tests for transient interference; the current tests mainly inject already-constructed integrity results. **PLAN/SPEC CHANGE:** repair the supplied observer code to meet Review Focus 5.
+
+3. **Important — `spikes/project0/browser/drivers/timing.js:78` and `:110`: invalid trials continue, and G9 loses their invalidations.**  
+   The driver records integrity violations without stopping subsequent acquisitions. Late G7 issuance is likewise rejected only after the entire invocation finishes. G9 then reports twelve windows without their integrity or schedule validity. An in-memory `finalise()` reproduction produced an invalid G6 record alongside a clean G9 record with passing metrics.
+
+   **Fix:** validate each completed trial before starting another, preserve its raw evidence, and terminate on failure as the brief requires. Bind G9 to the identities and validity of its source windows; interrupted or invalid source windows cannot produce clean G9 evidence. Apply equivalent failure checks to repeated G8/G10 work. **PLAN/SPEC CHANGE:** repair the supplied driver/control-flow text.
+
+4. **Important — `spikes/project0/browser/drivers/g12.js:25`: maintenance mismatches do not end the sequence.**  
+   `maintain()` checks only `raw.errors.length`. Failed content checks, `bandOk: false`, or other G11-rule failures can have an empty error array. My injected reproduction completed a cycle and ran maintenance twice after the first exercise reported failed checks.
+
+   **Fix:** validate every maintenance result against all G11 rules immediately, retain the failed result, and stop before further rendering or maintenance. Share browser-compatible validation without changing frozen evaluators. Test content mismatch, inventory mismatch, and malformed results—not only readback timeout. **PLAN/SPEC CHANGE:** repair the plan’s maintenance implementation.
+
+5. **Important — `spikes/project0/browser/drivers/g1.js:16`; `spikes/project0/measure/timing.mjs:94`: software execution can lose its stop classification.**  
+   G1 proceeds to preparation and dispatch without rejecting a software adapter. If identity corroboration also fails, the reducer throws before returning `software: 1`; `finalise()` retains empty metrics and corroboration invalidations that do not identify software execution. I reproduced `stopReasons(record) === []` for a fallback SwiftShader adapter.
+
+   **Fix:** detect software immediately after acquisition, before preparation/submission, and preserve an explicit `software adapter: …` invalidation independently of corroboration errors. Test the driver and finalised stop classification together. **PLAN/SPEC CHANGE:** repair the supplied G1 implementation to enforce §7.
+
+**Rulings**
+
+- **Concern 1 — G1 identity:** retain **inconclusive**, for T10. I reproduced the missing-device invalidation using the saved probe adapter and Chrome capture. The active Chrome GPU record is legitimate supporting evidence, but alone does not establish the plan’s required match to the selected WebGPU adapter. Spec G1 permits corroboration in principle; accepting a different corroboration protocol requires a reviewed **PLAN/SPEC CHANGE**, not silently substituting the active device ID. No user decision is needed merely to retain inconclusive.
+- **Concern 2 — polling:** must be fixed before measurement, as finding 1 describes.
+- **Concern 3 — G10:** agreed: it is measured, with `elapsedMs`, page clock, readback included, and `timestampQueriesUsed: false`.
+
+The other descriptors match their producers: G1/visible correctness-only; G2/G6/G7/G8/G12 page-clock measurements including readback; G9 long-task timing excluding readback. G9’s zero maximum when no tasks were observed is reasonable. The added top-level numbers do not replace event-derived metrics.
+
+**Step 8 may not proceed until these blockers are repaired and reviewed.**
+
+**Plan fidelity**
+
+The extraction comparison confirms the report’s seven byte-identical files. All deviations are accounted for and acceptable:
+
+- Chrome 151 G1 parsing, `activeGpuDriver` reuse, and revised/additional G1 tests.
+- Seven timing descriptors, nine registrations, descriptor attachment throughout the drivers, and additional raw timing fields.
+- G1 acquisition/preparation abort races and cancellation hook; G8, G12, and visible wait/terminal abort checks.
+- New timing-contract integration tests and the two unregistered-gate examples changed from G6 to G99.
+
+The blocking findings largely expose defects in the supplied plan code rather than unexplained implementation deviations.
+
+**Checks run**
+
+- `node --test` on `timing`, `g1`, `png`, `timing-driver`, `mapping-callers`, `timing-contract`, and `session-utils` suites: all passed.
+- Selected non-writing tests in `t9-timing.test.mjs`, using `--test-name-pattern`: passed.
+- Imported all seven drivers: module graphs resolved.
+- In-memory reproductions confirmed findings 2–5.
+- Independently hashed all 24 frozen sources: all matched.
+- `git diff --check 0a45be1..6dda1a9`: reported an extra blank line at EOF in `tests/timing-driver.test.mjs:92`.
+- `verify-fixtures.mjs`: blocked by sandbox `spawnSync git EPERM`; full verification was not completed.
+- Did not run filesystem-writing integration tests, the full suite, or GPU checks. No files were edited.
+
+**Agreed so far:** documented adaptations and timing descriptors are acceptable; frozen sources remain intact.  
+**Still disputed:** none of those adaptations; the five correctness gaps above remain blocking.
+
+---
+
+## Claude → Codex — EXEC T9 review r2 — scoped re-review of fix round 1 (05c1f7d), responsiveness bound judgement
+*2026-10-19 13:30:42 PDT*
+
+# Claude → Codex — EXEC T9 code review (round 2, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd, recreated under the
+round-1 directory name) is detached at 05c1f7d.
+
+This is a re-review. Review `git diff 6dda1a9..05c1f7d` (commits: `git log --oneline 6dda1a9..05c1f7d`). FIX_BASE is 6dda1a9; HEAD is 05c1f7d.
+
+Read:
+- the implementer's report with test evidence, section "Fix round 1": /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T9-report.md
+- the task text: .../task-T9-brief.md (same directory);
+- the plan header and global constraints: .../globals.md (same directory);
+- your own round-1 findings: .../codex-T9-r1-findings.md (same directory).
+
+Reported by the implementer: all new tests failed against 6dda1a9; the full suite passes 279 of 279 (run 4 times); FIXTURES OK holds; no frozen source changed.
+
+## Open findings (verbatim from your round 1)
+
+1. **Important — `spikes/project0/session-utils.mjs:46`: Node polls inside measured windows.**
+   `waitResult()` repeatedly calls `page.evaluate()`, including during G6/G7 and G12. Increasing `pollMs` does not guarantee isolation and weakens responsiveness detection.
+
+   **Fix:** install the result/checkpoint transport before navigation; let the page push completion and bounded checkpoints outside measured windows. Keep Node-owned deadlines and crash handling without periodic page evaluations. Test that no Node evaluation occurs between window start and end. **PLAN/SPEC CHANGE:** repair the plan's runner implementation; retain its measurement constraint.
+
+2. **Important — `spikes/project0/browser/integrity.js:14`: backing-size sampling misses interference.**
+   Backing dimensions are checked only on animation frames, with no initial or final check. I reproduced both an invalid initial backing followed by immediate `stop()`, and a temporary invalid size restored before the next animation frame. Both returned `violations: []`.
+
+   **Fix:** validate initial/final state and observe backing mutations, retaining intermediate changes and draining pending observations before stopping. Account explicitly for G12's intentional resize operations. Add direct observer tests for transient interference; the current tests mainly inject already-constructed integrity results. **PLAN/SPEC CHANGE:** repair the supplied observer code to meet Review Focus 5.
+
+3. **Important — `spikes/project0/browser/drivers/timing.js:78` and `:110`: invalid trials continue, and G9 loses their invalidations.**
+   The driver records integrity violations without stopping subsequent acquisitions. Late G7 issuance is likewise rejected only after the entire invocation finishes. G9 then reports twelve windows without their integrity or schedule validity. An in-memory `finalise()` reproduction produced an invalid G6 record alongside a clean G9 record with passing metrics.
+
+   **Fix:** validate each completed trial before starting another, preserve its raw evidence, and terminate on failure as the brief requires. Bind G9 to the identities and validity of its source windows; interrupted or invalid source windows cannot produce clean G9 evidence. Apply equivalent failure checks to repeated G8/G10 work. **PLAN/SPEC CHANGE:** repair the supplied driver/control-flow text.
+
+4. **Important — `spikes/project0/browser/drivers/g12.js:25`: maintenance mismatches do not end the sequence.**
+   `maintain()` checks only `raw.errors.length`. Failed content checks, `bandOk: false`, or other G11-rule failures can have an empty error array. My injected reproduction completed a cycle and ran maintenance twice after the first exercise reported failed checks.
+
+   **Fix:** validate every maintenance result against all G11 rules immediately, retain the failed result, and stop before further rendering or maintenance. Share browser-compatible validation without changing frozen evaluators. Test content mismatch, inventory mismatch, and malformed results—not only readback timeout. **PLAN/SPEC CHANGE:** repair the plan's maintenance implementation.
+
+5. **Important — `spikes/project0/browser/drivers/g1.js:16`; `spikes/project0/measure/timing.mjs:94`: software execution can lose its stop classification.**
+   G1 proceeds to preparation and dispatch without rejecting a software adapter. If identity corroboration also fails, the reducer throws before returning `software: 1`; `finalise()` retains empty metrics and corroboration invalidations that do not identify software execution. I reproduced `stopReasons(record) === []` for a fallback SwiftShader adapter.
+
+   **Fix:** detect software immediately after acquisition, before preparation/submission, and preserve an explicit `software adapter: …` invalidation independently of corroboration errors. Test the driver and finalised stop classification together. **PLAN/SPEC CHANGE:** repair the supplied G1 implementation to enforce §7.
+
+Also open (minor): `git diff --check 0a45be1..6dda1a9` reported an extra blank line at EOF in `tests/timing-driver.test.mjs:92`. The report says it is removed.
+
+## Ruling carried forward
+
+Concern 1 (G1 identity) stays inconclusive for T10; concern 3 (G10) is measured. The implementer recorded both.
+
+## Adapted tests: judge whether any assertion was weakened
+
+The report lists these adapted tests. Compare each against its 6dda1a9 form (`git diff 6dda1a9..05c1f7d -- <file>`) and say whether any assertion was weakened, removed or made vacuous:
+- two tests in `session-utils.test.mjs` that were built on evaluate polling ("evaluate never answers", "outer deadline with checkpoints"), rewritten against the push transport;
+- the brief's G9 test in `timing.test.mjs`, and the G9 raw in `t9-timing.test.mjs`, which now carry twelve valid sources (assertions said to be unchanged);
+- `runTiming` and `runBursts` now take injectable durations/limits (`warmupSeconds`, `windowSeconds`, `schedule`, `quietMs`, `now`, `lateLimitMs`); defaults are the frozen values. Confirm an injected value cannot loosen evidence accepted by Node, and that the page's `run()` passes none.
+
+## Explicit judgement requested: responsiveness bound (blocking or not?)
+
+The Global Constraints say: "Node independently bounds browser responsiveness and total duration." (see `globals.md` around line 94). With `waitResult` no longer polling (finding 1), a page that hangs without crashing is caught only by the gate's outer deadline: 1,200,000 ms for timing and G12, 300,000 ms for G8, G10 and visible. Before, a 10 s unanswered `page.evaluate` poll ended it. A page crash or close still ends the wait at once. G12 checkpoints arrive every 10 s and are kept, but Node does not treat their absence as a hang.
+
+Answer:
+1. Does this still satisfy "Node independently bounds browser responsiveness and total duration"? Say why or why not.
+2. If not, what is the fix? One option the controller proposes: page heartbeats pushed only outside measured windows (through the same binding), with Node treating a missing heartbeat as a hang whenever no window is declared open, plus a window-length bound while one is open. Assess that option (does it keep measured windows free of Node and page-side traffic; how does the page declare windows open/closed; what if the page lies or stalls inside a window), and propose a better one if you have it.
+3. Is this blocking for Step 8 (the real GPU run), or can it be accepted with a recorded limitation, or deferred to T10? Is it a PLAN/SPEC CHANGE?
+
+## Step 8 browser-only checks
+
+The implementer says two behaviours can only be confirmed in a real browser at Step 8: (a) `exposeBinding` installed before `goto` surviving G2's warm reload, and (b) the `MutationObserver` delivering records for canvas `width`/`height` property sets (reflected attributes). Read the Step 8 text in the brief/plan. Is Step 8 itself adequate to detect a failure of either one (a failure that is visible, classified and not silently producing clean evidence)? If not, say what must be added, and whether it blocks.
+
+## Check
+
+1. For each of the five findings and the EOF blank line: **ADDRESSED** or **NOT ADDRESSED**, with file:line evidence and what you ran.
+2. Any new breakage, regression or spec violation introduced in `git diff 6dda1a9..05c1f7d` only (do not re-review the unchanged 0a45be1..6dda1a9 work).
+3. Run the suites you can read-only (`node --test` on the non-writing suites: transport, integrity, t9-r1, session-utils, timing, timing-driver, g1, and so on; module import resolution of all drivers). Say exactly what you ran, the result, and what you could not run read-only.
+4. Confirm the 24 frozen sources are unchanged if you can.
+
+## Reply format
+
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- A per-finding ADDRESSED / NOT ADDRESSED table (findings 1 to 5, EOF blank line).
+- New findings, numbered, each with severity (Critical / Important / Minor), file:line, the concrete failure scenario, and the fix.
+- Any finding that requires changing the spec or the plan text is tagged `PLAN/SPEC CHANGE`.
+- A section "Responsiveness bound" with your answers to the three questions above, and a section "Step 8 browser-only checks".
+- An explicit final line: `Step 8 may proceed: YES` or `Step 8 may proceed: NO`, with the blockers if NO.
+- What you ran, and the results.
+
+
+---
+
+## Codex → Claude — EXEC T9 review r2 — scoped re-review of fix round 1 (05c1f7d), responsiveness bound judgement — CHANGES REQUIRED
+*2026-10-19 13:35:02 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ The fixes improve interference detection and stop handling, but measurement isolation, independent responsiveness monitoring, and G9 evidence validation remain incomplete. The new transport can also discard a recorded crash.
+
+Reviewed only `6dda1a9..05c1f7d` and the outstanding round-1 findings.
+
+| Round-1 finding | Status | Evidence |
+|---|---|---|
+| 1. Node calls during windows | **NOT ADDRESSED** fully | Direct polling is removed in `session-utils.mjs:66`, but G12’s unawaited binding reply can execute during the next cycle (`g12.js:59`). |
+| 2. Missed backing mutations | **ADDRESSED** | `integrity.js:22–54` checks boundaries, replays mutations, drains pending records, and handles intentional resizes. All seven integrity tests pass. Browser validation remains necessary below. |
+| 3. Invalid trials continue / clean G9 | **NOT ADDRESSED** fully | Integrity and late-issuance stops work, but trial validation remains partial, and G9 trusts source declarations without validating their workload or companion evidence (`timing.js:97`, `measure/timing.mjs:121`). |
+| 4. Failed maintenance continues | **ADDRESSED** | `g12.js:26–31` applies shared G11 validation immediately. Content, inventory, malformed-result, and later-cycle failure tests pass. |
+| 5. Software stop lost | **ADDRESSED** | `g1.js:20–21` stops before preparation; `measure/timing.mjs:37` preserves software classification independently. Driver and finalisation tests pass. |
+| EOF blank line | **ADDRESSED** | Both the fix-range and cumulative `git diff --check` pass. |
+
+**Blocking findings and remaining gaps**
+
+1. **Important — `spikes/project0/session-utils.mjs:70`: responsiveness detection has been removed.**  
+   A silent page waits for the entire invocation deadline. I reproduced a wait remaining pending beyond `roundTripMs`, then ending only at `deadlineMs`. Crash detection does not cover a hung main thread.
+
+   **Fix:** implement the phase-aware Node supervisor described below. **PLAN/SPEC CHANGE:** amend the runner implementation and tests while preserving the global constraint.
+
+2. **Important — `spikes/project0/browser/drivers/g12.js:59`: binding replies can cross into the next measured cycle.**  
+   Fire-and-forget does not make this transport one-way. The installed Playwright implementation delivers binding results through `context.evaluateExpressionHandle()` at `node_modules/playwright-core/lib/server/page.js:777`. G12 immediately starts its next cycle without waiting for that reply. The tests’ fake binding does not model this evaluation.
+
+   **Fix:** drain and await the checkpoint exchange at the permitted cycle boundary, racing abort and a bounded timeout, before starting subsequent measured work. Preserve absolute cycle deadlines and record any resulting overrun. **PLAN/SPEC CHANGE.**
+
+3. **Important — `spikes/project0/measure/timing.mjs:121`: G9’s new source validation can still accept invalid measurements.**  
+   It checks names, `valid: true`, and positive intervals—not actual source validity or frozen durations. I reproduced:
+   - passing G9 metrics from twelve overlapping **1 ms** windows;
+   - a clean G9 record beside an invalid G6 companion record;
+   - G8 opening all ten sessions despite a stale publication and an incomplete sphere frame in its first repetition (`g8.js:28` checks only integrity).
+
+   **Fix:** complete round-1 finding 3: validate trial workload/results before continuing, and validate G9 against its actual companion observations, including intervals and invalidations. Reject shortened or otherwise altered measurement configurations at the evidence boundary. Keep frozen evaluators unchanged. **PLAN/SPEC CHANGE.**
+
+4. **Important — `spikes/project0/session-utils.mjs:80`: a queued result hides a latched crash.**  
+   Results are returned before `ch.failure` is checked. Pushing a result, emitting `crash`, then calling `waitResult()` returned the clean result with no crash indication.
+
+   **Fix:** terminal failures must take precedence while retaining available results as incomplete evidence. Test result-plus-crash and result-plus-close races.
+
+**Adapted assertions and injected parameters**
+
+- The first rewritten `session-utils` test **weakens the previous guarantee**: previously, a 50 ms responsiveness limit applied independently of a 60 s total deadline. Now it tests only a 50 ms total deadline. It is meaningful, but does not preserve the original assertion.
+- The checkpoint/outer-deadline test retains its substantive assertions.
+- The existing G9 assertions in `timing.test.mjs` and `t9-timing.test.mjs` were not removed or weakened. However, their new 900 ms source fixtures expose the insufficient duration validation.
+- Defaults remain the frozen values, and `timing.js:147–148` passes no timing overrides.
+- Node independently enforces G7’s 4 ms limit and frozen request offsets. **The broader claim that injected values cannot loosen accepted evidence is false:** the new compressed-invocation test explicitly expects Node to accept its shortened G9 observations.
+
+## Responsiveness bound
+
+**1. Does the current implementation satisfy the constraint? No.** It bounds total duration, but provides no separate responsiveness bound while waiting. A main-thread hang also prevents page-side watchdog callbacks from running.
+
+**2. The controller’s proposed approach is appropriate with these requirements:**
+
+- Node owns a fixed phase sequence and maximum duration for each phase; the page cannot supply or extend those limits.
+- Outside measured windows, use bounded heartbeat/checkpoint exchanges.
+- Before entering a measured window, stop heartbeat scheduling and await all outstanding binding replies. Send and await the window-opening declaration before taking the measurement’s start timestamp.
+- Send the closing declaration after stopping the measurement. Await its reply before another measured interval.
+- For G2, Node arms the navigation-window deadline before `goto`; no opening exchange belongs inside navigation-to-publication timing.
+- For G12, use the already-permitted cycle-boundary checkpoints with a Node-owned checkpoint deadline.
+- Reject duplicate, out-of-order, or unexpected declarations. A missing close expires the fixed window deadline; declaring a window open cannot suspend supervision indefinitely.
+- Keep a separate absolute invocation deadline.
+
+This leaves active measurement intervals free of heartbeat traffic and binding replies. It cannot detect a stall instantaneously within a deliberately silent window; the independently fixed window bound supplies that limit.
+
+**3. This blocks Step 8.** It should not be deferred to T10 or accepted merely as a limitation. This is a **PLAN/SPEC CHANGE to the implementation/protocol**, not permission to relax measurement requirements.
+
+## Step 8 browser-only checks
+
+**Binding installation/reload:** Step 8 exercises G2’s warm reload. A missing binding/result produces a bounded, classified timeout rather than clean evidence. Require explicit inspection that all three fresh slots and the warm slot arrived; the existing “metrics or INVALIDATIONS” expectation alone does not establish success.
+
+**Mutation delivery:** Step 8 is **insufficient**. Normal runs need not introduce an unexpected transient resize. G12’s deliberate resize path explicitly discards its mutation records, so it does not prove that unexpected changes are detected.
+
+Add a bounded browser preflight, before GPU measurement, that uses real canvas property setters to verify:
+
+- a same-task resize-and-restore produces an invalidation;
+- immediate `stop()` drains undelivered mutations;
+- deliberate allowed resizes remain clean;
+- binding delivery works before navigation and across reload.
+
+Persist the assertions and stop the campaign if they fail. Adding this check is a **PLAN/SPEC CHANGE** and a prerequisite for the GPU campaign.
+
+**What I ran**
+
+- `node --test` on `integrity`, `t9-r1`, `session-utils`, `timing`, `timing-driver`, `g1`, `resources-metrics`, `resources-exercise`, and `mapping-callers`: passed.
+- The combined command also included `transport`: that suite failed; its final test creates directories and writes records. All six non-writing transport tests passed when selected separately.
+- Eight non-writing `t9-timing` tests selected with `--test-name-pattern`: passed.
+- `timing-contract` and `png`: passed.
+- `node --check` on every changed JavaScript module/test: passed.
+- Imports of all seven drivers: resolved.
+- In-memory reproductions confirmed the responsiveness, crash-priority, G9, and remaining G8 issues above.
+- All **24 frozen source hashes match**.
+- Both diff whitespace checks passed; working tree remains clean.
+
+I did not reproduce the full 279-test run, execute writing integration tests successfully, or launch a browser/GPU.
+
+Step 8 may proceed: NO — responsiveness supervision, G12 reply isolation, remaining trial/G9 validation, crash precedence, and the browser preflight must be addressed.
+
+---
+
+## Claude → Codex — EXEC T9 review r3 — scoped re-review of fix round 2 (supervision, G9/G8 validation, preflight)
+*2026-10-19 13:53:34 PDT*
+
+# Claude → Codex — EXEC T9 code review (round 3, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd, recreated under the
+round-1 directory name) is detached at 04fe9c1.
+
+This is a re-review. Review `git diff 05c1f7d..04fe9c1` (commits: `git log --oneline 05c1f7d..04fe9c1`). FIX_BASE is 05c1f7d; HEAD is 04fe9c1.
+
+Read:
+- the implementer's report with test evidence, section "Fix round 2": /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T9-report.md
+- the task text: .../task-T9-brief.md (same directory);
+- the plan header and global constraints: .../globals.md (same directory);
+- your own round-2 findings: .../codex-T9-r2-findings.md (same directory).
+
+Reported by the implementer: the new suites (`supervision.test.mjs`, 10 tests; `t9-r2.test.mjs`, 8 tests) failed against 05c1f7d (9 of 10 and 8 of 8; the heartbeat-keepalive test passed there because the old code had no bound to trip); the full suite `node --test spikes/project0/tests/` passes 297 of 297 (run twice); FIXTURES OK holds; no frozen source changed.
+
+Browser integrity preflight (new): run in real headed Chrome with no GPU device requested, `INTEGRITY PREFLIGHT OK`, all 6 assertions passing on both the first load and the reload. Evidence (read it read-only):
+/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/artifacts/project0/20261019T205104544Z-dev-integrity-preflight-headed/integrity-preflight.json
+
+## Open items (verbatim from your round 2)
+
+### The four Important findings
+
+1. **Important — `spikes/project0/session-utils.mjs:70`: responsiveness detection has been removed.**
+   A silent page waits for the entire invocation deadline. I reproduced a wait remaining pending beyond `roundTripMs`, then ending only at `deadlineMs`. Crash detection does not cover a hung main thread.
+
+   **Fix:** implement the phase-aware Node supervisor described below. **PLAN/SPEC CHANGE:** amend the runner implementation and tests while preserving the global constraint.
+
+2. **Important — `spikes/project0/browser/drivers/g12.js:59`: binding replies can cross into the next measured cycle.**
+   Fire-and-forget does not make this transport one-way. The installed Playwright implementation delivers binding results through `context.evaluateExpressionHandle()` at `node_modules/playwright-core/lib/server/page.js:777`. G12 immediately starts its next cycle without waiting for that reply. The tests' fake binding does not model this evaluation.
+
+   **Fix:** drain and await the checkpoint exchange at the permitted cycle boundary, racing abort and a bounded timeout, before starting subsequent measured work. Preserve absolute cycle deadlines and record any resulting overrun. **PLAN/SPEC CHANGE.**
+
+3. **Important — `spikes/project0/measure/timing.mjs:121`: G9's new source validation can still accept invalid measurements.**
+   It checks names, `valid: true`, and positive intervals—not actual source validity or frozen durations. I reproduced:
+   - passing G9 metrics from twelve overlapping **1 ms** windows;
+   - a clean G9 record beside an invalid G6 companion record;
+   - G8 opening all ten sessions despite a stale publication and an incomplete sphere frame in its first repetition (`g8.js:28` checks only integrity).
+
+   **Fix:** complete round-1 finding 3: validate trial workload/results before continuing, and validate G9 against its actual companion observations, including intervals and invalidations. Reject shortened or otherwise altered measurement configurations at the evidence boundary. Keep frozen evaluators unchanged. **PLAN/SPEC CHANGE.**
+
+4. **Important — `spikes/project0/session-utils.mjs:80`: a queued result hides a latched crash.**
+   Results are returned before `ch.failure` is checked. Pushing a result, emitting `crash`, then calling `waitResult()` returned the clean result with no crash indication.
+
+   **Fix:** terminal failures must take precedence while retaining available results as incomplete evidence. Test result-plus-crash and result-plus-close races.
+
+### The remaining parts of findings 1 and 3 (from your table)
+
+- 1. Node calls during windows — NOT ADDRESSED fully: "Direct polling is removed in `session-utils.mjs:66`, but G12's unawaited binding reply can execute during the next cycle (`g12.js:59`)."
+- 3. Invalid trials continue / clean G9 — NOT ADDRESSED fully: "Integrity and late-issuance stops work, but trial validation remains partial, and G9 trusts source declarations without validating their workload or companion evidence (`timing.js:97`, `measure/timing.mjs:121`)."
+
+### The required responsiveness protocol (verbatim)
+
+**1. Does the current implementation satisfy the constraint? No.** It bounds total duration, but provides no separate responsiveness bound while waiting. A main-thread hang also prevents page-side watchdog callbacks from running.
+
+**2. The controller's proposed approach is appropriate with these requirements:**
+
+- Node owns a fixed phase sequence and maximum duration for each phase; the page cannot supply or extend those limits.
+- Outside measured windows, use bounded heartbeat/checkpoint exchanges.
+- Before entering a measured window, stop heartbeat scheduling and await all outstanding binding replies. Send and await the window-opening declaration before taking the measurement's start timestamp.
+- Send the closing declaration after stopping the measurement. Await its reply before another measured interval.
+- For G2, Node arms the navigation-window deadline before `goto`; no opening exchange belongs inside navigation-to-publication timing.
+- For G12, use the already-permitted cycle-boundary checkpoints with a Node-owned checkpoint deadline.
+- Reject duplicate, out-of-order, or unexpected declarations. A missing close expires the fixed window deadline; declaring a window open cannot suspend supervision indefinitely.
+- Keep a separate absolute invocation deadline.
+
+This leaves active measurement intervals free of heartbeat traffic and binding replies. It cannot detect a stall instantaneously within a deliberately silent window; the independently fixed window bound supplies that limit.
+
+**3. This blocks Step 8.** It should not be deferred to T10 or accepted merely as a limitation. This is a **PLAN/SPEC CHANGE to the implementation/protocol**, not permission to relax measurement requirements.
+
+### The adapted-test concerns (verbatim)
+
+- The first rewritten `session-utils` test **weakens the previous guarantee**: previously, a 50 ms responsiveness limit applied independently of a 60 s total deadline. Now it tests only a 50 ms total deadline. It is meaningful, but does not preserve the original assertion.
+- The checkpoint/outer-deadline test retains its substantive assertions.
+- The existing G9 assertions in `timing.test.mjs` and `t9-timing.test.mjs` were not removed or weakened. However, their new 900 ms source fixtures expose the insufficient duration validation.
+- Defaults remain the frozen values, and `timing.js:147–148` passes no timing overrides.
+- Node independently enforces G7's 4 ms limit and frozen request offsets. **The broader claim that injected values cannot loosen accepted evidence is false:** the new compressed-invocation test explicitly expects Node to accept its shortened G9 observations.
+
+### The required browser integrity preflight (verbatim)
+
+**Binding installation/reload:** Step 8 exercises G2's warm reload. A missing binding/result produces a bounded, classified timeout rather than clean evidence. Require explicit inspection that all three fresh slots and the warm slot arrived; the existing "metrics or INVALIDATIONS" expectation alone does not establish success.
+
+**Mutation delivery:** Step 8 is **insufficient**. Normal runs need not introduce an unexpected transient resize. G12's deliberate resize path explicitly discards its mutation records, so it does not prove that unexpected changes are detected.
+
+Add a bounded browser preflight, before GPU measurement, that uses real canvas property setters to verify:
+
+- a same-task resize-and-restore produces an invalidation;
+- immediate `stop()` drains undelivered mutations;
+- deliberate allowed resizes remain clean;
+- binding delivery works before navigation and across reload.
+
+Persist the assertions and stop the campaign if they fail. Adding this check is a **PLAN/SPEC CHANGE** and a prerequisite for the GPU campaign.
+
+## Implementer's concerns: please judge each
+
+1. A hang inside a measured window is bounded only by that window's limit (up to 40 s for G6; for G12, 20 s between checkpoints), not by the 10 s `roundTripMs`. The implementer holds this is inherent to deliberately silent windows, as you accepted in round 2.
+2. The window limits are constants in `session-utils.mjs` (`WINDOW_PLANS`), derived from the frozen workload (G6 40 s, G7 35 s, G8 15 s, G10 25 s, G12 660 s with 20 s checkpoint gap, G2 45 s). Is this acceptable, or must they be derived or validated otherwise?
+3. The Step 8 checklist: every slot must arrive with no `window protocol` invalidations (G2's 3 fresh slots and the warm slot, the 12 timing windows, G12's 60 checkpoints). Is this checklist sufficient, and what else must the GPU campaign show?
+
+## What to do
+
+- Per open item (each of the four Important findings, the remaining parts of findings 1 and 3, the responsiveness protocol, each adapted-test concern, and the preflight requirement): reply `ADDRESSED` or `NOT ADDRESSED`, with evidence.
+- For the adapted tests, compare against the 05c1f7d form (`git diff 05c1f7d..04fe9c1 -- <file>`) and say whether any assertion was weakened, removed or made vacuous.
+- Check the preflight evidence file against the six assertions it claims, read-only. You may not launch a browser.
+- Report any new breakage in `git diff 05c1f7d..04fe9c1` only.
+- State explicitly: **Step 8 may proceed: YES or NO**, and what the campaign must show.
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- Findings, numbered, each with severity (Critical / Important / Minor), file:line, the concrete failure scenario, and the fix.
+- Any finding that requires changing the spec or the plan text is tagged `PLAN/SPEC CHANGE`.
+- What you ran, and the results.
+
+
+---
+
+## Codex → Claude — EXEC T9 review r3 — scoped re-review of fix round 2 (supervision, G9/G8 validation, preflight) — CHANGES REQUIRED
+*2026-10-19 13:59:04 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ The new supervision protocol addresses the main design requirements, but expiry enforcement, window-plan completeness, G12 scheduling, and G9 source binding still have gaps. The new preflight also permits work after its deadline.
+
+Reviewed `05c1f7d..04fe9c1` only, plus the outstanding findings.
+
+| Open item | Status | Evidence |
+|---|---|---|
+| R2 finding 1: independent responsiveness bound | **NOT ADDRESSED** fully | Silence detection works, but an expired window can close before `waitResult()` checks it and erase the expiry. |
+| R2 finding 2: G12 binding replies cross cycles | **ADDRESSED** | `g12.js:63` awaits the bounded, abort-raced checkpoint reply. This introduces a separate scheduling regression below. |
+| R2 finding 3: trial/G9 validation | **NOT ADDRESSED** fully | Short/overlapping observations and incomplete/stale frames are rejected, but G9 source timestamps remain independent of companion observations. |
+| R2 finding 4: queued result hides crash/close | **ADDRESSED** | `session-utils.mjs:148` preserves the result alongside the latched failure. Both race tests pass. |
+| Remaining R1 finding 1: Node traffic inside windows | **ADDRESSED** | `supervisor.js:30–55` drains replies and acknowledges opening/closing exchanges; G12 awaits checkpoints. |
+| Remaining R1 finding 3: invalid trials / clean G9 | **NOT ADDRESSED** fully | Frame-stop fixes work; source binding remains incomplete. |
+| Required responsiveness protocol | **NOT ADDRESSED** fully | Successful results can bypass the window plan, and expiry can be erased. |
+| Browser integrity preflight requirement | **ADDRESSED** for the saved run | All six assertions recompute successfully; timeout cleanup needs repair. |
+
+**Findings**
+
+1. **Important — `spikes/project0/session-utils.mjs:91`: closing an expired window erases its deadline.**  
+   Expiry is checked only inside `waitResult()`. The binding accepts a close and clears `ch.open` without checking its elapsed duration. I armed a 20 ms implicit window, waited 35 ms, closed it, and then waited for its result: the close returned `{ok:true}` and the result was clean.
+
+   **Fix:** latch expiry independently from the consumer loop, starting when the window is armed/opened. Check existing deadlines before processing messages that clear or refresh them. Apply this to checkpoint gaps and outside-window silence too. Test delayed close/checkpoint delivery before `waitResult()` begins and while it awaits persistence. **PLAN/SPEC CHANGE:** protocol implementation repair.
+
+2. **Important — `spikes/project0/session-utils.mjs:77`: a successful result need not complete—or even enter—the window plan.**  
+   `result` checks only whether a window is currently open. I installed the G8 plan and pushed ten slots without declaring any windows; the transport returned them clean.
+
+   **Fix:** require successful completion of the expected plan before accepting a clean result. Allow partial results only with an explicit failure/invalidation. Validate G12 checkpoint identity/order/count as well; repeated arbitrary checkpoints currently refresh its deadline. Persist enough supervision evidence to verify completion. **PLAN/SPEC CHANGE.**
+
+3. **Important — `spikes/project0/browser/drivers/g12.js:60`: checkpoint latency can silently remove scheduled work.**  
+   The driver sleeps until the cycle boundary, checks `deadlineMisses`, and only then awaits the checkpoint reply. That delay consumes the next cycle’s motion phases. Those phases are silently skipped when their remaining time is nonpositive.
+
+   In a two-cycle reproduction with 100 ms cycles and 50 ms checkpoint replies, cycle two skipped overview and sphere entirely, yet returned `cycles: 2`, `deadlineMisses: 0`, and no invalidations.
+
+   **Fix:** budget the acknowledged exchange within the preceding cycle’s available maintenance/idle time, keeping absolute boundaries. Record a failure if it cannot finish in time; never silently omit required phases. Test phase identities, durations, and deadline accounting. The current checkpoint test finds the next arbitrary `follow` call, which can be final cleanup rather than the next cycle’s first phase. **PLAN/SPEC CHANGE.**
+
+4. **Important — `spikes/project0/run.mjs:51`: G9 is associated with companion names, not their actual intervals.**  
+   The new check verifies existence and invalidations only. I finalised twelve companions starting at page time `1000`, with G9 claiming disjoint source windows starting at `1000000`: every record remained uninvalidated.
+
+   **Fix:** compare each source interval with its companion’s raw observation and validate the actual observation interval used for G9. Make this check reusable at evidence read/recomputation time, not solely during writing. Add mismatched-start/end tests. **PLAN/SPEC CHANGE:** complete the previously requested binding.
+
+5. **Important — `spikes/project0/integrity-preflight.mjs:35`: the outer timeout leaves its operation running.**  
+   `bounded()` does not cancel its promise. A late launch can resolve after cleanup and evidence writing, then continue navigation/reload without its browser ever being closed.
+
+   Using the unchanged function body with dependency fakes, I reproduced: server stopped → evidence written → late launch resolved → navigation → reload, with zero browser closes.
+
+   **Fix:** reuse the main runner’s expiry latch, post-await checks, and late-resource disposal pattern. Stop after a classified first-load failure rather than reloading. Add delayed server/launch/page tests; no real browser is needed.
+
+**Adapted-test judgments**
+
+- **Responsiveness-test concern: ADDRESSED.** The independent 50 ms limit against a 60 s total deadline is restored. Removing `assert.ok(binding)` is harmless; the substantive guarantee is stronger.
+- **Checkpoint/outer-deadline assertions: ADDRESSED.** Preserved, with the required window opening added.
+- **900 ms G9 fixtures: ADDRESSED.** They now use disjoint, permitted durations. Existing metric assertions remain.
+- **Compressed invocation accepted by Node: ADDRESSED.** Its assertion now correctly requires rejection, and finalisation coverage was added.
+- **Universal override-rejection claim: NOT ADDRESSED fully.** Shortened observations are rejected, but duration ranges do not prove the frozen configuration—for example, warm-up duration is not recorded or checked. The production wrapper still passes no overrides.
+- **Clean-companion test: incomplete coverage, not an assertion removal.** `t9-timing.test.mjs:94` constructs companions whose timestamps do not match their declared G9 sources; the test currently accepts the defect in finding 4.
+
+**Preflight evidence**
+
+I read and recomputed [the saved preflight]( /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/artifacts/project0/20261019T205104544Z-dev-integrity-preflight-headed/integrity-preflight.json). It supports:
+
+- resize/restore invalidation and immediate-stop mutation draining on both loads;
+- three clean deliberate resizes on both loads;
+- binding delivery following navigation and reload;
+- zero explicit runner `page.evaluate()` calls.
+
+The record names `04fe9c1`, has `errors: []`, and records visible, focused, DPR-1 state. The browser module requests no GPU adapter/device. The evaluation counter does **not** count Playwright’s internal binding-reply evaluations; the supervisor protocol supplies that isolation guarantee.
+
+**Rulings on the implementer’s concerns**
+
+1. **Accepted:** deliberately silent windows require their own responsiveness limits rather than the outside-window 10 s limit. Those limits must actually latch expiry.
+2. **Accepted in principle:** the listed constants are reasonable supervisory bounds, distinct from gate thresholds. Runtime derivation is unnecessary, but pin their relationship to frozen workloads in tests and document them as reviewed plan amendments.
+3. **Checklist insufficient:** slot presence and absence of `window protocol` errors alone cannot establish correct execution. After repair, Step 8 must also show completed supervision sequences, matching G9 companion intervals, all G12 phases/checkpoints with recorded overruns, correct descriptors, and no unexplained invalidations. Preserve failed evidence and obey stop rules; performance qualification remains T10’s job.
+
+**What I ran**
+
+- `node --test` on `supervision`, `t9-r2`, `t9-r1`, `session-utils`, `integrity`, `timing`, `timing-driver`, `g1`, `resources-metrics`, and `mapping-callers`: passed.
+- Six non-writing `transport` tests and eight non-writing `t9-timing` tests selected by name: passed.
+- `timing-contract` and `png`: passed.
+- All changed JavaScript files passed `node --check`; all seven drivers and the browser preflight module imported successfully.
+- In-memory reproductions confirmed findings 1–5.
+- All **24 frozen source hashes match**; diff whitespace check passes; working tree remains clean.
+
+I did not launch a browser, edit files, or reproduce the full filesystem-writing 297-test suite.
+
+**Step 8 may proceed: NO — findings 1–5 require repair and scoped re-review.**
+
+---
+
+## Claude → Codex — EXEC T9 review r4 — scoped re-review of fix round 3 (04fe9c1..36d1ca3), Step 8 gate
+*2026-10-19 14:11:58 PDT*
+
+# Claude → Codex — EXEC T9 code review (round 4, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd, recreated under the
+round-1 directory name) is detached at 36d1ca3.
+
+This is a re-review. Review `git diff 04fe9c1..36d1ca3` (commits: `git log --oneline 04fe9c1..36d1ca3`). FIX_BASE is 04fe9c1; HEAD is 36d1ca3.
+
+Read:
+- the implementer's report, section "Fix round 3": /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T9-report.md
+- the task text: .../task-T9-brief.md (same directory);
+- the plan header and global constraints: .../globals.md (same directory);
+- your own round-3 findings: .../codex-T9-r3-findings.md (same directory).
+
+Reported by the implementer:
+- the new tests failed against 04fe9c1 (`t9-r3-supervision.test.mjs`: 6 of 7 fail; `t9-r3.test.mjs` failed at import because `supervision-plan.js` and `validateSources` did not exist, then behaviourally with temporary stubs); the full suite passes 313 of 313 (run twice); FIXTURES OK holds; no frozen source changed;
+- the browser integrity preflight was rerun after the commit and reports `INTEGRITY PREFLIGHT OK`, headed, no GPU adapter or device requested: `artifacts/project0/20261019T211025030Z-dev-integrity-preflight-headed/integrity-preflight.json` under the implementation worktree (read it read-only);
+- new modules: `spikes/project0/supervision-plan.js` (the window limits as formulas, pinned to `fixtures.json` by a test) and an exported `validateSources` in `measure/timing.mjs` for T10.
+
+Implementer's disclosure (please rule on it): during the stubbed RED run, the old preflight (04fe9c1) ignored its injected fakes and started the real server and a real headed Chrome. No GPU adapter or device was requested (the preflight page never touches `navigator.gpu`). It left two failed development records, `artifacts/project0/20261019T2103*-dev-integrity-preflight-headed` (one failed on "implementation identity: harness has uncommitted changes", the other on a 40 ms deadline), and no process was left behind (port 5180 free, no Chrome from the run). Is that acceptable? Should those records be marked or excluded in any way (for example a note, or exclusion from T10's evidence set), and if so exactly how?
+
+## Open items (verbatim from your round 3)
+
+Your round-3 findings follow in full. The five Important findings are the open items, together with the notes on the constants, warm-up and frozen configuration (see "Universal override-rejection claim", "Rulings on the implementer's concerns", and the Step 8 checklist remark).
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ The new supervision protocol addresses the main design requirements, but expiry enforcement, window-plan completeness, G12 scheduling, and G9 source binding still have gaps. The new preflight also permits work after its deadline.
+
+Reviewed `05c1f7d..04fe9c1` only, plus the outstanding findings.
+
+| Open item | Status | Evidence |
+|---|---|---|
+| R2 finding 1: independent responsiveness bound | **NOT ADDRESSED** fully | Silence detection works, but an expired window can close before `waitResult()` checks it and erase the expiry. |
+| R2 finding 2: G12 binding replies cross cycles | **ADDRESSED** | `g12.js:63` awaits the bounded, abort-raced checkpoint reply. This introduces a separate scheduling regression below. |
+| R2 finding 3: trial/G9 validation | **NOT ADDRESSED** fully | Short/overlapping observations and incomplete/stale frames are rejected, but G9 source timestamps remain independent of companion observations. |
+| R2 finding 4: queued result hides crash/close | **ADDRESSED** | `session-utils.mjs:148` preserves the result alongside the latched failure. Both race tests pass. |
+| Remaining R1 finding 1: Node traffic inside windows | **ADDRESSED** | `supervisor.js:30–55` drains replies and acknowledges opening/closing exchanges; G12 awaits checkpoints. |
+| Remaining R1 finding 3: invalid trials / clean G9 | **NOT ADDRESSED** fully | Frame-stop fixes work; source binding remains incomplete. |
+| Required responsiveness protocol | **NOT ADDRESSED** fully | Successful results can bypass the window plan, and expiry can be erased. |
+| Browser integrity preflight requirement | **ADDRESSED** for the saved run | All six assertions recompute successfully; timeout cleanup needs repair. |
+
+**Findings**
+
+1. **Important — `spikes/project0/session-utils.mjs:91`: closing an expired window erases its deadline.**  
+   Expiry is checked only inside `waitResult()`. The binding accepts a close and clears `ch.open` without checking its elapsed duration. I armed a 20 ms implicit window, waited 35 ms, closed it, and then waited for its result: the close returned `{ok:true}` and the result was clean.
+
+   **Fix:** latch expiry independently from the consumer loop, starting when the window is armed/opened. Check existing deadlines before processing messages that clear or refresh them. Apply this to checkpoint gaps and outside-window silence too. Test delayed close/checkpoint delivery before `waitResult()` begins and while it awaits persistence. **PLAN/SPEC CHANGE:** protocol implementation repair.
+
+2. **Important — `spikes/project0/session-utils.mjs:77`: a successful result need not complete—or even enter—the window plan.**  
+   `result` checks only whether a window is currently open. I installed the G8 plan and pushed ten slots without declaring any windows; the transport returned them clean.
+
+   **Fix:** require successful completion of the expected plan before accepting a clean result. Allow partial results only with an explicit failure/invalidation. Validate G12 checkpoint identity/order/count as well; repeated arbitrary checkpoints currently refresh its deadline. Persist enough supervision evidence to verify completion. **PLAN/SPEC CHANGE.**
+
+3. **Important — `spikes/project0/browser/drivers/g12.js:60`: checkpoint latency can silently remove scheduled work.**  
+   The driver sleeps until the cycle boundary, checks `deadlineMisses`, and only then awaits the checkpoint reply. That delay consumes the next cycle’s motion phases. Those phases are silently skipped when their remaining time is nonpositive.
+
+   In a two-cycle reproduction with 100 ms cycles and 50 ms checkpoint replies, cycle two skipped overview and sphere entirely, yet returned `cycles: 2`, `deadlineMisses: 0`, and no invalidations.
+
+   **Fix:** budget the acknowledged exchange within the preceding cycle’s available maintenance/idle time, keeping absolute boundaries. Record a failure if it cannot finish in time; never silently omit required phases. Test phase identities, durations, and deadline accounting. The current checkpoint test finds the next arbitrary `follow` call, which can be final cleanup rather than the next cycle’s first phase. **PLAN/SPEC CHANGE.**
+
+4. **Important — `spikes/project0/run.mjs:51`: G9 is associated with companion names, not their actual intervals.**  
+   The new check verifies existence and invalidations only. I finalised twelve companions starting at page time `1000`, with G9 claiming disjoint source windows starting at `1000000`: every record remained uninvalidated.
+
+   **Fix:** compare each source interval with its companion’s raw observation and validate the actual observation interval used for G9. Make this check reusable at evidence read/recomputation time, not solely during writing. Add mismatched-start/end tests. **PLAN/SPEC CHANGE:** complete the previously requested binding.
+
+5. **Important — `spikes/project0/integrity-preflight.mjs:35`: the outer timeout leaves its operation running.**  
+   `bounded()` does not cancel its promise. A late launch can resolve after cleanup and evidence writing, then continue navigation/reload without its browser ever being closed.
+
+   Using the unchanged function body with dependency fakes, I reproduced: server stopped → evidence written → late launch resolved → navigation → reload, with zero browser closes.
+
+   **Fix:** reuse the main runner’s expiry latch, post-await checks, and late-resource disposal pattern. Stop after a classified first-load failure rather than reloading. Add delayed server/launch/page tests; no real browser is needed.
+
+**Adapted-test judgments**
+
+- **Responsiveness-test concern: ADDRESSED.** The independent 50 ms limit against a 60 s total deadline is restored. Removing `assert.ok(binding)` is harmless; the substantive guarantee is stronger.
+- **Checkpoint/outer-deadline assertions: ADDRESSED.** Preserved, with the required window opening added.
+- **900 ms G9 fixtures: ADDRESSED.** They now use disjoint, permitted durations. Existing metric assertions remain.
+- **Compressed invocation accepted by Node: ADDRESSED.** Its assertion now correctly requires rejection, and finalisation coverage was added.
+- **Universal override-rejection claim: NOT ADDRESSED fully.** Shortened observations are rejected, but duration ranges do not prove the frozen configuration—for example, warm-up duration is not recorded or checked. The production wrapper still passes no overrides.
+- **Clean-companion test: incomplete coverage, not an assertion removal.** `t9-timing.test.mjs:94` constructs companions whose timestamps do not match their declared G9 sources; the test currently accepts the defect in finding 4.
+
+**Preflight evidence**
+
+I read and recomputed [the saved preflight]( /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/artifacts/project0/20261019T205104544Z-dev-integrity-preflight-headed/integrity-preflight.json). It supports:
+
+- resize/restore invalidation and immediate-stop mutation draining on both loads;
+- three clean deliberate resizes on both loads;
+- binding delivery following navigation and reload;
+- zero explicit runner `page.evaluate()` calls.
+
+The record names `04fe9c1`, has `errors: []`, and records visible, focused, DPR-1 state. The browser module requests no GPU adapter/device. The evaluation counter does **not** count Playwright’s internal binding-reply evaluations; the supervisor protocol supplies that isolation guarantee.
+
+**Rulings on the implementer’s concerns**
+
+1. **Accepted:** deliberately silent windows require their own responsiveness limits rather than the outside-window 10 s limit. Those limits must actually latch expiry.
+2. **Accepted in principle:** the listed constants are reasonable supervisory bounds, distinct from gate thresholds. Runtime derivation is unnecessary, but pin their relationship to frozen workloads in tests and document them as reviewed plan amendments.
+3. **Checklist insufficient:** slot presence and absence of `window protocol` errors alone cannot establish correct execution. After repair, Step 8 must also show completed supervision sequences, matching G9 companion intervals, all G12 phases/checkpoints with recorded overruns, correct descriptors, and no unexplained invalidations. Preserve failed evidence and obey stop rules; performance qualification remains T10’s job.
+
+**What I ran**
+
+- `node --test` on `supervision`, `t9-r2`, `t9-r1`, `session-utils`, `integrity`, `timing`, `timing-driver`, `g1`, `resources-metrics`, and `mapping-callers`: passed.
+- Six non-writing `transport` tests and eight non-writing `t9-timing` tests selected by name: passed.
+- `timing-contract` and `png`: passed.
+- All changed JavaScript files passed `node --check`; all seven drivers and the browser preflight module imported successfully.
+- In-memory reproductions confirmed findings 1–5.
+- All **24 frozen source hashes match**; diff whitespace check passes; working tree remains clean.
+
+I did not launch a browser, edit files, or reproduce the full filesystem-writing 297-test suite.
+
+**Step 8 may proceed: NO — findings 1–5 require repair and scoped re-review.**
+
+## What to return
+
+1. For each of the five Important findings, the constants ruling (item 2 of "Rulings"), the warm-up and frozen-configuration note ("Universal override-rejection claim"), and the clean-companion note: `ADDRESSED` or `NOT ADDRESSED`, with evidence.
+2. Any new breakage in `git diff 04fe9c1..36d1ca3` only (severity, file:line, concrete failure scenario, fix; tag `PLAN/SPEC CHANGE` where it applies).
+3. Your ruling on the implementer's disclosure above (the accidental real-browser launch and its two failed development records).
+4. An explicit statement: **"Step 8 may proceed: YES"** or **"Step 8 may proceed: NO"**, with reasons.
+5. The exact Step 8 acceptance checklist: the concrete files, fields and conditions the controller must verify after the Step 8 run (supervision records, G9 companion intervals via `validateSources`, G12 phases/checkpoints and overruns, descriptors, invalidations, stop rules, evidence preservation), so it can be applied mechanically.
+
+Reply format: first line `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`; `Spec compliance: ✅` or `❌`; numbered findings; what you ran and the results.
+
+
+---
+
+## Codex → Claude — EXEC T9 review r4 — scoped re-review of fix round 3 (04fe9c1..36d1ca3), Step 8 gate — VERDICT: CHANGES REQUIRED
+*2026-10-19 14:21:37 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ The five requested implementation fixes are present, but the new G12 evidence validator accepts missing or contradictory scheduling evidence. That violates the brief’s requirement that malformed observations invalidate.
+
+Reviewed only `04fe9c1..36d1ca3`, containing commit `36d1ca3`, plus the outstanding items.
+
+| Open item | Status | Evidence |
+|---|---|---|
+| 1. Expiry can be erased | **ADDRESSED** | [session-utils.mjs:82](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/session-utils.mjs:82): independent timer and checks before incoming messages. Late-close, blocked-event-loop, checkpoint-gap and slow-persistence tests pass. |
+| 2. Clean results bypass the plan | **ADDRESSED** | [session-utils.mjs:89](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/session-utils.mjs:89): completion checks, ordered checkpoint identities/counts and persisted supervision. |
+| 3. Checkpoint latency removes G12 work | **ADDRESSED in the driver** | [g12.js:68](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/browser/drivers/g12.js:68): acknowledged exchange precedes the boundary sleep; phases and overruns are recorded. Both scheduling reproductions pass. The new reducer has the separate defect below. |
+| 4. G9 timestamps are independent of companions | **ADDRESSED** | [measure/timing.mjs:109](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/measure/timing.mjs:109): exported `validateSources` compares actual companion intervals; `finalise` calls it. Start/end mismatch tests pass. T10 must also call it. |
+| 5. Preflight continues after timeout | **ADDRESSED** | [integrity-preflight.mjs:39](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/integrity-preflight.mjs:39): expiry checks and disposal of late servers, browsers and pages. Failed first loads do not reload. Dependency-fake tests pass. |
+| Constants ruling | **ADDRESSED** | [supervision-plan.js:6](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/supervision-plan.js:6): shared formulas and fixture-pinning tests. The resulting G7/G8 bounds of 35,040/15,050 ms are acceptable supervisory limits. |
+| Warm-up and frozen configuration | **ADDRESSED for the cited G6/G7 configuration issue** | [measure/timing.mjs:14](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/measure/timing.mjs:14): exact recorded configuration and bounded warm-up duration are required. Production `run()` passes no overrides. This does not authenticate arbitrary injected fake dependencies. |
+| Clean-companion test | **ADDRESSED** | [t9-timing.test.mjs:94](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/tests/t9-timing.test.mjs:94): companion timestamps now match their declared sources. |
+
+1. **Important — [spikes/project0/measure/timing.mjs:188](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/measure/timing.mjs:188): G12’s new validation trusts flags instead of validating the recorded schedule. — PLAN/SPEC CHANGE**
+
+   The reducer never validates `c0`, planned phase boundaries, checkpoint send/reply times or `endedMs`. It accepts zero-length phases and derives deadline misses from the supplied `overrun` boolean.
+
+   Two read-only reproductions both returned `deadlineMisses: 0` with **every G12 metric rule satisfied**:
+
+   - Cycle 0’s checkpoint replied at **10,050 ms**, beyond its **10,000 ms** boundary, while `overrun` remained false.
+   - All cycle/checkpoint timing fields were removed and every phase’s actual span became `[0, 0]`.
+
+   **Fix:** require finite scheduling fields, validate planned intervals against the frozen cycle offsets, validate actual phase/exchange ordering and spans, and derive overruns from the recorded timestamps. Reject contradictions between those timestamps, flags and `deadlineMisses`. Add these counterexamples to the tests and retain genuine overrun evidence. Repair the plan’s metric-derivation implementation; leave frozen evaluators unchanged.
+
+The adapted tests retain their existing assertions; none was removed or made vacuous by the textual changes. However, the new G12 fixtures in `timing.test.mjs` and `t9-timing.test.mjs` omit checkpoint timing fields and are accepted. They therefore reinforce the validation gap above.
+
+The [new saved preflight](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/artifacts/project0/20261019T211025030Z-dev-integrity-preflight-headed/integrity-preflight.json) is valid evidence for this commit: all six assertions recompute successfully, `errors` is empty, and its implementation hash matches my independent calculation. Both loads record the expected transient-resize violations, three clean deliberate resizes, binding delivery, visible/focused DPR-1 state and `gpuRequested: false`. `evaluates: 0` counts explicit runner evaluations; the supervisor supplies the binding-reply isolation guarantee.
+
+The accidental browser launch is acceptable as a disclosed test-isolation incident, **not successful acceptance evidence**. I read both failed records:
+
+- `20261019T210308679Z-dev-integrity-preflight-headed`
+- `20261019T210309601Z-dev-integrity-preflight-headed`
+
+Both have `pass: false` and the implementation-identity error; the second additionally records the 40 ms deadline. The preflight browser module requests no GPU adapter/device. Preserve these directories unchanged. Add an explicit disposition to the report or campaign inventory: **“Accidental RED-test browser runs; failed development diagnostics; excluded from passing-preflight evidence and T10 qualification inputs.”** No fixture reset or remediation allowance is warranted. Historical process cleanup is reported by the implementer, rather than established by these JSON records.
+
+After repairing finding 1 and obtaining scoped approval, apply this Step 8 checklist:
+
+1. **Preflight and identity.** Use a passing `integrity-preflight.json` for the reviewed implementation. Recompute its six assertions; require `pass: true`, `errors: []`, successful first/reload results and the expected page state. Verify the implementation commit/hash, fixture identity and all 24 provenance hashes before GPU work.
+
+2. **Invocation files and slots.** In each printed `artifacts/project0/<stamp>-dev-…/` directory, inspect each `<id>.json` and its referenced `<id>.raw.json`, `<id>.launch.json` and `<id>.chrome-gpu.txt`. Verify artifact hashes, `campaign: "dev"`, identities and launch configuration. Completed invocations must contain exactly:
+   
+   | Invocation | Slots |
+   |---|---|
+   | G1 | `headed` and `headless`, in their respective runs |
+   | G2 | `fresh-0`, `fresh-1`, `fresh-2`, `warm` |
+   | timing | Nine G6 view/trial slots, G7 `0`–`2`, G9 `warmed` |
+   | G8 | `0`–`9` |
+   | G10 | The three specified bulb views |
+   | visible | `captures` |
+   | G12 | `sequence` |
+
+   Missing slots require explicit incomplete/failure evidence; they cannot count as a completed invocation.
+
+3. **Supervision.** Check `supervision.json`, or G2’s `supervision-fresh-0.json` through `supervision-fresh-2.json` and `supervision-warm.json`. Completed runs require `failure: null`, `complete: true`, every window closed and individually complete, correct order, and durations below the corresponding `WINDOW_PLANS` bounds. Expect 12 timing windows, ten G8 windows, three G10 windows and one G12 window. Each G2 fresh snapshot contains one navigation window; the warm snapshot is cumulative and contains fresh-2 plus warm. G1/visible have empty plans. G12 requires `checkpoints === expectedCheckpoints === 60`. Keep sidecars associated with their own invocation directory and include them in the preserved evidence inventory.
+
+4. **G6/G7/G9 recomputation.** Recompute companion metrics from saved raws, including frozen configuration, warm-up and schedule checks. Call `validateSources(g9Raw, companionOf)` using **validated companions and raws from the same invocation**; require `[]`. Also run G9’s own metric validation. Twelve declared source names alone are insufficient.
+
+5. **G12 schedule and checkpoints.** Require `checkpoint-0.json` through `checkpoint-59.json`, with matching cycle identities, and 60 corresponding `raw.cycleLog` entries. Validate fixed cycle origins and planned offsets `[0,3000,4000,7000,10000]`; the three phase identities must be overview, sphere, detail. Require complete finite phase/exchange timestamps, consistent ordering and explicit skipped-phase flags. Derive overruns from checkpoint reply times versus cycle boundaries, then reconcile `raw.deadlineMisses` and recomputed metrics. Checkpoint `deadlineMisses` currently precedes that checkpoint’s own exchange, so compare it with **preceding** cycle failures. Verify all seven maintenance results, inventory return and final backing. Missing timestamps or contradictory flags invalidate; recorded performance failures remain development observations for T10.
+
+6. **Descriptors and integrity.** Run `validateRecordTiming(record, raw)` and compare recomputed metrics with persisted metrics. G1/visible are correctness-only. Required raw timing fields are G2 `navigationMs`, G6/G7 `observedMs`, G8 `latencyMs`, G9 `longestTaskMs`, G10 `elapsedMs`, G12 `wallMs`; all use the page clock with `timestampQueriesUsed: false`. Readback is included except for G9. Every integrity violation must appear as an invalidation.
+
+7. **Visible output.** Require storage observations, `raw.presented` classifications and three readable presented-canvas PNGs for `sphere`, `bulb-overview` and `bulb-stress`. Missing captures are failures, not successful visible-output evidence.
+
+8. **Stops and preservation.** Inspect every invalidation and apply `stopReasons` after each invocation; do not rely on CLI exit status or `&&`. A classified stop prevents another GPU experiment pending diagnosis. Preserve failed and partial evidence without overwriting it. Explain every invalidation; G1’s missing device identity remains inconclusive, and G7 lateness must not be relabelled external interference. Step 8 records development behaviour; T10 performs qualification.
+
+What I ran:
+
+```bash
+node --test spikes/project0/tests/{t9-r3-supervision,t9-r3,supervision,t9-r2,t9-r1,session-utils,integrity,timing,timing-driver,g1,resources-metrics,mapping-callers,timing-contract,png}.test.mjs
+```
+
+All 14 files passed. Direct execution of the two new suites also passed **7/7** and **9/9**.
+
+```bash
+node --test --test-name-pattern='^(the result|a page|a crashed|without|a presented|results)' spikes/project0/tests/transport.test.mjs
+node --test --test-name-pattern='^(the T9 rows|wrong descriptors|G8|G10|followPath|the timing invocation|G12)' spikes/project0/tests/t9-timing.test.mjs
+```
+
+Both selections passed. Additionally: all changed JavaScript files passed `node --check`; all seven drivers and the browser preflight imported; preflight recomputation and independent source/spec/implementation hash checks passed; `git diff --check` passed; the worktree remains clean.
+
+`node spikes/project0/verify-fixtures.mjs` was blocked by `spawnSync git EPERM`. Independent checks confirmed all **24 frozen hashes match**, with no frozen source changed. I did not reproduce the filesystem-writing full 313-test suite, launch a browser, or edit files.
+
+**Step 8 may proceed: NO — finding 1 requires repair and scoped re-review.**
+
+---
+
+## Claude → Codex — EXEC T9 review r5 — scoped re-review of G12 schedule validation (fix round 4)
+*2026-10-19 14:37:05 PDT*
+
+# Claude → Codex — EXEC T9 code review (round 5, scoped re-review)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and
+check that it is operational and faithful to the approved spec and the rev-6 plan. You never
+commit or edit; this run is read-only. The review worktree (your cwd, recreated under the
+round-1 directory name) is detached at 9caa8c9.
+
+This is a re-review. Review `git diff 78c64af..9caa8c9` (commits: `git log --oneline 78c64af..9caa8c9`, that is a175106 and 9caa8c9). FIX_BASE is 78c64af; HEAD is 9caa8c9.
+
+Read:
+- the implementer's report, section "Fix round 4": /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan/task-T9-report.md
+- the task text: .../task-T9-brief.md (same directory);
+- the plan header and global constraints: .../globals.md (same directory);
+- your own round-4 findings: .../codex-T9-r4-findings.md (same directory).
+
+Reported by the implementer (a fresh implementer fixed round 4):
+- the first 9 new tests (`t9-r4.test.mjs`) were run against 78c64af: 8 of the 9 failed (the 9th is the clean-schedule control); the 10th test failed against a175106 before 9caa8c9 was written; no RED run started a real browser (the tests are pure: injected fakes only);
+- the full suite passes 323 of 323; FIXTURES OK holds;
+- the browser integrity preflight passes for the reviewed implementation (read it read-only): `artifacts/project0/20261019T213537933Z-dev-integrity-preflight-headed` under the implementation worktree;
+- the driver also changed: `g12.js` now decides overruns from its recorded reply time and waits until the cycle boundary even if the timer wakes early. A phase whose time has run out can no longer be recorded as run. The fake `followPath` in `t9-r3.test.mjs` now waits out its full duration (as the real one does).
+
+## Open item (verbatim from your round 4)
+
+The only open finding is the single Important item:
+
+> 1. **Important — [spikes/project0/measure/timing.mjs:188](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/measure/timing.mjs:188): G12’s new validation trusts flags instead of validating the recorded schedule. — PLAN/SPEC CHANGE**
+>
+> The reducer never validates `c0`, planned phase boundaries, checkpoint send/reply times or `endedMs`. It accepts zero-length phases and derives deadline misses from the supplied `overrun` boolean.
+>
+> Two read-only reproductions both returned `deadlineMisses: 0` with **every G12 metric rule satisfied**:
+>
+> - Cycle 0’s checkpoint replied at **10,050 ms**, beyond its **10,000 ms** boundary, while `overrun` remained false.
+> - All cycle/checkpoint timing fields were removed and every phase’s actual span became `[0, 0]`.
+>
+> **Fix:** require finite scheduling fields, validate planned intervals against the frozen cycle offsets, validate actual phase/exchange ordering and spans, and derive overruns from the recorded timestamps. Reject contradictions between those timestamps, flags and `deadlineMisses`. Add these counterexamples to the tests and retain genuine overrun evidence. Repair the plan’s metric-derivation implementation; leave frozen evaluators unchanged.
+
+The E3 disposition text you required in round 4, verbatim from the report (confirm it is adequate):
+
+> ### E3 disposition (Codex T9 r4, required)
+> The two records `artifacts/project0/20261019T210308679Z-dev-integrity-preflight-headed` and `artifacts/project0/20261019T210309601Z-dev-integrity-preflight-headed` (fix round 3, Concern 1): **Accidental RED-test browser runs; failed development diagnostics; excluded from passing-preflight evidence and T10 qualification inputs.** They are kept unchanged, and no fixture reset or remediation follows from them (docs/codesign/execution-decisions.md E3).
+
+## Implementer's concerns (please judge each)
+
+1. Per-cycle `checkpoint-N.json` binding is not checked by the reducer. It stays a reading rule for Step 8 and T10 (your own checklist item 5), not a reducer check. Is that acceptable?
+2. A phase that starts late but before its planned end runs shortened and is not counted as a deadline miss. That is round 3's definition of a miss. Is that acceptable?
+
+## What to deliver
+
+- ADDRESSED or NOT ADDRESSED for the open finding above, and whether the E3 disposition text is adequate.
+- Your ruling on each of the two concerns.
+- Any new breakage in `git diff 78c64af..9caa8c9` only.
+- State explicitly whether Step 8 may proceed.
+- Restate the Step 8 acceptance checklist (updated if anything changed).
+
+Reply format:
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- `Spec compliance: ✅` or `❌` with reasons.
+- Findings, numbered, each with severity (Critical / Important / Minor), file:line, the concrete failure scenario, and the fix.
+- Any finding that requires changing the spec or the plan text is tagged `PLAN/SPEC CHANGE`.
+- What you ran, and the results.
+
+
+---
+
+## Codex → Claude — EXEC T9 review r5 — scoped re-review of G12 schedule validation (fix round 4) — VERDICT: APPROVED
+*2026-10-19 14:40:35 PDT*
+
+VERDICT: APPROVED
+
+Spec compliance: ✅ The scoped changes address the remaining finding without changing frozen evaluators or workloads. No new defects found in `78c64af..9caa8c9`.
+
+**Round-4 finding 1: ADDRESSED.** [measure/timing.mjs:130](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/measure/timing.mjs:130) now validates finite scheduling fields, the frozen cycle grid, phase ordering and spans, both directions of the skip rule, checkpoint ordering, derived overruns, miss counts and wall time. Both previous counterexamples are rejected; consistently recorded overruns remain usable failure evidence.
+
+The changes in [g12.js:74](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/browser/drivers/g12.js:74) align the driver with those checks: overrun uses the recorded reply timestamp, early timer wakes cannot end a cycle prematurely, and `wallMs` equals the recorded sequence span. The requested **PLAN/SPEC CHANGE** to the implementation is accepted; qualification thresholds remain unchanged.
+
+The adapted tests retain their assertions. Adding checkpoint timestamps repairs the fixtures, and making the fake `followPath` wait its full duration accurately models the real function.
+
+**E3 disposition: adequate.** The report and [execution-decisions.md:50](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/docs/codesign/execution-decisions.md:50) explicitly preserve the failed diagnostics and exclude them from passing-preflight evidence and T10 qualification inputs.
+
+Rulings on the concerns:
+
+1. **Checkpoint-file binding: acceptable separation of responsibilities.** The reducer validates one raw observation; reconciliation with `checkpoint-N.json` belongs to evidence-bundle validation. It remains mandatory during Step 8 inspection and must be implemented before T10 accepts evidence. It is not an optional diagnostic.
+
+2. **Late but unskipped phases: acceptable under the previously reviewed absolute-boundary policy.** A phase starting before its planned end runs until that end; its shorter actual span is recorded. A phase starting at or after its planned end must be skipped and counted as a miss. Keep the planned boundaries fixed and report actual lateness and duration. No additional per-phase lateness threshold is introduced by this review.
+
+The [saved preflight](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/artifacts/project0/20261019T213537933Z-dev-integrity-preflight-headed/integrity-preflight.json) passes independent recomputation of all six assertions. Its commit and implementation hash match `9caa8c9`; both loads have the expected mutation evidence, clean deliberate resizes, visible/focused DPR-1 state, `gpuRequested: false`, and no errors.
+
+Apply this Step 8 acceptance checklist:
+
+1. **Run identity and launch.** Run each prescribed driver once as `campaign: "dev"` from the clean reviewed implementation. Use headed, foreground, unobscured execution except G1’s separate headless run. Verify fixture identity, implementation identity, sandboxing, attempt-1 flags and fresh profiles. Use the passing preflight above.
+
+2. **Files and slots.** In each invocation’s printed evidence directory, verify `<id>.json`, its referenced `.raw.json`, `.launch.json`, `.chrome-gpu.txt`, and all artifact hashes. Completed invocations must contain:
+
+   | Invocation | Required slots |
+   |---|---|
+   | G1 | `headed`, `headless`, in separate runs |
+   | G2 | `fresh-0`, `fresh-1`, `fresh-2`, `warm` |
+   | timing | Nine G6 view/trial slots, G7 `0`–`2`, G9 `warmed` |
+   | G8 | `0`–`9` |
+   | G10 | `bulb-overview`, `bulb-detail-0.05`, `bulb-detail-0.005` |
+   | visible | `captures` |
+   | G12 | `sequence` |
+
+   Missing slots require explicit failure/incomplete evidence and cannot represent completed execution.
+
+3. **Supervision.** Inspect `supervision.json`, or G2’s `supervision-fresh-0.json` through `supervision-fresh-2.json` and `supervision-warm.json`. Successful completion requires `failure: null`, `complete: true`, correct window identities/order, closed windows with `complete: true`, and durations below their `WINDOW_PLANS` bounds. Expect 12 timing windows, ten G8 windows, three G10 windows and one G12 window. G2 fresh snapshots contain one navigation window each; warm is cumulative and contains fresh-2 plus warm. G1/visible have empty plans. G12 must record 60 expected and received checkpoints. Preserve these sidecars with their own invocation.
+
+4. **G6/G7/G9 recomputation.** Recompute metrics from saved raws, including warm-up, frozen configuration and G7 schedule checks. Call `validateSources(g9Raw, companionOf)` with validated companions and saved raws from the **same invocation**; require `[]`. Also validate G9’s own twelve-source observation. Companion names alone do not establish validity.
+
+5. **G12 schedule and checkpoint reconciliation.** Run `metricsFor('G12', 'sequence', raw, fixtures)` and compare its result with persisted metrics. Require 60 cycle-log entries and exactly `checkpoint-0.json` through `checkpoint-59.json`. For checkpoint N:
+   - `cycle` must equal N.
+   - Its finite `t` must lie after that cycle’s last phase end and no later than `checkpointSentMs`.
+   - Its `deadlineMisses` must equal the number of **preceding** cycles with an overrun or skipped phase.
+
+   The reducer must accept the fixed cycle grid, phase spans, exchange ordering, flags and `wallMs`. Its total miss count must equal cycles with `checkpointRepliedMs > c0 + cycleMs` or a skipped phase. Verify all seven maintenance results, final backing and inventory return. Preserve genuine overruns as performance results; contradictory or missing evidence invalidates.
+
+6. **Descriptors and integrity.** Run `validateRecordTiming(record, raw)` and compare recomputed metrics with persisted metrics. G1/visible are correctness-only. Timing fields are G2 `navigationMs`, G6/G7 `observedMs`, G8 `latencyMs`, G9 `longestTaskMs`, G10 `elapsedMs`, G12 `wallMs`. All use the page clock and `timestampQueriesUsed: false`; readback is included except for G9. Every integrity violation must produce an invalidation.
+
+7. **Visible output.** Require storage observations, `raw.presented` classifications and three readable presented-canvas PNGs for `sphere`, `bulb-overview` and `bulb-stress`. Missing captures are failures.
+
+8. **Stops and preservation.** Inspect invalidations and apply `stopReasons` after every invocation; CLI exit status or `&&` is insufficient. A classified stop prevents another GPU experiment pending diagnosis. Preserve failed and partial evidence without overwriting it. Explain all invalidations. G1’s missing adapter device identity remains inconclusive; G7 lateness must retain its classification. Keep E3 records excluded. Step 8 produces development evidence; T10 performs qualification.
+
+What I ran:
+
+```bash
+node spikes/project0/tests/t9-r4.test.mjs
+node --test spikes/project0/tests/{t9-r3,t9-r3-supervision,t9-r2,t9-r1,timing,timing-driver,timing-contract,resources-metrics,supervision,session-utils}.test.mjs
+node --test --test-name-pattern='^(the T9 rows|wrong descriptors|G8|G10|followPath|the timing invocation|G12)' spikes/project0/tests/t9-timing.test.mjs
+```
+
+Results: **10/10 new tests passed**, all ten regression files passed, and the selected non-writing `t9-timing` tests passed.
+
+All changed JavaScript files passed `node --check`; all seven drivers imported successfully. Preflight recomputation, implementation-hash comparison and `git diff --check` passed. All **24 frozen source hashes match**, no frozen source changed, and the governing spec hash matches. The worktree remains clean.
+
+I did not run the filesystem-writing full 323-test suite, launch a browser, or edit files.
+
+**Step 8 may proceed: YES.**
+
+---
+
+## Claude → Codex — EXEC T9 review r6 — Step 8 dev campaign joint evidence review
+*2026-10-19 15:01:40 PDT*
+
+# Claude → Codex — EXEC T9 joint evidence review of the Step 8 development campaign (round 6)
+
+This is a joint evidence review of the Step 8 development campaign, not a code review. You never commit or edit; this run is read-only. The review worktree (your cwd) is detached at 9caa8c9 (unchanged from round 5, which you APPROVED).
+
+The T9 Step 8 development campaign ran at 9caa8c9: headed, G2 headed by controller ruling, one run each. Everything you read is read-only:
+- evidence: `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/artifacts/project0/20261019T2141*` to `20261019T2148*`;
+- the implementer's "Phase B: dev campaign" section in `$W/task-T9-report.md` (W = `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan`);
+- the inspection script and logs in `$W/T9-step8/`.
+
+Also read the spec (`docs/superpowers/specs/2026-10-18-project0-space-qualification-design.md`) and plan (`docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md`) sections on Step 8, the timing invocation, invalidation, and G12.
+
+Summary:
+- Every run exited 0, with no classified stop, and `stopReasons` gave `[]` for all 31 records.
+- Checklist items 1 and 5-8 PASS.
+- G2 `navigationMs` is ~458-477 fresh and 447 warm.
+- G6 has all nine slots, with `intervalP95` 8.8-10.5 ms.
+- G8 `latencyMs` is 18.3-21.8.
+- G10 `elapsedMs` is 42 / 10.5 / 12.8.
+- Visible produced three 1280x720 PNGs.
+- G12 ran 60 cycles, wallMs 600003.9, deadlineMisses 0, maintenanceFailures 0, with the inventory back at baseline.
+- G1 headed is inconclusive (empty device identity); G1 headless is no-adapter.
+
+Problems to rule on:
+1. **Timing invocation `20261019T214231975Z`.** G7/0 request 141 fired 7.90 ms late against the 4 ms limit, cause unknown, and that ended the invocation. G7/1, G7/2 and G9 were never produced, so checklist items 2-4 FAIL. Diagnose from the raw data: was it a harness issue, timer scheduling, X11 remote display (DISPLAY=:10.0), GC, or other machine load? The user reported ~35% GPU use during the run, and Ollama may share the GPU. Then decide what follows: a T9 code fix, a single diagnostic rerun of the timing invocation (and under what rule; would it count as remediation?), or accepting it as dev evidence and leaving it to T10.
+2. **The same invalidation is attached to all nine G6 records,** although G6 completed before G7. Is propagating an invocation-level invalidation to every earlier slot correct under the spec, or should completed G6 slots keep their own validity?
+3. **G12 `bindGroups` count grew from 1597 to 235115** over the run. It isn't a counted metric. Is it a leak of tracked objects, a counter that only counts creations, or harmless? Does it threaten G12's inventory-return or stability claim? Check the allocator's bindGroup accounting.
+4. **G1 identity gap:** status only, already ruled inconclusive for T10.
+5. **Is T9 complete** (the plan says not to judge pass/fail in Step 8; T10 runs the qualifying campaign), or is more work required first?
+
+For every item, give the action and whether T10 may begin.
+
+Reply format: first line `VERDICT: AGREED POSITION`, followed by numbered positions (one per item above). Mark any item that needs the user `USER DECISION`, and any item that needs a code fix and re-review `CHANGES REQUIRED`. Say exactly what you read and ran, and what you could not verify read-only.
+
+
+---
+
+## Codex → Claude — EXEC T9 review r6 — Step 8 dev campaign joint evidence review — AGREED POSITION (item 5 CHANGES REQUIRED)
+*2026-10-19 15:08:53 PDT*
+
+VERDICT: AGREED POSITION
+
+1. **G7: accept the incomplete development evidence; retain cause `unknown`. No G7 code fix is established.**
+
+   I independently matched the issued requests to the frozen schedule. Requests 0–140 were issued; request 141 was refused before rendering:
+   
+   - Scheduled: `311108.80000019073 ms`.
+   - Callback entered: `311116.69999980927 ms`.
+   - Lateness: `7.899999618530273 ms`.
+   - Earlier callbacks were consistently approximately **3.3–3.5 ms late**.
+
+   This establishes a page-side callback scheduling deviation. The persistent offset makes timer scheduling—including the early-callback rearm path—a useful diagnostic target. It does **not** establish a particular harness defect, GC pause, X11 effect, or Ollama interference. The saved failure payload contains neither a scheduler/GC trace nor the long-task observations used to assign the cause. Approximately 35% GPU utilisation cannot establish whether the page’s callback deadline was achievable at that instant.
+
+   The invocation correctly stopped, retained its partial evidence, and omitted G7/1, G7/2 and G9. `stopReasons: []` is consistent: this is a trial invalidation, not a §7 stop.
+
+   **Action:** preserve the result without an ad hoc diagnostic timing rerun. The [plan’s explicit 4 ms rule](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md:7174) requires a rerun to use T10’s remediation cycle. Calling another attempt “diagnostic” does not create an exception. Do not relax the limit or relabel the cause external interference.
+
+   **T10:** this item does not block starting T10. Complete timing/G9 evidence remains outstanding.
+
+2. **G6: retain the invocation-level invalidations, while distinguishing them from local measurement failures.**
+
+   All nine G6 observations independently recompute to their persisted metrics, and their integrity observations are clean. The subsequent G7 deviation does not demonstrate interference during those earlier windows.
+
+   Nevertheless, the reviewed implementation explicitly returns a failed trial as an invocation-level invalidation, and [finalisation propagates it to every slot](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/run.mjs:41). That is a conservative policy consistent with the approved implementation; it prevents accepting a partial timing invocation.
+
+   **Action:** retain the records unchanged. Describe G6 as completed development observations carrying a later invocation failure—not as nine independently observed G6 failures. Do not remove invalidations retrospectively. Changing to slot-local validity would require an explicit protocol change and review.
+
+   **T10:** no blocker from this item; these `dev` records remain ineligible for qualification regardless.
+
+3. **G12: `bindGroups` is a cumulative creation counter, not a live-object inventory.**
+
+   [The allocator](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/gpu/alloc.js:28) increments `bindGroups` and returns the object. It neither retains the object in its live-resource set nor decrements this counter. The renderer creates bind groups during bands and frame completion, explaining the accumulation.
+
+   Therefore, **1597 → 235115 does not demonstrate 233,518 leaked live bind groups**. It also does not prove anything about actual driver memory reclamation.
+
+   I independently verified all 60 cycle/checkpoint pairs, seven maintenance results, zero derived deadline misses, and exact return of tracked bytes/textures/buffers to baseline. The maximum phase-start lateness was 15.7 ms; minimum remaining time after a checkpoint reply was 2557 ms.
+
+   **Action:** describe this field as cumulative bind-group creations. Preserve the narrower claim: the measured sequence completed and its tracked allocation inventory returned to baseline. Do not extend that to a claim that all opaque browser/driver allocations were leak-free.
+
+   **T10:** no blocker from this item.
+
+4. **G1: retain inconclusive status.**
+
+   Headed G1 completed its probe but recorded an empty device identity. The previous ruling stands; `chrome://gpu` does not substitute for the required adapter identity.
+
+   One reporting correction: this headless run records a **`requestDevice` failure**, with “A valid external Instance reference no longer exists.” `adapterInfo: null` alone does not establish that `requestAdapter()` returned null. Describe this run as **no usable device/probe**, preserving the exact error.
+
+   **Action:** carry both limitations into T10 without claiming corroborated hardware identity or software execution.
+
+   **T10:** may begin from this item, but G1 cannot currently support backend selection.
+
+5. **T9’s development campaign ran as required, but an evidence-discovered G2 instrumentation defect needs repair. — CHANGES REQUIRED; PLAN/SPEC CHANGE to the supplied implementation only.**
+
+   Missing G7/G9 success alone would not prevent completing T9: Step 8 expressly permits invalidated development results and leaves qualification to T10.
+
+   However, all four G2 slots have `preparationVisible: 0`. This exposes a concrete measurement defect:
+   
+   - [g2.js:10](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/browser/drivers/g2.js:10) equates visibility with `offsetParent !== null`.
+   - [index.html:7](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/index.html:7) makes `#status` fixed-positioned.
+   - Such an element can be visible while having a null `offsetParent`, as specified by [CSSOM View](https://drafts.csswg.org/cssom-view/#dom-htmlelement-offsetparent).
+
+   Thus these records cannot reliably establish preparation visibility. Checklist item 6 confirms descriptor and recomputation consistency; it does not validate this sensor.
+
+   **Action:** replace the visibility predicate with a suitable page-local check, test visible fixed-position and hidden controls, obtain bounded browser verification, and submit the fix for scoped review. Preserve the current G2 evidence; do not rewrite its flags or weaken the frozen evaluator.
+
+   **T9 should not be marked fully complete until this instrumentation repair is reviewed. T10 implementation and classification may begin; its qualifying GPU campaign should wait for the repair.** No user decision is needed for the recommended course.
+
+I read the Phase B report, Step 8 inspection script and logs, applicable spec/plan sections, all eight campaign directories, the saved preflight, and the relevant timing, finalisation, visibility and allocation code.
+
+I ran an independent read-only audit: **31 records, 96 artifact hashes, 11 supervision files, 60 checkpoints, three decoded PNGs, and all six preflight assertions** checked successfully, with the expected incomplete timing sequence. All 27 available metric derivations matched; the two G1 and partial G7 derivations were refused as recorded. All 31 stop classifications were empty. All 24 frozen sources matched their recorded hashes and generator-commit bytes.
+
+I also ran:
+
+```text
+node --test spikes/project0/tests/alloc.test.mjs spikes/project0/tests/timing.test.mjs spikes/project0/tests/timing-driver.test.mjs spikes/project0/tests/t9-r4.test.mjs
+```
+
+All four test files passed. The worktree remains clean. I launched no browser and changed no files. Historical machine load, GC, actual preparation painting, physical memory reclamation, and the unproduced G9 evidence cannot be verified from these saved records.
+
+---
+
+## Claude → Codex — EXEC T9 review r7 — scoped re-review of fix round 5 (G2 visibility sensor)
+*2026-10-19 15:15:00 PDT*
+
+# Claude → Codex — EXEC T9 scoped re-review of fix round 5 (round 7)
+
+Roles for Project 0 execution (user directive): Claude writes the code; you review it and check that it is operational and faithful to the approved spec and the rev-6 plan. You never commit or edit; this run is read-only. The review worktree (your cwd, `review-T9-r1`) is detached at 03181ff.
+
+This is the final scoped re-review. Review `git diff b527ae5..03181ff` (commits: `git log --oneline b527ae5..03181ff`). Your round 6 verdict was AGREED POSITION with one open item (position 5). Everything else in round 6 is closed and out of scope unless the fix broke it.
+
+Read:
+- the implementer's report, section "Fix round 5" of `$W/task-T9-report.md` (W = `/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/.superpowers/sdd/2026-10-18-project0-space-qualification-plan`);
+- your own round 6 findings: `$W/codex-T9-r6-findings.md`;
+- the plan header and global constraints: `$W/globals.md`;
+- the spec and plan sections the report cites.
+
+## Open item (verbatim from your round 6 findings, position 5)
+
+5. **T9's development campaign ran as required, but an evidence-discovered G2 instrumentation defect needs repair. — CHANGES REQUIRED; PLAN/SPEC CHANGE to the supplied implementation only.**
+
+   Missing G7/G9 success alone would not prevent completing T9: Step 8 expressly permits invalidated development results and leaves qualification to T10.
+
+   However, all four G2 slots have `preparationVisible: 0`. This exposes a concrete measurement defect:
+   
+   - [g2.js:10](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/browser/drivers/g2.js:10) equates visibility with `offsetParent !== null`.
+   - [index.html:7](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/index.html:7) makes `#status` fixed-positioned.
+   - Such an element can be visible while having a null `offsetParent`, as specified by [CSSOM View](https://drafts.csswg.org/cssom-view/#dom-htmlelement-offsetparent).
+
+   Thus these records cannot reliably establish preparation visibility. Checklist item 6 confirms descriptor and recomputation consistency; it does not validate this sensor.
+
+   **Action:** replace the visibility predicate with a suitable page-local check, test visible fixed-position and hidden controls, obtain bounded browser verification, and submit the fix for scoped review. Preserve the current G2 evidence; do not rewrite its flags or weaken the frozen evaluator.
+
+   **T9 should not be marked fully complete until this instrumentation repair is reviewed. T10 implementation and classification may begin; its qualifying GPU campaign should wait for the repair.** No user decision is needed for the recommended course.
+
+## What the implementer says was done (verify, do not trust)
+
+- New module `spikes/project0/browser/visibility.js` exporting `elementVisible`, used by `browser/drivers/g2.js`. The report justifies it over `checkVisibility()` alone.
+- 4 new tests, all of which failed against b527ae5.
+- The suite passes 327 of 327, and FIXTURES OK holds.
+- The integrity preflight was extended with a seventh assertion: in real Chrome the fixed-position `#status` reads visible while its `offsetParent` is null, and 5 hidden controls read not visible.
+- That preflight passes (`artifacts/project0/20261019T221306494Z-dev-integrity-preflight-headed`, read-only) and becomes the current passing preflight.
+- The existing G2 evidence was preserved (flags not rewritten, evaluator not weakened).
+
+The implementer's own concerns, for you to judge:
+- the sensor has not been exercised in a real G2 run; the first will be in T10;
+- it checks layout, not proof of paint.
+
+## Also check
+
+- Your round 6 item 4 asked for a G1 reporting correction: the headless run records a `requestDevice` failure ("A valid external Instance reference no longer exists."), and `adapterInfo: null` alone does not establish that `requestAdapter()` returned null; describe it as "no usable device/probe", preserving the exact error. Confirm whether the report's G1 headless wording was corrected accordingly.
+- Your G12 wording point (`bindGroups` is a cumulative creation counter) and G6 wording point (completed observations carrying a later invocation failure): note if the report still misstates either; this is minor.
+
+## Required in your reply
+
+- First line: `VERDICT: APPROVED` or `VERDICT: CHANGES REQUIRED`.
+- Position 5: `ADDRESSED` or `NOT ADDRESSED`, with reasons. Your judgment on the implementer's two concerns above.
+- Any new breakage in `git diff b527ae5..03181ff` only (findings numbered, each with severity Critical / Important / Minor, file:line, the concrete failure scenario, and the fix). Tag anything that requires changing the spec or plan text `PLAN/SPEC CHANGE`.
+- The G1 headless wording check result.
+- An explicit statement: **is T9 complete?** And **may T10, including its qualifying GPU campaign, begin?** If not, say exactly what is blocking.
+- A list of everything T10 must carry from T5–T9, at minimum: the wrapper contracts, `validateSources`, the supervision `complete:true` requirement, checkpoint binding, and E1–E4. Add anything else you know T10 must carry (for example the incomplete G7/G9 evidence, G1 limitations, the 4 ms rerun rule, the cumulative bind-group wording).
+- What you ran and the results, and what you could not run read-only. Suggested: `node --test` on the new/changed test files, module import resolution of `visibility.js`, and a read-only check of the preflight artifact directory.
+
+
+---
+
+## Codex → Claude — EXEC T9 review r7 — scoped re-review of fix round 5 (G2 visibility sensor) — APPROVED
+*2026-10-19 15:17:49 PDT*
+
+VERDICT: APPROVED
+
+**Position 5: ADDRESSED.** [visibility.js:11](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/browser/visibility.js:11) checks connection, computed styles, positive dimensions and viewport intersection. [g2.js:13](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-T9-r1/spikes/project0/browser/drivers/g2.js:13) uses it immediately after updating the status text. The evaluator and timing descriptor remain unchanged.
+
+The new tests exercise visible fixed-position elements, hidden controls, G2’s status logging, metric derivation and preflight rejection. The adapted tests retain their previous assertions.
+
+I independently recomputed the [saved preflight]( /mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project0/artifacts/project0/20261019T221306494Z-dev-integrity-preflight-headed/integrity-preflight.json): **all seven assertions pass**. Both loads report the fixed-position status visible despite its null `offsetParent`, with all five hidden controls rejected. The implementation commit/hash match `03181ff`; errors are empty.
+
+Both disclosed limitations are acceptable:
+
+- **No real G2 rerun:** the browser preflight validates the actual element and sensor; the injected driver test validates their integration. T10 can produce the first repaired G2 measurements.
+- **Layout rather than paint:** this is suitable for the reviewed page-local visibility check. It does not prove compositing or physical presentation, and must not be described as doing so.
+
+**New findings:** none in `git diff b527ae5..03181ff`.
+
+**Reporting checks:** G1 headless wording is corrected in the Phase B table, explanation and concern: “no usable device/probe,” with the exact `requestDevice` error. The report does not mischaracterise G6 as nine local failures or claim a live bind-group leak. Carry forward the explicit E4 wording: completed G6 observations carrying a later invocation failure; cumulative bind-group creations.
+
+**T9 complete: YES.**  
+**T10, including its qualifying GPU campaign, may begin: YES**, subject to T10’s own implementation review and campaign prerequisites. No T9 blocker remains.
+
+T10 must carry forward these requirements:
+
+- **Read-time wrappers:** every verdict uses `evaluateGateChecked(..., { raws })`, never bare `evaluateGate`. Parse and verify every selected record’s raw payload, including invalidated records. Preserve original invalidations alongside wrapper failures. `inspectTimingDescriptor` is diagnostic only.
+- **Timing semantics:** enforce exact descriptors and finite raw fields. G2/G6/G7/G8/G9/G10/G12 use page-clock measurements without timestamp queries; readback is included except for G9. Keep queue-completion and timestamp-query diagnostics separate. Correctness-only records, including G11/G13 and experiments, must not become timing evidence.
+- **G9 binding:** run `validateSources(g9Raw, companionOf)` against validated companions from the same invocation, requiring matching actual intervals and no companion invalidations. Validate G9’s own twelve-window observation and the companions’ frozen configuration, warm-up and workload.
+- **Supervision:** successful evidence requires the invocation’s supervision sidecar with `failure: null`, `complete: true`, correct window order, closed/completed windows and durations within fixed bounds. Require the expected checkpoint count. Missing or partial supervision cannot support clean evidence.
+- **G12 checkpoint binding:** reconcile exactly `checkpoint-0.json` through `checkpoint-59.json` with `cycleLog`: cycle identity, finite timestamp between the final phase end and checkpoint send, and preceding-cycle miss count. Recompute schedule, phase spans, checkpoint ordering, overruns and wall time; validate all seven maintenance results and final inventory/backing. Preserve genuine overruns as results.
+- **Evidence and execution:** verify artifact hashes, frozen provenance, effective launch configuration, browser/driver/session coherence and explicit reuse. Exclude `dev`, probe and experiment records from qualification. Preserve partial attempts; reserve `not run` for unattempted gates. Apply shared stop classification after every invocation and enforce correctness before performance.
+- **Browser prerequisites:** obtain a passing seven-assertion preflight matching the final campaign implementation. Preserve sandbox, watchdogs, owned profiles/server, bounded waits and silent measured windows. Keep G2 headed under the controller ruling and inspect all three fresh slots plus warm.
+- **E1:** the diagnostic probe rerun exception was specific and already exercised; it grants no general retry allowance.
+- **E2:** G5 off-plane remains a true failure under the frozen arithmetic contract. No tolerance/reference/exclusion changes or expression search; any workaround follows the single remediation cycle.
+- **E3:** retain the two accidental failed preflights, excluded from passing-preflight and qualification evidence.
+- **E4:** retain the incomplete G7/G9 evidence and `unknown` cause; preserve the 4 ms rule and T10 remediation requirement for reruns. Keep G6 invocation invalidations, both G1 limitations, cumulative bind-group terminology and the original defective-sensor G2 records unchanged.
+- **Visible output and preservation:** retain storage observations, presented classifications and the three PNGs. Missing evidence never becomes a pass; backend selection still requires every mandatory gate.
+
+I ran:
+
+```text
+node --test spikes/project0/tests/t9-r5.test.mjs spikes/project0/tests/t9-r2.test.mjs spikes/project0/tests/t9-r3.test.mjs
+```
+
+All three test files passed. All seven changed JavaScript files passed `node --check`; the three changed browser modules imported successfully; diff whitespace checks passed. All 24 frozen source hashes and the spec hash match. The original four G2 records retain `preparationVisible: 0`, and their 12 artifact hashes verify.
+
+I did not launch a browser/GPU, rerun the filesystem-writing full suite, or reproduce the historical RED runs. No files were edited; the worktree remains clean.
