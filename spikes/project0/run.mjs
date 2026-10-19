@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText as captureChromeGpuText } from './launch.mjs';
-import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord, validateTimingMethod, notMeasured } from './evidence.mjs';
+import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord, validateRecordTiming, notMeasured } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
 import { bounded, boundedStart, waitResult, stopReasons } from './session-utils.mjs';
 
@@ -49,7 +49,8 @@ export async function finalise({ gate, mode, campaign, runDir, identity, launchI
     if (!experiment && s.slot !== 'incomplete') { try { metrics = await metricsFor(slotGate, s.slot, raw, fixtures); } catch (e) { recordInvalidations.push(`metrics: ${e.message}`); } }
     // The producer (the page driver) supplies each slot's timing method; a missing or invalid one invalidates the record and is never guessed.
     let timingMethod = s.slot === 'incomplete' ? notMeasured('incomplete: the session produced no result') : s.timingMethod;
-    try { validateTimingMethod(timingMethod, s); } catch (e) { recordInvalidations.push(e.message); timingMethod = notMeasured(e.message); }
+    // Shape and meaning: the descriptor this gate expects, and the raw measurement it names (validateRecordTiming, timing-contract.js).
+    try { validateRecordTiming({ gate: slotGate, slot: s.slot, timingMethod, invalidations: recordInvalidations }, raw); } catch (e) { recordInvalidations.push(e.message); timingMethod = notMeasured(e.message); }
     const id = `${slotGate}-${s.slot.replace(/[^A-Za-z0-9.-]/g, '_')}-${stamp}`;
     const record = { schema: 1, id, gate: slotGate, slot: s.slot, campaign, mode, experiment: Boolean(experiment), identity, invalidations: recordInvalidations, metrics, timingMethod };
     records.push(await write(runDir, record, [

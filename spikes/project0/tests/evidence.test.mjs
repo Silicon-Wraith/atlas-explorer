@@ -49,7 +49,7 @@ test('writeRecord refuses artefact names that collide with each other or with th
     const record = { id: 'probe-headed' };
     await assert.rejects(writeRecord(dir, record, [{ name: 'probe-headed.json', data: '{}' }]), /collides with the record/);
     await assert.rejects(writeRecord(dir, record, [{ name: 'a.raw.json', data: '1' }, { name: 'a.raw.json', data: '2' }]), /duplicate artefact/);
-    await writeRecord(dir, { id: 'ok', slot: 'vectors', timingMethod: CORRECTNESS_ONLY }, [{ name: 'ok.raw.json', data: '{"x":1}' }]);
+    await writeRecord(dir, { id: 'ok', gate: 'derivative-policy', slot: 'vectors', invalidations: [], timingMethod: CORRECTNESS_ONLY }, [{ name: 'ok.raw.json', data: '{"x":1}' }]);
     assert.deepEqual((await readdir(dir)).sort(), ['ok.json', 'ok.raw.json']);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
@@ -150,7 +150,28 @@ test('writeRecord rejects a missing or inconsistent timing method before writing
     await assert.rejects(writeRecord(dir, { id: 'a', slot: 'sphere' }, [{ name: 'a.raw.json', data: '{}' }]), /^Error: timing method: missing/);
     await assert.rejects(writeRecord(dir, { id: 'b', slot: 'incomplete', timingMethod: CORRECTNESS_ONLY }, [{ name: 'b.raw.json', data: '{}' }]), /^Error: timing method: .*incomplete record/);
     assert.deepEqual(await readdir(dir), [], 'nothing is written for a rejected record');
-    await writeRecord(dir, { id: 'c', slot: 'sphere', timingMethod: QUEUE }, [{ name: 'c.raw.json', data: '{}' }]);
+    await writeRecord(dir, { id: 'c', gate: 'G3', slot: 'sphere', invalidations: [], timingMethod: QUEUE }, [{ name: 'c.raw.json', data: '{"workMs":1.5}' }]);
     assert.deepEqual(JSON.parse(await readFile(join(dir, 'c.json'), 'utf8')).timingMethod, QUEUE);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+// T6 fix round 4 (Codex r5 finding 2): the writer checks what the descriptor means for this gate and the raw measurement it describes,
+// not only its shape. Each of these completed G3 slots carries a workMs and was persisted before this round.
+test('writeRecord rejects a G3 descriptor that does not describe its queue-completion workMs, and a workMs that is not a finite nonnegative number', async () => {
+  const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
+  const dir = await mkdtemp(join(base, 'p0-evidence-test-'));
+  const g3 = (id, timingMethod, raw = { workMs: 3 }, invalidations = []) => writeRecord(dir, { id, gate: 'G3', slot: 'sphere', invalidations, timingMethod }, [{ name: `${id}.raw.json`, data: JSON.stringify(raw) }]);
+  try {
+    await assert.rejects(g3('d', CORRECTNESS_ONLY), /^Error: timing method: G3\/sphere expects/);
+    await assert.rejects(g3('e', notMeasured('no timing')), /^Error: timing method: .*not-measured/);
+    await assert.rejects(g3('f', { ...QUEUE, field: 'gpuWorkSeconds', clock: 'gpu.timestamp', unit: 's' }), /^Error: timing method: G3\/sphere expects/);
+    for (const [id, raw] of [['g', {}], ['h', { workMs: -1 }], ['i', { workMs: '3' }], ['j', { workMs: null }]]) await assert.rejects(g3(id, QUEUE, raw), /^Error: timing method: .*workMs/, id);
+    await assert.rejects(writeRecord(dir, { id: 'k', gate: 'G3', slot: 'sphere', invalidations: [], timingMethod: QUEUE }, []), /^Error: timing method: .*no raw payload/);
+    await assert.rejects(writeRecord(dir, { id: 'l', gate: 'G4', slot: 'bulb-samples', invalidations: [], timingMethod: QUEUE }, [{ name: 'l.raw.json', data: '{}' }]), /^Error: timing method: G4\/bulb-samples expects/);
+    await assert.rejects(writeRecord(dir, { id: 'm', gate: 'G6', slot: 'bulb-overview/0', invalidations: [], timingMethod: CORRECTNESS_ONLY }, [{ name: 'm.raw.json', data: '{}' }]), /^Error: timing method: no expected timing method registered for G6/);
+    assert.deepEqual(await readdir(dir), [], 'nothing is written for a rejected record');
+    await g3('n', notMeasured('timing method: missing (the producer must supply one)'), {}, ['timing method: missing (the producer must supply one)']);   // finalise's fail-closed shape is kept
+    await g3('o', QUEUE, { workMs: 0 });
+    assert.deepEqual((await readdir(dir)).sort(), ['n.json', 'n.raw.json', 'o.json', 'o.raw.json']);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });

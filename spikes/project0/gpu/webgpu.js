@@ -81,9 +81,9 @@ export function profileWords({ k, floor, factor, H, steps, iterations }, start, 
   return new Uint8Array(words);
 }
 
-// What traceList's workMs measures (the evidence timing-method contract, evidence.mjs): t0 is taken before the batch loop, so it includes CPU batch
-// preparation, encoding and submission, and ends when the last onSubmittedWorkDone resolves. It is queue-completion time, not shader time.
-export const TRACE_LIST_TIMING = Object.freeze({ kind: 'queue-completion', clock: 'page.performance.now', unit: 'ms', field: 'workMs', start: 'before the first batch is prepared', end: 'after the final onSubmittedWorkDone promise resolves', readbackIncluded: false, timestampQueriesUsed: false });
+// What traceList's workMs measures: queue-completion time on the page clock, from before batch preparation (timing-contract.js, which G3's
+// expected timing method names exactly).
+export { QUEUE_COMPLETION_WORKMS as TRACE_LIST_TIMING } from '../timing-contract.js';
 // Bounded batches, at most two outstanding, each registered with the watchdog. workMs excludes readback.
 export async function traceList({ device, alloc, watchdog, abort = noAbort, pipelines, field, profile, origins, directions, boxes = new Float32Array(4), batch = 512, label = field }) {
   const n = origins.length / 3, pipeline = pipelines[`trace_list/${field}`];

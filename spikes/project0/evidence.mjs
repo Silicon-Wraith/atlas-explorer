@@ -59,30 +59,11 @@ export async function newRunDir(label) {
   return dir;
 }
 
-// The timing-method contract (globals: every record names its timing method). The producer of a record supplies `record.timingMethod`;
-// writeRecord validates it and never infers one. Three shapes:
-// - measured: { kind, clock, unit, field, start, end, readbackIncluded, timestampQueriesUsed }, all required, nothing else. `kind` names the
-//   method ('queue-completion', 'timestamp-query', or a later task's own measured kind); `field` names the raw value it describes; `start`/`end`
-//   state the measured interval in words. timestampQueriesUsed must be true exactly when kind is 'timestamp-query'.
-// - CORRECTNESS_ONLY = { kind: 'correctness-only' }: the record carries no timing measurement (G3-G5 arithmetic checks, policy, probe).
-// - notMeasured(reason) = { kind: 'not-measured', reason }: no measurement is available; the only shape an incomplete record may carry.
-export const CORRECTNESS_ONLY = Object.freeze({ kind: 'correctness-only' });
-export const notMeasured = reason => ({ kind: 'not-measured', reason });
-const MEASURED_FIELDS = ['kind', 'clock', 'unit', 'field', 'start', 'end', 'readbackIncluded', 'timestampQueriesUsed'];
-export function validateTimingMethod(tm, { slot } = {}) {
-  const fail = why => { throw new Error(`timing method: ${why}`); };
-  if (tm === undefined || tm === null || typeof tm !== 'object' || Array.isArray(tm)) fail('missing (the producer must supply one)');
-  if (typeof tm.kind !== 'string' || !tm.kind) fail('no kind');
-  const only = allowed => { for (const k of Object.keys(tm)) if (!allowed.includes(k)) fail(`unexpected field ${k} for kind ${tm.kind}`); };
-  if (tm.kind === 'not-measured') { only(['kind', 'reason']); if (typeof tm.reason !== 'string' || !tm.reason) fail('not-measured needs a reason'); return tm; }
-  if (slot === 'incomplete') fail(`an incomplete record must be not-measured, not ${tm.kind}`);
-  if (tm.kind === 'correctness-only') { only(['kind']); return tm; }
-  only(MEASURED_FIELDS);
-  for (const k of ['clock', 'unit', 'field', 'start', 'end']) if (typeof tm[k] !== 'string' || !tm[k]) fail(`measured kind ${tm.kind} needs ${k}`);
-  for (const k of ['readbackIncluded', 'timestampQueriesUsed']) if (typeof tm[k] !== 'boolean') fail(`measured kind ${tm.kind} needs boolean ${k}`);
-  if (tm.timestampQueriesUsed !== (tm.kind === 'timestamp-query')) fail(`inconsistent: kind ${tm.kind} with timestampQueriesUsed ${tm.timestampQueriesUsed}`);
-  return tm;
-}
+// The timing-method contract lives in timing-contract.js (pure, shared with the page drivers and the read-time evaluator gates-checked.js).
+// The producer of a record supplies `record.timingMethod`; writeRecord validates its shape and its meaning for the record's gate against the
+// raw payload being written, and never infers one.
+import { validateRecordTiming } from './timing-contract.js';
+export { CORRECTNESS_ONLY, notMeasured, validateTimingMethod, validateRecordTiming } from './timing-contract.js';
 
 export async function writeRecord(runDir, record, artifacts) {
   const names = new Set();
@@ -92,7 +73,11 @@ export async function writeRecord(runDir, record, artifacts) {
     if (names.has(name)) throw new Error(`duplicate artefact name: ${name}`);
     names.add(name);
   }
-  validateTimingMethod(record.timingMethod, record);                          // before anything is written
+  // Before anything is written: the raw payload checked is the one persisted (`<id>.raw.json`); without one, a measured descriptor is refused.
+  const rawArtifact = artifacts.find(a => a.name === `${record.id}.raw.json`);
+  let raw = null;
+  if (rawArtifact) { try { raw = JSON.parse(String(rawArtifact.data)); } catch { raw = null; } }
+  validateRecordTiming(record, raw);
   record.artifacts = [];
   const root = resolve(ROOT, 'artifacts/project0');
   for (const { name, data } of artifacts) {

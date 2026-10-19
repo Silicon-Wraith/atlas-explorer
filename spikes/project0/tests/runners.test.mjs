@@ -289,6 +289,30 @@ test('finalise passes each slot\'s timing method through; a missing one is an in
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
+// T6 fix round 4 (Codex r5 finding 2): finalise validates the gate, the descriptor and the raw measurement together. A contradiction is an
+// invalidation with a not-measured descriptor, so the evidence is kept and fails closed; before this round each of these was written clean.
+test('finalise invalidates a completed G3 slot whose descriptor or workMs contradicts the queue-completion measurement', async () => {
+  const dir = await scratch();
+  try {
+    const identity = { backend: 'webgpu', ...fixture, ...implementation, launchHash: 'f'.repeat(64), mode: 'headed', browserVersion: 'v', browserExecutable: 'x', driver: 'd', session: 's' };
+    const { TRACE_LIST_TIMING } = await import('../gpu/webgpu.js');
+    const common = { gate: 'G3', mode: 'headed', campaign: 'dev', runDir: dir, identity, launchInfo: {}, chromeGpuText: '', invalidations: [], fixtures: {}, experiment: true };
+    const slots = [
+      { slot: 'sphere', raw: { workMs: 4 }, timingMethod: { kind: 'correctness-only' } },
+      { slot: 'box', raw: { workMs: 4 }, timingMethod: { kind: 'not-measured', reason: 'no timing' } },
+      { slot: 'menger-1', raw: { workMs: 4 }, timingMethod: { ...TRACE_LIST_TIMING, field: 'gpuWorkSeconds', clock: 'gpu.timestamp', unit: 's' } },
+      { slot: 'menger-2', raw: { workMs: -4 }, timingMethod: TRACE_LIST_TIMING }];
+    const records = await finalise({ ...common, outcome: { result: { slots, invalidations: [] } } });
+    assert.equal(records.length, 4);
+    for (const r of records) {
+      assert.ok(r.invalidations.some(x => /^timing method: /.test(x)), `${r.slot}: ${JSON.stringify(r.invalidations)}`);
+      assert.equal(r.timingMethod.kind, 'not-measured', r.slot); assert.match(r.timingMethod.reason, /^timing method: /);
+    }
+    const [g4] = await finalise({ ...common, gate: 'G4', outcome: { result: { slots: [{ slot: 'bulb-samples', raw: {}, timingMethod: TRACE_LIST_TIMING }], invalidations: [] } } });
+    assert.ok(g4.invalidations.some(x => /^timing method: G4\/bulb-samples expects/.test(x)), JSON.stringify(g4.invalidations));
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
 test('the ray-list timing descriptor states what workMs measures: queue completion on the page clock, from before batch preparation', async () => {
   const { TRACE_LIST_TIMING } = await import('../gpu/webgpu.js');
   assert.deepEqual(TRACE_LIST_TIMING, { kind: 'queue-completion', clock: 'page.performance.now', unit: 'ms', field: 'workMs', start: 'before the first batch is prepared', end: 'after the final onSubmittedWorkDone promise resolves', readbackIncluded: false, timestampQueriesUsed: false });

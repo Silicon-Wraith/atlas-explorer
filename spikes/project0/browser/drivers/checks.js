@@ -1,7 +1,7 @@
 // spikes/project0/browser/drivers/checks.js — G3/G4/G5 and policy drivers: raw readbacks only, never a verdict.
 import { acquire, destroy, onLoss } from '../../gpu/device.js';
 import { prepare, upload, readBack, traceList, dispatchOnce, TRACE_LIST_TIMING } from '../../gpu/webgpu.js';
-const CORRECTNESS_ONLY = { kind: 'correctness-only' };   // the evidence timing-method contract (evidence.mjs): no timing measured
+import { CORRECTNESS_ONLY } from '../../timing-contract.js';   // the timing-method contract: no timing measured
 import { createAllocator } from '../../gpu/alloc.js';
 import { createWatchdog } from '../../gpu/watchdog.js';
 import { experiment } from '../../gpu/abort.js';
