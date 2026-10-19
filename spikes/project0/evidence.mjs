@@ -63,7 +63,7 @@ export async function newRunDir(label) {
 // The producer of a record supplies `record.timingMethod`; writeRecord validates its shape and its meaning for the record's gate against the
 // raw payload being written, and never infers one.
 import { validateRecordTiming } from './timing-contract.js';
-export { CORRECTNESS_ONLY, notMeasured, validateTimingMethod, validateRecordTiming } from './timing-contract.js';
+export { CORRECTNESS_ONLY, notMeasured, validateTimingMethod, validateRecordTiming, inspectTimingDescriptor } from './timing-contract.js';
 
 export async function writeRecord(runDir, record, artifacts) {
   const names = new Set();

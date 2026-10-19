@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateGate } from '../gates.js';
 import { evaluateGateChecked, validateEvidence } from '../gates-checked.js';
-import { EXPECTED_TIMING, QUEUE_COMPLETION_WORKMS, CORRECTNESS_ONLY, notMeasured, validateRecordTiming } from '../timing-contract.js';
+import { EXPECTED_TIMING, QUEUE_COMPLETION_WORKMS, CORRECTNESS_ONLY, notMeasured, validateRecordTiming, inspectTimingDescriptor } from '../timing-contract.js';
 
 // The same record shape as T1's contract tests (a frozen file, copied here rather than imported).
 const fixtures = {
@@ -36,10 +36,36 @@ test('the canonical queue-completion descriptor is the one Codex defined, and G3
   assert.ok(Object.isFrozen(EXPECTED_TIMING) && Object.isFrozen(EXPECTED_TIMING.G3) && Object.isFrozen(EXPECTED_TIMING.G3[0]));
 });
 
-test('a valid G3 record set passes through the checked evaluator, with and without its raw payloads', () => {
+test('a valid G3 record set passes through the checked evaluator only with its raw payloads', () => {
   const { records, manifest, raws } = g3Evidence();
-  assert.equal(evaluateGateChecked('G3', records, manifest, fixtures).status, 'pass');
   assert.equal(evaluateGateChecked('G3', records, manifest, fixtures, { raws }).status, 'pass');
+});
+
+// T6 fix round 5 (Codex r6): a verdict needs a usable raw payload for every measured record. Before this round an omitted map and an
+// undefined entry both returned `pass`.
+test('read time: an omitted raws map, or a raws entry that is undefined or null, is invalid/inconclusive, never pass', () => {
+  const omitted = g3Evidence();
+  for (const args of [[], [{}], [{ raws: undefined }], [{ raws: null }], [{ raws: 'x' }]]) {
+    const result = evaluateGateChecked('G3', omitted.records, omitted.manifest, omitted.fixtures ?? fixtures, ...args);
+    assert.equal(result.status, 'invalid/inconclusive', JSON.stringify(args)); assert.match(result.reasons[0], /^timing method: .*raws/);
+  }
+  assert.throws(() => validateEvidence(omitted.records), /^Error: timing method: .*raws/);
+  for (const entry of [undefined, null, 'x', 7]) {
+    const { records, manifest, raws } = g3Evidence();
+    raws[records[0].id] = entry;
+    const result = evaluateGateChecked('G3', records, manifest, fixtures, { raws });
+    assert.equal(result.status, 'invalid/inconclusive', String(entry)); assert.match(result.reasons[0], /no raw payload/);
+  }
+  // The shared validator never skips the raw check for a measured descriptor: undefined is not "not supplied".
+  assert.throws(() => validateRecordTiming(g3Evidence().records[0], undefined), /no raw payload/);
+  assert.throws(() => validateRecordTiming(g3Evidence().records[0]), /no raw payload/);
+});
+
+test('descriptor-only inspection is separate from verdicts: it checks shape and gate, not the raw value', () => {
+  const { records } = g3Evidence();
+  assert.deepEqual(inspectTimingDescriptor(records[0]), QUEUE);
+  assert.throws(() => inspectTimingDescriptor({ ...records[0], timingMethod: CORRECTNESS_ONLY }), /^Error: timing method: G3\/sphere expects/);
+  assert.throws(() => inspectTimingDescriptor({ ...records[0], timingMethod: undefined }), /missing/);
 });
 
 // Codex r5 finding 1: each of these returned `pass` from evaluateGate, because T1's frozen validateRecords ignores timingMethod.
@@ -54,17 +80,17 @@ const readCases = {
 };
 for (const [name, change] of Object.entries(readCases)) {
   test(`read time: ${name} is invalid/inconclusive, never pass`, () => {
-    const { records, manifest } = tamper(change);
+    const { records, manifest, raws } = tamper(change);
     assert.equal(evaluateGate('G3', records, manifest, fixtures).status, 'pass', 'the frozen evaluator alone accepts it: this is why the wrapper exists');
-    const result = evaluateGateChecked('G3', records, manifest, fixtures);
+    const result = evaluateGateChecked('G3', records, manifest, fixtures, { raws });
     assert.equal(result.status, 'invalid/inconclusive');
     assert.equal(result.reasons.length, 1); assert.match(result.reasons[0], /^timing method: /);
     assert.deepEqual(result.evidenceIds, records.map(r => r.id));
-    assert.throws(() => validateEvidence(records), /^Error: timing method: /);
+    assert.throws(() => validateEvidence(records, { raws }), /^Error: timing method: /);
   });
 }
 
-test('read time: a raw payload whose workMs is missing, negative or not a number is invalid when the raws are supplied', () => {
+test('read time: a raw payload whose workMs is missing, negative or not a number is invalid', () => {
   for (const workMs of [undefined, -1, '12', null]) {
     const { records, manifest, raws } = g3Evidence();
     raws[records[1].id] = { words: [], ...(workMs === undefined ? {} : { workMs }) };
@@ -77,12 +103,12 @@ test('read time: a raw payload whose workMs is missing, negative or not a number
 });
 
 test('read time: a not-measured completed slot is accepted only beside its timing invalidation, and then the gate is still not a pass', () => {
-  const { records, manifest } = tamper(r => { r.timingMethod = notMeasured('timing method: missing (the producer must supply one)'); r.invalidations = ['timing method: missing (the producer must supply one)']; });
-  validateEvidence(records);
-  const result = evaluateGateChecked('G3', records, manifest, fixtures);
+  const { records, manifest, raws } = tamper(r => { r.timingMethod = notMeasured('timing method: missing (the producer must supply one)'); r.invalidations = ['timing method: missing (the producer must supply one)']; });
+  validateEvidence(records, { raws });
+  const result = evaluateGateChecked('G3', records, manifest, fixtures, { raws });
   assert.equal(result.status, 'invalid/inconclusive'); assert.deepEqual(result.reasons, ['timing method: missing (the producer must supply one)']);
   const other = tamper(r => { r.timingMethod = notMeasured('no timing'); r.invalidations = ['console error: x']; });
-  assert.throws(() => validateEvidence(other.records), /not-measured/);
+  assert.throws(() => validateEvidence(other.records, { raws: other.raws }), /not-measured/);
 });
 
 test('a gate with no registered expectation fails closed, and a correctness-only gate refuses a measured descriptor', () => {

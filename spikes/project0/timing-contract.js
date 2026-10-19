@@ -8,7 +8,8 @@
 // - CORRECTNESS_ONLY = { kind: 'correctness-only' }: the record carries no timing measurement.
 // - notMeasured(reason) = { kind: 'not-measured', reason }: no measurement is available.
 // Meaning (validateRecordTiming): the shape must also be the one the record's gate expects (EXPECTED_TIMING), and a measured descriptor's
-// raw field must be a finite, nonnegative number in the record's raw payload.
+// raw field must be a finite, nonnegative number in the record's raw payload, which is always required. inspectTimingDescriptor checks the
+// descriptor alone, for diagnostics, and never supports a verdict.
 export const CORRECTNESS_ONLY = Object.freeze({ kind: 'correctness-only' });
 export const notMeasured = reason => ({ kind: 'not-measured', reason });
 
@@ -49,10 +50,9 @@ export function validateTimingMethod(tm, { slot } = {}) {
 const same = (a, b) => { const ka = Object.keys(a).sort(), kb = Object.keys(b).sort(); return ka.length === kb.length && ka.every((k, i) => k === kb[i] && a[k] === b[k]); };
 const describe = d => d.kind === 'correctness-only' || d.kind === 'not-measured' ? d.kind : `${d.kind} of ${d.field} (${d.clock}, ${d.unit})`;
 
-// Shape and meaning of one record's timing method. `record` needs gate, slot, timingMethod and invalidations. `raw` is the record's parsed raw
-// payload: pass it whenever it is available; `undefined` means "not supplied" and skips only the raw-value check, `null` means "the record has
-// no raw payload" and fails any measured descriptor. Throws `timing method: ...`; returns the descriptor.
-export function validateRecordTiming(record, raw) {
+// Descriptor-only inspection: shape and the gate's expected descriptor, without the raw measurement. For diagnostics only; it never
+// supports a verdict (gates-checked.js uses validateRecordTiming). Throws `timing method: ...`; returns the matched expected descriptor.
+export function inspectTimingDescriptor(record) {
   const { gate, slot, timingMethod: tm } = record ?? {};
   validateTimingMethod(tm, { slot });
   if (slot === 'incomplete') return tm;
@@ -65,10 +65,18 @@ export function validateRecordTiming(record, raw) {
   if (!expected) fail(`no expected timing method registered for ${gate}`);
   const match = expected.find(d => same(d, tm));
   if (!match) fail(`${gate}/${slot} expects ${expected.map(describe).join(' or ')}, not ${describe(tm)}`);
-  if (match.field && raw !== undefined) {
-    if (raw === null || typeof raw !== 'object') fail(`${gate}/${slot}: no raw payload holds ${match.field}`);
-    const v = raw[match.field];
-    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) fail(`${gate}/${slot}: ${match.field} must be a finite nonnegative number, not ${JSON.stringify(v)}`);
-  }
+  return match;
+}
+
+// Shape and meaning of one record's timing method, including its raw measurement. `record` needs gate, slot, timingMethod and invalidations;
+// `raw` is the record's parsed raw payload. A measured descriptor needs a raw object whose named field is a finite, nonnegative number: a
+// missing, undefined or null raw is refused, never skipped. Throws `timing method: ...`; returns the descriptor.
+export function validateRecordTiming(record, raw) {
+  const match = inspectTimingDescriptor(record);
+  const { gate, slot, timingMethod: tm } = record;
+  if (slot === 'incomplete' || tm.kind === 'not-measured' || !match.field) return tm;
+  if (raw === undefined || raw === null || typeof raw !== 'object' || Array.isArray(raw)) fail(`${gate}/${slot}: no raw payload holds ${match.field}`);
+  const v = raw[match.field];
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) fail(`${gate}/${slot}: ${match.field} must be a finite nonnegative number, not ${JSON.stringify(v)}`);
   return tm;
 }
