@@ -46,3 +46,15 @@ component (ratio 2.75). The double-precision reference matches the frozen refere
 - G3, G4 and the G5 plane set remain valid comparisons, because each is within its threshold.
 - Relaxing the tolerance, changing the reference or orbit, adding an exclusion, or excusing
   contraction would be a user decision. Neither author recommends any of them.
+
+## E3 — Accidental RED-test browser runs during T9 fix round 3 (Codex run 20261019T211158Z-ed18)
+
+While stubbed failing tests were being run, the old `integrity-preflight.mjs` ignored its injected
+fakes. It started the real harness server and a real headed Chrome. The page never touches
+`navigator.gpu`, so no GPU adapter or device was requested, and no process or port was left behind.
+
+The runs left two records, `artifacts/project0/20261019T2103*-dev-integrity-preflight-headed`.
+
+**Disposition:** these were accidental RED-test browser runs, and the records are failed
+development diagnostics. They are excluded from the passing-preflight evidence and from T10's
+qualification inputs, and are kept unchanged. No fixture reset or remediation follows from them.
