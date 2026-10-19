@@ -112,7 +112,7 @@ test('read time: a not-measured completed slot is accepted only beside its timin
 });
 
 test('a gate with no registered expectation fails closed, and a correctness-only gate refuses a measured descriptor', () => {
-  assert.throws(() => validateRecordTiming({ gate: 'G6', slot: 'bulb-overview/0', timingMethod: QUEUE, invalidations: [] }), /^Error: timing method: no expected timing method registered for G6/);
+  assert.throws(() => validateRecordTiming({ gate: 'G99', slot: 'x', timingMethod: QUEUE, invalidations: [] }), /^Error: timing method: no expected timing method registered for G99/);   // T9 registered G6, the former example
   assert.throws(() => validateRecordTiming({ gate: 'G4', slot: 'bulb-samples', timingMethod: QUEUE, invalidations: [] }), /^Error: timing method: G4\/bulb-samples expects/);
   validateRecordTiming({ gate: 'G4', slot: 'bulb-samples', timingMethod: CORRECTNESS_ONLY, invalidations: [] });
   validateRecordTiming({ gate: 'G6', slot: 'incomplete', timingMethod: notMeasured('incomplete: the session produced no result'), invalidations: ['incomplete: the session produced no result'] });

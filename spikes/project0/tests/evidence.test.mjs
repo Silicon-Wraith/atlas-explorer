@@ -168,7 +168,7 @@ test('writeRecord rejects a G3 descriptor that does not describe its queue-compl
     for (const [id, raw] of [['g', {}], ['h', { workMs: -1 }], ['i', { workMs: '3' }], ['j', { workMs: null }]]) await assert.rejects(g3(id, QUEUE, raw), /^Error: timing method: .*workMs/, id);
     await assert.rejects(writeRecord(dir, { id: 'k', gate: 'G3', slot: 'sphere', invalidations: [], timingMethod: QUEUE }, []), /^Error: timing method: .*no raw payload/);
     await assert.rejects(writeRecord(dir, { id: 'l', gate: 'G4', slot: 'bulb-samples', invalidations: [], timingMethod: QUEUE }, [{ name: 'l.raw.json', data: '{}' }]), /^Error: timing method: G4\/bulb-samples expects/);
-    await assert.rejects(writeRecord(dir, { id: 'm', gate: 'G6', slot: 'bulb-overview/0', invalidations: [], timingMethod: CORRECTNESS_ONLY }, [{ name: 'm.raw.json', data: '{}' }]), /^Error: timing method: no expected timing method registered for G6/);
+    await assert.rejects(writeRecord(dir, { id: 'm', gate: 'G99', slot: 'x', invalidations: [], timingMethod: CORRECTNESS_ONLY }, [{ name: 'm.raw.json', data: '{}' }]), /^Error: timing method: no expected timing method registered for G99/);   // T9 registered G6, the former example
     assert.deepEqual(await readdir(dir), [], 'nothing is written for a rejected record');
     await g3('n', notMeasured('timing method: missing (the producer must supply one)'), {}, ['timing method: missing (the producer must supply one)']);   // finalise's fail-closed shape is kept
     await g3('o', QUEUE, { workMs: 0 });
