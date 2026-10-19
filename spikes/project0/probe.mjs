@@ -3,15 +3,13 @@
 // injectable for tests.
 import { chromium } from 'playwright';
 import { resolve } from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
+import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion } from './launch.mjs';
 import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord } from './evidence.mjs';
 import { bounded, boundedStart, waitResult, stopReasons } from './session-utils.mjs';
 
 export async function runProbeInvocation(deps = {}) {
   const d = { chromium, startServer, launchChrome, effectiveCommandLine, waitResult, fixtureIdentity, implementationIdentity, newRunDir, writeRecord,
-    browserVersion: async () => (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim(), modeMs: 180000, stepMs: 20000, log: console.log, ...deps };
+    browserVersion: chromeVersion, modeMs: 180000, stepMs: 20000, log: console.log, env: process.env, ...deps };
   const fixture = await d.fixtureIdentity(), implementation = await d.implementationIdentity();
   const runDir = await d.newRunDir('probe');
   const records = []; let stopped = null, server = null;
@@ -19,30 +17,36 @@ export async function runProbeInvocation(deps = {}) {
     server = await d.startServer();
     for (const mode of ['headed', 'headless']) {
       if (stopped) { d.log(`${mode}: NOT RUN (stopped: ${stopped})`); continue; }
-      const invalidations = [], state = { expired: false }; let launched = null, probe = { ok: false }, chromeGpuText = '', launchInfo = { requestedArgs: null, mode }, identity = null;
+      const invalidations = [], state = { expired: false }; let launched = null, resultMetrics = {}, probe = { ok: false }, chromeGpuText = '', launchInfo = { requestedArgs: null, mode }, identity = null;
       const live = () => { if (state.expired) throw new Error('browser hang: probe mode deadline passed'); };   // a late result cannot resume work
+      const closeContext = c => bounded(c.close(), d.stepMs, `harness timeout: cleanup of the ${mode} browser did not finish within ${d.stepMs} ms`);
       const op = async () => {
-        launched = await boundedStart(() => d.launchChrome({ headless: mode === 'headless', profileKind: `probe-${mode}`, chromium: d.chromium }), d.stepMs * 3, 'browser hang: launch'); live();
+        // T0's bounded check, before any browser or GPU work; a failure or timeout is a browser hang (a stop), not an ordinary identity error.
+        const browserVersion = await d.browserVersion().catch(e => { throw new Error(`browser hang: browser version check failed: ${e.message}`); }); live();
+        launched = await boundedStart(() => d.launchChrome({ headless: mode === 'headless', profileKind: `probe-${mode}`, chromium: d.chromium }), d.stepMs * 3, 'browser hang: launch');
+        if (state.expired) { await closeContext(launched.context).catch(() => {}); live(); }       // a browser that launched after the outer deadline is closed, not leaked
+        live();
         const commandLine = await bounded(d.effectiveCommandLine(launched.context), d.stepMs, 'browser hang: chrome://version'); live(); assertSandboxed(commandLine);
-        launchInfo = { requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode };
+        launchInfo = { requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode, display: d.env.DISPLAY ?? null, session: d.env.XDG_SESSION_TYPE ?? null };   // display context is evidence, not identity
         const page = await bounded(launched.context.newPage(), d.stepMs, 'browser hang: new page'); live();
         page.on('pageerror', e => invalidations.push(`page error: ${e.message}`));
         await bounded(page.goto(`${server.url}${HARNESS_PATH}?mode=probe&runMode=${mode}`), d.stepMs, 'browser hang: navigation'); live();
         const { result } = await d.waitResult(page, { gate: 'probe', runDir, deadlineMs: d.stepMs * 3 }); live();
+        resultMetrics = result.metrics ?? {};
         probe = result.error ? { ok: false, error: result.error } : result.slots[0].raw;
         invalidations.push(...(result.invalidations ?? []), ...(result.error ? [`page: ${result.error}`] : []));
         const gpuPage = await bounded(launched.context.newPage(), d.stepMs, 'browser hang: new page'); live();
         await bounded(gpuPage.goto('chrome://gpu'), d.stepMs, 'browser hang: chrome://gpu'); live();
         chromeGpuText = await bounded(gpuPage.locator('body').innerText(), d.stepMs, 'browser hang: chrome://gpu text'); live();
-        try { identity = { ...launchIdentity(launchInfo), ...environmentIdentity(chromeGpuText, { browserVersion: await d.browserVersion(), browserExecutable: commandLine.split(/\s+/)[0], session: process.env.XDG_SESSION_TYPE || 'unknown' }) }; }
+        try { identity = { ...launchIdentity(launchInfo), ...environmentIdentity(chromeGpuText, { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: d.env.XDG_SESSION_TYPE || 'unknown' }) }; }
         catch (e) { invalidations.push(`environment identity: ${e.message}`); }
       };
       try { await bounded(op(), d.modeMs, `browser hang: probe ${mode} exceeded its ${d.modeMs} ms outer deadline`); }
       catch (error) { state.expired = true; invalidations.push(`session: ${error.message}`); }
-      finally { await bounded(launched?.context.close() ?? Promise.resolve(), d.stepMs, 'close').catch(e => invalidations.push(`close: ${e.message}`)); }
+      finally { await (launched ? closeContext(launched.context) : Promise.resolve()).catch(e => invalidations.push(e.message)); }
       identity ??= { launchHash: '0'.repeat(64), mode, browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' };
-      const incomplete = !probe.info && !probe.readback;
-      const record = { schema: 1, id: `probe-${mode}`, gate: 'probe', slot: incomplete ? 'incomplete' : mode, campaign: 'probe', mode, experiment: true, identity: { backend: 'webgpu', ...fixture, ...implementation, ...identity }, invalidations, metrics: { probeOk: probe.ok === true ? 1 : 0 } };
+      const incomplete = state.expired || (!probe.info && !probe.readback) || !chromeGpuText;   // expiry or an unfinished required step is never a completed slot
+      const record = { schema: 1, id: `probe-${mode}`, gate: 'probe', slot: incomplete ? 'incomplete' : mode, campaign: 'probe', mode, experiment: true, identity: { backend: 'webgpu', ...fixture, ...implementation, ...identity }, invalidations, metrics: { probeOk: probe.ok === true && !incomplete ? 1 : 0, ...(resultMetrics.software ? { software: 1 } : {}) } };
       records.push(await d.writeRecord(runDir, record, [
         { name: `probe-${mode}.raw.json`, data: JSON.stringify(probe) },
         { name: `probe-${mode}.launch.json`, data: JSON.stringify(launchInfo) },
