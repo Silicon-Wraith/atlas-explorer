@@ -134,11 +134,11 @@ test('G12 awaits each cycle-boundary checkpoint reply before its next measured c
 // The browser preflight's verdict (integrity-preflight.mjs) is computed from the page's raw observations and fails closed.
 const pageRun = (over = {}) => ({ sameTaskRevert: { violations: ['unexpected backing 800x720 at 12'] }, undeliveredAtStop: { violations: ['unexpected backing 640x720 at 13'] },
   allowedResizes: { violations: [], events: [{ type: 'backing', value: '1920x1080', deliberate: true }, { type: 'backing', value: '960x540', deliberate: true }, { type: 'backing', value: '1280x720', deliberate: true }] },
-  transport: 'p0Push', ...over });
+  transport: 'p0Push', statusVisibility: { position: 'fixed', offsetParentNull: true, visible: true, controls: { visibleFixed: true, displayNone: false, visibilityHidden: false, zeroSize: false, opacityZero: false, offscreen: false } }, ...over });   // fix round 5: the status visibility sensor
 test('the integrity preflight passes only when every assertion holds, on both loads, through the binding', () => {
   const ok = evaluatePreflight({ first: pageRun(), reload: pageRun(), evaluates: 0 });
   assert.equal(ok.pass, true, JSON.stringify(ok.assertions));
-  assert.deepEqual(ok.assertions.map(a => a.name), ['same-task resize and restore is a violation', 'stop() drains undelivered mutations', 'deliberate allowed resizes are clean', 'the binding delivers before navigation', 'the binding delivers after a reload', 'no Node evaluation while waiting']);
+  assert.deepEqual(ok.assertions.map(a => a.name), ['same-task resize and restore is a violation', 'stop() drains undelivered mutations', 'deliberate allowed resizes are clean', 'the binding delivers before navigation', 'the binding delivers after a reload', 'no Node evaluation while waiting', 'the fixed-position #status reports visible; hidden controls do not']);   // fix round 5: one assertion added
   for (const bad of [{ first: pageRun({ sameTaskRevert: { violations: [] } }), reload: pageRun() }, { first: pageRun({ undeliveredAtStop: { violations: [] } }), reload: pageRun() },
     { first: pageRun({ allowedResizes: { violations: ['unexpected backing 1920x720 at 3'], events: [] } }), reload: pageRun() }, { first: pageRun(), reload: null }, { first: null, reload: null },
     { first: pageRun(), reload: pageRun(), evaluates: 1 }, { first: pageRun({ transport: 'none' }), reload: pageRun() }])

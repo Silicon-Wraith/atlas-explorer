@@ -22,6 +22,10 @@ export function evaluatePreflight({ first, reload, evaluates }) {
     ['the binding delivers before navigation', first?.transport === 'p0Push'],
     ['the binding delivers after a reload', reload?.transport === 'p0Push'],
     ['no Node evaluation while waiting', evaluates === 0],
+    // fix round 5 (Codex T9 r6, item 5): G2's preparation sensor on the real fixed-position #status, whose offsetParent is null, and its controls
+    ['the fixed-position #status reports visible; hidden controls do not', every(r => { const v = r.statusVisibility, c = v?.controls ?? {};
+      return v?.position === 'fixed' && v.offsetParentNull === true && v.visible === true && c.visibleFixed === true
+        && ['displayNone', 'visibilityHidden', 'zeroSize', 'opacityZero', 'offscreen'].every(k => c[k] === false); })],
   ].map(([name, ok]) => ({ name, ok }));
   return { pass: assertions.every(a => a.ok), assertions };
 }

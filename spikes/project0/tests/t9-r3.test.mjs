@@ -127,7 +127,7 @@ test('Node recomputes G12\'s deadline misses from the cycle log and refuses a lo
 function preflightDeps({ launchMs = 0, pageMs = 0, serverMs = 0, firstError = null } = {}) {
   const c = { serverStops: 0, launches: 0, closes: 0, pageCloses: 0, gotos: 0, reloads: 0, written: null };
   const page = { on() {}, exposeBinding: async () => {}, evaluate: async () => {}, goto: async () => { c.gotos++; }, reload: async () => { c.reloads++; }, bringToFront: async () => {}, close: async () => { c.pageCloses++; } };
-  const raw = { sameTaskRevert: { violations: ['unexpected backing 800x720 at 1'] }, undeliveredAtStop: { violations: ['unexpected backing 640x720 at 1'] }, allowedResizes: { violations: [], events: [1, 2, 3].map(() => ({ deliberate: true })) }, transport: 'p0Push' };
+  const raw = { sameTaskRevert: { violations: ['unexpected backing 800x720 at 1'] }, undeliveredAtStop: { violations: ['unexpected backing 640x720 at 1'] }, allowedResizes: { violations: [], events: [1, 2, 3].map(() => ({ deliberate: true })) }, transport: 'p0Push', statusVisibility: { position: 'fixed', offsetParentNull: true, visible: true, controls: { visibleFixed: true, displayNone: false, visibilityHidden: false, zeroSize: false, opacityZero: false, offscreen: false } } };   // fix round 5: the status visibility sensor
   let waits = 0;
   return { c, deps: {
     startServer: () => sleep(serverMs).then(() => ({ url: 'http://x', stop: async () => { c.serverStops++; } })),
