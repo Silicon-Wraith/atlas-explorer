@@ -31,8 +31,9 @@ export const STOPS = Object.freeze([
   ['submission stalled for 5 s', r => r.invalidations.some(x => /no observable progress for 5 s/.test(x))],
   ['harness readback timeout', r => r.invalidations.some(x => /harness readback timeout/.test(x))],
   ['harness timeout', r => r.invalidations.some(x => /harness timeout:/.test(x))],
-  // T7 (Codex T7 r2, finding 6): the renderer latches this abort only for a rejected completion of current work, never for a retired generation.
-  ['submission completion rejected', r => r.invalidations.some(x => /aborted: submission-failed/.test(x))],
+  // T7 (Codex T7 r2, finding 6): the renderer latches this abort only for a rejected completion of current work, never for a retired generation. The
+  // whole abort-kind token is matched (r3, finding 8): a longer kind sharing the prefix is not this stop.
+  ['submission completion rejected', r => r.invalidations.some(x => /aborted: submission-failed(?![\w-])/.test(x))],
 ]);
 export const stopReasons = record => STOPS.filter(([, test]) => test({ metrics: {}, invalidations: [], ...record })).map(([reason]) => reason);
 export const stopReasonsOf = invalidations => stopReasons({ invalidations });

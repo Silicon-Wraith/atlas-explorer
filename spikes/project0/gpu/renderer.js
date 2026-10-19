@@ -107,12 +107,15 @@ export class Renderer {
     while (this.ledger.available()) {
       const band = job.planner.next(); if (!band) return;
       if (!job.counted) { job.counted = true; this.device.queue.writeBuffer(this.counts, 0, new Uint32Array(8)); }
+      const camWords = job.camWords.slice(); new Uint32Array(camWords.buffer).set([band.row0, band.rows, band.col0, band.cols], 20);
+      // The band's buffers are allocated before its credit is taken, and released if any allocation fails (e.g. the allocation cap), so a
+      // throwing pump leaks neither a credit nor a buffer (Codex T7 r3 follow-up). The error propagates to whoever called pump().
+      const owned = [];
+      try { for (const [data, usage] of [[profileWords(job.profile, 0, 0, 0), GPUBufferUsage.UNIFORM], [camWords, GPUBufferUsage.UNIFORM], [new Float32Array(4), GPUBufferUsage.STORAGE]]) owned.push(upload(this.device, this.alloc, data, usage)); }
+      catch (error) { owned.forEach(b => b.destroy()); throw error; }
+      const [prof, camB, dummy] = owned;
       const ticket = this.ledger.take({ epoch: job.epoch, generation: job.generation, requestId: job.requestId, kind: 'band' });
       const batch = ++this.batchSeq;
-      const camWords = job.camWords.slice(); new Uint32Array(camWords.buffer).set([band.row0, band.rows, band.col0, band.cols], 20);
-      const prof = upload(this.device, this.alloc, profileWords(job.profile, 0, 0, 0), GPUBufferUsage.UNIFORM);
-      const camB = upload(this.device, this.alloc, camWords, GPUBufferUsage.UNIFORM);
-      const dummy = upload(this.device, this.alloc, new Float32Array(4), GPUBufferUsage.STORAGE);
       const pl = job.pipeline, t = job.targets; t.users++;
       const g0 = this.alloc.bindGroup(this.device.createBindGroup({ layout: pl.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: prof } }, { binding: 1, resource: { buffer: dummy } }] }));
       const g1 = this.alloc.bindGroup(this.device.createBindGroup({ layout: pl.getBindGroupLayout(1), entries: [{ binding: 0, resource: { buffer: camB } }, { binding: 1, resource: t.depth.createView() }, { binding: 2, resource: t.status.createView() }, { binding: 3, resource: t.normal.createView() }] }));
@@ -211,14 +214,17 @@ export class Renderer {
       // session abort *before* anything can pump, so no submission follows it; after destroy() or epoch retirement it only cleans up.
       // Either way the credit and watchdog registration settle exactly once.
       const completion = this.device.queue.onSubmittedWorkDone();
-      completion.then(() => { if (settle()) this.pump(); }, error => {
+      // The handlers' own promise is the one awaited (Codex T7 r3, finding 7): an exception they throw, such as the pump's next band
+      // hitting the allocation cap, rejects this readback through the caller's failure path instead of escaping unhandled.
+      const handled = completion.then(() => { if (settle()) this.pump(); }, error => {
         if (settled) return;
         const current = this.epochLive(), message = error?.message ?? String(error);
         this.events.mark('submission-failed', { epoch: this.deviceEpoch, kind: 'timestamp-readback', current, message });
         if (current && this.abort.abort) this.abort.abort({ kind: 'submission-failed', message: `timestamp-readback completion rejected: ${message}` });
         settle(); this.pump();
+        throw error;                                                                      // the readback itself fails
       });
-      await abort.race(completion);
+      await abort.race(handled);
       check();
       await mapWithin(read, abort, this.mapDeadlineMs ?? 5000);
       check();

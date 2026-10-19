@@ -46,10 +46,10 @@ const pipeline = { getBindGroupLayout: () => ({}) };
 const viewport = { bulb: pipeline, sphere: pipeline, shade: pipeline, blit: pipeline };
 const SMALL = { view: 'bulb-overview', profile: 'draft', override: { W: 8, H: 8 } };   // one band
 const LARGE = { view: 'bulb-overview', profile: 'draft' };                              // 64x64: many bands
-function make(fake, { epoch = () => 1, abort, watchdog = createWatchdog({ every: null }) } = {}) {
+function make(fake, { epoch = () => 1, abort, watchdog = createWatchdog({ every: null }), alloc = createAllocator({ capBytes: 2 ** 30 }) } = {}) {
   const events = { log: [], mark(type, f = {}) { const e = { type, t: performance.now(), ...f }; this.log.push(e); return e; } };
   const canvas = { width: 1280, height: 720, getContext: () => ({ configure() {}, getCurrentTexture: () => ({ createView: () => ({}) }) }) };
-  const r = new Renderer({ device: fake.device, viewport, canvas, fixtures, events, alloc: createAllocator({ capBytes: 2 ** 30 }), watchdog, abort, epoch });
+  const r = new Renderer({ device: fake.device, viewport, canvas, fixtures, events, alloc, watchdog, abort, epoch });
   return { r, events };
 }
 // Unhandled rejections during a test are a defect (finding 4): collect them for the duration of fn.
@@ -206,5 +206,20 @@ test('r2/5b: after destroy(), a rejected timestamp readback only cleans up: no a
     await fake.failOne();
     assert.equal(abort.aborted, false); assert.equal(r.ledger.outstanding(), 0);
     assert.notEqual(await outcome, 'resolved');
+  });
+});
+
+// T7 fix round 3 (Codex T7 r3, finding 7): an exception thrown by the copy's completion handler (here the pump's next band hitting the
+// allocation cap) rejects readTimestamps() through the caller's normal failure path; it is never an unhandled rejection beside a success.
+test('r3/7: a pump failure in the timestamp copy\'s completion handler rejects the readback, with no unhandled rejection', async () => {
+  await noUnhandled(async () => {
+    const fake = fakeDevice({ timestamps: true }), alloc = createAllocator({ capBytes: 2 ** 30 }), { r } = make(fake, { alloc });
+    const outcome = r.readTimestamps().then(x => `resolved ${JSON.stringify(x)}`, e => e.message);
+    r.render(LARGE);                                                                                    // the copy and one band hold both credits
+    alloc.buffer(fake.device, { size: 2 ** 30 - alloc.inventory().bytes, usage: 0 });                   // no allowance left for the next band
+    await fake.completeOne();                                                                           // the copy completes; its pump throws
+    await fake.mapAll();
+    assert.match(await outcome, /allocation cap exceeded/);
+    assert.equal(r.ledger.outstanding(), 1, 'the copy released its own credit; the band still holds its own');
   });
 });

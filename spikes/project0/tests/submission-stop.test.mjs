@@ -21,3 +21,11 @@ test('without the abort (a retired generation\'s failure is only an event) there
   assert.deepEqual(stopReasonsOf(['aborted: something-else']), []);
   assert.deepEqual(stopReasonsOf(['page error: TypeError']), []);
 });
+
+// T7 fix round 3 (Codex T7 r3, finding 8): the whole abort-kind token is matched, not a prefix.
+test('a longer abort kind sharing the submission-failed prefix is not the submission stop', () => {
+  assert.deepEqual(stopReasonsOf(['aborted: submission-failed-other']), []);
+  assert.deepEqual(stopReasonsOf(['aborted: submission-failedx']), []);
+  assert.deepEqual(stopReasonsOf(['driver error: aborted: submission-failed']), ['submission completion rejected'], 'a wrapped invalidation still matches');
+  assert.deepEqual(stopReasonsOf(['aborted: submission-failed (band completion rejected: x)']), ['submission completion rejected'], 'the abort error message form still matches');
+});
