@@ -10,6 +10,8 @@ export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 export const ATTEMPT1_ARGS = Object.freeze(['--enable-gpu', '--use-angle=vulkan', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan']);
 export const HARNESS_PATH = '/spikes/project0/index.html';
 export const PORT = 5180;
+// Chrome's SingletonSocket (<TMPDIR>/com.google.Chrome.XXXXXX/SingletonSocket) must fit the 107-byte sun_path limit, so its TMPDIR is short and on ZFS.
+export const CHROME_TMPDIR = '/mnt/ml_storage/scratch/atlas-p0-tmp';
 
 export async function freshProfile(kind, { root = ROOT, now = () => new Date(), rand = () => randomBytes(4).toString('hex') } = {}) {
   if (!/^[a-z0-9-]+$/.test(kind)) throw new Error(`invalid profile kind: ${kind}`);
@@ -56,8 +58,9 @@ export async function startServer({ port = PORT, probeFn = portInUse, spawnFn = 
 
 export async function launchChrome({ headless, args = ATTEMPT1_ARGS, profileKind, chromium }) {
   const profile = await freshProfile(profileKind);
+  await mkdir(CHROME_TMPDIR, { recursive: true });
   const context = await chromium.launchPersistentContext(profile, {
-    channel: 'chrome', chromiumSandbox: true, headless, args: [...args],
+    channel: 'chrome', chromiumSandbox: true, headless, args: [...args], env: { ...process.env, TMPDIR: CHROME_TMPDIR },
     viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, timeout: 30000,
   });
   return { context, profile, requestedArgs: [...args], headless };

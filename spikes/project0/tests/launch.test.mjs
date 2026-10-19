@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readdir, rm, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { EventEmitter } from 'node:events';
-import { ROOT, PORT, freshProfile, startServer, assertSandboxed, ATTEMPT1_ARGS } from '../launch.mjs';
+import { ROOT, PORT, freshProfile, startServer, assertSandboxed, ATTEMPT1_ARGS, launchChrome, CHROME_TMPDIR } from '../launch.mjs';
 
 async function scratchRoot() {
   const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
@@ -66,4 +66,15 @@ test('assertSandboxed rejects a command line without the sandbox or watchdog', (
   assert.doesNotThrow(() => assertSandboxed('/opt/google/chrome/chrome --enable-gpu --use-angle=vulkan'));
   assert.throws(() => assertSandboxed('/opt/google/chrome/chrome --no-sandbox --enable-gpu'), /sandbox/);
   assert.throws(() => assertSandboxed('chrome --disable-gpu-watchdog'), /watchdog/);
+});
+
+test('launchChrome gives Chrome a short TMPDIR so its SingletonSocket path fits sun_path', async () => {
+  let seen;
+  const chromium = { launchPersistentContext: async (profile, options) => { seen = { profile, options }; return {}; } };
+  const launched = await launchChrome({ headless: true, profileKind: 'unit-test', chromium });
+  try {
+    assert.equal(seen.options.env.TMPDIR, CHROME_TMPDIR);
+    assert.ok(CHROME_TMPDIR.length + 45 < 107);
+    assert.equal(seen.options.chromiumSandbox, true);
+  } finally { await rm(launched.profile, { recursive: true, force: true }); }
 });
