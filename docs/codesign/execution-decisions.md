@@ -99,3 +99,12 @@ qualification inputs, and are kept unchanged. No fixture reset or remediation fo
    Step 7 after the `webgpu-1` campaign. Diagnosis consumes no remediation.
 
 Source: Codex open consult, run 20261019T230539Z-9cfe (`codex-T10-consult-r1-findings.md`).
+
+## E6 — Provisional backend assumption for Project 1 design (user, 2026-10-19)
+
+**The user's decision:** Project 1 design may start now, in parallel, assuming WebGPU. Project 1
+must not block the completion of Project 0.
+
+**How this sits with Project 0:** the assumption is provisional. Project 0's recorded decision,
+`webgpu-remediation`, confirms or revises it. Nothing in Project 1 may change Project 0's frozen
+inputs, gates or evidence.
