@@ -69,13 +69,16 @@ export async function runG12(fx, status, { open, canvas, integrity: observe = ob
       target.p0Checkpoints.push(checkpoint);
       entry.checkpointSentMs = performance.now();
       await sup.checkpoint(checkpoint, s.abort);                                      // inside this cycle's idle time; the reply precedes the next cycle
+      // Fix round 4 (Codex T9 r4): the overrun is decided from the recorded reply time itself, the comparison Node repeats; an on-time cycle waits
+      // until the page clock reaches its boundary (a timer may wake early), so its recorded end is never before the boundary.
       entry.checkpointRepliedMs = performance.now();
-      if (performance.now() > boundary) entry.overrun = true; else await s.abort.race(sleep(boundary - performance.now()));
+      entry.overrun = entry.checkpointRepliedMs > boundary;
+      while (!entry.overrun && performance.now() < boundary) await s.abort.race(sleep(boundary - performance.now()));
       entry.endedMs = performance.now();
       if (entry.overrun || entry.phases.some(p => p.skipped)) deadlineMisses++;
       cycleLog.push(entry);
     }
-    const wallMs = performance.now() - start;
+    const wallMs = cycleLog.length ? cycleLog.at(-1).endedMs - start : performance.now() - start;   // fix round 4: the recorded span, cycle 0 start to the last cycle's end
     setBacking(cfg.baselineBacking); await followPath(s, fx, 'bulb-overview', 'draft', 1, draftAt());
     await s.abort.race(s.device.queue.onSubmittedWorkDone()); await s.abort.race(sleep(200)); s.abort.throwIfAborted();   // a stop in the final drain is the sequence's error
     const final = s.alloc.inventory(), observed = integrity.stop();

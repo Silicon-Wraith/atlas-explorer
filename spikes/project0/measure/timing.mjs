@@ -119,6 +119,65 @@ export function validateSources(raw, companionOf) {
   return problems;
 }
 
+// G12's recorded schedule (T9 fix round 4, Codex T9 r4 finding 1). Every scheduling field must be finite and the skip flags explicit; the planned
+// intervals must be the frozen grid (cycle i starts at c0₀ + i·cycleMs, phase k is planned for [c0 + phaseOffsetsMs[k], c0 + phaseOffsetsMs[k+1]));
+// the actual record must be ordered (cycle start ≤ each phase's start ≤ its end ≤ the next phase's start ≤ checkpoint sent ≤ replied ≤ cycle end ≤
+// the next cycle's first phase); a run phase covers its span up to its planned end (the driver's path runs until then), and a skipped phase is
+// justified only when it started at or after its planned end, with no span. The overrun is derived exactly as the driver decides it: the reply
+// came after the boundary; an on-time cycle waits until its boundary. A flag, a deadline-miss count or a wall time that contradicts these
+// timestamps invalidates; genuine overruns stay as recorded deadline misses (a performance result, not an invalidation).
+const same = (a, b) => Math.abs(a - b) <= 8 * Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b));
+function validateCycleLog(raw, fx) {
+  const { cycleCount, cycleMs, phaseOffsetsMs: off } = fx.stability, PHASES = fx.stability.phases.slice(0, 3);
+  if (!Array.isArray(raw.cycleLog) || raw.cycleLog.length !== raw.cycles) throw invalid(`G12: the cycle log has ${raw.cycleLog?.length} cycles, not ${raw.cycles}`);
+  if (raw.cycles !== cycleCount) throw invalid(`G12: the sequence ran ${raw.cycles} cycles, not the frozen ${cycleCount}`);
+  let previousEnd = null, origin = null, misses = 0;
+  raw.cycleLog.forEach((c, i) => {
+    if (c?.cycle !== i) throw invalid(`G12: cycle log entry ${i} is cycle ${c?.cycle}`);
+    const views = (c.phases ?? []).map(p => p?.view);
+    if (views.join() !== PHASES.join()) throw invalid(`G12: cycle ${i} phases are ${views.join(', ')}`);
+    finite(c.c0, `G12: cycle ${i} c0`);
+    c.phases.forEach(p => {
+      for (const k of ['plannedStartMs', 'plannedEndMs', 'startMs', 'endMs']) finite(p[k], `G12: cycle ${i} ${p.view} ${k}`);
+      if (typeof p.skipped !== 'boolean') throw invalid(`G12: cycle ${i} ${p.view} does not record whether it was skipped`);
+    });
+    for (const k of ['checkpointSentMs', 'checkpointRepliedMs', 'endedMs']) finite(c[k], `G12: cycle ${i} ${k}`);
+    if (typeof c.overrun !== 'boolean') throw invalid(`G12: cycle ${i} does not record its overrun`);
+    // the frozen grid
+    if (i === 0) origin = c.c0;
+    const c0 = origin + i * cycleMs, boundary = c.c0 + cycleMs;
+    if (!same(c.c0, c0)) throw invalid(`G12: cycle ${i} starts at ${c.c0} ms, not at the frozen origin ${c0} ms`);
+    c.phases.forEach((p, k) => {
+      const from = c.c0 + off[k], until = c.c0 + off[k + 1];
+      if (!same(p.plannedStartMs, from) || !same(p.plannedEndMs, until)) throw invalid(`G12: cycle ${i} ${p.view} is planned for [${p.plannedStartMs}, ${p.plannedEndMs}), not the frozen [${from}, ${until})`);
+    });
+    // the actual order and spans
+    let at = previousEnd ?? c.c0, after = previousEnd === null ? `the cycle's start ${c.c0} ms` : `cycle ${i - 1}'s end ${previousEnd} ms`;
+    if (c.c0 > at) { at = c.c0; after = `the cycle's start ${c.c0} ms`; }
+    for (const p of c.phases) {
+      if (p.startMs < at) throw invalid(`G12: cycle ${i} ${p.view} started at ${p.startMs} ms, before ${after}`);
+      if (p.endMs < p.startMs) throw invalid(`G12: cycle ${i} ${p.view} ended at ${p.endMs} ms, before it started at ${p.startMs} ms`);
+      if (p.skipped) {
+        if (p.startMs < p.plannedEndMs) throw invalid(`G12: cycle ${i} ${p.view} was skipped at ${p.startMs} ms, before its planned end ${p.plannedEndMs} ms`);
+        if (p.endMs !== p.startMs) throw invalid(`G12: cycle ${i} ${p.view} was skipped but records a span [${p.startMs}, ${p.endMs})`);
+      } else if (p.endMs < p.plannedEndMs && !same(p.endMs, p.plannedEndMs)) throw invalid(`G12: cycle ${i} ${p.view} ran until ${p.endMs} ms, before its planned end ${p.plannedEndMs} ms`);
+      at = p.endMs; after = `the end of ${p.view} at ${p.endMs} ms`;
+    }
+    if (c.checkpointSentMs < at) throw invalid(`G12: cycle ${i}'s checkpoint was sent at ${c.checkpointSentMs} ms, before ${after}`);
+    if (c.checkpointRepliedMs < c.checkpointSentMs) throw invalid(`G12: cycle ${i}'s checkpoint replied at ${c.checkpointRepliedMs} ms, before it was sent at ${c.checkpointSentMs} ms`);
+    if (c.endedMs < c.checkpointRepliedMs) throw invalid(`G12: cycle ${i} ended at ${c.endedMs} ms, before its checkpoint replied at ${c.checkpointRepliedMs} ms`);
+    // the derived overrun
+    const overrun = c.checkpointRepliedMs > boundary;
+    if (overrun !== c.overrun) throw invalid(`G12: cycle ${i}'s checkpoint replied at ${c.checkpointRepliedMs} ms, ${overrun ? 'after' : 'before'} its boundary at ${boundary} ms, but overrun is ${c.overrun}`);
+    if (!overrun && c.endedMs < boundary) throw invalid(`G12: cycle ${i} ended at ${c.endedMs} ms, before its boundary at ${boundary} ms`);
+    if (overrun || c.phases.some(p => p.skipped)) misses++;
+    previousEnd = c.endedMs;
+  });
+  if (raw.deadlineMisses !== misses) throw invalid(`G12: deadlineMisses ${raw.deadlineMisses}, but the cycle log records ${misses}`);
+  const span = raw.cycleLog.at(-1).endedMs - origin;
+  if (!same(finite(raw.wallMs, 'G12 wallMs'), span)) throw invalid(`G12: wallMs ${raw.wallMs} is not the recorded span ${span} ms (cycle 0 start to cycle ${raw.cycles - 1} end)`);
+}
+
 export function metrics(gate, slot, raw, fx) {
   const draft = fx.profiles.draft, settled = fx.profiles.settled;
   if (raw?.error) throw invalid(`driver error: ${raw.error}`);
@@ -181,19 +240,9 @@ export function metrics(gate, slot, raw, fx) {
       integrityOk(raw);
       if (!Array.isArray(raw.maintenance) || raw.maintenance.length !== 1 + Math.floor(fx.stability.cycleCount / fx.stability.resourceEvery)) throw invalid('G12: the maintenance record is incomplete');
       const maintenanceFailures = raw.maintenance.filter(m => maintenanceFailed(m, fx)).length;
-      // Fix round 3 (Codex T9 r3, finding 3): the cycle log records every cycle's three phases (run or skipped), its checkpoint exchange and its
-      // overrun; Node recomputes the deadline misses from it, so a skipped phase or an overrun can never pass silently.
-      const PHASES = fx.stability.phases.slice(0, 3);
-      if (!Array.isArray(raw.cycleLog) || raw.cycleLog.length !== raw.cycles) throw invalid(`G12: the cycle log has ${raw.cycleLog?.length} cycles, not ${raw.cycles}`);
-      raw.cycleLog.forEach((c, i) => {
-        if (c?.cycle !== i) throw invalid(`G12: cycle log entry ${i} is cycle ${c?.cycle}`);
-        const views = (c.phases ?? []).map(p => p.view);
-        if (views.join() !== PHASES.join()) throw invalid(`G12: cycle ${i} phases are ${views.join(', ')}`);
-        if (!c.phases.every(p => p.skipped === true || (Number.isFinite(p.startMs) && Number.isFinite(p.endMs) && p.endMs >= p.startMs))) throw invalid(`G12: cycle ${i} has a phase with no measured span`);
-        if (typeof c.overrun !== 'boolean') throw invalid(`G12: cycle ${i} does not record its overrun`);
-      });
-      const misses = raw.cycleLog.filter(c => c.overrun || c.phases.some(p => p.skipped)).length;
-      if (raw.deadlineMisses !== misses) throw invalid(`G12: deadlineMisses ${raw.deadlineMisses}, but the cycle log records ${misses}`);
+      // Fix rounds 3-4 (Codex T9 r3 finding 3, r4 finding 1): the cycle log records every cycle's three phases (run or skipped), its checkpoint
+      // exchange and its end. Node validates the recorded schedule itself and derives the deadline misses from it: no flag is trusted.
+      validateCycleLog(raw, fx);
       const counts = ['textures', 'buffers'].reduce((n, k) => n + Math.abs(raw.final[k] - raw.baseline[k]), 0);
       return { cycles: raw.cycles, wallMs: raw.wallMs, deadlineMisses: raw.deadlineMisses, unhandled: raw.unhandled, unplannedLosses: raw.unplannedLosses,
         countDifferences: counts, byteRelativeDifference: Math.abs(raw.final.bytes - raw.baseline.bytes) / raw.baseline.bytes,

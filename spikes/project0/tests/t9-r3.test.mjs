@@ -71,7 +71,8 @@ test('finalise applies validateSources: G9 claiming intervals its companions nev
   assert.ok(records.at(-1).invalidations.some(x => /^G9: source window G6\/bulb-overview\/0 is \[1000000, 1030012\), but its companion observed \[1000, 31012\)/.test(x)), JSON.stringify(records.at(-1).invalidations));
 });
 
-// G12's cycle schedule. A fake path that really takes its time; a checkpoint exchange whose reply takes `replyMs`.
+// G12's cycle schedule. A fake path that really takes its time (fix round 4: like the real followPath, it returns only once its full duration has
+// elapsed on the page clock; a bare timer may wake early); a checkpoint exchange whose reply takes `replyMs`.
 function g12Run({ replyMs, cycleMs = 120, cycles = 3 }) {
   const fx = { ...fixtures, stability: { ...fixtures.stability, cycleCount: cycles, cycleMs, phaseOffsetsMs: [0, 0.3 * cycleMs, 0.5 * cycleMs, 0.7 * cycleMs, cycleMs], resourceEvery: 100 } };
   const log = [], abort = createAbort(), handlers = new Set(), ev = []; let n = 0;
@@ -80,7 +81,7 @@ function g12Run({ replyMs, cycleMs = 120, cycles = 3 }) {
   const sup = { window: async (name, fn) => fn(), checkpoint: async cp => { log.push({ type: 'sent', cycle: cp.cycle, t: performance.now() }); await sleep(replyMs); log.push({ type: 'replied', cycle: cp.cycle, t: performance.now() }); } };
   const R = fixtures.resources;
   return runG12(fx, () => {}, { open: async () => s, canvas: { width: 1280, height: 720 }, integrity: () => ({ stop: () => ({ violations: [], events: [] }) }), target: {}, sup,
-    prepareResourceCheck: async () => ({}), followPath: async (sess, f, view, profile, seconds) => { await sleep(seconds * 1000); }, renderOnce: async () => ({}),
+    prepareResourceCheck: async () => ({}), followPath: async (sess, f, view, profile, seconds) => { const t0 = performance.now(); while ((performance.now() - t0) / 1000 < seconds) await sleep(1); }, renderOnce: async () => ({}),
     exerciseResources: async () => ({ tableBytes: R.tableBytes, before: { bytes: 1, textures: 0, buffers: 1 }, after: { bytes: 1, textures: 0, buffers: 1 }, peakBytes: R.tableBytes + 1, written: Array(7).fill(true), checks: Array.from({ length: 63 }, () => ({ ok: true })), bandOk: true, fullBandBytes: 3932160, cancel: { before: 2, after: 0 }, outstandingMax: 2, errors: [] }) })
     .then(out => ({ out, log, fx }));
 }
