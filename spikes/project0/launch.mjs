@@ -76,6 +76,40 @@ export async function effectiveCommandLine(context) {
   finally { await page.close(); }
 }
 
+// chrome://gpu (Chrome 151) renders into <info-view> open shadow roots, filled in asynchronously, so body.innerText is empty. This walks the
+// open shadow roots; it must stay self-contained because Playwright serialises it into the page.
+export function collectVisibleText() {
+  const SKIP = new Set(['STYLE', 'SCRIPT']), INLINE = new Set(['A', 'B', 'I', 'EM', 'STRONG', 'CODE', 'SPAN']);
+  const walk = node => {
+    let out = node.shadowRoot ? walk(node.shadowRoot) : '';
+    for (const child of node.childNodes) {
+      if (child.nodeType === 3) out += child.textContent;
+      else if (child.nodeType === 1 && !SKIP.has(child.tagName)) out += walk(child) + (INLINE.has(child.tagName) ? '' : '\n');
+    }
+    return out;
+  };
+  return walk(document.body);
+}
+const GPU_READY = text => text.includes('Graphics Feature Status') && /DRIVER_VERSION=|Driver version\s/.test(text);
+
+// Bounded capture of the full visible chrome://gpu text (no WebGPU adapter is requested). Waits until the sections the environment identity needs
+// are present; expiry is a classified `browser hang` (a stop). The page is always closed.
+export async function chromeGpuText(context, { timeoutMs = 20000, pollMs = 250 } = {}) {
+  const deadline = Date.now() + timeoutMs, left = () => Math.max(1, deadline - Date.now());
+  const hang = what => new Error(`browser hang: chrome://gpu ${what} within ${timeoutMs} ms`);
+  const within = async (promise, what) => { let timer; try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(hang(what)), left()); })]); } finally { clearTimeout(timer); } };
+  const page = await within(context.newPage(), 'did not open');
+  try {
+    await within(page.goto('chrome://gpu'), 'did not load');
+    for (;;) {
+      const text = await within(page.evaluate(collectVisibleText), 'did not answer');
+      if (GPU_READY(text)) return text;
+      if (Date.now() >= deadline) throw hang('did not fill in');
+      await new Promise(r => setTimeout(r, Math.min(pollMs, left())));
+    }
+  } finally { await Promise.race([page.close(), new Promise(r => setTimeout(r, 2000))]).catch(() => {}); }
+}
+
 export function assertSandboxed(commandLine) {
   if (/(^|\s)--no-sandbox(\s|$)/.test(commandLine)) throw new Error('Chrome launched without its sandbox');
   if (/--disable-gpu-watchdog/.test(commandLine)) throw new Error('Chrome launched with the GPU watchdog disabled');

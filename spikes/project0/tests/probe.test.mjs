@@ -12,8 +12,8 @@ function harness(over = {}) {
     startServer: async () => ({ url: 'http://x', stop: async () => {} }),
     launchChrome: async () => { h.launches++; return { profile: '/p', requestedArgs: ['--enable-gpu'], context: {
       close: over.close ?? (async () => { h.closes++; }),
-      newPage: async () => ({ on() {}, goto: async url => { if (String(url).startsWith('chrome://gpu') && over.gpuHang) await new Promise(() => {}); },
-        locator: () => ({ innerText: async () => GPU_TEXT }) }) } }; },
+      newPage: async () => ({ on() {}, goto: async () => {} }) } }; },
+    chromeGpuText: over.gpuHang ? () => new Promise(() => {}) : async () => GPU_TEXT,
     effectiveCommandLine: async () => 'chrome --enable-gpu --user-data-dir=/p',
     waitResult: async () => ({ result: over.result ?? { slots: [{ raw: GOOD_RAW }], invalidations: [], metrics: {} } }),
     fixtureIdentity: async () => ({ fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64) }),
@@ -91,4 +91,12 @@ test('an unknown adapter identity is inconclusive: no stop, the second mode stil
   const out = await runProbeInvocation(d);
   assert.equal(h.launches, 2); assert.equal(out.stopped, null); assert.equal(out.records[0].metrics.software, undefined);
   assert.equal(out.records[0].metrics.probeOk, 0); assert.equal(probeSucceeded(out.records), false);
+});
+
+test('the chrome://gpu text comes from the shared bounded capture, and its hang is a classified stop', async () => {
+  const calls = []; const ok = harness({ deps: { chromeGpuText: async (ctx, opts) => { calls.push(opts); return GPU_TEXT; } } });
+  await runProbeInvocation(ok.d); assert.deepEqual(calls[0], { timeoutMs: 500 });
+  const bad = harness({ deps: { chromeGpuText: async () => { throw new Error('browser hang: chrome://gpu did not fill in within 500 ms'); } } });
+  const out = await runProbeInvocation(bad.d);
+  assert.equal(bad.h.launches, 1); assert.match(out.stopped, /browser hang/); assert.equal(out.records[0].slot, 'incomplete');
 });

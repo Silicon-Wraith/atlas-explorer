@@ -53,3 +53,8 @@ test('writeRecord refuses artefact names that collide with each other or with th
     assert.deepEqual((await readdir(dir)).sort(), ['ok.json', 'ok.raw.json']);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
+
+test('environment identity reads the Chrome 151 GPU0 line (DRIVER_VENDOR/DRIVER_VERSION, ACTIVE device)', () => {
+  const text = 'GPU0 : VENDOR= 0x10de, DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=580.173.2.0 *ACTIVE*\nGPU1 : DRIVER_VENDOR=Other, DRIVER_VERSION=1.0\n';
+  assert.equal(environmentIdentity(text, { browserVersion: 'x', browserExecutable: 'y', session: 'z' }).driver, 'NVIDIA 580.173.2.0');
+});

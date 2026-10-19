@@ -3,13 +3,13 @@
 // injectable for tests.
 import { chromium } from 'playwright';
 import { resolve } from 'node:path';
-import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion } from './launch.mjs';
+import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText } from './launch.mjs';
 import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord } from './evidence.mjs';
 import { bounded, boundedStart, waitResult, stopReasons } from './session-utils.mjs';
 
 export async function runProbeInvocation(deps = {}) {
   const d = { chromium, startServer, launchChrome, effectiveCommandLine, waitResult, fixtureIdentity, implementationIdentity, newRunDir, writeRecord,
-    browserVersion: chromeVersion, modeMs: 180000, stepMs: 20000, log: console.log, env: process.env, ...deps };
+    browserVersion: chromeVersion, chromeGpuText, modeMs: 180000, stepMs: 20000, log: console.log, env: process.env, ...deps };
   const fixture = await d.fixtureIdentity(), implementation = await d.implementationIdentity();
   const runDir = await d.newRunDir('probe');
   const records = []; let stopped = null, server = null;
@@ -35,9 +35,7 @@ export async function runProbeInvocation(deps = {}) {
         resultMetrics = result.metrics ?? {};
         probe = result.error ? { ok: false, error: result.error } : result.slots[0].raw;
         invalidations.push(...(result.invalidations ?? []), ...(result.error ? [`page: ${result.error}`] : []));
-        const gpuPage = await bounded(launched.context.newPage(), d.stepMs, 'browser hang: new page'); live();
-        await bounded(gpuPage.goto('chrome://gpu'), d.stepMs, 'browser hang: chrome://gpu'); live();
-        chromeGpuText = await bounded(gpuPage.locator('body').innerText(), d.stepMs, 'browser hang: chrome://gpu text'); live();
+        chromeGpuText = await d.chromeGpuText(launched.context, { timeoutMs: d.stepMs }); live();
         try { identity = { ...launchIdentity(launchInfo), ...environmentIdentity(chromeGpuText, { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: d.env.XDG_SESSION_TYPE || 'unknown' }) }; }
         catch (e) { invalidations.push(`environment identity: ${e.message}`); }
       };

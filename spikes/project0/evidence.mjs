@@ -46,8 +46,10 @@ export function launchConfiguration({ requestedArgs, mode, commandLine, profile 
 export const launchIdentity = info => ({ launchHash: sha256(canonical(launchConfiguration(info))), mode: info.mode });
 
 export function environmentIdentity(chromeGpuText, { browserVersion, browserExecutable, session }) {
-  const vendor = /Driver vendor\s+(.+)/.exec(chromeGpuText)?.[1]?.trim();
-  const version = /Driver version\s+(.+)/.exec(chromeGpuText)?.[1]?.trim();
+  // Chrome 151 prints the active device as `GPU0 : ... DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=580.x *ACTIVE*`; older builds had `Driver vendor` rows.
+  const active = /DRIVER_VENDOR=([^,\n]+),\s*DRIVER_VERSION=(\S+)[^\n]*\*ACTIVE\*/.exec(chromeGpuText);
+  const vendor = active?.[1]?.trim() ?? /Driver vendor\s+(.+)/.exec(chromeGpuText)?.[1]?.trim();
+  const version = active?.[2]?.trim() ?? /Driver version\s+(.+)/.exec(chromeGpuText)?.[1]?.trim();
   if (!vendor || !version) throw new Error('chrome://gpu has no driver vendor/version');
   return { browserVersion, browserExecutable, driver: `${vendor} ${version}`, session };
 }
