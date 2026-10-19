@@ -72,3 +72,23 @@ test('the display context is recorded in the launch artefact but not in the conf
   assert.equal(launch(a.h).display, ':10.0'); assert.equal(launch(a.h).session, 'x11'); assert.equal(launch(b.h).session, null);
   assert.equal(a.h.written[0].record.identity.launchHash, b.h.written[0].record.identity.launchHash);
 });
+
+test('a cleanup timeout makes the mode incomplete, not a passing slot', async () => {
+  const { d } = harness({ close: () => new Promise(() => {}), deps: { stepMs: 40 } });
+  const out = await runProbeInvocation(d);
+  assert.equal(out.records[0].slot, 'incomplete'); assert.equal(out.records[0].metrics.probeOk, 0); assert.equal(probeSucceeded(out.records), false);
+});
+
+test('a failed launch still records the display context', async () => {
+  const { h, d } = harness({ deps: { launchChrome: async () => { throw new Error('Missing X server or $DISPLAY'); }, env: { DISPLAY: ':10.0', XDG_SESSION_TYPE: 'x11' } } });
+  await runProbeInvocation(d);
+  const launch = JSON.parse(h.written[0].artifacts.find(x => x.name === 'probe-headed.launch.json').data);
+  assert.equal(launch.display, ':10.0'); assert.equal(launch.session, 'x11');
+});
+
+test('an unknown adapter identity is inconclusive: no stop, the second mode still runs, never a pass', async () => {
+  const { h, d } = harness({ result: { slots: [{ raw: { ok: false, error: 'adapter identity unknown: x', info: { vendor: '' } } }], invalidations: [], metrics: {} } });
+  const out = await runProbeInvocation(d);
+  assert.equal(h.launches, 2); assert.equal(out.stopped, null); assert.equal(out.records[0].metrics.software, undefined);
+  assert.equal(out.records[0].metrics.probeOk, 0); assert.equal(probeSucceeded(out.records), false);
+});

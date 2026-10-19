@@ -17,7 +17,7 @@ export async function runProbeInvocation(deps = {}) {
     server = await d.startServer();
     for (const mode of ['headed', 'headless']) {
       if (stopped) { d.log(`${mode}: NOT RUN (stopped: ${stopped})`); continue; }
-      const invalidations = [], state = { expired: false }; let launched = null, resultMetrics = {}, probe = { ok: false }, chromeGpuText = '', launchInfo = { requestedArgs: null, mode }, identity = null;
+      const invalidations = [], state = { expired: false }; let launched = null, resultMetrics = {}, probe = { ok: false }, chromeGpuText = '', launchInfo = { requestedArgs: null, mode, display: d.env.DISPLAY ?? null, session: d.env.XDG_SESSION_TYPE ?? null }, identity = null, cleanupFailed = false;   // display context is set before any await, so a failed launch records it too
       const live = () => { if (state.expired) throw new Error('browser hang: probe mode deadline passed'); };   // a late result cannot resume work
       const closeContext = c => bounded(c.close(), d.stepMs, `harness timeout: cleanup of the ${mode} browser did not finish within ${d.stepMs} ms`);
       const op = async () => {
@@ -43,9 +43,9 @@ export async function runProbeInvocation(deps = {}) {
       };
       try { await bounded(op(), d.modeMs, `browser hang: probe ${mode} exceeded its ${d.modeMs} ms outer deadline`); }
       catch (error) { state.expired = true; invalidations.push(`session: ${error.message}`); }
-      finally { await (launched ? closeContext(launched.context) : Promise.resolve()).catch(e => invalidations.push(e.message)); }
+      finally { await (launched ? closeContext(launched.context) : Promise.resolve()).catch(e => { cleanupFailed = true; invalidations.push(e.message); }); }
       identity ??= { launchHash: '0'.repeat(64), mode, browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' };
-      const incomplete = state.expired || (!probe.info && !probe.readback) || !chromeGpuText;   // expiry or an unfinished required step is never a completed slot
+      const incomplete = state.expired || cleanupFailed || stopReasons({ invalidations, metrics: { software: resultMetrics.software ? 1 : 0 } }).length > 0 || (!probe.info && !probe.readback) || !chromeGpuText;   // expiry or an unfinished required step is never a completed slot
       const record = { schema: 1, id: `probe-${mode}`, gate: 'probe', slot: incomplete ? 'incomplete' : mode, campaign: 'probe', mode, experiment: true, identity: { backend: 'webgpu', ...fixture, ...implementation, ...identity }, invalidations, metrics: { probeOk: probe.ok === true && !incomplete ? 1 : 0, ...(resultMetrics.software ? { software: 1 } : {}) } };
       records.push(await d.writeRecord(runDir, record, [
         { name: `probe-${mode}.raw.json`, data: JSON.stringify(probe) },

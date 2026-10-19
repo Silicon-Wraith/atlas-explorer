@@ -11,12 +11,16 @@ function signalLoss({ reason, message = '', injected }) {
   for (const handler of [...state.handlers]) handler({ epoch: lostEpoch, reason, message, injected });
 }
 
-export async function acquire({ requiredFeatures = [] } = {}) {
+// `cancelled` lets the caller withdraw the acquisition (timeout, abort): a late adapter then requests no device, and a late device is
+// destroyed before it can become current or advance the epoch.
+export async function acquire({ requiredFeatures = [], cancelled = () => false } = {}) {
   if (!('gpu' in navigator)) throw Object.assign(new Error('navigator.gpu is absent'), { code: 'no-api' });
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw Object.assign(new Error('requestAdapter returned null'), { code: 'no-adapter' });
+  if (cancelled()) throw Object.assign(new Error('acquisition cancelled before requestDevice'), { code: 'cancelled' });
   const granted = requiredFeatures.filter(f => adapter.features.has(f));
   const device = await adapter.requestDevice({ requiredFeatures: granted });
+  if (cancelled()) { device.destroy(); throw Object.assign(new Error('acquisition cancelled; late device destroyed'), { code: 'cancelled' }); }
   const epoch = ++state.epoch;
   state.device = device;
   device.lost.then(info => { if (epoch === state.epoch) signalLoss({ reason: info.reason, message: info.message, injected: false }); });
