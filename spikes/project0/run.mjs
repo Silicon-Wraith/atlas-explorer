@@ -65,6 +65,16 @@ async function cleanup(launched, ms, what, invalidations) {
   catch (e) { invalidations.push(/^harness timeout:/.test(e.message) ? e.message : `harness timeout: cleanup of the ${what} browser failed: ${e.message}`); }
 }
 
+// A server that does not stop leaves the port (and its child) behind: a classified stop, recorded before the evidence is finalised.
+async function stopServer(server, invalidations) {
+  try { await server?.stop(); } catch (e) { invalidations.push(`harness timeout: the harness server did not stop: ${e.message}`); }
+}
+// A resource (server or browser) that arrives after the session expired is disposed at once and never used: `finally` has already run.
+async function arrived(resource, state, dispose, live) {
+  if (state.expired) { await Promise.resolve().then(() => dispose(resource)).catch(() => {}); live(); }
+  return resource;
+}
+
 const fallbackIdentity = (fixture, implementation, mode) => ({ backend: 'webgpu', ...fixture, ...implementation, launchHash: '0'.repeat(64), mode, browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' });
 
 // Dependencies are injectable for tests, as in runG2.
@@ -84,8 +94,8 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
   const deadlineMs = d.deadlineMs, outerMs = d.outerMs ?? deadlineMs + 120000;
   try {
     await bounded((async () => {
-      server = await d.startServer(); live();
-      launched = await boundedStart(() => d.launchChrome({ headless: mode === 'headless', args: LAUNCH[args], profileKind: `${gate.toLowerCase()}-${mode}`, chromium: d.chromium }), d.launchMs, `browser hang: launch exceeded ${d.launchMs} ms`); live();
+      server = await arrived(await d.startServer(), state, s => s.stop(), live); live();
+      launched = await arrived(await boundedStart(() => d.launchChrome({ headless: mode === 'headless', args: LAUNCH[args], profileKind: `${gate.toLowerCase()}-${mode}`, chromium: d.chromium }), d.launchMs, `browser hang: launch exceeded ${d.launchMs} ms`), state, r => bounded(r.context.close(), d.closeMs, 'late close'), live); live();
       const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
       launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode };
       const environmentInfo = await d.environment(launched.context, commandLine, invalidations, publish); live();
@@ -104,7 +114,7 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
     state.expired = true; invalidations.push(`session: ${error.message}`);
   } finally {
     await cleanup(launched, d.closeMs, gate, invalidations);
-    await server?.stop();
+    await stopServer(server, invalidations);
   }
   state.final = true;   // finalisation: no snapshot arriving from here on can change the record
   identity ??= fallbackIdentity(fixture, implementation, mode);
@@ -129,8 +139,8 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
     const runDeadline = Date.now() + d.runMs;
     try {
       await bounded((async () => {
-        server = await d.startServer(); live();
-        launched = await boundedStart(() => d.launchChrome({ headless: false, args: LAUNCH[args], profileKind: `g2-fresh-${i}`, chromium: d.chromium }), d.launchMs, `browser hang: launch exceeded ${d.launchMs} ms`); live();
+        server = await arrived(await d.startServer(), state, s => s.stop(), live); live();
+        launched = await arrived(await boundedStart(() => d.launchChrome({ headless: false, args: LAUNCH[args], profileKind: `g2-fresh-${i}`, chromium: d.chromium }), d.launchMs, `browser hang: launch exceeded ${d.launchMs} ms`), state, r => bounded(r.context.close(), d.closeMs, 'late close'), live); live();
         const page = await launched.context.newPage();
         if (state.expired) page.close().catch(() => {});                                        // a late page is closed, never navigated
         live();
@@ -158,7 +168,7 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
     } catch (error) { state.expired = true; invalidations.push(`session: ${error.message}`); }
     finally {
       await cleanup(launched, d.closeMs, `G2 fresh-${i}`, invalidations);
-      await server?.stop();
+      await stopServer(server, invalidations);
     }
     state.final = true;   // finalisation: no snapshot arriving from here on can change the record
     identity ??= fallbackIdentity(fixture, implementation, 'headed');

@@ -195,3 +195,51 @@ test('G2: the chrome://gpu capture never starts with less than its allowance lef
     assert.equal(c.launches, 1, 'a skipped capture is a stop');
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
+
+// Fix round 2 (Codex T6 r2): a server or browser that arrives after the deadline is disposed; a failed server stop keeps the evidence.
+const delayed = (ms, value) => new Promise(r => setTimeout(() => r(value), ms));
+function lateResources({ serverMs = 0, launchMs = 0, stop } = {}) {
+  const c = { stops: 0, launches: 0, closes: 0, gotos: 0 };
+  const page = { on() {}, goto: async () => { c.gotos++; }, reload: async () => {}, close: async () => {} };
+  return { c, deps: {
+    startServer: () => delayed(serverMs, { url: 'http://x', stop: stop ?? (async () => { c.stops++; }) }),
+    launchChrome: () => { c.launches++; return delayed(launchMs, { context: { newPage: async () => page, close: async () => { c.closes++; } }, requestedArgs: ['--enable-gpu'], profile: '/p' }); } } };
+}
+for (const runner of ['runSession', 'runG2']) {
+  const run = (dir, c, deps, extra) => (runner === 'runSession'
+    ? runSession({ gate: 'G4' }, { ...baseDeps(dir, deps.launchChrome, c), waitResult: async () => ({ result: { slots: [{ slot: 'bulb-samples', raw: {} }], invalidations: [] } }), ...deps, deadlineMs: 10, outerMs: 20, launchMs: 200, ...extra })
+    : runG2({}, { ...baseDeps(dir, deps.launchChrome, c), ...deps, runMs: 20, launchMs: 200, ...extra }));
+
+  test(`${runner}: a server that starts after the deadline is stopped, and no browser is launched`, async () => {
+    const dir = await scratch(), { c, deps } = lateResources({ serverMs: 60 });
+    try {
+      const { records } = await run(dir, c, deps);
+      await delayed(120);
+      assert.equal(c.stops, 1, 'the late server is stopped'); assert.equal(c.launches, 0);
+      assert.deepEqual(records.map(r => r.slot), ['incomplete']);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  test(`${runner}: a browser that launches after the deadline is closed and never navigated`, async () => {
+    const dir = await scratch(), { c, deps } = lateResources({ launchMs: 60 });
+    try {
+      const { records } = await run(dir, c, deps);
+      await delayed(120);
+      assert.equal(c.launches, 1); assert.equal(c.closes, 1, 'the late browser is closed'); assert.equal(c.gotos, 0);
+      assert.equal(c.stops, 1, 'the server is stopped once');
+      assert.deepEqual(records.map(r => r.slot), ['incomplete']);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  test(`${runner}: a server stop that fails is a classified stop, and the evidence is still written`, async () => {
+    const dir = await scratch(), { c, deps } = lateResources({ stop: async () => { throw new Error('server did not exit'); } });
+    try {
+      const { records } = await run(dir, c, deps, runner === 'runSession' ? { deadlineMs: 2000, outerMs: 2000 } : { runMs: 2000, gpuTextMs: 100, versionMs: 50 });
+      assert.equal(records.length >= 1, true, 'evidence is finalised');
+      assert.ok(records[0].invalidations.some(x => /^harness timeout: the harness server did not stop: server did not exit/.test(x)), JSON.stringify(records[0].invalidations));
+      assert.ok(stopReasons(records[0]).includes('harness timeout'));
+      assert.equal(c.launches, 1, 'no further browser after the stop');
+      JSON.parse(await readFile(join(dir, `${records[0].id}.json`), 'utf8'));
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+}
