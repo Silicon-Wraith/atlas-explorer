@@ -49,7 +49,8 @@ test('a clean timing invocation: 9 G6 and 3 G7 trials, then G9 bound to its twel
   assert.equal(g9.gate, 'G9');
   assert.deepEqual(g9.raw.sources.map(x => `${x.gate}/${x.slot}`), [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => `G6/${v}/${i}`)), 'G7/0', 'G7/1', 'G7/2']);
   assert.ok(g9.raw.sources.every(x => x.valid === true && x.windowEnd > x.windowStart));
-  assert.deepEqual(await metricsFor('G9', 'warmed', g9.raw, fixtures), { windows: 12, applicationOver50: 0, unattributedOver50: 0, harnessRecorded: 1 });
+  // fix round 2 (Codex T9 r2): the shortened run's observations are never accepted by Node, whatever the driver was told
+  await assert.rejects(metricsFor('G9', 'warmed', g9.raw, fixtures), /G9: source window G6\/bulb-overview\/0 lasted [\d.]+ ms; the frozen G6 window is 30000 ms/);
 });
 
 test('an integrity violation in the first G6 trial ends the invocation: one acquisition, its raw kept, no G9 slot', async () => {
@@ -90,7 +91,7 @@ test('a late G7 issuance ends the timing invocation with the trial\'s partial ev
 });
 
 const sources = () => [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => ({ gate: 'G6', slot: `${v}/${i}` }))), ...['0', '1', '2'].map(slot => ({ gate: 'G7', slot }))]
-  .map((x, i) => ({ ...x, windowStart: 1000 * i, windowEnd: 1000 * i + 900, valid: true }));
+  .map((x, i) => ({ ...x, windowStart: i * 34000, windowEnd: i * 34000 + (x.gate === 'G6' ? 30012 : 23045), valid: true }));   // fix round 2: the frozen durations
 test('G9 refuses windows that are missing, invalid, of the wrong identity or order, or tasks outside every source window', async () => {
   const raw = (over = {}) => ({ windows: 12, longTasks: [{ ms: 60, start: 10, kind: 'application' }], harnessMeasures: 3, sources: sources(), ...over });
   assert.equal((await metricsFor('G9', 'warmed', raw(), fixtures)).applicationOver50, 1);
@@ -99,7 +100,7 @@ test('G9 refuses windows that are missing, invalid, of the wrong identity or ord
   await assert.rejects(metricsFor('G9', 'warmed', raw({ sources: invalid }), fixtures), /G9: source window G6\/bulb-detail-0.05\/1 is not valid/);
   const swapped = sources(); [swapped[0], swapped[1]] = [swapped[1], swapped[0]];
   await assert.rejects(metricsFor('G9', 'warmed', raw({ sources: swapped }), fixtures), /G9: source window 0 is G6\/bulb-overview\/1, expected G6\/bulb-overview\/0/);
-  await assert.rejects(metricsFor('G9', 'warmed', raw({ longTasks: [{ ms: 60, start: 950, kind: 'application' }] }), fixtures), /G9: a long task at 950 lies outside every source window/);
+  await assert.rejects(metricsFor('G9', 'warmed', raw({ longTasks: [{ ms: 60, start: 31000, kind: 'application' }] }), fixtures), /G9: a long task at 31000 lies outside every source window/);
 });
 
 test('G8: an integrity violation in a repetition ends G8 before the next acquisition, its raw kept', async () => {

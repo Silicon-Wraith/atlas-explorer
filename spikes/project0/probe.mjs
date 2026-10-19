@@ -31,7 +31,7 @@ export async function runProbeInvocation(deps = {}) {
         launchInfo = { requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode, display: d.env.DISPLAY ?? null, session: d.env.XDG_SESSION_TYPE ?? null };   // display context is evidence, not identity
         const page = await bounded(launched.context.newPage(), d.stepMs, 'browser hang: new page'); live();
         page.on('pageerror', e => invalidations.push(`page error: ${e.message}`));
-        await bounded(installTransport(page), d.stepMs, 'browser hang: result transport'); live();   // before navigation: the page pushes its result
+        await bounded(installTransport(page, { gate: 'probe' }), d.stepMs, 'browser hang: result transport'); live();   // before navigation: the page pushes its result
         await bounded(page.goto(`${server.url}${HARNESS_PATH}?mode=probe&runMode=${mode}`), d.stepMs, 'browser hang: navigation'); live();
         const { result } = await d.waitResult(page, { gate: 'probe', runDir, deadlineMs: d.stepMs * 3 }); live();
         resultMetrics = result.metrics ?? {};

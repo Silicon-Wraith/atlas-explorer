@@ -55,7 +55,8 @@ const RAW = {
   G6: () => ({ windowStart: 1000, observedMs: 30010, frames: Array.from({ length: 950 }, (_, i) => overview(i + 1, 1000 + i * 31.5)), pendingMax: 1, outstandingMax: 2, integrity: ok, refreshHz: 60, timestamps: 'timestamp-query', diagnostics: {} }),
   G7: g7raw,
   G8: () => ({ stressRequestId: 1, stressSubmit: { requestId: 1, epoch: 1, t: 1000 }, sphereRequestId: 2, sphereRequested: 1050, latencyMs: 150, sphere: sphere(2, 1200), stalePublications: 0, outstandingMax: 2, integrity: ok }),
-  G9: () => ({ windows: 12, sources: [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => ({ gate: 'G6', slot: `${v}/${i}` }))), ...['0', '1', '2'].map(slot => ({ gate: 'G7', slot }))].map((x, i) => ({ ...x, windowStart: 1000 * i, windowEnd: 1000 * i + 900, valid: true })),
+  G9: () => ({ windows: 12, sources: [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => ({ gate: 'G6', slot: `${v}/${i}` }))), ...['0', '1', '2'].map(slot => ({ gate: 'G7', slot }))]
+  .map((x, i) => ({ ...x, windowStart: i * 34000, windowEnd: i * 34000 + (x.gate === 'G6' ? 30012 : 23045), valid: true })),
     longTasks: [{ ms: 30, start: 1, kind: 'application' }], harnessMeasures: 24, longestTaskMs: 30 }),   // fix round 1: G9 names its source windows
   G10: () => ({ requestedMs: 100, elapsedMs: 900, frame: overview(1, 1000, settled.W, settled.H), prepared: 1, outstandingMax: 2, integrity: ok }),
   G12: () => ({ cycles: 60, wallMs: 600000, deadlineMisses: 0, unhandled: 0, unplannedLosses: 0, baseline: { bytes: 1000, textures: 4, buffers: 5 }, final: { bytes: 1000, textures: 4, buffers: 5 }, baselinePrepared: 1, returned1280: 1, outstandingMax: 2, integrity: ok, maintenance: Array(7).fill(good) }),
@@ -89,7 +90,11 @@ test('the T9 rows: one measured page-clock descriptor per timing gate, correctne
 
 test('a clean record of every T9 gate is written clean, with exactly its gatePlan keys, and accepted at read time with its raw payload', async () => {
   for (const gate of Object.keys(RAW)) {
-    const { records, saved, raws } = await finalised(gate, [{ slot: SLOT[gate], raw: RAW[gate](), timingMethod: descriptorOf(gate) }]);
+    // fix round 2: G9 is bound to its twelve companion records of the same invocation, so it is finalised after clean G6 and G7 companions
+    const companions = gate !== 'G9' ? [] : RAW.G9().sources.map(x => ({ slot: x.slot, gate: x.gate, raw: RAW[x.gate](), timingMethod: MEASURED[x.gate] }));
+    const all = await finalised(gate === 'G9' ? 'timing' : gate, [...companions, { slot: SLOT[gate], gate, raw: RAW[gate](), timingMethod: descriptorOf(gate) }]);
+    for (const c of all.records.slice(0, -1)) assert.deepEqual(c.invalidations, [], `${c.gate}/${c.slot}: ${JSON.stringify(c.invalidations)}`);
+    const records = all.records.slice(-1), saved = all.saved.slice(-1), raws = all.raws;
     assert.equal(records.length, 1, gate);
     const [rec] = records;
     assert.deepEqual(rec.invalidations, [], `${gate}: ${JSON.stringify(rec.invalidations)}`);

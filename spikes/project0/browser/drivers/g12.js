@@ -6,9 +6,10 @@ import { followPath as realFollowPath } from './timing.js';
 import { prepareResourceCheck as realPrepare, exerciseResources as realExercise } from './resources.js';
 import { observeIntegrity } from '../integrity.js';
 import { G12_WALL_TIMING } from '../../timing-contract.js';   // wallMs: the 60-cycle span, page clock
-import { maintenanceProblems } from '../../measure/resource-rules.js';   // the G11 rules, shared with Node (T9 fix round 1)
+import { maintenanceProblems } from '../../measure/resource-rules.js';
+import { pageSupervisor } from '../supervisor.js';   // the G11 rules, shared with Node (T9 fix round 1)
 export async function runG12(fx, status, { open, canvas, integrity: observe = observeIntegrity, followPath = realFollowPath, renderOnce = realRenderOnce,
-  prepareResourceCheck = realPrepare, exerciseResources = realExercise, stressWaitMs = 5000, target = globalThis }) {
+  prepareResourceCheck = realPrepare, exerciseResources = realExercise, stressWaitMs = 5000, target = globalThis, sup = pageSupervisor() }) {
   const cfg = fx.stability;
   let unhandled = 0; const onErr = () => unhandled++; target.addEventListener?.('error', onErr); target.addEventListener?.('unhandledrejection', onErr);
   const maintenance = []; let s = null, integrity = null;
@@ -36,6 +37,10 @@ export async function runG12(fx, status, { open, canvas, integrity: observe = ob
     setBacking(cfg.baselineBacking); await followPath(s, fx, 'bulb-overview', 'draft', 1, draftAt());
     await s.abort.race(s.device.queue.onSubmittedWorkDone()); await s.abort.race(sleep(200));   // every wait races the session abort (T8 pattern)
     const baseline = s.alloc.inventory();
+    // The ten-minute sequence is Node's declared window G12/sequence (T9 fix round 2): heartbeats stop and every reply is awaited before it opens;
+    // inside it the only exchange is the cycle-boundary checkpoint, whose reply is awaited (bounded, raced against the abort) before the next
+    // cycle starts, under Node's fixed checkpoint gap. Absolute cycle deadlines are kept: time spent in the exchange counts towards the cycle.
+    const sequence = await sup.window('G12/sequence', async () => {
     integrity = observe(canvas, { allowedBacking: [cfg.baselineBacking, ...cfg.resizeBacking] });
     const [, toSphere, toDetail, toMaintenance] = cfg.phaseOffsetsMs;
     const start = performance.now(); let deadlineMisses = 0;
@@ -55,18 +60,20 @@ export async function runG12(fx, status, { open, canvas, integrity: observe = ob
       if (performance.now() > c0 + cfg.cycleMs) deadlineMisses++; else await s.abort.race(sleep(c0 + cfg.cycleMs - performance.now()));
       const checkpoint = { cycle: c, t: performance.now(), deadlineMisses, unhandled, losses: s.losses.length, inventory: s.alloc.inventory(), maintenanceErrors: maintenance.flatMap(m => m.errors ?? []) };
       target.p0Checkpoints.push(checkpoint);
-      // pushed to Node at the cycle boundary (the bounded checkpoint the plan allows); never awaited, so Node's handling cannot delay the next cycle
-      if (typeof target.p0Push === 'function') Promise.resolve(target.p0Push({ type: 'checkpoint', checkpoint })).catch(() => {});
+      await sup.checkpoint(checkpoint, s.abort);                                      // the reply arrives before the next measured cycle
     }
     const wallMs = performance.now() - start;
     setBacking(cfg.baselineBacking); await followPath(s, fx, 'bulb-overview', 'draft', 1, draftAt());
     await s.abort.race(s.device.queue.onSubmittedWorkDone()); await s.abort.race(sleep(200)); s.abort.throwIfAborted();   // a stop in the final drain is the sequence's error
-    const final = s.alloc.inventory();
-    return { slots: [{ slot: 'sequence', raw: { cycles: target.p0Checkpoints.length, wallMs, deadlineMisses, unhandled, unplannedLosses: s.losses.length, baseline, final, baselinePrepared: 1, returned1280: canvas.width === 1280 && canvas.height === 720 ? 1 : 0, outstandingMax: s.renderer.stats().outstandingMax, integrity: integrity.stop(), maintenance }, timingMethod: G12_WALL_TIMING }], invalidations: [] };
+    const final = s.alloc.inventory(), observed = integrity.stop();
+    return { wallMs, deadlineMisses, final, observed };
+    });
+    const { wallMs, deadlineMisses, final, observed } = sequence;
+    return { slots: [{ slot: 'sequence', raw: { cycles: target.p0Checkpoints.length, wallMs, deadlineMisses, unhandled, unplannedLosses: s.losses.length, baseline, final, baselinePrepared: 1, returned1280: canvas.width === 1280 && canvas.height === 720 ? 1 : 0, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, maintenance }, timingMethod: G12_WALL_TIMING }], invalidations: [] };
   } catch (error) {
     return { slots: [{ slot: 'sequence', raw: { error: failure(s, error), cycles: target.p0Checkpoints.length, maintenance, unplannedLosses: s?.losses.length ?? 0 }, timingMethod: G12_WALL_TIMING }], invalidations: [failure(s, error)] };
   } finally { target.removeEventListener?.('error', onErr); target.removeEventListener?.('unhandledrejection', onErr); s?.close(); }
 }
 export function run(gate, fx, params, status) {
-  return runG12(fx, status, { open: () => session(fx, status), canvas: document.getElementById('view'), target: window });
+  return runG12(fx, status, { open: () => session(fx, status), canvas: document.getElementById('view'), target: window, sup: pageSupervisor() });
 }

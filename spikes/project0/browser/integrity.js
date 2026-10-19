@@ -42,6 +42,7 @@ export function observeIntegrity(canvas, { allowedBacking = [[1280, 720]] } = {}
       events.push({ t: t(), type: 'backing', value: key(), deliberate: true }); flag(key(), `after a deliberate resize at ${t().toFixed(0)}`);
     },
     stop() {
+      if (!running) return { events, violations };                                     // idempotent: a second stop() changes nothing
       running = false;
       if (mo) { replay(mo.takeRecords()); mo.disconnect(); }
       flag(`${canvas.width}x${canvas.height}`, 'at stop');

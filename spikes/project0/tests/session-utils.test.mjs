@@ -12,24 +12,25 @@ test('an operation that finishes immediately leaves no live timer behind', async
   assert.equal(timers(), before);
 });
 
-// T9 fix round 1 (Codex T9 r1, finding 1): waitResult no longer polls the page with evaluate(); the page pushes through a binding installed
-// before navigation (tests/transport.test.mjs). These two tests keep their intent against the push transport.
-test('a page that never pushes a result is a classified hang at the Node-owned deadline, with no evaluate call', async () => {
-  let binding = null, evaluates = 0;
-  const page = { exposeBinding: async (name, fn) => { binding = fn; }, evaluate: async () => { evaluates++; }, on() {} };
-  await installTransport(page);
+// T9 fix rounds 1-2 (Codex T9 r1 finding 1, r2 finding 1): waitResult no longer evaluates in the page; the page pushes through a binding installed
+// before navigation and heartbeats outside measured windows (tests/transport.test.mjs, tests/supervision.test.mjs). The round-trip bound of the
+// original test is restored: a silent page is a hang within 50 ms although the total deadline is 60 s.
+test('a page that never answers is a hang within the round-trip bound', async () => {
+  let evaluates = 0;
+  const page = { exposeBinding: async () => {}, evaluate: async () => { evaluates++; }, on() {} };
+  await installTransport(page, { gate: 'G6' });
   const t0 = Date.now();
-  const out = await waitResult(page, { gate: 'G6', runDir: '/x', deadlineMs: 50 });
-  assert.match(out.result.error, /^browser hang: no result within the 50 ms outer deadline/); assert.ok(Date.now() - t0 < 1000); assert.equal(evaluates, 0);
-  assert.ok(binding);
+  const out = await waitResult(page, { gate: 'G6', runDir: '/x', deadlineMs: 60000, roundTripMs: 50 });
+  assert.match(out.result.error, /did not answer within 50 ms/); assert.ok(Date.now() - t0 < 1000); assert.equal(evaluates, 0);
 });
 
-test('the outer deadline holds while the page pushes only checkpoints; the last checkpoint is kept', async () => {
+test('the outer deadline holds while the page answers without a result; the last checkpoint is kept', async () => {
   let binding = null; const writes = [];
   const page = { exposeBinding: async (name, fn) => { binding = fn; }, on() {} };
-  await installTransport(page);
+  await installTransport(page, { gate: 'G12' });
+  binding(null, { type: 'window-open', id: 1, name: 'G12/sequence' });
   binding(null, { type: 'checkpoint', checkpoint: { cycle: 0 } });
-  const out = await waitResult(page, { gate: 'G12', runDir: '/x', deadlineMs: 50, writeFn: async p => writes.push(p) });
+  const out = await waitResult(page, { gate: 'G12', runDir: '/x', deadlineMs: 50, roundTripMs: 50, writeFn: async p => writes.push(p) });
   assert.match(out.result.error, /outer deadline/); assert.deepEqual(out.lastCheckpoint, { cycle: 0 }); assert.equal(writes.length, 1);
 });
 

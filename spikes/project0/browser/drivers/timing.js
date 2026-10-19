@@ -5,6 +5,7 @@ import { session, frameOf, sleep, failure } from './common.js';
 import { posesAt, burstSchedule } from '../paths.js';
 import { observeIntegrity, observeLongTasks, refreshHz } from '../integrity.js';
 import * as events from '../events.js';
+import { pageSupervisor } from '../supervisor.js';
 import { G6_WINDOW_TIMING, G7_BURST_TIMING, G9_LONG_TASK_TIMING } from '../../timing-contract.js';
 const TIMING = { G6: G6_WINDOW_TIMING, G7: G7_BURST_TIMING };   // each slot's producer-supplied timing method (T9 registration)
 
@@ -74,13 +75,17 @@ const stagesOf = (requestId, log = events) => {
   return { submittedMs: ev.find(e => e.type === 'submit' && e.requestId === requestId)?.t ?? null, completedMs: ev.find(e => e.type === 'complete' && e.requestId === requestId)?.t ?? null };
 };
 
-// T9 fix round 1 (Codex T9 r1, finding 3): every completed trial is validated before the next acquisition. An integrity violation, a G7 final
-// request without exactly one publication, or a late G7 issuance ends the invocation; the trial's raw evidence is kept in its slot, and the
-// reason is the invocation's invalidation. G9 is produced only after all twelve windows were valid, and it names them (`sources`), so Node binds
-// it to their identities, order and validity. Durations, the schedule, `now` and the late limit are injectable for Node tests only.
-export async function runTiming(fx, status, { open, canvas, integrity = observeIntegrity, longTasks = observeLongTasks, hzOf = refreshHz,
+// T9 fix rounds 1-2 (Codex T9 r1 finding 3, r2 findings 1 and 3): every completed trial is validated before the next acquisition. An integrity
+// violation, an incomplete frame in the window, a G7 final request without exactly one publication, or a late G7 issuance ends the invocation;
+// the trial's raw evidence is kept in its slot, and the reason is the invocation's invalidation. Each measured interval runs inside a declared
+// window of Node's fixed plan (sup.window: heartbeats stopped and every reply awaited before the start timestamp, the close awaited after the
+// measurement stopped). G9 is produced only after all twelve windows were valid, and it names them (`sources`, with their measured intervals);
+// Node binds it to their frozen durations, their order and their companion records. Durations, the schedule, `now` and the late limit are
+// injectable for Node tests only: Node refuses the shortened observations they produce (measure/timing.mjs), so they can never be accepted.
+const complete = (f, view, profile) => Boolean(f?.counts && f.view === view && f.W === profile.W && f.H === profile.H && f.counts.total === profile.W * profile.H);
+export async function runTiming(fx, status, { open, canvas, integrity = observeIntegrity, longTasks = observeLongTasks, hzOf = refreshHz, sup = pageSupervisor(),
   warmupSeconds = 3, windowSeconds = 30, schedule = burstSchedule(fx), quietMs = fx.bursts.quietMs, now, lateLimitMs }) {
-  const lt = longTasks(), slots = [], tasksSeen = [], sources = [];
+  const lt = longTasks(), slots = [], tasksSeen = [], sources = [], draft = fx.profiles.draft;
   const hz = await hzOf(); let windows = 0;
   const stop = (slot, gate, s, error) => { slots.push({ slot, gate, raw: { error: failure(s, error) }, timingMethod: TIMING[gate] }); return { slots, invalidations: [failure(s, error)] }; };
   const invalid = (slot, gate, raw, reason) => { slots.push({ slot, gate, raw, timingMethod: TIMING[gate] }); return { slots, invalidations: [reason] }; };
@@ -89,39 +94,44 @@ export async function runTiming(fx, status, { open, canvas, integrity = observeI
     try {
       s = await open();
       await followPath(s, fx, view, 'draft', warmupSeconds);                               // warm-up, discarded
-      const watch = integrity(canvas);
-      const r = await followPath(s, fx, view, 'draft', windowSeconds);
-      const observed = watch.stop(), windowEnd = r.windowStart + windowSeconds * 1000;
+      let observed = null;
+      const r = await sup.window(`G6/${slot}`, async () => { const watch = integrity(canvas); try { return await followPath(s, fx, view, 'draft', windowSeconds); } finally { observed = watch.stop(); } });
+      const windowEnd = r.windowStart + windowSeconds * 1000;
       tasksSeen.push(...lt.take(r.windowStart, windowEnd)); windows++;
       const raw = await events.harness(async () => { const ts = await s.renderer.readTimestamps(); return { ...r, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, timestamps: ts.method, diagnostics: bandDiagnostics(s.renderer.stats()) }; });
-      if (observed.violations.length) return invalid(slot, 'G6', raw, `trial invalid: G6/${slot}: ${observed.violations.join('; ')}`);
+      const incomplete = r.frames.filter(f => f.t >= r.windowStart && f.t < windowEnd && !complete(f, view, draft)).length;
+      const problems = [...observed.violations, ...(incomplete ? [`${incomplete} incomplete frame${incomplete === 1 ? '' : 's'} in the window`] : [])];
+      if (problems.length) return invalid(slot, 'G6', raw, `trial invalid: G6/${slot}: ${problems.join('; ')}`);
       slots.push({ slot, gate: 'G6', raw, timingMethod: G6_WINDOW_TIMING });
-      sources.push({ gate: 'G6', slot, windowStart: r.windowStart, windowEnd, valid: true });
+      sources.push({ gate: 'G6', slot, windowStart: r.windowStart, windowEnd: r.windowStart + r.observedMs, valid: true });
     } catch (error) { return stop(slot, 'G6', s, error); }
     finally { s?.close(); }
   }
   const finalIndex = fx.bursts.requestsPerBurst - 1;
   for (let trial = 0; trial < 3; trial++) {
-    let s = null, off = null, watch = null; const slot = String(trial), frames = [];
+    let s = null, off = null; const slot = String(trial), frames = [];
     try {
       s = await open();
       await followPath(s, fx, 'bulb-overview', 'draft', warmupSeconds);
       off = s.renderer.onPublish(p => frames.push(frameOf(p)));
-      watch = integrity(canvas);
-      let bursts;
-      try { bursts = await runBursts(s, schedule, { log: s.events ?? events, ...(now ? { now } : {}), ...(lateLimitMs !== undefined ? { lateLimitMs } : {}) }); }
-      catch (error) {
-        if (!error.scheduleDeviation) throw error;
+      let observed = null, end = null, deviation = null;
+      const bursts = await sup.window(`G7/${slot}`, async () => {
+        const watch = integrity(canvas);
+        try {
+          const b = await runBursts(s, schedule, { log: s.events ?? events, ...(now ? { now } : {}), ...(lateLimitMs !== undefined ? { lateLimitMs } : {}) });
+          await s.abort.race(sleep(quietMs));
+          return b;
+        } catch (error) { if (!error.scheduleDeviation) throw error; deviation = error; return null; }   // refused at once; the window still closes
+        finally { observed = watch.stop(); end = performance.now(); }
+      });
+      if (deviation) {
         // The late request was never issued; the trial's partial evidence is kept and the deviation is classified (never external interference).
-        const observed = watch.stop(); watch = null; const end = performance.now(), d = error.scheduleDeviation;
-        const tasks = lt.take(error.t0, end);
+        const d = deviation.scheduleDeviation, tasks = lt.take(deviation.t0, end);
         const cause = tasks.some(x => x.kind !== 'unattributed' && x.start < d.firedMs && x.start + x.ms > d.scheduledMs) ? 'application' : 'unknown';
-        return invalid(slot, 'G7', { windowStart: error.t0, observedMs: end - error.t0, issued: error.issued, deviation: { ...d, lateCause: cause }, frames, integrity: observed, refreshHz: hz },
-          `${error.message} (cause: ${cause}); not accepted as execution of the frozen schedule`);
+        return invalid(slot, 'G7', { windowStart: deviation.t0, observedMs: end - deviation.t0, issued: deviation.issued, deviation: { ...d, lateCause: cause }, frames, integrity: observed, refreshHz: hz },
+          `${deviation.message} (cause: ${cause}); not accepted as execution of the frozen schedule`);
       }
       const { t0, issued } = bursts;
-      await s.abort.race(sleep(quietMs));
-      const observed = watch.stop(), end = performance.now(); watch = null;
       const tasks = lt.take(t0, end); tasksSeen.push(...tasks); windows++;
       const raw = await events.harness(async () => {
         await s.renderer.readTimestamps();
@@ -132,18 +142,20 @@ export async function runTiming(fx, status, { open, canvas, integrity = observeI
         });
         return { windowStart: t0, observedMs: end - t0, issued: withStages, frames, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, diagnostics: bandDiagnostics(s.renderer.stats()) };
       });
-      const unpublished = raw.issued.filter(r => r.index === finalIndex).map(r => [r.id, frames.filter(f => f.requestId === r.requestId).length]).filter(([, n]) => n !== 1);
-      const problems = [...observed.violations, ...unpublished.map(([id, n]) => `final request ${id} was published ${n} times`)];
+      const finals = raw.issued.filter(r => r.index === finalIndex);
+      const unpublished = finals.map(r => [r.id, frames.filter(f => f.requestId === r.requestId)]).filter(([, fs]) => fs.length !== 1);
+      const incomplete = finals.map(r => frames.find(f => f.requestId === r.requestId)).filter(f => f && !complete(f, 'bulb-overview', draft)).length;
+      const problems = [...observed.violations, ...unpublished.map(([id, fs]) => `final request ${id} was published ${fs.length} times`), ...(incomplete ? [`${incomplete} incomplete final frame${incomplete === 1 ? '' : 's'}`] : [])];
       if (problems.length) return invalid(slot, 'G7', raw, `trial invalid: G7/${slot}: ${problems.join('; ')}`);
       slots.push({ slot, gate: 'G7', raw, timingMethod: G7_BURST_TIMING });
       sources.push({ gate: 'G7', slot, windowStart: t0, windowEnd: end, valid: true });
     } catch (error) { off?.(); return stop(slot, 'G7', s, error); }
-    finally { watch?.stop(); off?.(); s?.close(); }
+    finally { off?.(); s?.close(); }
   }
   slots.push({ slot: 'warmed', gate: 'G9', raw: { windows, sources, longTasks: tasksSeen, harnessMeasures: lt.harnessMeasures(), longestTaskMs: Math.max(0, ...tasksSeen.map(x => x.ms)) }, timingMethod: G9_LONG_TASK_TIMING });
   return { slots, invalidations: [] };
 }
 
 export function run(gate, fx, params, status) {
-  return runTiming(fx, status, { open: () => session(fx, status), canvas: document.getElementById('view') });
+  return runTiming(fx, status, { open: () => session(fx, status), canvas: document.getElementById('view'), sup: pageSupervisor() });
 }

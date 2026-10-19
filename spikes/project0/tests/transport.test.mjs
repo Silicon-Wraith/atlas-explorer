@@ -25,10 +25,11 @@ function fakePage(log = []) {
 
 test('the result and the checkpoints arrive by push; Node makes no evaluate call while it waits', async () => {
   const f = fakePage(), writes = [];
-  await installTransport(f.page);
+  await installTransport(f.page, { gate: 'G12' });                                   // fix round 2: checkpoints belong to G12's sequence window
+  f.push({ type: 'window-open', id: 1, name: 'G12/sequence' });
   setTimeout(() => f.push({ type: 'checkpoint', checkpoint: { cycle: 0 } }), 10);
   setTimeout(() => f.push({ type: 'checkpoint', checkpoint: { cycle: 1 } }), 20);
-  setTimeout(() => f.push({ type: 'result', result: { slots: [{ slot: 'sequence', raw: {} }], invalidations: [] } }), 40);
+  setTimeout(async () => { await f.push({ type: 'window-close', id: 1, name: 'G12/sequence' }); f.push({ type: 'result', result: { slots: [{ slot: 'sequence', raw: {} }], invalidations: [] } }); }, 40);
   const out = await waitResult(f.page, { gate: 'G12', runDir: '/x', deadlineMs: 5000, writeFn: async (p, data) => writes.push([p, data]) });
   assert.deepEqual(out.result.slots.map(s => s.slot), ['sequence']);
   assert.deepEqual(out.lastCheckpoint, { cycle: 1 });
@@ -37,7 +38,8 @@ test('the result and the checkpoints arrive by push; Node makes no evaluate call
 });
 
 test('a page that never pushes a result meets the Node-owned outer deadline; the last checkpoint is kept; no evaluate', async () => {
-  const f = fakePage(); await installTransport(f.page);
+  const f = fakePage(); await installTransport(f.page, { gate: 'G12' });
+  f.push({ type: 'window-open', id: 1, name: 'G12/sequence' });
   setTimeout(() => f.push({ type: 'checkpoint', checkpoint: { cycle: 0 } }), 5);
   const t0 = Date.now();
   const out = await waitResult(f.page, { gate: 'G12', runDir: '/x', deadlineMs: 60, writeFn: async () => {} });

@@ -28,7 +28,7 @@ test('G6: completion-driven publications in the window; partial frames and wrong
   const frames = Array.from({ length: 950 }, (_, i) => frame(i + 1, 1000 + i * 31.5));
   frames[10] = frame(11, frames[10].t, 'bulb-overview', px - 1);
   frames[20] = frame(21, frames[20].t, 'sphere');                                    // a frame of another view, by its own label
-  const m = await metricsFor('G6', 'bulb-overview/0', { windowStart: 1000, frames, pendingMax: 1, outstandingMax: 2, integrity: ok }, fixtures);
+  const m = await metricsFor('G6', 'bulb-overview/0', { windowStart: 1000, observedMs: 30010, frames, pendingMax: 1, outstandingMax: 2, integrity: ok }, fixtures);   // fix round 2: the observed path span
   assert.deepEqual(Object.keys(m).sort(), ['coverageErrors', 'intervalP95', 'outstandingMax', 'pendingMax', 'published', 'windowMs']);
   assert.equal(m.published, 950); assert.equal(m.coverageErrors, 2);
   await assert.rejects(metricsFor('G6', 'bulb-overview/0', { windowStart: 1000, frames, pendingMax: 1, outstandingMax: 2, integrity: { violations: ['window blurred at 12000'] } }, fixtures), /blurred/);
@@ -42,7 +42,7 @@ function g7raw() {
   });
   const finals = issued.filter(r => r.index === 19);
   finals.forEach((r, b) => { r.publishedMs = r.requestedMs + 40 + b; r.completedMs = r.publishedMs - 1; });
-  return { issued, frames: finals.map(r => frame(r.requestId, r.publishedMs)), outstandingMax: 2, integrity: ok };
+  return { issued, frames: finals.map(r => frame(r.requestId, r.publishedMs)), outstandingMax: 2, integrity: ok, observedMs: 23100 };   // fix round 2: the observed burst window
 }
 
 test('G7: latency from each final request\'s own request event; the frozen schedule is matched one to one', async () => {
@@ -81,7 +81,7 @@ test('G8: stressSubmitted comes from the exact stress submission event; the sphe
 });
 
 const sources = [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => ({ gate: 'G6', slot: `${v}/${i}` }))), ...['0', '1', '2'].map(slot => ({ gate: 'G7', slot }))]
-  .map((x, i) => ({ ...x, windowStart: 1000 * i, windowEnd: 1000 * i + 900, valid: true }));   // T9 fix round 1: G9 names its twelve valid source windows
+  .map((x, i) => ({ ...x, windowStart: i * 34000, windowEnd: i * 34000 + (x.gate === 'G6' ? 30012 : 23045), valid: true }));   // T9 fix rounds 1-2: G9 names its twelve valid, disjoint source windows of the frozen durations
 test('G9 validates task records and derives harness attribution from recorded measures', async () => {
   const tasks = [{ ms: 60, start: 1, kind: 'application' }, { ms: 51, start: 2, kind: 'harness' }, { ms: 40, start: 3, kind: 'application' }, { ms: 70, start: 4, kind: 'unattributed' }];
   assert.deepEqual(await metricsFor('G9', 'warmed', { windows: 12, sources, longTasks: tasks, harnessMeasures: 24 }, fixtures), { windows: 12, applicationOver50: 1, unattributedOver50: 1, harnessRecorded: 1 });

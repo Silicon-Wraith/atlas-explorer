@@ -4,6 +4,14 @@ import { throughput, percentile, coverageValid } from '../metrics.js';
 import { maintenanceFailed } from './resources.mjs';
 import { activeGpuDriver } from '../launch.mjs';            // the fail-closed Chrome 151 driver parser (T5 fix rounds 4-5)
 
+// The frozen observation durations (T9 fix round 2, Codex T9 r2 finding 3): a G6 window is the 30 s path, a G7 window the frozen burst schedule
+// with its quiet period (fx.bursts.durationMs); each is accepted up to the fixed bound of its supervised window (session-utils WINDOW_PLANS).
+// Shortened or overlong observations are refused here whatever the driver was told, so a test-only override can never yield accepted evidence.
+const G6_WINDOW_MS = 30000, G6_BOUND_MS = 40000, G7_BOUND_MS = 35000;
+function covered(gate, ms, fx) {
+  const [low, high, what] = gate === 'G6' ? [G6_WINDOW_MS, G6_BOUND_MS, 'the measured path'] : [fx.bursts.durationMs, G7_BOUND_MS, 'the burst window'];
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < low || ms > high) throw invalid(`${gate}: ${what} covered ${ms} ms, not the frozen ${low} ms (accepted up to ${high} ms)`);
+}
 const G9_SOURCES = [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => `G6/${v}/${i}`)), 'G7/0', 'G7/1', 'G7/2'];
 export const LATE_LIMIT_MS = 4;                                  // the frozen G7 issuance-deviation limit (same constant as the driver)
 const KINDS = new Set(['application', 'harness', 'unattributed']);
@@ -97,6 +105,7 @@ export function metrics(gate, slot, raw, fx) {
     }
     case 'G6': {
       integrityOk(raw);
+      covered('G6', raw.observedMs, fx);
       const view = slot.split('/')[0];
       const t = throughput(raw.frames.map(f => ({ id: f.requestId, time: f.t })), raw.windowStart, raw.windowStart + 30000);
       const inWindow = raw.frames.filter(f => f.t >= raw.windowStart && f.t < raw.windowStart + 30000);
@@ -104,6 +113,7 @@ export function metrics(gate, slot, raw, fx) {
     }
     case 'G7': {
       integrityOk(raw);
+      covered('G7', raw.observedMs, fx);
       const latencies = validateG7(raw, fx);
       return { requests: raw.issued.length, finals: latencies.length, latencyP95: percentile(latencies, 0.95), coverageErrors: raw.frames.filter(f => !frameOk(f, 'bulb-overview', draft)).length, outstandingMax: raw.outstandingMax };
     }
@@ -115,7 +125,7 @@ export function metrics(gate, slot, raw, fx) {
     }
     case 'G9': {
       if (raw.windows !== 12) throw invalid(`G9 expects 12 observation windows, got ${raw.windows}`);
-      // T9 fix round 1 (Codex T9 r1, finding 3): G9 is bound to its source windows, the nine G6 and three G7 trials in order, each valid, and
+      // T9 fix rounds 1-2 (Codex T9 r1 finding 3, r2 finding 3): G9 is bound to its source windows, the nine G6 and three G7 trials in order, each valid, and
       // every long task must lie in one of them. An interrupted or invalid source window can never yield clean G9 evidence.
       if (!Array.isArray(raw.sources) || raw.sources.length !== G9_SOURCES.length) throw invalid('G9: the twelve source windows are not recorded');
       raw.sources.forEach((x, i) => {
@@ -123,6 +133,10 @@ export function metrics(gate, slot, raw, fx) {
         if (id !== G9_SOURCES[i]) throw invalid(`G9: source window ${i} is ${id}, expected ${G9_SOURCES[i]}`);
         if (x.valid !== true) throw invalid(`G9: source window ${id} is not valid`);
         if (!(Number.isFinite(x.windowStart) && Number.isFinite(x.windowEnd) && x.windowEnd > x.windowStart)) throw invalid(`G9: source window ${id} has no finite interval`);
+        // fix round 2: each window has its frozen duration, and the twelve are disjoint and in order
+        const d = x.windowEnd - x.windowStart, [low, high] = x.gate === 'G6' ? [G6_WINDOW_MS, G6_BOUND_MS] : [fx.bursts.durationMs, G7_BOUND_MS];
+        if (d < low || d > high) throw invalid(`G9: source window ${id} lasted ${d} ms; the frozen ${x.gate} window is ${x.gate === 'G6' ? '' : 'at least '}${low} ms (accepted up to ${high} ms)`);
+        if (i > 0 && x.windowStart < raw.sources[i - 1].windowEnd) throw invalid(`G9: source window ${id} overlaps the previous window`);
       });
       if (!Array.isArray(raw.longTasks) || !raw.longTasks.every(t => KINDS.has(t.kind) && typeof t.ms === 'number' && Number.isFinite(t.ms) && t.ms > 0 && Number.isFinite(t.start))) throw invalid('G9: malformed long-task records');
       if (!Number.isInteger(raw.harnessMeasures)) throw invalid('G9: harness attribution was not recorded');
