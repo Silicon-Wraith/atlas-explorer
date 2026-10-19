@@ -7,7 +7,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
 
-process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
+// Chrome's SingletonSocket path (<TMPDIR>/com.google.Chrome.XXXXXX/SingletonSocket) must fit in a 107-byte sun_path.
+// artifacts/runtime is used when short enough; otherwise a short directory on the ZFS scratch dataset (never /tmp).
+const runtimeDir = resolve(ROOT, 'artifacts/runtime');
+process.env.TMPDIR = runtimeDir.length <= 60 ? runtimeDir : '/mnt/ml_storage/scratch/atlas-p0-tmp';
+await mkdir(process.env.TMPDIR, { recursive: true });
 const record = { kind: 'preflight', at: new Date().toISOString(), node: process.version, checks: [] };
 let failed = false, server;
 try {
