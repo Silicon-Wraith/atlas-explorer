@@ -4,9 +4,8 @@ import { chromium } from 'playwright';
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify, parseArgs } from 'node:util';
-import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeGpuText as captureChromeGpuText } from './launch.mjs';
+import { parseArgs } from 'node:util';
+import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText as captureChromeGpuText } from './launch.mjs';
 import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
 import { bounded, boundedStart, waitResult, stopReasons } from './session-utils.mjs';
@@ -20,12 +19,13 @@ export { waitResult } from './session-utils.mjs';
 
 // Chrome 151 renders chrome://gpu into open shadow roots, asynchronously, so body.innerText is empty: the shared bounded capture (launch.mjs), as
 // probe.mjs uses it. Every snapshot is handed to `publish` as it is read, so a capture timeout or the session's outer deadline keeps the latest
-// text as evidence; a timeout is a classified browser hang (a stop) and is rethrown.
-export const GPU_TEXT_MS = 20000;
-export async function environment(context, commandLine, invalidations, publish = () => {}, { gpuTextMs = GPU_TEXT_MS } = {}) {
+// text as evidence; a timeout is a classified browser hang (a stop) and is rethrown. The browser version comes from T0's bounded chromeVersion()
+// (a hung subprocess is killed); its failure or timeout is a browser hang too, as in probe.mjs.
+export const GPU_TEXT_MS = 20000, VERSION_MS = 10000;
+export async function environment(context, commandLine, invalidations, publish = () => {}, { gpuTextMs = GPU_TEXT_MS, versionMs = VERSION_MS, browserVersion: version = () => chromeVersion({ timeoutMs: versionMs }) } = {}) {
   const chromeGpuText = await captureChromeGpuText(context, { timeoutMs: gpuTextMs, onSnapshot: publish }).catch(e => { publish(e?.capturedText); throw e; });
   publish(chromeGpuText);
-  const browserVersion = (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim();
+  const browserVersion = await version().catch(e => { throw new Error(`browser hang: browser version check failed: ${e.message}`); });
   const base = { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: process.env.XDG_SESSION_TYPE || 'unknown' };
   try { return { chromeGpuText, env: environmentIdentity(chromeGpuText, base) }; }
   catch (e) { invalidations.push(`environment identity: ${e.message}`); return { chromeGpuText, env: { ...base, driver: 'unknown' } }; }
@@ -58,42 +58,57 @@ export async function finalise({ gate, mode, campaign, runDir, identity, launchI
   return records;
 }
 
+// Cleanup that does not finish, or fails, may leave a browser running: a classified stop, so no further browser is launched after it.
+async function cleanup(launched, ms, what, invalidations) {
+  if (!launched) return;
+  try { await bounded(launched.context.close(), ms, `harness timeout: cleanup of the ${what} browser did not finish within ${ms} ms`); }
+  catch (e) { invalidations.push(/^harness timeout:/.test(e.message) ? e.message : `harness timeout: cleanup of the ${what} browser failed: ${e.message}`); }
+}
+
 const fallbackIdentity = (fixture, implementation, mode) => ({ backend: 'webgpu', ...fixture, ...implementation, launchHash: '0'.repeat(64), mode, browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' });
 
-export async function runSession({ gate, mode = 'headless', args = 'attempt1', campaign = 'dev', extra = '' }) {
+// Dependencies are injectable for tests, as in runG2.
+export async function runSession({ gate, mode = 'headless', args = 'attempt1', campaign = 'dev', extra = '' }, deps = {}) {
+  const d = { startServer, launchChrome, effectiveCommandLine, waitResult, environment, fixtureIdentity, implementationIdentity, newRunDir, writeRecord, chromium,
+    fixtures: async () => JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8')), launchMs: 60000, closeMs: 30000, deadlineMs: DEADLINE[gate] ?? 900000, ...deps };
   if (!LAUNCH[args]) throw new Error(`unknown launch configuration: ${args}`);
   if (!/^[a-z0-9-]+$/.test(campaign)) throw new Error('campaign identity required');
   const experiment = EXPERIMENTS.has(gate);
-  const fixtures = JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8'));
-  const fixture = await fixtureIdentity(), implementation = await implementationIdentity();
-  const runDir = await newRunDir(`${campaign}-${gate.toLowerCase()}-${mode}`);
+  const fixtures = await d.fixtures();
+  const fixture = await d.fixtureIdentity(), implementation = await d.implementationIdentity();
+  const runDir = await d.newRunDir(`${campaign}-${gate.toLowerCase()}-${mode}`);
   const invalidations = [], state = { expired: false, final: false }; let server, launched, outcome = null, chromeGpuText = '', identity = null, launchInfo = { args, requestedArgs: LAUNCH[args] };
   const publish = text => { if (text && !state.expired && !state.final) chromeGpuText = text; };   // session-owned chrome://gpu evidence; frozen once the session ends
-  const deadlineMs = DEADLINE[gate] ?? 900000;
+  const note = x => { if (!state.final) invalidations.push(x); };
+  const live = () => { if (state.expired) throw new Error('browser hang: session deadline passed'); };   // a late result cannot resume work
+  const deadlineMs = d.deadlineMs, outerMs = d.outerMs ?? deadlineMs + 120000;
   try {
     await bounded((async () => {
-      server = await startServer();
-      launched = await boundedStart(() => launchChrome({ headless: mode === 'headless', args: LAUNCH[args], profileKind: `${gate.toLowerCase()}-${mode}`, chromium }), 60000, 'browser hang: launch exceeded 60000 ms');
-      const commandLine = await effectiveCommandLine(launched.context); assertSandboxed(commandLine);
+      server = await d.startServer(); live();
+      launched = await boundedStart(() => d.launchChrome({ headless: mode === 'headless', args: LAUNCH[args], profileKind: `${gate.toLowerCase()}-${mode}`, chromium: d.chromium }), d.launchMs, `browser hang: launch exceeded ${d.launchMs} ms`); live();
+      const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
       launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode };
-      const environmentInfo = await environment(launched.context, commandLine, invalidations, publish);
+      const environmentInfo = await d.environment(launched.context, commandLine, invalidations, publish); live();
       publish(environmentInfo.chromeGpuText);
       identity = { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity(launchInfo), ...environmentInfo.env };
       const page = await launched.context.newPage();
-      page.on('pageerror', e => invalidations.push(`page error: ${e.message}`));
-      page.on('console', m => { if (m.type() === 'error') invalidations.push(`console error: ${m.text()}`); });
-      await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}&runMode=${mode}${extra}`);
-      outcome = await waitResult(page, { gate, runDir, deadlineMs });
-    })(), deadlineMs + 120000, `browser hang: session exceeded its ${deadlineMs + 120000} ms outer bound`);
+      if (state.expired) page.close().catch(() => {});                                          // a late page is closed, never navigated
+      live();
+      page.on('pageerror', e => note(`page error: ${e.message}`));
+      page.on('console', m => { if (m.type() === 'error') note(`console error: ${m.text()}`); });
+      await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}&runMode=${mode}${extra}`); live();
+      const result = await d.waitResult(page, { gate, runDir, deadlineMs }); live();
+      outcome = result;
+    })(), outerMs, `browser hang: session exceeded its ${outerMs} ms outer bound`);
   } catch (error) {
     state.expired = true; invalidations.push(`session: ${error.message}`);
   } finally {
-    await bounded(launched?.context.close() ?? Promise.resolve(), 30000, 'close').catch(e => invalidations.push(`close: ${e.message}`));
+    await cleanup(launched, d.closeMs, gate, invalidations);
     await server?.stop();
   }
   state.final = true;   // finalisation: no snapshot arriving from here on can change the record
   identity ??= fallbackIdentity(fixture, implementation, mode);
-  const records = await finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, outcome, invalidations, fixtures, experiment });
+  const records = await finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, outcome, invalidations, fixtures, experiment, write: d.writeRecord });
   return { records, runDir, outcome };
 }
 
@@ -101,7 +116,7 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
 // for a stop immediately; if fresh-2 stops there is no warm reload; the shared classifier decides. Dependencies are injectable for tests.
 export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps = {}) {
   const d = { startServer, launchChrome, effectiveCommandLine, waitResult, environment, fixtureIdentity, implementationIdentity, newRunDir, chromium,
-    fixtures: async () => JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8')), launchMs: 60000, ...deps };
+    fixtures: async () => JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8')), launchMs: 60000, runMs: 180000, closeMs: 30000, gpuTextMs: GPU_TEXT_MS, versionMs: VERSION_MS, ...deps };
   if (!LAUNCH[args]) throw new Error(`unknown launch configuration: ${args}`);
   const fixtures = await d.fixtures();
   const fixture = await d.fixtureIdentity(), implementation = await d.implementationIdentity();
@@ -109,32 +124,40 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
   for (let i = 0; i < 3; i++) {
     const invalidations = [], slots = [], state = { expired: false, final: false }; let server, launched, chromeGpuText = '', identity = null, launchInfo = { args, requestedArgs: LAUNCH[args] };
     const publish = text => { if (text && !state.expired && !state.final) chromeGpuText = text; };   // run-owned chrome://gpu evidence; frozen once the run ends
+    const note = x => { if (!state.final) invalidations.push(x); };
+    const live = () => { if (state.expired) throw new Error('browser hang: G2 run deadline passed'); };   // a late result cannot resume work
+    const runDeadline = Date.now() + d.runMs;
     try {
       await bounded((async () => {
-        server = await d.startServer();
-        launched = await boundedStart(() => d.launchChrome({ headless: false, args: LAUNCH[args], profileKind: `g2-fresh-${i}`, chromium: d.chromium }), d.launchMs, `browser hang: launch exceeded ${d.launchMs} ms`);
+        server = await d.startServer(); live();
+        launched = await boundedStart(() => d.launchChrome({ headless: false, args: LAUNCH[args], profileKind: `g2-fresh-${i}`, chromium: d.chromium }), d.launchMs, `browser hang: launch exceeded ${d.launchMs} ms`); live();
         const page = await launched.context.newPage();
-        page.on('pageerror', e => invalidations.push(`page error: ${e.message}`));
-        page.on('console', m => { if (m.type() === 'error') invalidations.push(`console error: ${m.text()}`); });
-        await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=G2&runMode=headed`);
-        const first = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result;
+        if (state.expired) page.close().catch(() => {});                                        // a late page is closed, never navigated
+        live();
+        page.on('pageerror', e => note(`page error: ${e.message}`));
+        page.on('console', m => { if (m.type() === 'error') note(`console error: ${m.text()}`); });
+        await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=G2&runMode=headed`); live();
+        const first = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result; live();
         const firstInvalidations = [...(first.invalidations ?? []), ...(first.error ? [`page: ${first.error}`] : [])];
         slots.push({ slot: `fresh-${i}`, raw: { ...(first.slots?.[0]?.raw ?? { error: first.error }), emptyProfile: 1, freshProcess: 1 }, invalidations: firstInvalidations });
         const stopNow = stopReasons({ invalidations: [...invalidations, ...firstInvalidations] }).length > 0;
         if (i === 2 && !stopNow) {                                                            // never reload after a stop
-          await page.reload();
-          const warm = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result;
+          live(); await page.reload(); live();
+          const warm = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result; live();
           slots.push({ slot: 'warm', raw: warm.slots?.[0]?.raw ?? { error: warm.error }, invalidations: [...(warm.invalidations ?? []), ...(warm.error ? [`page: ${warm.error}`] : [])] });
         }
-        const commandLine = await d.effectiveCommandLine(launched.context); assertSandboxed(commandLine);
+        const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
         launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode: 'headed' };
-        const environmentInfo = await d.environment(launched.context, commandLine, invalidations, publish);
+        // as in probe.mjs: the capture (and its version check) starts only with its full allowance left in the run window
+        const windowLeft = runDeadline - Date.now(), allowance = d.gpuTextMs + d.versionMs;
+        if (windowLeft < allowance) throw new Error(`harness timeout: chrome://gpu capture skipped: ${windowLeft} ms of the ${d.runMs} ms run window left, it needs ${allowance} ms`);
+        const environmentInfo = await d.environment(launched.context, commandLine, invalidations, publish, { gpuTextMs: d.gpuTextMs, versionMs: d.versionMs }); live();
         publish(environmentInfo.chromeGpuText);
         identity = { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity(launchInfo), ...environmentInfo.env };
-      })(), 180000, 'browser hang: G2 launch exceeded 180000 ms');
+      })(), d.runMs, `browser hang: G2 launch exceeded ${d.runMs} ms`);
     } catch (error) { state.expired = true; invalidations.push(`session: ${error.message}`); }
     finally {
-      await bounded(launched?.context.close() ?? Promise.resolve(), 30000, 'close').catch(e => invalidations.push(`close: ${e.message}`));
+      await cleanup(launched, d.closeMs, `G2 fresh-${i}`, invalidations);
       await server?.stop();
     }
     state.final = true;   // finalisation: no snapshot arriving from here on can change the record
