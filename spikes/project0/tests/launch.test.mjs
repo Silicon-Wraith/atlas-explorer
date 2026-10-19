@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readdir, rm, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { EventEmitter } from 'node:events';
-import { ROOT, PORT, freshProfile, startServer, assertSandboxed, ATTEMPT1_ARGS, launchChrome, CHROME_TMPDIR } from '../launch.mjs';
+import { ROOT, PORT, freshProfile, startServer, assertSandboxed, ATTEMPT1_ARGS, launchChrome, CHROME_TMPDIR, chromeVersion } from '../launch.mjs';
 
 async function scratchRoot() {
   const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
@@ -77,4 +77,18 @@ test('launchChrome gives Chrome a short TMPDIR so its SingletonSocket path fits 
     assert.ok(CHROME_TMPDIR.length + 45 < 107);
     assert.equal(seen.options.chromiumSandbox, true);
   } finally { await rm(launched.profile, { recursive: true, force: true }); }
+});
+
+test('stop() reports a shutdown failure when the server never exits, even after SIGKILL', async () => {
+  const child = fakeChild(); child.kill = sig => { child.signals.push(sig); };
+  const server = await startServer({ probeFn: async () => false, spawnFn: () => { setImmediate(() => child.stdout.emit('data', 'ready')); return child; }, stopMs: 30 });
+  await assert.rejects(server.stop(), /did not exit/);
+  assert.deepEqual(child.signals, ['SIGTERM', 'SIGKILL']);
+});
+
+test('chromeVersion is bounded: a stalled subprocess is killed and reported', async () => {
+  const started = Date.now();
+  await assert.rejects(chromeVersion({ command: process.execPath, args: ['-e', 'setInterval(() => {}, 1000)'], timeoutMs: 200 }));
+  assert.ok(Date.now() - started < 5000);
+  assert.equal(await chromeVersion({ command: process.execPath, args: ['-p', '"v"'], timeoutMs: 5000 }), 'v');
 });

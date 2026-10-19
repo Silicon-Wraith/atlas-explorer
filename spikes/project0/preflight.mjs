@@ -1,18 +1,16 @@
 // spikes/project0/preflight.mjs — environment preflight. No adapter, no device, no shaders.
 import { chromium } from 'playwright';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { ROOT, HARNESS_PATH, startServer, launchChrome, effectiveCommandLine, assertSandboxed } from './launch.mjs';
+import { ROOT, HARNESS_PATH, startServer, launchChrome, chromeVersion, effectiveCommandLine, assertSandboxed } from './launch.mjs';
 
 process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
 const record = { kind: 'preflight', at: new Date().toISOString(), node: process.version, checks: [] };
 let failed = false, server;
 try {
   record.playwright = createRequire(import.meta.url)('playwright/package.json').version;
-  record.chrome = (await promisify(execFile)('google-chrome', ['--version'])).stdout.trim();
+  record.chrome = await chromeVersion();
   server = await startServer();
   const js = await fetch(`${server.url}/spikes/project0/browser/main.js`);
   record.checks.push({ name: 'module-mime', status: js.status, contentType: js.headers.get('content-type') });
@@ -32,7 +30,12 @@ try {
     } finally { await launched?.context.close(); }
   }
 } catch (error) { record.error = error.message; failed = true; }
-finally { await server?.stop(); }
+finally {
+  try { await server?.stop(); } catch (error) {
+    record.checks.push({ name: 'shutdown', error: error.message });
+    record.error ||= error.message; failed = true;
+  }
+}
 const dir = resolve(ROOT, 'artifacts/project0/preflight');
 await mkdir(dir, { recursive: true });
 await writeFile(resolve(dir, `${record.at.replace(/[-:.]/g, '')}.json`), JSON.stringify(record, null, 2));

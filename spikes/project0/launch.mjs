@@ -1,5 +1,6 @@
 // spikes/project0/launch.mjs — Node-side launcher. Never requests a GPU adapter or device.
-import { spawn as nodeSpawn } from 'node:child_process';
+import { spawn as nodeSpawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { mkdir, readdir } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { resolve, join } from 'node:path';
@@ -44,7 +45,10 @@ export async function startServer({ port = PORT, probeFn = portInUse, spawnFn = 
   const child = spawnFn(process.execPath, ['scripts/serve.mjs', '--port', String(port)], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe'] });
   const stop = async () => {
     child.kill('SIGTERM');
-    if (!(await exited(child, stopMs))) { child.kill('SIGKILL'); await exited(child, stopMs); }
+    if (!(await exited(child, stopMs))) {
+      child.kill('SIGKILL');
+      if (!(await exited(child, stopMs))) throw new Error(`owned server on port ${port} did not exit after SIGTERM and SIGKILL`);
+    }
   };
   const ready = await new Promise(done => {
     const timer = setTimeout(() => done(false), startMs);
@@ -75,4 +79,9 @@ export async function effectiveCommandLine(context) {
 export function assertSandboxed(commandLine) {
   if (/(^|\s)--no-sandbox(\s|$)/.test(commandLine)) throw new Error('Chrome launched without its sandbox');
   if (/--disable-gpu-watchdog/.test(commandLine)) throw new Error('Chrome launched with the GPU watchdog disabled');
+}
+
+// Bounded `google-chrome --version`: a hung subprocess is killed and rejects instead of stalling the preflight.
+export async function chromeVersion({ command = 'google-chrome', args = ['--version'], timeoutMs = 10000 } = {}) {
+  return (await promisify(execFile)(command, args, { timeout: timeoutMs, killSignal: 'SIGKILL' })).stdout.trim();
 }
