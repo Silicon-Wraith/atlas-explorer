@@ -79,3 +79,16 @@ test('a successful capture leaves no timer behind', async () => {
   await chromeGpuText(context, { timeoutMs: 1000, pollMs: 5 });
   assert.equal(timers() - before, 0);
 });
+
+// Fix round 5: every snapshot is published as it is read, and an unready page's hang keeps the parser's reason.
+test('each snapshot is published through onSnapshot as soon as it is read', async () => {
+  const seen = [];
+  const { context } = fakeContext(ms => nested(ms < 40 ? 'Loading…' : READY));
+  const out = await chromeGpuText(context, { timeoutMs: 1000, pollMs: 5, onSnapshot: t => seen.push(t) });
+  assert.ok(seen.length > 1); assert.equal(seen.at(-1), out); assert.match(seen[0], /Loading/);
+});
+test('an ambiguous page that never becomes ready keeps the parser reason in the hang message', async () => {
+  const two = `Graphics Feature Status\n${REC(0, 'DRIVER_VENDOR=A, DRIVER_VERSION=1 *ACTIVE*')}${REC(1, 'DRIVER_VENDOR=B, DRIVER_VERSION=2 *ACTIVE*')}`;
+  const { context } = fakeContext(() => nested(two));
+  await assert.rejects(chromeGpuText(context, { timeoutMs: 60, pollMs: 5 }), /^Error: browser hang: chrome:\/\/gpu did not fill in within 60 ms \(chrome:\/\/gpu driver identity: 2 active GPU records/);
+});

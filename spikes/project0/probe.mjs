@@ -18,6 +18,7 @@ export async function runProbeInvocation(deps = {}) {
     for (const mode of ['headed', 'headless']) {
       if (stopped) { d.log(`${mode}: NOT RUN (stopped: ${stopped})`); continue; }
       const invalidations = [], state = { expired: false }; let launched = null, resultMetrics = {}, probe = { ok: false }, chromeGpuText = '', launchInfo = { requestedArgs: null, mode, display: d.env.DISPLAY ?? null, session: d.env.XDG_SESSION_TYPE ?? null }, identity = null, cleanupFailed = false;   // display context is set before any await, so a failed launch records it too
+      const publish = text => { if (text && !state.expired && !state.final) chromeGpuText = text; };   // invocation-owned chrome://gpu evidence; frozen once the mode ends
       const live = () => { if (state.expired) throw new Error('browser hang: probe mode deadline passed'); };   // a late result cannot resume work
       const closeContext = c => bounded(c.close(), d.stepMs, `harness timeout: cleanup of the ${mode} browser did not finish within ${d.stepMs} ms`);
       const op = async () => {
@@ -35,13 +36,18 @@ export async function runProbeInvocation(deps = {}) {
         resultMetrics = result.metrics ?? {};
         probe = result.error ? { ok: false, error: result.error } : result.slots[0].raw;
         invalidations.push(...(result.invalidations ?? []), ...(result.error ? [`page: ${result.error}`] : []));
-        chromeGpuText = await d.chromeGpuText(launched.context, { timeoutMs: d.stepMs }).catch(e => { chromeGpuText = e?.capturedText || chromeGpuText; throw e; }); live();   // a failed capture keeps its latest text as evidence
+        // the capture starts only with its full allowance left in the mode window; every snapshot it reads is published into this mode's state at once
+        const windowLeft = modeDeadline - Date.now();
+        if (windowLeft < d.stepMs) throw new Error(`harness timeout: chrome://gpu capture skipped: ${windowLeft} ms of the ${d.modeMs} ms mode window left, it needs ${d.stepMs} ms`);
+        publish(await d.chromeGpuText(launched.context, { timeoutMs: d.stepMs, onSnapshot: publish }).catch(e => { publish(e?.capturedText); throw e; })); live();
         try { identity = { ...launchIdentity(launchInfo), ...environmentIdentity(chromeGpuText, { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: d.env.XDG_SESSION_TYPE || 'unknown' }) }; }
         catch (e) { invalidations.push(`environment identity: ${e.message}`); }
       };
+      const modeDeadline = Date.now() + d.modeMs;
       try { await bounded(op(), d.modeMs, `browser hang: probe ${mode} exceeded its ${d.modeMs} ms outer deadline`); }
       catch (error) { state.expired = true; invalidations.push(`session: ${error.message}`); }
       finally { await (launched ? closeContext(launched.context) : Promise.resolve()).catch(e => { cleanupFailed = true; invalidations.push(e.message); }); }
+      state.final = true;   // finalisation: no snapshot arriving from here on can change the record
       identity ??= { launchHash: '0'.repeat(64), mode, browserVersion: 'unknown', browserExecutable: 'unknown', driver: 'unknown', session: 'unknown' };
       const incomplete = state.expired || cleanupFailed || stopReasons({ invalidations, metrics: { software: resultMetrics.software ? 1 : 0 } }).length > 0 || (!probe.info && !probe.readback) || !chromeGpuText;   // expiry or an unfinished required step is never a completed slot
       const record = { schema: 1, id: `probe-${mode}`, gate: 'probe', slot: incomplete ? 'incomplete' : mode, campaign: 'probe', mode, experiment: true, identity: { backend: 'webgpu', ...fixture, ...implementation, ...identity }, invalidations, metrics: { probeOk: probe.ok === true && !incomplete ? 1 : 0, ...(resultMetrics.software ? { software: 1 } : {}) } };

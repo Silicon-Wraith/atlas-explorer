@@ -59,7 +59,7 @@ test('a browser that launches after the outer deadline is still closed', async (
 });
 
 test('a mode that expires after readback is recorded incomplete, never as a passing slot', async () => {
-  const { d: d2 } = harness({ gpuHang: true, deps: { modeMs: 100, stepMs: 1000 } });
+  const { d: d2 } = harness({ gpuHang: true, deps: { modeMs: 300, stepMs: 100 } });
   const out = await runProbeInvocation(d2);
   assert.equal(out.records[0].slot, 'incomplete'); assert.equal(out.records[0].metrics.probeOk, 0);
   assert.equal(probeSucceeded(out.records), false); assert.match(out.stopped, /browser hang/);
@@ -95,7 +95,7 @@ test('an unknown adapter identity is inconclusive: no stop, the second mode stil
 
 test('the chrome://gpu text comes from the shared bounded capture, and its hang is a classified stop', async () => {
   const calls = []; const ok = harness({ deps: { chromeGpuText: async (ctx, opts) => { calls.push(opts); return GPU_TEXT; } } });
-  await runProbeInvocation(ok.d); assert.deepEqual(calls[0], { timeoutMs: 500 });
+  await runProbeInvocation(ok.d); assert.equal(calls[0].timeoutMs, 500); assert.equal(typeof calls[0].onSnapshot, 'function');
   const bad = harness({ deps: { chromeGpuText: async () => { throw new Error('browser hang: chrome://gpu did not fill in within 500 ms'); } } });
   const out = await runProbeInvocation(bad.d);
   assert.equal(bad.h.launches, 1); assert.match(out.stopped, /browser hang/); assert.equal(out.records[0].slot, 'incomplete');
@@ -110,4 +110,30 @@ test('a chrome://gpu timeout persists the latest captured text, still classified
   assert.equal(record.slot, 'incomplete'); assert.equal(record.metrics.probeOk, 0);
   assert.ok(record.invalidations.some(x => /browser hang: chrome:\/\/gpu did not fill in/.test(x)));
   assert.match(out.stopped, /browser hang/); assert.equal(h.launches, 1);
+});
+
+// Fix round 5: snapshots go into invocation-owned state as they are read, so the outer deadline cannot lose them; updates stop at finalisation.
+test('the outer mode deadline winning over a capture still persists the latest snapshot, and later snapshots are refused (Codex r5)', async () => {
+  const { chromeGpuText } = await import('../launch.mjs');
+  const partial = 'Graphics Feature Status\nWebGPU: Hardware accelerated\n';
+  const page = { goto: async () => {}, close: async () => {}, evaluate: async () => partial };
+  let late = null;
+  const { h, d } = harness({ close: () => new Promise(r => setTimeout(r, 150)), deps: { modeMs: 300, stepMs: 100,
+    // a capture that overruns its own allowance (the real helper with a longer timeout), then a stray snapshot after the deadline
+    chromeGpuText: (ctx, opts) => { late = () => opts.onSnapshot?.('LATE'); setTimeout(late, 380); return chromeGpuText({ newPage: async () => page }, { ...opts, timeoutMs: 600, pollMs: 10 }); } } });
+  const out = await runProbeInvocation(d);
+  const { record, artifacts } = h.written[0];
+  assert.equal(artifacts.find(a => a.name === 'probe-headed.chrome-gpu.txt').data, partial);
+  assert.equal(record.slot, 'incomplete'); assert.match(out.stopped, /browser hang/); assert.equal(h.launches, 1);
+  await settle(700);
+});
+test('a capture never starts with less than its allowance left in the mode window: it is skipped with a classified reason', async () => {
+  const calls = [];
+  const { h, d } = harness({ deps: { modeMs: 300, stepMs: 100, chromeGpuText: async () => { calls.push(1); return GPU_TEXT; },
+    waitResult: async () => { await settle(250); return { result: { slots: [{ raw: GOOD_RAW }], invalidations: [], metrics: {} } }; } } });
+  const out = await runProbeInvocation(d);
+  assert.equal(calls.length, 0);
+  const { record } = h.written[0];
+  assert.ok(record.invalidations.some(x => /harness timeout: chrome:\/\/gpu capture skipped/.test(x)), record.invalidations.join('; '));
+  assert.equal(record.slot, 'incomplete'); assert.match(out.stopped, /harness timeout/); assert.equal(h.launches, 1);
 });

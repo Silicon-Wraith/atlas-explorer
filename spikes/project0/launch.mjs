@@ -90,30 +90,50 @@ export function collectVisibleText() {
   };
   return walk(document.body);
 }
-// The chrome://gpu driver identity, fail closed. Chrome 151 lists each GPU as a `GPUn   :` label whose value is the next non-empty line (or the
-// rest of the label line). Exactly one record must be `*ACTIVE*`, with exactly one non-empty DRIVER_VENDOR and DRIVER_VERSION; that record is the
-// identity, whatever its vendor. Text outside the records is ignored. The legacy `Driver vendor`/`Driver version` rows are read only when the
-// page has no GPU records at all, and each must then appear exactly once with a value.
+// The chrome://gpu driver identity, fail closed. The text is tokenised line by line into labels and values. A label is a `GPUn :` record label,
+// a legacy `Driver vendor`/`Driver version` row label, or any other `Name :` line; its value is the rest of its own line or else the next
+// non-blank line, unless that line is itself a label, in which case the value is missing (a value never swallows the next label). Exactly one GPU
+// record must be `*ACTIVE*`, with exactly one non-empty DRIVER_VENDOR and DRIVER_VERSION; that record is the identity, whatever its vendor.
+// A GPU record without a value, or a repeated record label, is refused. Text outside the labelled values is ignored. The legacy rows are read
+// only when the page has no GPU records at all, and each must then appear exactly once with a value.
+// (Known limit: a field value ends at `,`, because DEVICE=[ANGLE (NVIDIA, Vulkan ...)] is full of commas; a vendor containing a comma is truncated.)
+const GPU_LABEL = /^GPU(\d+)[ \t]*:[ \t]*(.*)$/, LEGACY_LABEL = /^[ \t]*Driver (vendor|version)\b[ \t]*:?[ \t]*(.*)$/, ANY_LABEL = /^[^:]*\S[ \t]*:[ \t]*$/;
+const isLabel = line => GPU_LABEL.test(line) || LEGACY_LABEL.test(line) || ANY_LABEL.test(line);
+function labelled(text) {
+  const lines = text.split('\n'), out = [];
+  lines.forEach((line, i) => {
+    const gpu = GPU_LABEL.exec(line), legacy = gpu ? null : LEGACY_LABEL.exec(line);
+    if (!gpu && !legacy) return;
+    let value = (gpu ?? legacy)[2].trim();
+    if (!value) { let j = i + 1; while (j < lines.length && !lines[j].trim()) j++; value = j < lines.length && !isLabel(lines[j]) ? lines[j].trim() : ''; }
+    out.push(gpu ? { kind: 'gpu', index: gpu[1], value } : { kind: legacy[1], value });
+  });
+  return out;
+}
 export function activeGpuDriver(text) {
   const fail = why => { throw new Error(`chrome://gpu driver identity: ${why}`); };
   const unique = (values, what) => (values.length === 1 && values[0] ? values[0] : fail(`no unique non-empty driver ${what} ${values.length ? `(found ${JSON.stringify(values)})` : '(absent)'}`));
-  const records = [...text.matchAll(/^GPU(\d+)[ \t]*:[ \t]*(?:\n[ \t]*)*([^\n]*)/gm)].map(([, index, value]) => ({ index, value }));
+  const tokens = labelled(text), records = tokens.filter(t => t.kind === 'gpu');
   if (!records.length) {
-    const row = name => [...text.matchAll(new RegExp(`^[ \\t]*Driver ${name}[ \\t]*:?[ \\t]*(?:\\n[ \\t]*)*([^\\n]*)`, 'gm'))].map(m => m[1].trim());
+    const row = kind => tokens.filter(t => t.kind === kind).map(t => t.value);
     return { vendor: unique(row('vendor'), 'vendor row'), version: unique(row('version'), 'version row') };
   }
   if (new Set(records.map(r => r.index)).size !== records.length) fail('a GPU record is listed twice');
+  const empty = records.find(r => !r.value);
+  if (empty) fail(`GPU${empty.index} has no value`);
   const active = records.filter(r => r.value.includes('*ACTIVE*'));
   if (active.length !== 1) fail(`${active.length} active GPU records (exactly one required)`);
-  const field = key => [...active[0].value.matchAll(new RegExp(`(?:^|[\\s,])${key}=([^,*\\n]*)`, 'g'))].map(m => m[1].trim());
+  // a field value ends at `,` or `*`, and a value that contains another `KEY=` is the next field, not this one's value (it is missing)
+  const field = key => [...active[0].value.matchAll(new RegExp(`(?:^|[\\s,])${key}=([^,*\\n]*)`, 'g'))].map(m => m[1].trim()).map(v => (/[A-Z_]+=/.test(v) ? '' : v));
   return { vendor: unique(field('DRIVER_VENDOR'), 'vendor in the active GPU record'), version: unique(field('DRIVER_VERSION'), 'version in the active GPU record') };
 }
-const GPU_READY = text => { if (!text.includes('Graphics Feature Status')) return false; try { activeGpuDriver(text); return true; } catch { return false; } };
+// null when the page carries the sections and an unambiguous identity, else the reason it is not ready yet
+const gpuNotReady = text => { if (!text.includes('Graphics Feature Status')) return 'no Graphics Feature Status section'; try { activeGpuDriver(text); return null; } catch (e) { return e.message; } };
 
 // Bounded capture of the full visible chrome://gpu text (no WebGPU adapter is requested). Waits until the sections the environment identity needs
 // are present and the active driver is unambiguous; expiry is a classified `browser hang` (a stop) whose error carries the latest text as
-// `capturedText`. The page is always closed.
-export async function chromeGpuText(context, { timeoutMs = 20000, pollMs = 250 } = {}) {
+// `capturedText`; every snapshot is also handed to `onSnapshot` as it is read. The page is always closed.
+export async function chromeGpuText(context, { timeoutMs = 20000, pollMs = 250, onSnapshot } = {}) {
   const deadline = Date.now() + timeoutMs, left = () => Math.max(1, deadline - Date.now());
   const hang = what => new Error(`browser hang: chrome://gpu ${what} within ${timeoutMs} ms`);
   const within = async (promise, what) => { let timer; try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(hang(what)), left()); })]); } finally { clearTimeout(timer); } };
@@ -123,9 +143,10 @@ export async function chromeGpuText(context, { timeoutMs = 20000, pollMs = 250 }
   try {
     await within(page.goto('chrome://gpu'), 'did not load');
     for (;;) {
-      latest = await within(page.evaluate(collectVisibleText), 'did not answer');
-      if (GPU_READY(latest)) return latest;
-      if (Date.now() >= deadline) throw hang('did not fill in');
+      latest = await within(page.evaluate(collectVisibleText), 'did not answer'); onSnapshot?.(latest);   // published as soon as it is read
+      const notReady = gpuNotReady(latest);
+      if (!notReady) return latest;
+      if (Date.now() >= deadline) throw new Error(`${hang('did not fill in').message} (${notReady})`);
       await new Promise(r => setTimeout(r, Math.min(pollMs, left())));
     }
   } catch (error) { error.capturedText = latest; throw error; }   // the latest snapshot is evidence even when the capture fails

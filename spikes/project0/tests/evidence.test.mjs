@@ -106,3 +106,21 @@ test('legacy rows are used only without modern records, and must themselves be u
 test('a GPU record label listed twice is ambiguous and refused', () => {
   assert.throws(() => driverOf(rec(0, `${NV} *ACTIVE*`) + rec(0, INTEL)), /listed twice/);
 });
+
+// Fix round 5: labels and values are tokenised separately. A recognised label that comes before a value means the value is missing; a value never
+// swallows the next label, row or field.
+test('adjacent legacy labels: a label never becomes the previous row\'s value (Codex r5)', () => {
+  assert.throws(() => driverOf('Driver vendor\nDriver version\t580.1\n'), /driver vendor/);
+  assert.throws(() => driverOf('Driver vendor\tNVIDIA\nDriver version\nDriver vendor\tNVIDIA\n'), /driver (vendor|version)/);
+  assert.throws(() => driverOf('Driver version   :\n\nDriver vendor   :\n\nNVIDIA\n'), /driver version/);
+});
+test('an empty GPU record does not swallow the next record label, so duplicates stay visible (Codex r5)', () => {
+  assert.throws(() => driverOf(`GPU0                            :\n\n${rec(0, `${NV} *ACTIVE*`)}`), /listed twice/);
+  assert.throws(() => driverOf(`GPU0                            :\n\n${rec(1, `${NV} *ACTIVE*`)}`), /GPU0 has no value/);
+});
+test('a GPU record followed by an unrelated label has a missing value', () => {
+  assert.throws(() => driverOf(`GPU0                            :\n\nOptimus                         :\n\nfalse\n\n${rec(1, `${NV} *ACTIVE*`)}`), /GPU0 has no value/);
+});
+test('a driver field value never swallows the next field', () => {
+  assert.throws(() => driverOf(rec(0, 'VENDOR= 0x10de, DRIVER_VENDOR= DRIVER_VERSION=580.173.2.0 *ACTIVE*')), /driver vendor/);
+});
