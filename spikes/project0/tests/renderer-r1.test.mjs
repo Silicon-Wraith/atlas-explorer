@@ -38,6 +38,8 @@ function fakeDevice({ timestamps = false } = {}) {
   const tick = () => new Promise(r => setImmediate(r));
   return { device, submits: () => submits, pendingNow: () => pending.length, peakPending: () => peakPending,
     completeOne: async () => { pending.shift()?.res(); await tick(); },
+    // Resolves the next n completions together, before yielding, so their handlers are all queued before any of them runs (Codex T7 r5).
+    completeTogether: async n => { for (let i = 0; i < n; i++) pending.shift()?.res(); await tick(); },
     failOne: async (message = 'OperationError: queue completion rejected') => { pending.shift()?.rej(new Error(message)); await tick(); },
     mapAll: async () => { while (maps.length) maps.shift().res(); await tick(); } };
 }
@@ -332,3 +334,81 @@ for (const kind of ['band', 'finish']) {
     });
   });
 }
+
+// T7 fix round 5 (Codex T7 r5, finding 9 remainder): a handler's synchronous exception latches the abort inside the completion callback
+// itself, before the microtask queue runs another already-queued completion handler, so that handler submits nothing.
+test('r5/9d: two band completions resolved together: the first handler hits the cap, the second submits nothing', async () => {
+  await noUnhandled(async () => {
+    let clock = 0; const stalls = [];
+    const watchdog = createWatchdog({ every: null, stallMs: 10, now: () => clock, onStall: s => stalls.push(s) });
+    const fake = fakeDevice(), abort = createAbort(), cap = capOnNextBuffer(fake.device), { r } = make(fake, { abort, watchdog, alloc: cap.alloc });
+    const { releases, settles } = instrument(r, watchdog);
+    r.render(LARGE);
+    assert.equal(fake.submits(), 2);
+    cap.arm();
+    await fake.completeTogether(2);
+    assert.equal(fake.submits(), 2, 'the second, already-queued handler submits nothing after the first hit the cap');
+    assert.equal(abort.reason.kind, 'driver-error');
+    assert.deepEqual(stopReasonsOf([abort.invalidation()]), ['allocation cap exceeded']);
+    assert.equal(r.ledger.outstanding(), 0); assert.equal(releases.length, 2); assert.equal(new Set(releases).size, 2);
+    assert.deepEqual(settles.sort(), ['band:1', 'band:2']);
+    clock = 1000; watchdog.check(); assert.equal(stalls.length, 0);
+  });
+});
+
+test('r5/9e: a finish and a band resolved together: the finish handler hits the cap, the band handler submits nothing, the reservation is released', async () => {
+  await noUnhandled(async () => {
+    let clock = 0; const stalls = [];
+    const watchdog = createWatchdog({ every: null, stallMs: 10, now: () => clock, onStall: s => stalls.push(s) });
+    const fake = fakeDevice(), abort = createAbort(), cap = capOnNextBuffer(fake.device), { r } = make(fake, { abort, watchdog, alloc: cap.alloc });
+    const { releases, settles } = instrument(r, watchdog); let published = 0;
+    r.onPublish(() => published++);
+    r.render(SMALL); await fake.completeOne();                                                          // the finish is submitted
+    r.render(LARGE);                                                                                    // the finish and one band hold both credits
+    assert.equal(fake.submits(), 3);
+    cap.arm();
+    await fake.completeTogether(2);                                                                     // finish first, then the band
+    assert.equal(fake.submits(), 3, 'the band handler submits nothing after the finish handler hit the cap');
+    assert.equal(abort.reason.kind, 'driver-error');
+    assert.match(abort.invalidation(), /^driver error: allocation cap exceeded: /);
+    assert.deepEqual(stopReasonsOf([abort.invalidation()]), ['allocation cap exceeded']);
+    assert.ok(r.ring.every(s => s.owner === null), 'the finish released its reservation');
+    await fake.mapAll();
+    assert.equal(r.ledger.outstanding(), 0); assert.equal(releases.length, 3); assert.equal(new Set(releases).size, 3);
+    assert.deepEqual(settles.sort(), ['band:1', 'band:3', 'finish:1']);
+    clock = 1000; watchdog.check(); assert.equal(stalls.length, 0);
+    assert.equal(published, 0);
+  });
+});
+
+// Codex T7 r4 accepted: a driver's throwing onPublish callback (it runs inside the finish's mapping chain) latches driver-error with its message.
+test('r5/9f: a throwing onPublish callback latches driver-error with its message and leaves no reservation held', async () => {
+  await noUnhandled(async () => {
+    const fake = fakeDevice(), abort = createAbort(), { r, events } = make(fake, { abort });
+    r.onPublish(() => { throw new Error('publish handler failed'); });
+    r.render(SMALL); await fake.completeOne(); await fake.completeOne(); await fake.mapAll();
+    assert.equal(abort.aborted, true); assert.equal(abort.reason.kind, 'driver-error');
+    assert.equal(abort.invalidation(), 'driver error: publish handler failed');
+    assert.ok(events.log.some(e => e.type === 'handler-failed' && e.kind === 'finish' && e.live === true));
+    assert.ok(r.ring.every(s => s.owner === null)); assert.equal(r.ledger.outstanding(), 0);
+  });
+});
+
+// The same window in readTimestamps(): the copy's fulfilment handler pumps; if that pump hits the cap, the abort is latched before an
+// already-queued band handler runs, and the readback still rejects with the cap text (r3/7's path).
+test('r5/9g: a timestamp copy and a band resolved together: the copy\'s pump hits the cap, the band handler submits nothing', async () => {
+  await noUnhandled(async () => {
+    const fake = fakeDevice({ timestamps: true }), abort = createAbort(), cap = capOnNextBuffer(fake.device), { r } = make(fake, { abort, alloc: cap.alloc });
+    const outcome = r.readTimestamps().then(x => `resolved ${JSON.stringify(x)}`, e => e.message);
+    r.render(LARGE);                                                                                    // the copy and one band hold both credits
+    assert.equal(fake.submits(), 2);
+    cap.arm();
+    await fake.completeTogether(2);                                                                     // the copy first, then the band
+    assert.equal(fake.submits(), 2, 'the band handler submits nothing after the copy\'s pump hit the cap');
+    assert.equal(abort.reason?.kind, 'driver-error');
+    assert.deepEqual(stopReasonsOf([abort.invalidation()]), ['allocation cap exceeded']);
+    await fake.mapAll();
+    assert.match(await outcome, /allocation cap exceeded/);
+    assert.equal(r.ledger.outstanding(), 0);
+  });
+});

@@ -48,16 +48,21 @@ export class Renderer {
 
   // Every submission's completion settles its own credit, watchdog registration and resources exactly once, whether the completion
   // promise fulfils or rejects (Codex T7 r1, finding 4); then exactly one of onDone or onFail runs.
-  // The handlers' own promise ends in a terminal rejection handler (Codex T7 r4, finding 9): an exception they throw, or one from an
-  // asynchronous chain onDone returns (a finish's mapping), goes to handlerFailed() and then to `rescue`, which releases what the handler
-  // still owned (a finish's ring reservation). The credit, watchdog and resource settlement above has already run and is not repeated.
+  // A handler's exception (Codex T7 r4/r5, finding 9) is caught *inside* the callback that threw it, by guard(): the abort is latched
+  // synchronously, before the microtask queue can run another completion handler that is already queued (which would otherwise submit
+  // again), and only then does `rescue` release what the handler still owned (a finish's ring reservation). The handlers' own promise
+  // also ends in a terminal rejection handler, for anything asynchronous that is not guarded. The credit, watchdog and resource
+  // settlement in once() has already run and is not repeated.
   settle(completion, ticket, done, cleanup, onDone, onFail, { kind, job, rescue = () => {} } = {}) {
     let settled = false;
     const once = () => { if (settled) return false; settled = true; done(); cleanup(); this.ledger.release(ticket); return true; };
-    completion.then(() => { if (once()) return onDone(); }, error => { if (once()) return onFail(error); }).catch(error => {
-      this.handlerFailed(job, kind, error);
-      try { rescue(); } catch (again) { this.handlerFailed(job, kind, again); }   // terminal: nothing escapes as an unhandled rejection
-    });
+    completion.then(this.guard(job, kind, rescue, () => { if (once()) return onDone(); }), this.guard(job, kind, rescue, error => { if (once()) return onFail(error); }))
+      .catch(error => this.rescued(job, kind, rescue, error));
+  }
+  guard(job, kind, rescue, fn) { return (...args) => { try { return fn(...args); } catch (error) { this.rescued(job, kind, rescue, error); } }; }
+  rescued(job, kind, rescue, error) {
+    this.handlerFailed(job, kind, error);                                                // latches first ...
+    try { rescue(); } catch (again) { this.handlerFailed(job, kind, again); }            // ... then releases; nothing escapes unhandled
   }
   // A completion handler threw (e.g. the pump's next band hit the allocation cap). In the live device epoch this latches the session abort
   // {kind: 'driver-error', message} with the original message, so its invalidation keeps text such as `allocation cap exceeded` for the
@@ -176,28 +181,29 @@ export class Renderer {
     device.queue.submit([enc.finish()]); this.submits++;
     this.events.mark('submit', { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch: ++this.batchSeq, kind: 'finish' });
     const suppressed = () => { this.events.mark('suppressed-publication', { requestId: job.requestId }); };
-    // If a handler below throws, settle()'s terminal handler latches the abort first and only then calls release() (rescue), whose pump
-    // therefore submits nothing (Codex T7 r4, finding 9). The mapping chain is returned, so its handlers' exceptions are observed too.
+    // If a handler below throws, guard() latches the abort synchronously and only then calls release() (rescue), whose pump therefore
+    // submits nothing (Codex T7 r4/r5, finding 9). The mapping handlers are guarded the same way, and the chain is returned for the
+    // terminal handler.
     this.settle(device.queue.onSubmittedWorkDone(), ticket, done, () => { dstB.destroy(); this.drained(t); }, () => {
       this.events.mark('complete', { requestId: job.requestId });
       this.pump();                                                                        // the released credit may serve a newer request
       if (!this.current(job)) { release(); return suppressed(); }
       const abortRace = this.abort.race ? this.abort : { race: p => p };
-      return mapWithin(slot.buf, abortRace, this.mapDeadlineMs ?? 5000).then(() => {
+      return mapWithin(slot.buf, abortRace, this.mapDeadlineMs ?? 5000).then(this.guard(job, 'finish', release, () => {
         const c = new Uint32Array(slot.buf.getMappedRange().slice(0)); slot.buf.unmap();
         release();
         if (!this.current(job)) return suppressed();
         const counts = { total: c[0], hit: c[1], miss: c[2], point: c[3], steps: c[4], failure: c[5], normalUnavailable: c[6] };
         const e = this.events.mark('publish', { requestId: job.requestId, generation: job.generation, label: job.label, W: job.W, H: job.H, counts });
         for (const h of [...this.handlers]) h({ requestId: job.requestId, generation: job.generation, epoch: job.epoch, label: job.label, view: job.view, W: job.W, H: job.H, counts, publishedMs: e.t });
-      }, error => {
+      }), this.guard(job, 'finish', release, error => {
         // A current generation's mapping failure ends the experiment and wakes the waiting driver; a retired one stays suppressed. The abort
         // is latched before the reservation's release can pump; the reservation is released on every outcome.
         const current = this.current(job);
         if (current && this.abort.abort) this.abort.abort({ kind: 'harness', message: error.message });
         release();
         if (!current) suppressed();
-      });
+      }));
     }, error => { const current = this.failed(job, 'finish', error); release(); if (!current) suppressed(); this.pump(); }, { kind: 'finish', job, rescue: release });
   }
 
@@ -235,7 +241,12 @@ export class Renderer {
       const completion = this.device.queue.onSubmittedWorkDone();
       // The handlers' own promise is the one awaited (Codex T7 r3, finding 7): an exception they throw, such as the pump's next band
       // hitting the allocation cap, rejects this readback through the caller's failure path instead of escaping unhandled.
-      const handled = completion.then(() => { if (settle()) this.pump(); }, error => {
+      // The fulfilment's pump is guarded like a band's (Codex T7 r5): its exception latches driver-error synchronously, before another queued
+      // completion handler can submit, and is rethrown so the readback rejects with it.
+      const handled = completion.then(() => {
+        if (!settle()) return;
+        try { this.pump(); } catch (error) { this.handlerFailed(null, 'timestamp-readback', error); throw error; }
+      }, error => {
         if (settled) return;
         const current = this.epochLive(), message = error?.message ?? String(error);
         this.events.mark('submission-failed', { epoch: this.deviceEpoch, kind: 'timestamp-readback', current, message });
