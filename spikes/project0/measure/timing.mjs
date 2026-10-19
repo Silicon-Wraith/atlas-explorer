@@ -122,8 +122,8 @@ export function validateSources(raw, companionOf) {
 // G12's recorded schedule (T9 fix round 4, Codex T9 r4 finding 1). Every scheduling field must be finite and the skip flags explicit; the planned
 // intervals must be the frozen grid (cycle i starts at c0₀ + i·cycleMs, phase k is planned for [c0 + phaseOffsetsMs[k], c0 + phaseOffsetsMs[k+1]));
 // the actual record must be ordered (cycle start ≤ each phase's start ≤ its end ≤ the next phase's start ≤ checkpoint sent ≤ replied ≤ cycle end ≤
-// the next cycle's first phase); a run phase covers its span up to its planned end (the driver's path runs until then), and a skipped phase is
-// justified only when it started at or after its planned end, with no span. The overrun is derived exactly as the driver decides it: the reply
+// the next cycle's first phase); the skip flag must be the driver's rule in both directions: a run phase started before its planned end and covers
+// its span up to it (the driver's path runs until then), a skipped phase started at or after its planned end and has no span. The overrun is derived exactly as the driver decides it: the reply
 // came after the boundary; an on-time cycle waits until its boundary. A flag, a deadline-miss count or a wall time that contradicts these
 // timestamps invalidates; genuine overruns stay as recorded deadline misses (a performance result, not an invalidation).
 const same = (a, b) => Math.abs(a - b) <= 8 * Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b));
@@ -160,7 +160,8 @@ function validateCycleLog(raw, fx) {
       if (p.skipped) {
         if (p.startMs < p.plannedEndMs) throw invalid(`G12: cycle ${i} ${p.view} was skipped at ${p.startMs} ms, before its planned end ${p.plannedEndMs} ms`);
         if (p.endMs !== p.startMs) throw invalid(`G12: cycle ${i} ${p.view} was skipped but records a span [${p.startMs}, ${p.endMs})`);
-      } else if (p.endMs < p.plannedEndMs && !same(p.endMs, p.plannedEndMs)) throw invalid(`G12: cycle ${i} ${p.view} ran until ${p.endMs} ms, before its planned end ${p.plannedEndMs} ms`);
+      } else if (p.startMs >= p.plannedEndMs) throw invalid(`G12: cycle ${i} ${p.view} is recorded as run, but it started at ${p.startMs} ms, at or after its planned end ${p.plannedEndMs} ms (the driver skips a phase whose time is gone)`);
+      else if (p.endMs < p.plannedEndMs && !same(p.endMs, p.plannedEndMs)) throw invalid(`G12: cycle ${i} ${p.view} ran until ${p.endMs} ms, before its planned end ${p.plannedEndMs} ms`);
       at = p.endMs; after = `the end of ${p.view} at ${p.endMs} ms`;
     }
     if (c.checkpointSentMs < at) throw invalid(`G12: cycle ${i}'s checkpoint was sent at ${c.checkpointSentMs} ms, before ${after}`);

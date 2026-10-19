@@ -107,6 +107,19 @@ test('a skipped phase must be justified by the clock, and its count is derived',
   await assert.rejects(g12(spanned), /G12: cycle 2 bulb-overview was skipped but records a span/);
 });
 
+test('a phase whose time was gone cannot be recorded as run: the driver would have skipped it, so the hidden miss is refused', async () => {
+  // After an overrun into cycle 3's first phase, that phase is relabelled as run with no span, and the count left at the overrun alone.
+  const relabel = span => edit((raw, log) => {
+    log[2].checkpointRepliedMs = log[2].c0 + S.cycleMs + OFF[1] + 10; log[2].endedMs = log[2].checkpointRepliedMs + 0.2; log[2].overrun = true;
+    const [p0, p1] = log[3].phases; p0.startMs = log[2].endedMs + 0.1; p0.endMs = p0.startMs + span; p0.skipped = false; p1.startMs = p0.endMs + 0.1; raw.deadlineMisses = 1;
+  });
+  await assert.rejects(g12(relabel(0)), /G12: cycle 3 bulb-overview is recorded as run, but it started at [\d.]+ ms, at or after its planned end [\d.]+ ms/);
+  await assert.rejects(g12(relabel(5)), /G12: cycle 3 bulb-overview is recorded as run, but it started at/);
+  // Recorded as the driver records it, the skip is counted.
+  const honest = relabel(0); honest.cycleLog[3].phases[0].skipped = true; honest.deadlineMisses = 2;
+  assert.equal((await g12(honest)).deadlineMisses, 2);
+});
+
 test('the wall time must be the recorded sequence span', async () => {
   await assert.rejects(g12(edit(raw => { raw.wallMs -= 1000; })), /G12: wallMs [\d.]+ is not the recorded span [\d.]+ ms \(cycle 0 start to cycle 59 end\)/);
   await assert.rejects(g12(edit(raw => { raw.wallMs += 1000; })), /G12: wallMs [\d.]+ is not the recorded span/);
