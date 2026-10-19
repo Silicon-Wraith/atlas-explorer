@@ -58,3 +58,51 @@ test('environment identity reads the Chrome 151 GPU0 line (DRIVER_VENDOR/DRIVER_
   const text = 'GPU0 : VENDOR= 0x10de, DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=580.173.2.0 *ACTIVE*\nGPU1 : DRIVER_VENDOR=Other, DRIVER_VERSION=1.0\n';
   assert.equal(environmentIdentity(text, { browserVersion: 'x', browserExecutable: 'y', session: 'z' }).driver, 'NVIDIA 580.173.2.0');
 });
+
+// Fix round 4: the GPU records are parsed explicitly and fail closed. Fixtures use the real Chrome 151 shape: a `GPUn   :` label line,
+// a blank line, then the record's value line.
+const ENV = { browserVersion: 'x', browserExecutable: 'y', session: 'z' };
+const rec = (n, value) => `GPU${n}                            :\n\n${value}\n\n`;
+const NV = 'VENDOR= 0x10de [Google Inc. (NVIDIA)], DEVICE=0x26b1 [ANGLE (NVIDIA, Vulkan 1.4.312 (NVIDIA RTX 6000 Ada Generation (0x000026B1)), NVIDIA-580.173.2.0)], DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=580.173.2.0';
+const INTEL = 'VENDOR= 0x8086 [Google Inc. (Intel)], DEVICE=0x46a6 [ANGLE (Intel, Vulkan 1.3 (Intel(R) Graphics))], DRIVER_VENDOR=Intel, DRIVER_VERSION=24.0.5';
+const driverOf = text => environmentIdentity(text, ENV).driver;
+
+test('the real multi-line Chrome 151 GPU record gives the active driver', () => {
+  assert.equal(driverOf(`Sandboxed :\n\nfalse\n\n${rec(0, `${NV} *ACTIVE*`)}Optimus :\n\nfalse\n`), 'NVIDIA 580.173.2.0');
+});
+test('a uniquely active integrated GPU keeps its own identity; an inactive NVIDIA entry does not replace it', () => {
+  assert.equal(driverOf(rec(0, `${INTEL} *ACTIVE*`) + rec(1, NV)), 'Intel 24.0.5');
+  assert.equal(driverOf(rec(0, NV) + rec(1, `${INTEL} *ACTIVE*`)), 'Intel 24.0.5');
+});
+test('two active GPU records are ambiguous and refused', () => {
+  assert.throws(() => driverOf(rec(0, `${NV} *ACTIVE*`) + rec(1, `${INTEL} *ACTIVE*`)), /driver.*2 active/);
+});
+test('GPU records with no active marker are refused, even when legacy rows are present', () => {
+  assert.throws(() => driverOf(rec(0, NV) + rec(1, INTEL) + 'Driver vendor\tLegacy\nDriver version\t1.0\n'), /driver.*0 active/);
+});
+test('an active record missing its vendor or version is refused, even when legacy rows are present', () => {
+  const legacy = 'Driver vendor\tLegacy\nDriver version\t1.0\n';
+  assert.throws(() => driverOf(rec(0, 'VENDOR= 0x10de, DRIVER_VERSION=580.173.2.0 *ACTIVE*') + legacy), /driver vendor/);
+  assert.throws(() => driverOf(rec(0, 'VENDOR= 0x10de, DRIVER_VENDOR=NVIDIA *ACTIVE*') + legacy), /driver version/);
+  assert.throws(() => driverOf(rec(0, 'VENDOR= 0x10de, DRIVER_VENDOR= , DRIVER_VERSION=580 *ACTIVE*')), /driver vendor/);
+});
+test('DRIVER_VERSION=, is an empty version, not ","', () => {
+  assert.throws(() => driverOf(rec(0, 'VENDOR= 0x10de, DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=, *ACTIVE*')), /driver version/);
+});
+test('a record with a repeated driver field is ambiguous and refused', () => {
+  assert.throws(() => driverOf(rec(0, 'DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=1, DRIVER_VERSION=2 *ACTIVE*')), /driver version/);
+});
+test('matching text outside any GPU record is ignored', () => {
+  const stray = 'Log Messages\n[1:1] DRIVER_VENDOR=Evil, DRIVER_VERSION=6.6.6 *ACTIVE*\n';
+  assert.throws(() => driverOf(stray), /driver/);                                       // no record and no legacy rows: refused
+  assert.equal(driverOf(stray + rec(0, `${NV} *ACTIVE*`)), 'NVIDIA 580.173.2.0');        // the record decides, the stray line does not
+  assert.equal(driverOf(rec(0, INTEL) + stray + rec(1, `${NV} *ACTIVE*`)), 'NVIDIA 580.173.2.0');
+});
+test('legacy rows are used only without modern records, and must themselves be unambiguous', () => {
+  assert.equal(driverOf('Driver vendor   :\n\nNVIDIA\n\nDriver version   :\n\n580.1\n'), 'NVIDIA 580.1');
+  assert.throws(() => driverOf('Driver vendor\tA\nDriver vendor\tB\nDriver version\t1\n'), /driver vendor/);
+  assert.throws(() => driverOf('Driver vendor\tA\n'), /driver version/);
+});
+test('a GPU record label listed twice is ambiguous and refused', () => {
+  assert.throws(() => driverOf(rec(0, `${NV} *ACTIVE*`) + rec(0, INTEL)), /listed twice/);
+});

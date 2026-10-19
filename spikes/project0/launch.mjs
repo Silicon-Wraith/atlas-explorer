@@ -90,24 +90,46 @@ export function collectVisibleText() {
   };
   return walk(document.body);
 }
-const GPU_READY = text => text.includes('Graphics Feature Status') && /DRIVER_VERSION=|Driver version\s/.test(text);
+// The chrome://gpu driver identity, fail closed. Chrome 151 lists each GPU as a `GPUn   :` label whose value is the next non-empty line (or the
+// rest of the label line). Exactly one record must be `*ACTIVE*`, with exactly one non-empty DRIVER_VENDOR and DRIVER_VERSION; that record is the
+// identity, whatever its vendor. Text outside the records is ignored. The legacy `Driver vendor`/`Driver version` rows are read only when the
+// page has no GPU records at all, and each must then appear exactly once with a value.
+export function activeGpuDriver(text) {
+  const fail = why => { throw new Error(`chrome://gpu driver identity: ${why}`); };
+  const unique = (values, what) => (values.length === 1 && values[0] ? values[0] : fail(`no unique non-empty driver ${what} ${values.length ? `(found ${JSON.stringify(values)})` : '(absent)'}`));
+  const records = [...text.matchAll(/^GPU(\d+)[ \t]*:[ \t]*(?:\n[ \t]*)*([^\n]*)/gm)].map(([, index, value]) => ({ index, value }));
+  if (!records.length) {
+    const row = name => [...text.matchAll(new RegExp(`^[ \\t]*Driver ${name}[ \\t]*:?[ \\t]*(?:\\n[ \\t]*)*([^\\n]*)`, 'gm'))].map(m => m[1].trim());
+    return { vendor: unique(row('vendor'), 'vendor row'), version: unique(row('version'), 'version row') };
+  }
+  if (new Set(records.map(r => r.index)).size !== records.length) fail('a GPU record is listed twice');
+  const active = records.filter(r => r.value.includes('*ACTIVE*'));
+  if (active.length !== 1) fail(`${active.length} active GPU records (exactly one required)`);
+  const field = key => [...active[0].value.matchAll(new RegExp(`(?:^|[\\s,])${key}=([^,*\\n]*)`, 'g'))].map(m => m[1].trim());
+  return { vendor: unique(field('DRIVER_VENDOR'), 'vendor in the active GPU record'), version: unique(field('DRIVER_VERSION'), 'version in the active GPU record') };
+}
+const GPU_READY = text => { if (!text.includes('Graphics Feature Status')) return false; try { activeGpuDriver(text); return true; } catch { return false; } };
 
 // Bounded capture of the full visible chrome://gpu text (no WebGPU adapter is requested). Waits until the sections the environment identity needs
-// are present; expiry is a classified `browser hang` (a stop). The page is always closed.
+// are present and the active driver is unambiguous; expiry is a classified `browser hang` (a stop) whose error carries the latest text as
+// `capturedText`. The page is always closed.
 export async function chromeGpuText(context, { timeoutMs = 20000, pollMs = 250 } = {}) {
   const deadline = Date.now() + timeoutMs, left = () => Math.max(1, deadline - Date.now());
   const hang = what => new Error(`browser hang: chrome://gpu ${what} within ${timeoutMs} ms`);
   const within = async (promise, what) => { let timer; try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(hang(what)), left()); })]); } finally { clearTimeout(timer); } };
-  const page = await within(context.newPage(), 'did not open');
+  const opening = context.newPage();
+  const page = await within(opening, 'did not open').catch(error => { opening.then(late => late.close().catch(() => {}), () => {}); throw error; });   // a late page is closed
+  let latest = '';
   try {
     await within(page.goto('chrome://gpu'), 'did not load');
     for (;;) {
-      const text = await within(page.evaluate(collectVisibleText), 'did not answer');
-      if (GPU_READY(text)) return text;
+      latest = await within(page.evaluate(collectVisibleText), 'did not answer');
+      if (GPU_READY(latest)) return latest;
       if (Date.now() >= deadline) throw hang('did not fill in');
       await new Promise(r => setTimeout(r, Math.min(pollMs, left())));
     }
-  } finally { await Promise.race([page.close(), new Promise(r => setTimeout(r, 2000))]).catch(() => {}); }
+  } catch (error) { error.capturedText = latest; throw error; }   // the latest snapshot is evidence even when the capture fails
+  finally { let timer; await Promise.race([page.close(), new Promise(r => { timer = setTimeout(r, 2000); })]).catch(() => {}); clearTimeout(timer); }
 }
 
 export function assertSandboxed(commandLine) {

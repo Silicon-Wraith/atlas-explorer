@@ -4,7 +4,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, relative, join } from 'node:path';
-import { ROOT } from './launch.mjs';
+import { ROOT, activeGpuDriver } from './launch.mjs';
 import { canonical } from './contract.js';
 import { readVerifiedFile } from './fixture-files.mjs';
 
@@ -46,11 +46,7 @@ export function launchConfiguration({ requestedArgs, mode, commandLine, profile 
 export const launchIdentity = info => ({ launchHash: sha256(canonical(launchConfiguration(info))), mode: info.mode });
 
 export function environmentIdentity(chromeGpuText, { browserVersion, browserExecutable, session }) {
-  // Chrome 151 prints the active device as `GPU0 : ... DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=580.x *ACTIVE*`; older builds had `Driver vendor` rows.
-  const active = /DRIVER_VENDOR=([^,\n]+),\s*DRIVER_VERSION=(\S+)[^\n]*\*ACTIVE\*/.exec(chromeGpuText);
-  const vendor = active?.[1]?.trim() ?? /Driver vendor\s+(.+)/.exec(chromeGpuText)?.[1]?.trim();
-  const version = active?.[2]?.trim() ?? /Driver version\s+(.+)/.exec(chromeGpuText)?.[1]?.trim();
-  if (!vendor || !version) throw new Error('chrome://gpu has no driver vendor/version');
+  const { vendor, version } = activeGpuDriver(chromeGpuText);   // exactly one active GPU record with complete fields, or it throws
   return { browserVersion, browserExecutable, driver: `${vendor} ${version}`, session };
 }
 

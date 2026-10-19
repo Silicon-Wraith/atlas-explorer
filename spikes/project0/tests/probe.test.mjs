@@ -100,3 +100,14 @@ test('the chrome://gpu text comes from the shared bounded capture, and its hang 
   const out = await runProbeInvocation(bad.d);
   assert.equal(bad.h.launches, 1); assert.match(out.stopped, /browser hang/); assert.equal(out.records[0].slot, 'incomplete');
 });
+
+test('a chrome://gpu timeout persists the latest captured text, still classified as a stop', async () => {
+  const partial = 'Graphics Feature Status\nWebGPU: Hardware accelerated\nGPU0 :\n\nVENDOR= 0x8086, DRIVER_VENDOR=Intel, DRIVER_VERSION=24.0.5\n';
+  const { h, d } = harness({ deps: { chromeGpuText: async () => { throw Object.assign(new Error('browser hang: chrome://gpu did not fill in within 500 ms'), { capturedText: partial }); } } });
+  const out = await runProbeInvocation(d);
+  const { record, artifacts } = h.written[0];
+  assert.equal(artifacts.find(a => a.name === 'probe-headed.chrome-gpu.txt').data, partial);
+  assert.equal(record.slot, 'incomplete'); assert.equal(record.metrics.probeOk, 0);
+  assert.ok(record.invalidations.some(x => /browser hang: chrome:\/\/gpu did not fill in/.test(x)));
+  assert.match(out.stopped, /browser hang/); assert.equal(h.launches, 1);
+});

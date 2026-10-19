@@ -35,7 +35,7 @@ export async function runProbeInvocation(deps = {}) {
         resultMetrics = result.metrics ?? {};
         probe = result.error ? { ok: false, error: result.error } : result.slots[0].raw;
         invalidations.push(...(result.invalidations ?? []), ...(result.error ? [`page: ${result.error}`] : []));
-        chromeGpuText = await d.chromeGpuText(launched.context, { timeoutMs: d.stepMs }); live();
+        chromeGpuText = await d.chromeGpuText(launched.context, { timeoutMs: d.stepMs }).catch(e => { chromeGpuText = e?.capturedText || chromeGpuText; throw e; }); live();   // a failed capture keeps its latest text as evidence
         try { identity = { ...launchIdentity(launchInfo), ...environmentIdentity(chromeGpuText, { browserVersion, browserExecutable: commandLine.split(/\s+/)[0], session: d.env.XDG_SESSION_TYPE || 'unknown' }) }; }
         catch (e) { invalidations.push(`environment identity: ${e.message}`); }
       };
