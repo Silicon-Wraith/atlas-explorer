@@ -22,3 +22,27 @@ conditions:
 
 The headless `requestAdapter() → null` result is not addressed by this rerun. It stays open for
 T10's single remediation decision.
+
+## E2 — G5 off-plane failure under FMA contraction (joint: Claude + Codex, Codex run 20261019T175943Z-a363)
+
+The headed development check of G5 at ce798d2 (`artifacts/project0/20261019T175713064Z-dev-g5-headed`)
+reports an off-plane componentRatio of **2.75**, against a limit of 1. The plane set passes at 0.274.
+
+Two independent reproductions agree on the cause. With multiply-adds fused at the contraction sites
+(`fma(x, x, -y²)`, `fma(2x, y|z|w, C)`), an f32 model matches the GPU on 32 of 32 components;
+Codex's model used exact BigInt FMA. Unfused f32 matches only 11 of 32, with a maximum ratio of 0.650.
+The error comes from cancellation in iterate 7's x component (ratio 2.47), carried into iterate 8's y
+component (ratio 2.75). The double-precision reference matches the frozen reference exactly.
+
+**Classification: a true G5 failure of the current implementation on this backend.**
+- WGSL permits fusion and has no portable way to prevent it in compute shaders. Splitting the
+  expression into temporaries is not a legitimate fix.
+- The approved spec does not say that G5 measures only unfused arithmetic, so the tolerance,
+  reference, orbit and exclusions remain binding and are not edited.
+- The WGSL stays unchanged for the rerun, and no search over expression variants is made. The
+  failure goes to T10's decision procedure.
+- Diagnosis consumes no remediation. Any shader, compiler or launch workaround aimed at this
+  failure would be the backend's single remediation under spec §6, even under the `dev` label.
+- G3, G4 and the G5 plane set remain valid comparisons, because each is within its threshold.
+- Relaxing the tolerance, changing the reference or orbit, adding an exclusion, or excusing
+  contraction would be a user decision. Neither author recommends any of them.
