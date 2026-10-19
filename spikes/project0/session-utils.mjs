@@ -38,24 +38,49 @@ export const STOPS = Object.freeze([
 export const stopReasons = record => STOPS.filter(([, test]) => test({ metrics: {}, invalidations: [], ...record })).map(([reason]) => reason);
 export const stopReasonsOf = invalidations => stopReasons({ invalidations });
 
-// Polls the page with each round trip bounded; enforces the outer deadline even if the page never answers; serves presented-canvas
-// capture requests (window.p0Capture) by screenshotting #view; keeps the last checkpoint.
-export async function waitResult(page, { gate, runDir, deadlineMs, roundTripMs = ROUND_TRIP_MS, pollMs = gate === 'G12' ? 15000 : 1000, writeFn = writeFile }) {
-  const start = Date.now(), captures = []; let checkpoints = 0, handled = 0, lastCheckpoint = null;
+// The result transport (T9 fix round 1, Codex T9 r1 finding 1): installed with page.exposeBinding *before* navigation, so the page can push
+// its result, its bounded checkpoints and its presented-canvas capture requests (window.p0Push) outside its measured windows, and Node never
+// evaluates in the page while a gate runs. A capture request is answered through the binding's reply once Node has screenshotted #view.
+// A page without exposeBinding (a test fake) gets no transport, and waitResult then fails closed.
+const TRANSPORTS = new WeakMap();
+export async function installTransport(page) {
+  if (typeof page?.exposeBinding !== 'function') return null;
+  const ch = { results: [], checkpoints: [], captures: [], failure: null, wake: new Set() };
+  const notify = () => { for (const wake of [...ch.wake]) wake(); };
+  await page.exposeBinding('p0Push', (_source, message) => {
+    const type = message?.type;
+    if (type === 'result') { ch.results.push(message.result); notify(); return true; }
+    if (type === 'checkpoint') { ch.checkpoints.push(message.checkpoint); notify(); return true; }
+    if (type === 'capture') return new Promise(ack => { ch.captures.push({ seq: message.seq, name: message.name, ack }); notify(); });
+    return false;
+  });
+  page.on?.('crash', () => { ch.failure ??= 'browser hang or crash: the page crashed'; notify(); });
+  page.on?.('close', () => { ch.failure ??= 'browser hang or crash: the page closed'; notify(); });
+  TRANSPORTS.set(page, ch);
+  return ch;
+}
+
+// Waits for the page's next pushed result under the Node-owned outer deadline, with no page evaluation: checkpoints are persisted as they
+// arrive (the last one is kept), capture requests are served by screenshotting #view (each bounded), and a crash or close ends the wait at
+// once. Results are consumed in order, so a reload's result is the next wait's.
+export async function waitResult(page, { gate, runDir, deadlineMs, roundTripMs = ROUND_TRIP_MS, writeFn = writeFile }) {
+  const ch = TRANSPORTS.get(page), captures = []; let lastCheckpoint = null, written = 0;
+  const done = result => ({ result, captures, lastCheckpoint });
+  if (!ch) return done({ error: `harness timeout: no result transport was installed before navigation (${gate})` });
+  const deadline = Date.now() + deadlineMs;
   for (;;) {
-    let state;
-    try { state = await bounded(page.evaluate(n => ({ result: window.p0Result ?? null, checkpoints: (window.p0Checkpoints || []).slice(n), capture: window.p0Capture ?? null }), checkpoints), roundTripMs, `browser hang: the page did not answer within ${roundTripMs} ms`); }
-    catch (e) { return { result: { error: e.message.startsWith('browser hang') ? e.message : `browser hang or crash: ${e.message}` }, captures, lastCheckpoint }; }
-    for (const cp of state.checkpoints) { lastCheckpoint = cp; await writeFn(resolve(runDir, `checkpoint-${checkpoints++}.json`), JSON.stringify(cp)); }
-    if (state.capture && state.capture.seq > handled) {
+    while (ch.checkpoints.length) { const cp = ch.checkpoints.shift(); lastCheckpoint = cp; await writeFn(resolve(runDir, `checkpoint-${written++}.json`), JSON.stringify(cp)); }
+    while (ch.captures.length) {
+      const request = ch.captures.shift();
       try {
         const png = await bounded(page.locator('#view').screenshot(), roundTripMs, 'browser hang: canvas capture');
-        captures.push({ name: state.capture.name, png }); handled = state.capture.seq;
-        await bounded(page.evaluate(seq => { window.p0CaptureAck = seq; }, handled), roundTripMs, 'browser hang: capture acknowledgement');
-      } catch (e) { return { result: { error: e.message }, captures, lastCheckpoint }; }
+        captures.push({ name: request.name, png }); request.ack(request.seq);
+      } catch (e) { request.ack(0); return done({ error: e.message }); }
     }
-    if (state.result) return { result: state.result, captures, lastCheckpoint };
-    if (Date.now() - start > deadlineMs) return { result: { error: `browser hang: no result within the ${deadlineMs} ms outer deadline` }, captures, lastCheckpoint };
-    await new Promise(r => setTimeout(r, pollMs));
+    if (ch.results.length) return done(ch.results.shift());
+    if (ch.failure) return done({ error: ch.failure });
+    const left = deadline - Date.now();
+    if (left <= 0) return done({ error: `browser hang: no result within the ${deadlineMs} ms outer deadline` });
+    await new Promise(r => { const wake = () => { clearTimeout(timer); ch.wake.delete(wake); r(); }; const timer = setTimeout(wake, left); ch.wake.add(wake); });
   }
 }

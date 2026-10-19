@@ -80,12 +80,14 @@ test('G8: stressSubmitted comes from the exact stress submission event; the sphe
   assert.equal((await metricsFor('G8', '0', { ...base, sphere: frame(2, 1200, 'bulb-overview') }, fixtures)).coverageErrors, 1);
 });
 
+const sources = [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => ({ gate: 'G6', slot: `${v}/${i}` }))), ...['0', '1', '2'].map(slot => ({ gate: 'G7', slot }))]
+  .map((x, i) => ({ ...x, windowStart: 1000 * i, windowEnd: 1000 * i + 900, valid: true }));   // T9 fix round 1: G9 names its twelve valid source windows
 test('G9 validates task records and derives harness attribution from recorded measures', async () => {
   const tasks = [{ ms: 60, start: 1, kind: 'application' }, { ms: 51, start: 2, kind: 'harness' }, { ms: 40, start: 3, kind: 'application' }, { ms: 70, start: 4, kind: 'unattributed' }];
-  assert.deepEqual(await metricsFor('G9', 'warmed', { windows: 12, longTasks: tasks, harnessMeasures: 24 }, fixtures), { windows: 12, applicationOver50: 1, unattributedOver50: 1, harnessRecorded: 1 });
-  assert.equal((await metricsFor('G9', 'warmed', { windows: 12, longTasks: [], harnessMeasures: 0 }, fixtures)).harnessRecorded, 0);
-  await assert.rejects(metricsFor('G9', 'warmed', { windows: 11, longTasks: [], harnessMeasures: 1 }, fixtures), /12 observation windows/);
-  await assert.rejects(metricsFor('G9', 'warmed', { windows: 12, longTasks: [{ ms: 60, start: 1, kind: 'mystery' }], harnessMeasures: 1 }, fixtures), /malformed/);
+  assert.deepEqual(await metricsFor('G9', 'warmed', { windows: 12, sources, longTasks: tasks, harnessMeasures: 24 }, fixtures), { windows: 12, applicationOver50: 1, unattributedOver50: 1, harnessRecorded: 1 });
+  assert.equal((await metricsFor('G9', 'warmed', { windows: 12, sources, longTasks: [], harnessMeasures: 0 }, fixtures)).harnessRecorded, 0);
+  await assert.rejects(metricsFor('G9', 'warmed', { windows: 11, sources, longTasks: [], harnessMeasures: 1 }, fixtures), /12 observation windows/);
+  await assert.rejects(metricsFor('G9', 'warmed', { windows: 12, sources, longTasks: [{ ms: 60, start: 1, kind: 'mystery' }], harnessMeasures: 1 }, fixtures), /malformed/);
 });
 
 test('G12 validates every maintenance exercise with the G11 rules', async () => {

@@ -6,6 +6,7 @@ import { followPath as realFollowPath } from './timing.js';
 import { prepareResourceCheck as realPrepare, exerciseResources as realExercise } from './resources.js';
 import { observeIntegrity } from '../integrity.js';
 import { G12_WALL_TIMING } from '../../timing-contract.js';   // wallMs: the 60-cycle span, page clock
+import { maintenanceProblems } from '../../measure/resource-rules.js';   // the G11 rules, shared with Node (T9 fix round 1)
 export async function runG12(fx, status, { open, canvas, integrity: observe = observeIntegrity, followPath = realFollowPath, renderOnce = realRenderOnce,
   prepareResourceCheck = realPrepare, exerciseResources = realExercise, stressWaitMs = 5000, target = globalThis }) {
   const cfg = fx.stability;
@@ -14,16 +15,20 @@ export async function runG12(fx, status, { open, canvas, integrity: observe = ob
   target.p0Checkpoints = [];
   try {
     s = await open();
-    const setBacking = ([w, h]) => { canvas.width = w; canvas.height = h; };
+    // Deliberate resizes go through the integrity observer once it runs, so they are not interference (T9 fix round 1, finding 2).
+    const setBacking = ([w, h]) => { if (integrity?.resize) integrity.resize([w, h]); else { canvas.width = w; canvas.height = h; } };
     const draftAt = () => ({ W: canvas.width * cfg.internalScale, H: canvas.height * cfg.internalScale });
     // Baseline: prepare and cache every pipeline the sequence uses, exercise once, return to 1280x720, drain, record.
     const prepared = await prepareResourceCheck(s.device, s.alloc);
-    // Every maintenance result is kept; an error (e.g. a harness readback timeout) or an abort ends the sequence before anything else runs.
+    // Every maintenance result is kept and checked at once against every G11 rule (T9 fix round 1, finding 4): its own errors (e.g. a harness
+    // readback timeout), a malformed result, a content or band mismatch, an inventory that did not return, and so on. Any failure, or an abort,
+    // ends the sequence before anything else runs.
     const maintain = async () => {
       const raw = await exerciseResources(s.device, s.alloc, s.watchdog, s.abort, fx, prepared, status);
       maintenance.push(raw);
       s.abort.throwIfAborted();
-      if (raw.errors.length) throw new Error(raw.errors.join('; '));
+      const problems = maintenanceProblems(raw, fx);
+      if (problems.length) throw new Error(`G12 maintenance failed the G11 rules: ${problems.join('; ')}`);
     };
     await followPath(s, fx, 'bulb-overview', 'draft', 1);
     await renderOnce(s.renderer, { view: 'sphere', profile: 'draft' });
@@ -48,7 +53,10 @@ export async function runG12(fx, status, { open, canvas, integrity: observe = ob
       if ((c + 1) % cfg.resourceEvery === 0) await maintain();
       s.events.clear();
       if (performance.now() > c0 + cfg.cycleMs) deadlineMisses++; else await s.abort.race(sleep(c0 + cfg.cycleMs - performance.now()));
-      target.p0Checkpoints.push({ cycle: c, t: performance.now(), deadlineMisses, unhandled, losses: s.losses.length, inventory: s.alloc.inventory(), maintenanceErrors: maintenance.flatMap(m => m.errors) });
+      const checkpoint = { cycle: c, t: performance.now(), deadlineMisses, unhandled, losses: s.losses.length, inventory: s.alloc.inventory(), maintenanceErrors: maintenance.flatMap(m => m.errors ?? []) };
+      target.p0Checkpoints.push(checkpoint);
+      // pushed to Node at the cycle boundary (the bounded checkpoint the plan allows); never awaited, so Node's handling cannot delay the next cycle
+      if (typeof target.p0Push === 'function') Promise.resolve(target.p0Push({ type: 'checkpoint', checkpoint })).catch(() => {});
     }
     const wallMs = performance.now() - start;
     setBacking(cfg.baselineBacking); await followPath(s, fx, 'bulb-overview', 'draft', 1, draftAt());

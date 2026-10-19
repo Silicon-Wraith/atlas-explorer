@@ -4,6 +4,7 @@ import { throughput, percentile, coverageValid } from '../metrics.js';
 import { maintenanceFailed } from './resources.mjs';
 import { activeGpuDriver } from '../launch.mjs';            // the fail-closed Chrome 151 driver parser (T5 fix rounds 4-5)
 
+const G9_SOURCES = [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => `G6/${v}/${i}`)), 'G7/0', 'G7/1', 'G7/2'];
 export const LATE_LIMIT_MS = 4;                                  // the frozen G7 issuance-deviation limit (same constant as the driver)
 const KINDS = new Set(['application', 'harness', 'unattributed']);
 const invalid = message => Object.assign(new Error(message), { invalidation: true });
@@ -31,6 +32,9 @@ export function g1Metrics({ adapterInfo: a, chromeGpuText: text, probeOk }) {
   const desc = `${a?.vendor ?? ''} ${a?.architecture ?? ''} ${a?.description ?? ''}`;
   const software = a?.isFallbackAdapter === true || /swiftshader|llvmpipe|lavapipe|software/i.test(desc) ? 1 : 0;
   const nvidia = !software && /nvidia/i.test(desc) ? 1 : 0;
+  // T9 fix round 1 (Codex T9 r1, finding 5): software execution is named explicitly, independent of every corroboration error, so the shared stop
+  // classifier recognises the record even when the metrics cannot be returned.
+  if (software) invalidations.push(`software adapter: ${a?.isFallbackAdapter === true ? 'isFallbackAdapter is true' : `adapter identity names a software renderer: ${desc.trim()}`}`);
   const webgpuRow = WEBGPU_ROW.exec(text ?? '')?.[1]?.trim();
   if (!webgpuRow) invalidations.push('chrome://gpu has no WebGPU feature-status row');
   let driver = null;
@@ -111,8 +115,19 @@ export function metrics(gate, slot, raw, fx) {
     }
     case 'G9': {
       if (raw.windows !== 12) throw invalid(`G9 expects 12 observation windows, got ${raw.windows}`);
+      // T9 fix round 1 (Codex T9 r1, finding 3): G9 is bound to its source windows, the nine G6 and three G7 trials in order, each valid, and
+      // every long task must lie in one of them. An interrupted or invalid source window can never yield clean G9 evidence.
+      if (!Array.isArray(raw.sources) || raw.sources.length !== G9_SOURCES.length) throw invalid('G9: the twelve source windows are not recorded');
+      raw.sources.forEach((x, i) => {
+        const id = `${x?.gate}/${x?.slot}`;
+        if (id !== G9_SOURCES[i]) throw invalid(`G9: source window ${i} is ${id}, expected ${G9_SOURCES[i]}`);
+        if (x.valid !== true) throw invalid(`G9: source window ${id} is not valid`);
+        if (!(Number.isFinite(x.windowStart) && Number.isFinite(x.windowEnd) && x.windowEnd > x.windowStart)) throw invalid(`G9: source window ${id} has no finite interval`);
+      });
       if (!Array.isArray(raw.longTasks) || !raw.longTasks.every(t => KINDS.has(t.kind) && typeof t.ms === 'number' && Number.isFinite(t.ms) && t.ms > 0 && Number.isFinite(t.start))) throw invalid('G9: malformed long-task records');
       if (!Number.isInteger(raw.harnessMeasures)) throw invalid('G9: harness attribution was not recorded');
+      const outside = raw.longTasks.find(t => !raw.sources.some(x => t.start >= x.windowStart && t.start < x.windowEnd));
+      if (outside) throw invalid(`G9: a long task at ${outside.start} lies outside every source window`);
       const over = kind => raw.longTasks.filter(t => t.kind === kind && t.ms > 50).length;
       return { windows: raw.windows, applicationOver50: over('application'), unattributedOver50: over('unattributed'), harnessRecorded: raw.harnessMeasures > 0 ? 1 : 0 };
     }

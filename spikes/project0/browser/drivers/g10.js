@@ -11,8 +11,11 @@ export async function runG10(fx, status, { open, canvas, integrity = observeInte
       const watch = integrity(canvas), requestedMs = performance.now();
       let frame = null, error = null;
       try { frame = await renderOnce(s.renderer, { view, profile: 'settled' }, { timeoutMs }); } catch (e) { error = failure(s, e); }
-      slots.push({ slot: view, timingMethod: G10_SETTLED_TIMING, raw: { requestedMs, ...(frame ? { elapsedMs: frame.t - requestedMs } : {}), frame, prepared: 1, outstandingMax: s.renderer.stats().outstandingMax, integrity: watch.stop(), ...(error ? { error } : {}) } });
+      const observed = watch.stop();
+      slots.push({ slot: view, timingMethod: G10_SETTLED_TIMING, raw: { requestedMs, ...(frame ? { elapsedMs: frame.t - requestedMs } : {}), frame, prepared: 1, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, ...(error ? { error } : {}) } });
       if (s.abort.aborted) return { slots, invalidations: [s.abort.invalidation()] };    // a stop ends the invocation, recognisably
+      // T9 fix round 1 (Codex T9 r1, finding 3): an invalid view ends G10 before the next view is rendered, its raw kept
+      if (observed.violations.length) return { slots, invalidations: [`trial invalid: G10/${view}: ${observed.violations.join('; ')}`] };
     }
   } catch (error) { slots.push({ slot: 'bulb-overview', raw: { error: failure(s, error) }, timingMethod: G10_SETTLED_TIMING }); return { slots, invalidations: [failure(s, error)] }; }
   finally { s?.close(); }

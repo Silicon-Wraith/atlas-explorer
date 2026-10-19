@@ -39,75 +39,108 @@ export function bandDiagnostics(stats) {
 }
 
 // The burst schedule. Every timer belongs to this invocation and is cancelled on abort; a callback that fires early re-arms for its
-// absolute target, so a request is never issued before its frozen offset.
-export async function runBursts(s, schedule, { log = events, now = () => performance.now() } = {}) {
-  const timers = new Set(), issued = [], t0 = now() + 50;
+// absolute target, so a request is never issued before its frozen offset. A callback that fires more than LATE_LIMIT_MS after its target is
+// refused at once (T9 fix round 1, Codex T9 r1 finding 3): that request is not issued, every pending timer is cancelled, and the run rejects
+// with the deviation and the requests issued so far. (`lateLimitMs` is injectable for Node tests only; Node's metric derivation enforces the
+// frozen 4 ms independently.)
+export async function runBursts(s, schedule, { log = events, now = () => performance.now(), lateLimitMs = LATE_LIMIT_MS } = {}) {
+  const timers = new Set(), issued = [], t0 = now() + 50; let deviation = null, refuse;
+  const refused = new Promise((_, reject) => { refuse = reject; }); refused.catch(() => {});
   try {
-    await s.abort.race(Promise.all(schedule.map(r => new Promise(resolve => {
+    await s.abort.race(Promise.race([refused, Promise.all(schedule.map(r => new Promise(resolve => {
       const target = t0 + r.offsetMs;
       const fire = () => {
-        if (s.abort.aborted) return resolve();
+        if (s.abort.aborted || deviation) return resolve();
         const t = now();
         if (t < target) { timers.add(setTimeout(fire, target - t)); return; }
+        if (t - target > lateLimitMs) {
+          deviation = { id: r.id, burst: r.burst, index: r.index, scheduledMs: target, firedMs: t, lateByMs: t - target };
+          for (const id of timers) clearTimeout(id);
+          refuse(Object.assign(new Error(`G7 schedule deviation: request ${r.id} fired ${(t - target).toFixed(2)} ms late (limit ${lateLimitMs} ms)`), { scheduleDeviation: deviation, issued: issued.slice(), t0 }));
+          return resolve();
+        }
         const requestId = s.renderer.render({ view: 'bulb-overview', profile: 'draft', camera: r.camera, label: 'bulb-overview' });
         const requestedMs = log.list().findLast(e => e.type === 'request' && e.requestId === requestId).t;   // function-entry time
         issued.push({ id: r.id, burst: r.burst, index: r.index, requestId, scheduledMs: target, firedMs: t, requestedMs }); resolve();
       };
       timers.add(setTimeout(fire, Math.max(0, target - now())));
-    }))));
+    })))]));
   } finally { for (const id of timers) clearTimeout(id); }
   return { t0, issued };
 }
 
-const stagesOf = requestId => {
-  const ev = events.list();
+const stagesOf = (requestId, log = events) => {
+  const ev = log.list();
   return { submittedMs: ev.find(e => e.type === 'submit' && e.requestId === requestId)?.t ?? null, completedMs: ev.find(e => e.type === 'complete' && e.requestId === requestId)?.t ?? null };
 };
 
-export async function runTiming(fx, status, { open, canvas, integrity = observeIntegrity, longTasks = observeLongTasks, hzOf = refreshHz }) {
-  const lt = longTasks(), slots = [], tasksSeen = [];
+// T9 fix round 1 (Codex T9 r1, finding 3): every completed trial is validated before the next acquisition. An integrity violation, a G7 final
+// request without exactly one publication, or a late G7 issuance ends the invocation; the trial's raw evidence is kept in its slot, and the
+// reason is the invocation's invalidation. G9 is produced only after all twelve windows were valid, and it names them (`sources`), so Node binds
+// it to their identities, order and validity. Durations, the schedule, `now` and the late limit are injectable for Node tests only.
+export async function runTiming(fx, status, { open, canvas, integrity = observeIntegrity, longTasks = observeLongTasks, hzOf = refreshHz,
+  warmupSeconds = 3, windowSeconds = 30, schedule = burstSchedule(fx), quietMs = fx.bursts.quietMs, now, lateLimitMs }) {
+  const lt = longTasks(), slots = [], tasksSeen = [], sources = [];
   const hz = await hzOf(); let windows = 0;
   const stop = (slot, gate, s, error) => { slots.push({ slot, gate, raw: { error: failure(s, error) }, timingMethod: TIMING[gate] }); return { slots, invalidations: [failure(s, error)] }; };
+  const invalid = (slot, gate, raw, reason) => { slots.push({ slot, gate, raw, timingMethod: TIMING[gate] }); return { slots, invalidations: [reason] }; };
   for (const view of VIEWS) for (let trial = 0; trial < 3; trial++) {
     const slot = `${view}/${trial}`; let s = null;
     try {
       s = await open();
-      await followPath(s, fx, view, 'draft', 3);                                           // warm-up, discarded
+      await followPath(s, fx, view, 'draft', warmupSeconds);                               // warm-up, discarded
       const watch = integrity(canvas);
-      const r = await followPath(s, fx, view, 'draft', 30);
-      const observed = watch.stop();
-      tasksSeen.push(...lt.take(r.windowStart, r.windowStart + 30000)); windows++;
+      const r = await followPath(s, fx, view, 'draft', windowSeconds);
+      const observed = watch.stop(), windowEnd = r.windowStart + windowSeconds * 1000;
+      tasksSeen.push(...lt.take(r.windowStart, windowEnd)); windows++;
       const raw = await events.harness(async () => { const ts = await s.renderer.readTimestamps(); return { ...r, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, timestamps: ts.method, diagnostics: bandDiagnostics(s.renderer.stats()) }; });
+      if (observed.violations.length) return invalid(slot, 'G6', raw, `trial invalid: G6/${slot}: ${observed.violations.join('; ')}`);
       slots.push({ slot, gate: 'G6', raw, timingMethod: G6_WINDOW_TIMING });
+      sources.push({ gate: 'G6', slot, windowStart: r.windowStart, windowEnd, valid: true });
     } catch (error) { return stop(slot, 'G6', s, error); }
     finally { s?.close(); }
   }
-  const schedule = burstSchedule(fx);
+  const finalIndex = fx.bursts.requestsPerBurst - 1;
   for (let trial = 0; trial < 3; trial++) {
-    let s = null, off = null; const slot = String(trial);
+    let s = null, off = null, watch = null; const slot = String(trial), frames = [];
     try {
       s = await open();
-      await followPath(s, fx, 'bulb-overview', 'draft', 3);
-      const frames = []; off = s.renderer.onPublish(p => frames.push(frameOf(p)));
-      const watch = integrity(canvas);
-      const { t0, issued } = await runBursts(s, schedule);
-      await s.abort.race(sleep(fx.bursts.quietMs));
-      const observed = watch.stop(), end = performance.now();
+      await followPath(s, fx, 'bulb-overview', 'draft', warmupSeconds);
+      off = s.renderer.onPublish(p => frames.push(frameOf(p)));
+      watch = integrity(canvas);
+      let bursts;
+      try { bursts = await runBursts(s, schedule, { log: s.events ?? events, ...(now ? { now } : {}), ...(lateLimitMs !== undefined ? { lateLimitMs } : {}) }); }
+      catch (error) {
+        if (!error.scheduleDeviation) throw error;
+        // The late request was never issued; the trial's partial evidence is kept and the deviation is classified (never external interference).
+        const observed = watch.stop(); watch = null; const end = performance.now(), d = error.scheduleDeviation;
+        const tasks = lt.take(error.t0, end);
+        const cause = tasks.some(x => x.kind !== 'unattributed' && x.start < d.firedMs && x.start + x.ms > d.scheduledMs) ? 'application' : 'unknown';
+        return invalid(slot, 'G7', { windowStart: error.t0, observedMs: end - error.t0, issued: error.issued, deviation: { ...d, lateCause: cause }, frames, integrity: observed, refreshHz: hz },
+          `${error.message} (cause: ${cause}); not accepted as execution of the frozen schedule`);
+      }
+      const { t0, issued } = bursts;
+      await s.abort.race(sleep(quietMs));
+      const observed = watch.stop(), end = performance.now(); watch = null;
       const tasks = lt.take(t0, end); tasksSeen.push(...tasks); windows++;
       const raw = await events.harness(async () => {
         await s.renderer.readTimestamps();
         const withStages = issued.sort((a, b) => a.id - b.id).map(r => {
           const late = r.firedMs - r.scheduledMs;
           const cause = late <= LATE_LIMIT_MS ? null : tasks.some(x => x.kind !== 'unattributed' && x.start < r.firedMs && x.start + x.ms > r.scheduledMs) ? 'application' : 'unknown';
-          return { ...r, ...stagesOf(r.requestId), publishedMs: frames.find(f => f.requestId === r.requestId)?.t ?? null, lateByMs: late, lateCause: cause };
+          return { ...r, ...stagesOf(r.requestId, s.events ?? events), publishedMs: frames.find(f => f.requestId === r.requestId)?.t ?? null, lateByMs: late, lateCause: cause };
         });
         return { windowStart: t0, observedMs: end - t0, issued: withStages, frames, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, diagnostics: bandDiagnostics(s.renderer.stats()) };
       });
+      const unpublished = raw.issued.filter(r => r.index === finalIndex).map(r => [r.id, frames.filter(f => f.requestId === r.requestId).length]).filter(([, n]) => n !== 1);
+      const problems = [...observed.violations, ...unpublished.map(([id, n]) => `final request ${id} was published ${n} times`)];
+      if (problems.length) return invalid(slot, 'G7', raw, `trial invalid: G7/${slot}: ${problems.join('; ')}`);
       slots.push({ slot, gate: 'G7', raw, timingMethod: G7_BURST_TIMING });
+      sources.push({ gate: 'G7', slot, windowStart: t0, windowEnd: end, valid: true });
     } catch (error) { off?.(); return stop(slot, 'G7', s, error); }
-    finally { off?.(); s?.close(); }
+    finally { watch?.stop(); off?.(); s?.close(); }
   }
-  slots.push({ slot: 'warmed', gate: 'G9', raw: { windows, longTasks: tasksSeen, harnessMeasures: lt.harnessMeasures(), longestTaskMs: Math.max(0, ...tasksSeen.map(x => x.ms)) }, timingMethod: G9_LONG_TASK_TIMING });
+  slots.push({ slot: 'warmed', gate: 'G9', raw: { windows, sources, longTasks: tasksSeen, harnessMeasures: lt.harnessMeasures(), longestTaskMs: Math.max(0, ...tasksSeen.map(x => x.ms)) }, timingMethod: G9_LONG_TASK_TIMING });
   return { slots, invalidations: [] };
 }
 

@@ -1,7 +1,7 @@
 // spikes/project0/tests/session-utils.test.mjs — Node bounds: no lingering timers, never-answering pages, late launches closed.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bounded, boundedStart, waitResult, stopReasons } from '../session-utils.mjs';
+import { bounded, boundedStart, waitResult, installTransport, stopReasons } from '../session-utils.mjs';
 const timers = () => process.getActiveResourcesInfo().filter(x => x === 'Timeout').length;
 
 test('an operation that finishes immediately leaves no live timer behind', async () => {
@@ -12,16 +12,24 @@ test('an operation that finishes immediately leaves no live timer behind', async
   assert.equal(timers(), before);
 });
 
-test('a page whose evaluate() never answers is a hang within the round-trip bound', async () => {
+// T9 fix round 1 (Codex T9 r1, finding 1): waitResult no longer polls the page with evaluate(); the page pushes through a binding installed
+// before navigation (tests/transport.test.mjs). These two tests keep their intent against the push transport.
+test('a page that never pushes a result is a classified hang at the Node-owned deadline, with no evaluate call', async () => {
+  let binding = null, evaluates = 0;
+  const page = { exposeBinding: async (name, fn) => { binding = fn; }, evaluate: async () => { evaluates++; }, on() {} };
+  await installTransport(page);
   const t0 = Date.now();
-  const out = await waitResult({ evaluate: () => new Promise(() => {}) }, { gate: 'G6', runDir: '/x', deadlineMs: 60000, roundTripMs: 50, pollMs: 10 });
-  assert.match(out.result.error, /did not answer within 50 ms/); assert.ok(Date.now() - t0 < 1000);
+  const out = await waitResult(page, { gate: 'G6', runDir: '/x', deadlineMs: 50 });
+  assert.match(out.result.error, /^browser hang: no result within the 50 ms outer deadline/); assert.ok(Date.now() - t0 < 1000); assert.equal(evaluates, 0);
+  assert.ok(binding);
 });
 
-test('the outer deadline holds while the page answers without a result; the last checkpoint is kept', async () => {
-  let n = 0; const writes = [];
-  const page = { evaluate: async () => ({ result: null, checkpoints: n++ === 0 ? [{ cycle: 0 }] : [], capture: null }) };
-  const out = await waitResult(page, { gate: 'G12', runDir: '/x', deadlineMs: 50, roundTripMs: 50, pollMs: 10, writeFn: async p => writes.push(p) });
+test('the outer deadline holds while the page pushes only checkpoints; the last checkpoint is kept', async () => {
+  let binding = null; const writes = [];
+  const page = { exposeBinding: async (name, fn) => { binding = fn; }, on() {} };
+  await installTransport(page);
+  binding(null, { type: 'checkpoint', checkpoint: { cycle: 0 } });
+  const out = await waitResult(page, { gate: 'G12', runDir: '/x', deadlineMs: 50, writeFn: async p => writes.push(p) });
   assert.match(out.result.error, /outer deadline/); assert.deepEqual(out.lastCheckpoint, { cycle: 0 }); assert.equal(writes.length, 1);
 });
 

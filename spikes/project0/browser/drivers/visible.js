@@ -23,10 +23,16 @@ export async function storageCapture(s, { mapDeadlineMs = MAP_DEADLINE_MS } = {}
     return { W: t.W, H: t.H, classes: classifyRgba(rgba) };
   } finally { buf.destroy(); }
 }
-async function presentedCapture(s, name, seq) {
-  window.p0Capture = { seq, name };
-  const t0 = performance.now();
-  while ((window.p0CaptureAck ?? 0) < seq) { s.abort.throwIfAborted(); if (performance.now() - t0 > 20000) throw harnessTimeout(s.abort, `presented capture ${name} was not acknowledged within 20000 ms`); await sleep(20); }
+// T9 fix round 1 (Codex T9 r1, finding 1): the request goes through Node's binding (window.p0Push, installed before navigation) and Node's reply
+// is the acknowledgement, so Node never evaluates in the page. Bounded, and raced against the session abort.
+export async function presentedCapture(s, name, seq, { timeoutMs = 20000 } = {}) {
+  if (typeof window.p0Push !== 'function') throw harnessTimeout(s.abort, 'no presented-capture transport (window.p0Push is not installed)');
+  let timer;
+  const expired = new Promise((_, reject) => { timer = setTimeout(() => reject(harnessTimeout(s.abort, `presented capture ${name} was not acknowledged within ${timeoutMs} ms`)), timeoutMs); });
+  try {
+    const ack = await s.abort.race(Promise.race([window.p0Push({ type: 'capture', seq, name }), expired]));
+    if (ack !== seq) throw harnessTimeout(s.abort, `presented capture ${name} was refused by the runner`);
+  } finally { clearTimeout(timer); }
 }
 export async function run(gate, fx, params, status) {
   let s = null; const out = {};

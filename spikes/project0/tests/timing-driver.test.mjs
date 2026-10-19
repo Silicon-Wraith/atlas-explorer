@@ -89,4 +89,3 @@ test('G12: a maintenance readback timeout ends the sequence: no further renderin
   assert.deepEqual(out.slots[0].raw.maintenance, [failed], 'the failed maintenance record is preserved');
   assert.deepEqual(stopReasonsOf(out.invalidations), ['harness readback timeout']);
 });
-

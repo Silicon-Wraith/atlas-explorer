@@ -8,7 +8,7 @@ import { parseArgs } from 'node:util';
 import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText as captureChromeGpuText } from './launch.mjs';
 import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord, validateRecordTiming, notMeasured } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
-import { bounded, boundedStart, waitResult, stopReasons } from './session-utils.mjs';
+import { bounded, boundedStart, waitResult, installTransport, ROUND_TRIP_MS, stopReasons } from './session-utils.mjs';
 
 process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
 const REMEDIATION = resolve(ROOT, 'spikes/project0/launch-remediation.json');
@@ -117,6 +117,7 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
       if (state.expired) page.close().catch(() => {});                                          // a late page is closed, never navigated
       live();
       watchPage(page, note);
+      await bounded(installTransport(page), ROUND_TRIP_MS, `browser hang: the result transport was not installed within ${ROUND_TRIP_MS} ms`); live();   // before navigation: the page pushes, Node never polls
       await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}&runMode=${mode}${extra}`); live();
       const result = await d.waitResult(page, { gate, runDir, deadlineMs }); live();
       outcome = result;
@@ -156,6 +157,7 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
         if (state.expired) page.close().catch(() => {});                                        // a late page is closed, never navigated
         live();
         watchPage(page, note);
+        await bounded(installTransport(page), ROUND_TRIP_MS, `browser hang: the result transport was not installed within ${ROUND_TRIP_MS} ms`); live();   // before navigation; it survives the warm reload
         await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=G2&runMode=headed`); live();
         const first = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result; live();
         const firstInvalidations = [...(first.invalidations ?? []), ...(first.error ? [`page: ${first.error}`] : [])];

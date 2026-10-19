@@ -21,8 +21,11 @@ export async function runG8(fx, status, { open, canvas, integrity = observeInteg
       if (!frames.some(f => f.requestId === sphereId)) throw harnessTimeout(s.abort, `the sphere frame was not published within ${waitMs} ms`);
       await s.abort.race(Promise.race([s.device.queue.onSubmittedWorkDone(), sleep(2000)]));   // bounded drain: a stale stress result would publish now
       await s.abort.race(sleep(50)); s.abort.throwIfAborted();                              // a stop latched in the settle is this repetition's error
-      const sphere = frames.find(f => f.requestId === sphereId);
-      slots.push({ slot, timingMethod: G8_REPLACEMENT_TIMING, raw: { stressRequestId, stressSubmit: stressSubmit ? { requestId: stressSubmit.requestId, epoch: stressSubmit.epoch, t: stressSubmit.t } : null, sphereRequestId: sphereId, sphereRequested, latencyMs: sphere.t - sphereRequested, sphere, stalePublications: frames.filter(f => f.label === 'bulb-stress').length, outstandingMax: s.renderer.stats().outstandingMax, integrity: watch.stop() } });
+      const sphere = frames.find(f => f.requestId === sphereId), observed = watch.stop();
+      const raw = { stressRequestId, stressSubmit: stressSubmit ? { requestId: stressSubmit.requestId, epoch: stressSubmit.epoch, t: stressSubmit.t } : null, sphereRequestId: sphereId, sphereRequested, latencyMs: sphere.t - sphereRequested, sphere, stalePublications: frames.filter(f => f.label === 'bulb-stress').length, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed };
+      slots.push({ slot, timingMethod: G8_REPLACEMENT_TIMING, raw });
+      // T9 fix round 1 (Codex T9 r1, finding 3): an invalid repetition ends G8 before the next acquisition, its raw kept
+      if (observed.violations.length) return { slots, invalidations: [`trial invalid: G8/${slot}: ${observed.violations.join('; ')}`] };
     } catch (error) { slots.push({ slot, raw: { error: failure(s, error) }, timingMethod: G8_REPLACEMENT_TIMING }); return { slots, invalidations: [failure(s, error)] }; }
     finally { off?.(); s?.close(); }
   }

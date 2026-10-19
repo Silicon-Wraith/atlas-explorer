@@ -5,7 +5,8 @@ const params = new URLSearchParams(location.search);
 const status = document.getElementById('status');
 const say = text => { status.textContent = text; };
 const mode = params.get('mode');
-const finish = result => { window.p0Result = result; say(`${mode}: ${result.error ? 'error' : 'done'}`); };
+// The result is also pushed through Node's binding (installed before navigation), so Node never evaluates in the page while it waits.
+const finish = result => { window.p0Result = result; say(`${mode}: ${result.error ? 'error' : 'done'}`); if (typeof window.p0Push === 'function') Promise.resolve(window.p0Push({ type: 'result', result })).catch(() => {}); };
 const fail = error => finish({ error: `${error.name}: ${error.message}` });
 
 async function loadFixtures() {
