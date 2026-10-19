@@ -175,3 +175,36 @@ test('r1/4c: a retired generation\'s rejected completion is suppressed without a
     assert.equal(r.ledger.outstanding(), 0);
   });
 });
+
+// T7 fix round 2 (Codex T7 r2, finding 5): a rejected timestamp copy in the live epoch latches the abort before anything can pump, so no
+// further submission follows the failure; its credit and watchdog registration settle exactly once. After destroy() it only cleans up.
+test('r2/5: a rejected timestamp readback aborts before any further submission and settles its credit and watchdog once', async () => {
+  await noUnhandled(async () => {
+    let clock = 0; const stalls = [];
+    const watchdog = createWatchdog({ every: null, stallMs: 10, now: () => clock, onStall: s => stalls.push(s) });
+    const fake = fakeDevice({ timestamps: true }), abort = createAbort(), { r, events } = make(fake, { abort, watchdog });
+    const p = r.readTimestamps(); const outcome = p.then(() => 'resolved', e => e.message);
+    r.render(LARGE);                                                                                    // the copy holds one credit, one band the other
+    assert.equal(fake.submits(), 2); assert.equal(r.ledger.outstanding(), 2);
+    await fake.failOne();                                                                               // the copy's completion rejects
+    assert.equal(abort.aborted, true, 'the failure is latched'); assert.match(abort.invalidation(), /submission-failed/);
+    assert.equal(fake.submits(), 2, 'nothing is submitted after the failure');
+    assert.ok(events.log.some(e => e.type === 'submission-failed' && e.kind === 'timestamp-readback' && e.current === true));
+    assert.notEqual(await outcome, 'resolved');
+    assert.equal(r.ledger.outstanding(), 1, 'the copy released exactly its own credit');
+    await fake.completeOne();
+    assert.equal(r.ledger.outstanding(), 0); assert.equal(fake.submits(), 2);
+    clock = 1000; watchdog.check(); assert.equal(stalls.length, 0, 'both watchdog registrations were settled');
+  });
+});
+
+test('r2/5b: after destroy(), a rejected timestamp readback only cleans up: no abort', async () => {
+  await noUnhandled(async () => {
+    const fake = fakeDevice({ timestamps: true }), abort = createAbort(), { r } = make(fake, { abort });
+    const outcome = r.readTimestamps().then(() => 'resolved', e => e.message);
+    r.destroy();
+    await fake.failOne();
+    assert.equal(abort.aborted, false); assert.equal(r.ledger.outstanding(), 0);
+    assert.notEqual(await outcome, 'resolved');
+  });
+});

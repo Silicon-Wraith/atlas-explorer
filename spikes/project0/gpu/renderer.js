@@ -40,6 +40,7 @@ export class Renderer {
   }
 
   onPublish(handler) { this.handlers.add(handler); return () => this.handlers.delete(handler); }
+  // `submits` counts every queue submission, timestamp readback copies included; rendered work is described by `bands` and the events.
   stats() { return { outstandingMax: this.ledger.maxObserved(), submits: this.submits, bands: this.bands.slice(), planner: this.job?.planner.stats() ?? null }; }
   epochLive() { return this.alive && !this.abort.aborted && this.epoch() === this.deviceEpoch; }
   live(job) { return this.epochLive() && job.epoch === this.deviceEpoch; }
@@ -198,7 +199,7 @@ export class Renderer {
     const ticket = this.ledger.available() && !this.waiters.length ? this.ledger.take({ epoch: this.deviceEpoch, kind: 'timestamp-readback' })
       : await abort.race(new Promise((resolve, reject) => this.waiters.push({ resolve, reject })));
     let read = null, done = () => {}, submitted = false, settled = false;
-    const settle = () => { if (settled) return; settled = true; done(); this.ledger.release(ticket); this.pump(); };
+    const settle = () => { if (settled) return false; settled = true; done(); this.ledger.release(ticket); return true; };   // no pump here
     try {
       check();
       const owners = Array.from({ length: QUERY_PAIRS }, (_, slot) => this.bands.findLast(b => b.ts === slot) ?? null);
@@ -206,7 +207,18 @@ export class Renderer {
       const enc = this.device.createCommandEncoder(); enc.copyBufferToBuffer(this.timestamps.resolve, 0, read, 0, size);
       done = this.watchdog.submitted('timestamp-readback', { label: 'timestamp-readback', epoch: this.deviceEpoch });
       this.device.queue.submit([enc.finish()]); this.submits++; submitted = true;
-      await abort.race(this.device.queue.onSubmittedWorkDone().finally(settle));        // credit and watchdog settle on either outcome
+      // Fulfilment and rejection are handled separately (Codex T7 r2, finding 5). A rejection in the live epoch is recorded and latches the
+      // session abort *before* anything can pump, so no submission follows it; after destroy() or epoch retirement it only cleans up.
+      // Either way the credit and watchdog registration settle exactly once.
+      const completion = this.device.queue.onSubmittedWorkDone();
+      completion.then(() => { if (settle()) this.pump(); }, error => {
+        if (settled) return;
+        const current = this.epochLive(), message = error?.message ?? String(error);
+        this.events.mark('submission-failed', { epoch: this.deviceEpoch, kind: 'timestamp-readback', current, message });
+        if (current && this.abort.abort) this.abort.abort({ kind: 'submission-failed', message: `timestamp-readback completion rejected: ${message}` });
+        settle(); this.pump();
+      });
+      await abort.race(completion);
       check();
       await mapWithin(read, abort, this.mapDeadlineMs ?? 5000);
       check();
@@ -217,7 +229,7 @@ export class Renderer {
         if (row && row.doneMs !== null && ns[base + 1] >= ns[base]) { row.gpuMs = Number(ns[base + 1] - ns[base]) / 1e6; filled++; }
       }
       return { method: 'timestamp-query', filled };
-    } catch (error) { if (!submitted) settle(); throw error; }
+    } catch (error) { if (!submitted && settle()) this.pump(); throw error; }
     finally { read?.destroy(); }
   }
 
