@@ -26,6 +26,7 @@ export const EXPECTED_TIMING = Object.freeze({
   G5: freeze([CORRECTNESS_ONLY]),
   'derivative-policy': freeze([CORRECTNESS_ONLY]),
   probe: freeze([CORRECTNESS_ONLY]),
+  smoke: freeze([CORRECTNESS_ONLY]),                     // T7: the viewport smoke experiment; its raw per-frame ms are development observations, not timing evidence
 });
 
 const MEASURED_FIELDS = ['kind', 'clock', 'unit', 'field', 'start', 'end', 'readbackIncluded', 'timestampQueriesUsed'];

@@ -1,0 +1,183 @@
+// spikes/project0/gpu/renderer.js — WebGPU viewport. Every submission that can overlap replacement rendering — trace bands and the
+// shade/blit finish — takes credit from the one session Ledger; a Planner per generation.
+import { Ledger, Planner } from './scheduler.js';
+import { upload, profileWords, source, compile, dispatchOnce, mapWithin } from './webgpu.js';
+import { norm, cross } from '../reference/camera.js';
+import { currentEpoch } from './device.js';
+
+export async function prepareViewport(device, alloc, onStatus = () => {}) {
+  const fields = await source('./fields.wgsl'), trace = await source('./trace.wgsl');
+  const view = await compile(device, fields + trace + await source('./view.wgsl'), 'view');
+  const present = await compile(device, await source('./present.wgsl'), 'present');
+  onStatus('preparing viewport pipelines');
+  const [bulb, sphere, shade, blit] = await Promise.all([
+    device.createComputePipelineAsync({ layout: 'auto', compute: { module: view, entryPoint: 'view_band', constants: { FIELD: 3 } } }),
+    device.createComputePipelineAsync({ layout: 'auto', compute: { module: view, entryPoint: 'view_band', constants: { FIELD: 0 } } }),
+    device.createComputePipelineAsync({ layout: 'auto', compute: { module: present, entryPoint: 'shade' } }),
+    device.createRenderPipelineAsync({ layout: 'auto', vertex: { module: present, entryPoint: 'blit_vs' }, fragment: { module: present, entryPoint: 'blit_fs', targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }] }, primitive: { topology: 'triangle-list' } }),
+  ]);
+  return { bulb: alloc.pipeline(bulb), sphere: alloc.pipeline(sphere), shade: alloc.pipeline(shade), blit: alloc.pipeline(blit) };
+}
+
+const RING = 3, QUERY_PAIRS = 8, QUERY_STRIDE = 256;   // resolveQuerySet destinationOffset must be a multiple of 256
+const noAbort = { aborted: false };
+
+export class Renderer {
+  constructor({ device, viewport, canvas, fixtures, events, alloc, watchdog, abort = noAbort, epoch = currentEpoch, timestamps = device.features.has('timestamp-query') }) {
+    Object.assign(this, { device, viewport, canvas, fixtures, events, alloc, watchdog, abort, epoch, alive: true, seq: 0, generation: 0, batchSeq: 0, job: null, carry: null, pendingFinish: null, handlers: new Set() });
+    this.ledger = new Ledger({ max: 2 });
+    this.bands = []; this.submits = 0;
+    this.context = canvas.getContext('webgpu');
+    this.context.configure({ device, format: navigator.gpu.getPreferredCanvasFormat(), alphaMode: 'opaque' });
+    this.ring = Array.from({ length: RING }, () => ({ buf: alloc.buffer(device, { size: 32, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }), owner: null }));
+    this.counts = alloc.buffer(device, { size: 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+    this.timestamps = timestamps ? { set: device.createQuerySet({ type: 'timestamp', count: 2 * QUERY_PAIRS }), resolve: alloc.buffer(device, { size: QUERY_STRIDE * QUERY_PAIRS, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC }), next: 0 } : null;
+    this.targets = null; this.retired = [];
+  }
+
+  onPublish(handler) { this.handlers.add(handler); return () => this.handlers.delete(handler); }
+  stats() { return { outstandingMax: this.ledger.maxObserved(), submits: this.submits, bands: this.bands.slice(), planner: this.job?.planner.stats() ?? null }; }
+  live(job) { return this.alive && !this.abort.aborted && job.epoch === this.epoch(); }
+
+  targetsFor(W, H) {
+    if (this.targets?.W === W && this.targets?.H === H) return this.targets;
+    if (this.targets) this.retire(this.targets);
+    const S = GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;
+    const tex = format => this.alloc.texture(this.device, { size: [W, H], format, usage: S });
+    const t = { W, H, users: 0, depth: tex('r32float'), status: tex('r32uint'), normal: tex('rgba16float'), display: tex('rgba8unorm') };
+    t.all = [t.depth, t.status, t.normal, t.display];
+    return (this.targets = t);
+  }
+  retire(t) { t.retired = true; if (t.users === 0) t.all.forEach(x => x.destroy()); else this.retired.push(t); }
+  drained(t) { if (--t.users === 0 && t.retired) { t.all.forEach(x => x.destroy()); this.retired = this.retired.filter(x => x !== t); } }
+
+  render({ view, profile, camera, label = view, override = {} }) {
+    const requestId = ++this.seq;
+    this.events.mark('request', { requestId, view, profile, label });                 // at function entry: G7 measures from here
+    if (!this.alive) throw new Error('renderer destroyed');
+    if (Object.keys(override).some(k => !['W', 'H'].includes(k))) throw new Error('render override may only set W and H');
+    const fx = this.fixtures, v = fx.views[view], p = { ...fx.profiles[profile], ...(v.traceOverrides || {}), ...override };
+    const cam = camera || v.camera;
+    const f = norm(cam.target.map((x, i) => x - cam.origin[i])), r = norm(cross(f, [0, 0, 1])), u = cross(r, f);
+    const camWords = new Float32Array(24), camU = new Uint32Array(camWords.buffer);
+    [cam.origin, f, r, u].forEach((vec, i) => camWords.set(vec, 4 * i)); camU.set([p.W, p.H, 0, 0], 16);
+    this.job = { requestId, generation: ++this.generation, epoch: this.epoch(), label, view, W: p.W, H: p.H, profile: p,
+      pipeline: view === 'sphere' ? this.viewport.sphere : this.viewport.bulb, camWords, targets: this.targetsFor(p.W, p.H),
+      planner: new Planner({ rows: p.H, cols: p.W, carry: this.carry }), counted: false };
+    this.pendingFinish = null;
+    this.pump();
+    return requestId;
+  }
+
+  // Called on every credit release and every new request: a waiting finish goes first, then the current generation's bands.
+  pump() {
+    const job = this.job;
+    if (!job || !this.live(job) || this.watchdog.stopped) return;
+    if (this.pendingFinish === job) { if (this.ledger.available()) { this.pendingFinish = null; this.finish(job); } return; }
+    while (this.ledger.available()) {
+      const band = job.planner.next(); if (!band) return;
+      if (!job.counted) { job.counted = true; this.device.queue.writeBuffer(this.counts, 0, new Uint32Array(8)); }
+      const ticket = this.ledger.take({ epoch: job.epoch, generation: job.generation, requestId: job.requestId, kind: 'band' });
+      const batch = ++this.batchSeq;
+      const camWords = job.camWords.slice(); new Uint32Array(camWords.buffer).set([band.row0, band.rows, band.col0, band.cols], 20);
+      const prof = upload(this.device, this.alloc, profileWords(job.profile, 0, 0, 0), GPUBufferUsage.UNIFORM);
+      const camB = upload(this.device, this.alloc, camWords, GPUBufferUsage.UNIFORM);
+      const dummy = upload(this.device, this.alloc, new Float32Array(4), GPUBufferUsage.STORAGE);
+      const pl = job.pipeline, t = job.targets; t.users++;
+      const g0 = this.alloc.bindGroup(this.device.createBindGroup({ layout: pl.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: prof } }, { binding: 1, resource: { buffer: dummy } }] }));
+      const g1 = this.alloc.bindGroup(this.device.createBindGroup({ layout: pl.getBindGroupLayout(1), entries: [{ binding: 0, resource: { buffer: camB } }, { binding: 1, resource: t.depth.createView() }, { binding: 2, resource: t.status.createView() }, { binding: 3, resource: t.normal.createView() }] }));
+      const ts = this.timestamps ? this.timestamps.next++ % QUERY_PAIRS : null;
+      const enc = this.device.createCommandEncoder();
+      const pass = enc.beginComputePass(ts === null ? {} : { timestampWrites: { querySet: this.timestamps.set, beginningOfPassWriteIndex: 2 * ts, endOfPassWriteIndex: 2 * ts + 1 } });
+      pass.setPipeline(pl); pass.setBindGroup(0, g0); pass.setBindGroup(1, g1); pass.dispatchWorkgroups(Math.ceil(band.cols / 8), Math.ceil(band.rows / 8)); pass.end();
+      if (ts !== null) enc.resolveQuerySet(this.timestamps.set, 2 * ts, 2, this.timestamps.resolve, QUERY_STRIDE * ts);
+      const row = { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch, band, submitMs: null, doneMs: null, gpuMs: null, ts };
+      const done = this.watchdog.submitted(`band:${batch}`, { requestId: job.requestId, generation: job.generation, epoch: job.epoch });
+      this.device.queue.submit([enc.finish()]); this.submits++;
+      row.submitMs = performance.now(); this.bands.push(row);
+      this.events.mark('submit', { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch, kind: 'band' });
+      this.device.queue.onSubmittedWorkDone().then(() => {
+        done(); prof.destroy(); camB.destroy(); dummy.destroy(); this.drained(t);
+        row.doneMs = performance.now();
+        this.ledger.release(ticket);                                                      // releases its own credit even if obsolete
+        const current = this.job === job && this.live(job);
+        this.events.mark(current ? 'band-done' : 'stale-band', { requestId: job.requestId, generation: job.generation, batch });
+        if (current) {
+          job.planner.completed(band, row.doneMs - row.submitMs); this.carry = job.planner.carry();
+          if (job.planner.done()) this.pendingFinish = job;
+        }
+        this.pump();
+      });
+    }
+  }
+
+  finish(job) {
+    if (this.job !== job || !this.live(job)) return;
+    const { device } = this, t = job.targets; t.users++;
+    const ticket = this.ledger.take({ epoch: job.epoch, generation: job.generation, requestId: job.requestId, kind: 'finish' });
+    const slot = this.ring.find(s => s.owner === null);
+    if (slot) slot.owner = job;                                                           // reserved before the copy is encoded
+    const dstB = upload(device, this.alloc, new Float32Array([this.canvas.width, this.canvas.height, 0, 0]), GPUBufferUsage.UNIFORM);
+    const g = this.alloc.bindGroup(device.createBindGroup({ layout: this.viewport.shade.getBindGroupLayout(0), entries: [{ binding: 0, resource: t.status.createView() }, { binding: 1, resource: t.normal.createView() }, { binding: 2, resource: t.display.createView() }, { binding: 3, resource: { buffer: this.counts } }] }));
+    const blitGroup = this.alloc.bindGroup(device.createBindGroup({ layout: this.viewport.blit.getBindGroupLayout(0), entries: [{ binding: 0, resource: t.display.createView() }, { binding: 1, resource: { buffer: dstB } }] }));
+    const enc = device.createCommandEncoder(); const pass = enc.beginComputePass();
+    pass.setPipeline(this.viewport.shade); pass.setBindGroup(0, g); pass.dispatchWorkgroups(Math.ceil(t.W / 8), Math.ceil(t.H / 8)); pass.end();
+    if (slot) enc.copyBufferToBuffer(this.counts, 0, slot.buf, 0, 32);
+    const rp = enc.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 1 }, storeOp: 'store' }] });
+    rp.setPipeline(this.viewport.blit); rp.setBindGroup(0, blitGroup); rp.draw(3); rp.end();
+    const done = this.watchdog.submitted(`finish:${job.requestId}`, { requestId: job.requestId, generation: job.generation, epoch: job.epoch });
+    device.queue.submit([enc.finish()]); this.submits++;
+    this.events.mark('submit', { requestId: job.requestId, generation: job.generation, epoch: job.epoch, batch: ++this.batchSeq, kind: 'finish' });
+    device.queue.onSubmittedWorkDone().then(() => {
+      done(); dstB.destroy(); this.drained(t);
+      this.ledger.release(ticket);
+      this.events.mark('complete', { requestId: job.requestId });
+      const publish = counts => {
+        if (slot && slot.owner === job) slot.owner = null;                                 // only the reservation's owner releases
+        if (this.job !== job || !this.live(job)) { this.events.mark('suppressed-publication', { requestId: job.requestId }); return; }
+        const e = this.events.mark('publish', { requestId: job.requestId, generation: job.generation, label: job.label, W: job.W, H: job.H, counts });
+        for (const h of [...this.handlers]) h({ requestId: job.requestId, generation: job.generation, epoch: job.epoch, label: job.label, view: job.view, W: job.W, H: job.H, counts, publishedMs: e.t });
+      };
+      this.pump();                                                                        // the released credit may serve a newer request
+      if (!slot || !this.live(job)) return publish(null);
+      const abortRace = this.abort.race ? this.abort : { race: p => p };
+      mapWithin(slot.buf, abortRace, this.mapDeadlineMs ?? 5000).then(() => {
+        const c = new Uint32Array(slot.buf.getMappedRange().slice(0)); slot.buf.unmap();
+        publish({ total: c[0], hit: c[1], miss: c[2], point: c[3], steps: c[4], failure: c[5], normalUnavailable: c[6] });
+      }, error => {
+        if (slot.owner === job) slot.owner = null;                                        // the reservation is released on every outcome
+        // A current generation's mapping failure ends the experiment and wakes the waiting driver; a retired one stays suppressed.
+        if (this.job === job && this.live(job) && this.abort.abort) this.abort.abort({ kind: 'harness', message: error.message });
+        else this.events.mark('suppressed-publication', { requestId: job.requestId });
+      });
+    });
+  }
+
+  // Outside measured windows: read the resolved timestamp pairs, attaching gpuMs to the most recent band in each slot.
+  async readTimestamps() {
+    if (!this.timestamps || !this.alive) return { method: 'queue-completion', filled: 0 };
+    const size = QUERY_STRIDE * QUERY_PAIRS;
+    const read = this.alloc.buffer(this.device, { size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const abort = this.abort.race ? this.abort : { race: p => p, throwIfAborted() {} };
+    try {
+      await dispatchOnce(this.device, this.watchdog, abort, enc => enc.copyBufferToBuffer(this.timestamps.resolve, 0, read, 0, size), 'timestamp-readback');
+      await mapWithin(read, abort, this.mapDeadlineMs ?? 5000);
+      const ns = new BigUint64Array(read.getMappedRange().slice(0)); read.unmap();
+      let filled = 0;
+      for (let slot = 0; slot < QUERY_PAIRS; slot++) {
+        const base = (QUERY_STRIDE / 8) * slot;
+        const row = [...this.bands].reverse().find(b => b.ts === slot && b.doneMs !== null);
+        if (row && ns[base + 1] >= ns[base]) { row.gpuMs = Number(ns[base + 1] - ns[base]) / 1e6; filled++; }
+      }
+      return { method: 'timestamp-query', filled };
+    } finally { read.destroy(); }
+  }
+
+  destroy() {
+    if (!this.alive) return;
+    this.alive = false; this.handlers.clear();
+    if (this.targets) this.retire(this.targets);
+    for (const s of this.ring) if (s.owner === null) s.buf.destroy();
+    this.counts.destroy(); this.timestamps?.set.destroy(); this.timestamps?.resolve.destroy();
+  }
+}
