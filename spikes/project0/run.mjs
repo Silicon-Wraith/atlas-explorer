@@ -8,6 +8,7 @@ import { parseArgs } from 'node:util';
 import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText as captureChromeGpuText } from './launch.mjs';
 import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord, validateRecordTiming, notMeasured } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
+import { validateSources } from './measure/timing.mjs';
 import { bounded, boundedStart, waitResult, installTransport, armWindow, ROUND_TRIP_MS, stopReasons } from './session-utils.mjs';
 
 process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
@@ -33,7 +34,7 @@ export async function environment(context, commandLine, invalidations, publish =
 
 
 export async function finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, outcome, invalidations, fixtures, experiment, write = writeRecord }) {
-  const records = [], stamp = runDir.split('/').at(-1), result = outcome?.result;
+  const records = [], raws = new Map(), stamp = runDir.split('/').at(-1), result = outcome?.result;
   const slots = result?.slots?.length ? result.slots : [{ slot: 'incomplete', raw: { error: result?.error ?? 'no result', lastCheckpoint: outcome?.lastCheckpoint ?? null } }];
   for (const s of slots) {
     const slotGate = s.gate ?? gate;
@@ -49,17 +50,15 @@ export async function finalise({ gate, mode, campaign, runDir, identity, launchI
     if (!experiment && s.slot !== 'incomplete') { try { metrics = await metricsFor(slotGate, s.slot, raw, fixtures); } catch (e) { recordInvalidations.push(`metrics: ${e.message}`); } }
     // A slot that names source windows (G9, T9 fix round 2) is bound to its companion records of the same invocation: a missing or invalid
     // companion invalidates it, whatever its own raw says. The companions precede it in the slot order, so they are already finalised.
-    if (Array.isArray(raw?.sources)) for (const src of raw.sources) {
-      const companion = records.find(r => r.gate === src?.gate && r.slot === src?.slot);
-      if (!companion) recordInvalidations.push(`${slotGate}: source window ${src?.gate}/${src?.slot} has no companion record`);
-      else if (companion.invalidations.length) recordInvalidations.push(`${slotGate}: source window ${src.gate}/${src.slot} is invalid (${companion.invalidations[0]})`);
-    }
+    // Fix round 3: the binding compares each source interval with the companion's own raw observation (validateSources, also for read time).
+    if (Array.isArray(raw?.sources)) recordInvalidations.push(...validateSources(raw, (g, sl) => { const r = records.find(x => x.gate === g && x.slot === sl); return r ? { invalidations: r.invalidations, raw: raws.get(r.id) } : null; }));
     // The producer (the page driver) supplies each slot's timing method; a missing or invalid one invalidates the record and is never guessed.
     let timingMethod = s.slot === 'incomplete' ? notMeasured('incomplete: the session produced no result') : s.timingMethod;
     // Shape and meaning: the descriptor this gate expects, and the raw measurement it names (validateRecordTiming, timing-contract.js).
     try { validateRecordTiming({ gate: slotGate, slot: s.slot, timingMethod, invalidations: recordInvalidations }, raw); } catch (e) { recordInvalidations.push(e.message); timingMethod = notMeasured(e.message); }
     const id = `${slotGate}-${s.slot.replace(/[^A-Za-z0-9.-]/g, '_')}-${stamp}`;
     const record = { schema: 1, id, gate: slotGate, slot: s.slot, campaign, mode, experiment: Boolean(experiment), identity, invalidations: recordInvalidations, metrics, timingMethod };
+    raws.set(id, raw);
     records.push(await write(runDir, record, [
       { name: `${id}.raw.json`, data: JSON.stringify(raw) },
       { name: `${id}.launch.json`, data: JSON.stringify(launchInfo) },
@@ -127,6 +126,8 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
       await bounded(installTransport(page, { gate }), ROUND_TRIP_MS, `browser hang: the result transport was not installed within ${ROUND_TRIP_MS} ms`); live();   // before navigation: the page pushes, Node supervises its gate's fixed window plan
       await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}&runMode=${mode}${extra}`); live();
       const result = await d.waitResult(page, { gate, runDir, deadlineMs }); live();
+      // the supervision record (T9 fix round 3): every window's open/close times and checkpoints, and whether the plan completed
+      if (result?.supervision) await writeFile(resolve(runDir, 'supervision.json'), JSON.stringify(result.supervision));
       outcome = result;
     })(), outerMs, `browser hang: session exceeded its ${outerMs} ms outer bound`);
   } catch (error) {
@@ -167,13 +168,15 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
         await bounded(installTransport(page, { gate: 'G2' }), ROUND_TRIP_MS, `browser hang: the result transport was not installed within ${ROUND_TRIP_MS} ms`); live();   // before navigation; it survives the warm reload
         armWindow(page, 'G2/navigation');                                                   // Node's navigation deadline is armed before goto; nothing is exchanged inside it
         await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=G2&runMode=headed`); live();
-        const first = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result; live();
+        const firstWait = await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 }), first = firstWait.result; live();
+        if (firstWait?.supervision) await writeFile(resolve(runDir, `supervision-fresh-${i}.json`), JSON.stringify(firstWait.supervision));
         const firstInvalidations = [...(first.invalidations ?? []), ...(first.error ? [`page: ${first.error}`] : [])];
         slots.push({ slot: `fresh-${i}`, raw: { ...(first.slots?.[0]?.raw ?? { error: first.error }), emptyProfile: 1, freshProcess: 1 }, invalidations: firstInvalidations, timingMethod: first.slots?.[0]?.timingMethod });
         const stopNow = stopReasons({ invalidations: [...invalidations, ...firstInvalidations] }).length > 0;
         if (i === 2 && !stopNow) {                                                            // never reload after a stop
           live(); armWindow(page, 'G2/navigation'); await page.reload(); live();
-          const warm = (await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 })).result; live();
+          const warmWait = await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 }), warm = warmWait.result; live();
+          if (warmWait?.supervision) await writeFile(resolve(runDir, 'supervision-warm.json'), JSON.stringify(warmWait.supervision));
           slots.push({ slot: 'warm', raw: warm.slots?.[0]?.raw ?? { error: warm.error }, invalidations: [...(warm.invalidations ?? []), ...(warm.error ? [`page: ${warm.error}`] : [])], timingMethod: warm.slots?.[0]?.timingMethod });
         }
         const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);

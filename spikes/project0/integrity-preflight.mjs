@@ -26,36 +26,45 @@ export function evaluatePreflight({ first, reload, evaluates }) {
   return { pass: assertions.every(a => a.ok), assertions };
 }
 
-export async function runIntegrityPreflight({ mode = 'headed', totalMs = 120000 } = {}) {
+// Fix round 3 (Codex T9 r3, finding 5): the outer deadline latches `expired`; every step re-checks it after each await (`live`), and a server,
+// browser or page that arrives after expiry is disposed at once and never used (the run.mjs/probe.mjs pattern). A failed first load ends the run
+// before any reload. Dependencies are injectable so the stop paths are tested without a browser.
+export async function runIntegrityPreflight({ mode = 'headed', totalMs = 120000, deps = {} } = {}) {
+  const d = { startServer, launchChrome, effectiveCommandLine, newRunDir, implementationIdentity, installTransport, waitResult, writeFile, chromium, ...deps };
   process.env.TMPDIR = resolve(ROOT, 'artifacts/runtime');
-  const runDir = await newRunDir(`dev-integrity-preflight-${mode}`), evidence = { mode, errors: [] };
+  const runDir = await d.newRunDir(`dev-integrity-preflight-${mode}`), evidence = { mode, errors: [] }, state = { expired: false };
   let server = null, launched = null, evaluates = 0, first = null, reload = null;
-  try { evidence.implementation = await implementationIdentity(); } catch (e) { evidence.errors.push(`implementation identity: ${e.message}`); }
+  const live = () => { if (state.expired) throw new Error('browser hang: integrity preflight deadline passed'); };
+  // a resource that arrives after expiry is disposed at once; `finally` has already run
+  const arrived = async (resource, dispose) => { if (state.expired) { await Promise.resolve().then(() => dispose(resource)).catch(() => {}); live(); } return resource; };
+  try { evidence.implementation = await d.implementationIdentity(); } catch (e) { evidence.errors.push(`implementation identity: ${e.message}`); }
   try {
     await bounded((async () => {
-      server = await startServer();
-      launched = await launchChrome({ headless: mode === 'headless', args: ATTEMPT1_ARGS, profileKind: `integrity-preflight-${mode}`, chromium });
-      const commandLine = await effectiveCommandLine(launched.context); assertSandboxed(commandLine);
+      server = await arrived(await d.startServer(), r => r.stop()); live();
+      launched = await arrived(await d.launchChrome({ headless: mode === 'headless', args: ATTEMPT1_ARGS, profileKind: `integrity-preflight-${mode}`, chromium: d.chromium }), r => r.context.close()); live();
+      const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
       evidence.launch = { commandLine, profile: launched.profile, requestedArgs: launched.requestedArgs };
-      const page = await launched.context.newPage();
+      const page = await arrived(await launched.context.newPage(), p => p.close()); live();
       const evaluate = page.evaluate.bind(page); page.evaluate = (...a) => { evaluates++; return evaluate(...a); };   // counts any evaluation by this runner
-      page.on('pageerror', e => evidence.errors.push(`page error: ${e.message}`));
-      await installTransport(page, { gate: 'integrity-preflight' });
-      await page.goto(`${server.url}${HARNESS_PATH}?mode=integrity-preflight`); await page.bringToFront();
-      first = (await waitResult(page, { gate: 'integrity-preflight', runDir, deadlineMs: 30000 })).result;
-      await page.reload();
-      reload = (await waitResult(page, { gate: 'integrity-preflight', runDir, deadlineMs: 30000 })).result;
+      page.on('pageerror', e => { if (!state.expired) evidence.errors.push(`page error: ${e.message}`); });
+      await d.installTransport(page, { gate: 'integrity-preflight' }); live();
+      await page.goto(`${server.url}${HARNESS_PATH}?mode=integrity-preflight`); live(); await page.bringToFront?.(); live();
+      first = (await d.waitResult(page, { gate: 'integrity-preflight', runDir, deadlineMs: 30000 })).result; live();
+      if (first?.error) throw new Error(`first load: ${first.error}`);                // a failed first load is never reloaded
+      await page.reload(); live();
+      reload = (await d.waitResult(page, { gate: 'integrity-preflight', runDir, deadlineMs: 30000 })).result; live();
+      if (reload?.error) throw new Error(`reload: ${reload.error}`);
     })(), totalMs, `browser hang: the integrity preflight exceeded ${totalMs} ms`);
-  } catch (e) { evidence.errors.push(e.message); }
+  } catch (e) { state.expired = true; evidence.errors.push(e.message); }
   finally {
+    state.expired = true;                                                           // from here on, anything arriving is disposed, never used
     if (launched) await bounded(launched.context.close(), 30000, 'cleanup').catch(e => evidence.errors.push(`cleanup: ${e.message}`));
     await server?.stop().catch(e => evidence.errors.push(`server: ${e.message}`));
   }
-  for (const [k, r] of [['first', first], ['reload', reload]]) if (r?.error) evidence.errors.push(`${k}: ${r.error}`);
-  const verdict = evaluatePreflight({ first: first?.slots?.[0]?.raw ?? null, reload: reload?.slots?.[0]?.raw ?? null, evaluates });
+  const verdict = evaluatePreflight({ first: first?.error ? null : first?.slots?.[0]?.raw ?? null, reload: reload?.error ? null : reload?.slots?.[0]?.raw ?? null, evaluates });
   const pass = verdict.pass && evidence.errors.length === 0;
   const record = { schema: 1, kind: 'integrity-preflight', pass, assertions: verdict.assertions, evaluates, ...evidence, first, reload };
-  await writeFile(resolve(runDir, 'integrity-preflight.json'), JSON.stringify(record, null, 2));
+  await d.writeFile(resolve(runDir, 'integrity-preflight.json'), JSON.stringify(record, null, 2));
   return { pass, record, runDir };
 }
 

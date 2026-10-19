@@ -64,12 +64,12 @@ test('G9 accepts disjoint source windows of the frozen durations, and refuses ov
 
 test('G6 and G7 refuse a shortened observation at the evidence boundary', async () => {
   const frame = (i, t) => ({ requestId: i, t, view: 'bulb-overview', label: 'bulb-overview', W: 640, H: 360, counts: overviewCounts(640, 360) });
-  const g6 = observedMs => ({ windowStart: 1000, observedMs, frames: Array.from({ length: 950 }, (_, i) => frame(i + 1, 1000 + i * 31.5)), pendingMax: 1, outstandingMax: 2, integrity: { violations: [] } });
+  const g6 = observedMs => ({ windowStart: 1000, observedMs, warmupMs: 3005, config: { warmupSeconds: 3, windowSeconds: 30 }, frames: Array.from({ length: 950 }, (_, i) => frame(i + 1, 1000 + i * 31.5)), pendingMax: 1, outstandingMax: 2, integrity: { violations: [] } });
   assert.equal((await metricsFor('G6', 'bulb-overview/0', g6(30010), fixtures)).published, 950);
   await assert.rejects(metricsFor('G6', 'bulb-overview/0', g6(20), fixtures), /G6: the measured path covered 20 ms, not the frozen 30000 ms/);
   const issued = fixtures.bursts.requests.map((r, i) => { const s = 1000 + r.offsetMs; return { id: r.id, burst: r.burst, index: r.index, requestId: i + 1, scheduledMs: s, firedMs: s + 0.5, requestedMs: s + 0.6, submittedMs: s + 0.8, completedMs: s + 30, publishedMs: r.index === 19 ? s + 40 : null, lateByMs: 0.5, lateCause: null }; });
   issued.filter(r => r.index === 19).forEach(r => { r.completedMs = r.publishedMs - 1; });
-  const g7 = observedMs => ({ windowStart: 1000, observedMs, issued, frames: issued.filter(r => r.index === 19).map(r => frame(r.requestId, r.publishedMs)), outstandingMax: 2, integrity: { violations: [] } });
+  const g7 = observedMs => ({ windowStart: 1000, observedMs, warmupMs: 3005, config: { warmupSeconds: 3, quietMs: 1000, lateLimitMs: 4 }, issued, frames: issued.filter(r => r.index === 19).map(r => frame(r.requestId, r.publishedMs)), outstandingMax: 2, integrity: { violations: [] } });
   assert.equal((await metricsFor('G7', '0', g7(23100), fixtures)).requests, 400);
   await assert.rejects(metricsFor('G7', '0', g7(500), fixtures), /G7: the burst window covered 500 ms, not the frozen 23040 ms/);
 });

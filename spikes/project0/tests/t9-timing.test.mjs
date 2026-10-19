@@ -38,28 +38,28 @@ const gpuText = ['Graphics Feature Status', '*   WebGPU: Hardware accelerated', 
 const draft = fixtures.profiles.draft, settled = fixtures.profiles.settled, ok = { violations: [], events: [] };
 const overview = (requestId, t, W = draft.W, H = draft.H) => { const total = W * H, hit = Math.round(total * 0.28); return { requestId, t, view: 'bulb-overview', label: 'bulb-overview', W, H, counts: { total, hit, miss: total - hit, point: 0, steps: 0, failure: 0 } }; };
 const sphere = (requestId, t) => ({ requestId, t, view: 'sphere', label: 'sphere', W: draft.W, H: draft.H, counts: { total: 230400, hit: 58700, miss: 171700, point: 0, steps: 0, failure: 0 } });
-function g7raw() {
+function g7raw(start = 1000) {   // fix round 3: placed at its G9 source interval when it is a companion
   const issued = fixtures.bursts.requests.map((r, i) => {
-    const scheduledMs = 1000 + r.offsetMs, firedMs = scheduledMs + 0.5, requestedMs = firedMs + 0.1;
+    const scheduledMs = start + r.offsetMs, firedMs = scheduledMs + 0.5, requestedMs = firedMs + 0.1;
     return { id: r.id, burst: r.burst, index: r.index, requestId: i + 1, scheduledMs, firedMs, requestedMs, submittedMs: requestedMs + 0.2, completedMs: requestedMs + 30, publishedMs: null, lateByMs: 0.5, lateCause: null };
   });
   const finals = issued.filter(r => r.index === 19);
   finals.forEach((r, b) => { r.publishedMs = r.requestedMs + 40 + b; r.completedMs = r.publishedMs - 1; });
-  return { issued, frames: finals.map(r => overview(r.requestId, r.publishedMs)), outstandingMax: 2, integrity: ok, windowStart: 1000, observedMs: fixtures.bursts.durationMs + 1100 };
+  return { issued, frames: finals.map(r => overview(r.requestId, r.publishedMs)), outstandingMax: 2, integrity: ok, windowStart: start, observedMs: fixtures.bursts.durationMs + 5, warmupMs: 3005, config: { warmupSeconds: 3, quietMs: 1000, lateLimitMs: 4 } };
 }
 const R = fixtures.resources, textures = R.entries.filter(e => e.kind === 'texture').length;
 const good = { tableBytes: R.tableBytes, before: { bytes: 1, textures: 0, buffers: 1 }, after: { bytes: 1, textures: 0, buffers: 1 }, peakBytes: R.tableBytes + 1, written: Array(textures).fill(true), checks: Array.from({ length: R.readback.x.length * R.readback.y.length * textures }, () => ({ ok: true })), bandOk: true, fullBandBytes: 3932160, cancel: { before: 2, after: 0 }, outstandingMax: 2, errors: [] };
 const RAW = {
   G1: () => ({ adapterInfo: { vendor: 'nvidia', architecture: 'lovelace', device: '0x26b1', description: 'NVIDIA RTX 6000 Ada Generation', isFallbackAdapter: false, fallbackSource: 'adapter.info.isFallbackAdapter' }, probeOk: true }),
   G2: () => ({ navigationMs: 900, statusLog: [{ t: 5, text: 'preparing: acquiring GPU', visible: true }], frame: overview(1, 900), outstandingMax: 2, integrity: ok, emptyProfile: 1, freshProcess: 1 }),
-  G6: () => ({ windowStart: 1000, observedMs: 30010, frames: Array.from({ length: 950 }, (_, i) => overview(i + 1, 1000 + i * 31.5)), pendingMax: 1, outstandingMax: 2, integrity: ok, refreshHz: 60, timestamps: 'timestamp-query', diagnostics: {} }),
+  G6: (start = 1000) => ({ windowStart: start, observedMs: 30012, warmupMs: 3005, config: { warmupSeconds: 3, windowSeconds: 30 }, frames: Array.from({ length: 950 }, (_, i) => overview(i + 1, start + i * 31.5)), pendingMax: 1, outstandingMax: 2, integrity: ok, refreshHz: 60, timestamps: 'timestamp-query', diagnostics: {} }),
   G7: g7raw,
   G8: () => ({ stressRequestId: 1, stressSubmit: { requestId: 1, epoch: 1, t: 1000 }, sphereRequestId: 2, sphereRequested: 1050, latencyMs: 150, sphere: sphere(2, 1200), stalePublications: 0, outstandingMax: 2, integrity: ok }),
   G9: () => ({ windows: 12, sources: [...['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'].flatMap(v => [0, 1, 2].map(i => ({ gate: 'G6', slot: `${v}/${i}` }))), ...['0', '1', '2'].map(slot => ({ gate: 'G7', slot }))]
   .map((x, i) => ({ ...x, windowStart: i * 34000, windowEnd: i * 34000 + (x.gate === 'G6' ? 30012 : 23045), valid: true })),
     longTasks: [{ ms: 30, start: 1, kind: 'application' }], harnessMeasures: 24, longestTaskMs: 30 }),   // fix round 1: G9 names its source windows
   G10: () => ({ requestedMs: 100, elapsedMs: 900, frame: overview(1, 1000, settled.W, settled.H), prepared: 1, outstandingMax: 2, integrity: ok }),
-  G12: () => ({ cycles: 60, wallMs: 600000, deadlineMisses: 0, unhandled: 0, unplannedLosses: 0, baseline: { bytes: 1000, textures: 4, buffers: 5 }, final: { bytes: 1000, textures: 4, buffers: 5 }, baselinePrepared: 1, returned1280: 1, outstandingMax: 2, integrity: ok, maintenance: Array(7).fill(good) }),
+  G12: () => ({ cycles: 60, wallMs: 600000, deadlineMisses: 0, unhandled: 0, unplannedLosses: 0, baseline: { bytes: 1000, textures: 4, buffers: 5 }, final: { bytes: 1000, textures: 4, buffers: 5 }, baselinePrepared: 1, returned1280: 1, outstandingMax: 2, integrity: ok, maintenance: Array(7).fill(good), cycleLog: Array.from({ length: 60 }, (_, cycle) => ({ cycle, c0: cycle * 10000, overrun: false, phases: ['bulb-overview', 'sphere', 'bulb-detail-0.005'].map((view, k) => ({ view, plannedStartMs: cycle * 10000 + [0, 3000, 4000][k], plannedEndMs: cycle * 10000 + [3000, 4000, 7000][k], startMs: cycle * 10000 + [0, 3000, 4000][k], endMs: cycle * 10000 + [3000, 4000, 7000][k], skipped: false })) })) }),
 };
 const SLOT = { G1: 'headed', G2: 'fresh-0', G6: 'bulb-overview/0', G7: '0', G8: '0', G9: 'warmed', G10: 'bulb-overview', G12: 'sequence' };
 const descriptorOf = gate => MEASURED[gate] ?? CORRECTNESS_ONLY;
@@ -91,7 +91,7 @@ test('the T9 rows: one measured page-clock descriptor per timing gate, correctne
 test('a clean record of every T9 gate is written clean, with exactly its gatePlan keys, and accepted at read time with its raw payload', async () => {
   for (const gate of Object.keys(RAW)) {
     // fix round 2: G9 is bound to its twelve companion records of the same invocation, so it is finalised after clean G6 and G7 companions
-    const companions = gate !== 'G9' ? [] : RAW.G9().sources.map(x => ({ slot: x.slot, gate: x.gate, raw: RAW[x.gate](), timingMethod: MEASURED[x.gate] }));
+    const companions = gate !== 'G9' ? [] : RAW.G9().sources.map(x => ({ slot: x.slot, gate: x.gate, raw: RAW[x.gate](x.windowStart), timingMethod: MEASURED[x.gate] }));   // fix round 3: each companion observed exactly its source interval
     const all = await finalised(gate === 'G9' ? 'timing' : gate, [...companions, { slot: SLOT[gate], gate, raw: RAW[gate](), timingMethod: descriptorOf(gate) }]);
     for (const c of all.records.slice(0, -1)) assert.deepEqual(c.invalidations, [], `${c.gate}/${c.slot}: ${JSON.stringify(c.invalidations)}`);
     const records = all.records.slice(-1), saved = all.saved.slice(-1), raws = all.raws;

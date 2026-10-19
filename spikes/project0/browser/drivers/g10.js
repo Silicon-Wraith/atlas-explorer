@@ -4,7 +4,8 @@ import { session, renderOnce, failure } from './common.js';
 import { observeIntegrity } from '../integrity.js';
 import { G10_SETTLED_TIMING } from '../../timing-contract.js';   // elapsedMs: settled request to its publication, page clock
 import { pageSupervisor } from '../supervisor.js';
-export async function runG10(fx, status, { open, canvas, integrity = observeIntegrity, timeoutMs = 20000, sup = pageSupervisor() }) {
+import { DRIVER } from '../../supervision-plan.js';
+export async function runG10(fx, status, { open, canvas, integrity = observeIntegrity, timeoutMs = DRIVER.g10TimeoutMs, sup = pageSupervisor() }) {
   const slots = []; let s = null;
   try {
     s = await open();

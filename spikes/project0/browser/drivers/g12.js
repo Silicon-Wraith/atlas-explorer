@@ -43,13 +43,21 @@ export async function runG12(fx, status, { open, canvas, integrity: observe = ob
     const sequence = await sup.window('G12/sequence', async () => {
     integrity = observe(canvas, { allowedBacking: [cfg.baselineBacking, ...cfg.resizeBacking] });
     const [, toSphere, toDetail, toMaintenance] = cfg.phaseOffsetsMs;
-    const start = performance.now(); let deadlineMisses = 0;
+    const start = performance.now(); let deadlineMisses = 0; const cycleLog = [];
+    // T9 fix round 3 (Codex T9 r3, finding 3): the checkpoint exchange is budgeted inside the cycle's own idle time, after the maintenance point and
+    // before the boundary, so it can never consume the next cycle's motion. Every phase is recorded, run or skipped (no time left), with its
+    // planned and measured span; a cycle with a skipped phase or whose exchange ended after its boundary is an overrun, counted as a deadline miss.
     for (let c = 0; c < cfg.cycleCount; c++) {
-      const c0 = start + c * cfg.cycleMs;
-      const phase = async (view, untilMs) => { const seconds = (untilMs - performance.now()) / 1000; if (seconds > 0) await followPath(s, fx, view, 'draft', seconds, draftAt()); };
-      await phase('bulb-overview', c0 + toSphere);
-      await phase('sphere', c0 + toDetail);
-      await phase('bulb-detail-0.005', c0 + toMaintenance);
+      const c0 = start + c * cfg.cycleMs, boundary = c0 + cfg.cycleMs, entry = { cycle: c, c0, phases: [], overrun: false };
+      const phase = async (view, fromMs, untilMs) => {
+        const startMs = performance.now(), seconds = (untilMs - startMs) / 1000;
+        if (seconds <= 0) { entry.phases.push({ view, plannedStartMs: fromMs, plannedEndMs: untilMs, startMs, endMs: startMs, skipped: true }); return; }
+        await followPath(s, fx, view, 'draft', seconds, draftAt());
+        entry.phases.push({ view, plannedStartMs: fromMs, plannedEndMs: untilMs, startMs, endMs: performance.now(), skipped: false });
+      };
+      await phase('bulb-overview', c0, c0 + toSphere);
+      await phase('sphere', c0 + toSphere, c0 + toDetail);
+      await phase('bulb-detail-0.005', c0 + toDetail, c0 + toMaintenance);
       const stressId = s.renderer.render({ view: 'bulb-stress', profile: 'stress', label: 'bulb-stress', override: draftAt() });
       const w0 = performance.now();
       while (!s.events.list().some(e => e.type === 'submit' && e.requestId === stressId)) { s.abort.throwIfAborted(); if (performance.now() - w0 > stressWaitMs) throw harnessTimeout(s.abort, `the stress request was never submitted within ${stressWaitMs} ms`); await sleep(1); }
@@ -57,19 +65,24 @@ export async function runG12(fx, status, { open, canvas, integrity: observe = ob
       setBacking(cfg.resizeBacking[c % cfg.resizeBacking.length]);
       if ((c + 1) % cfg.resourceEvery === 0) await maintain();
       s.events.clear();
-      if (performance.now() > c0 + cfg.cycleMs) deadlineMisses++; else await s.abort.race(sleep(c0 + cfg.cycleMs - performance.now()));
       const checkpoint = { cycle: c, t: performance.now(), deadlineMisses, unhandled, losses: s.losses.length, inventory: s.alloc.inventory(), maintenanceErrors: maintenance.flatMap(m => m.errors ?? []) };
       target.p0Checkpoints.push(checkpoint);
-      await sup.checkpoint(checkpoint, s.abort);                                      // the reply arrives before the next measured cycle
+      entry.checkpointSentMs = performance.now();
+      await sup.checkpoint(checkpoint, s.abort);                                      // inside this cycle's idle time; the reply precedes the next cycle
+      entry.checkpointRepliedMs = performance.now();
+      if (performance.now() > boundary) entry.overrun = true; else await s.abort.race(sleep(boundary - performance.now()));
+      entry.endedMs = performance.now();
+      if (entry.overrun || entry.phases.some(p => p.skipped)) deadlineMisses++;
+      cycleLog.push(entry);
     }
     const wallMs = performance.now() - start;
     setBacking(cfg.baselineBacking); await followPath(s, fx, 'bulb-overview', 'draft', 1, draftAt());
     await s.abort.race(s.device.queue.onSubmittedWorkDone()); await s.abort.race(sleep(200)); s.abort.throwIfAborted();   // a stop in the final drain is the sequence's error
     const final = s.alloc.inventory(), observed = integrity.stop();
-    return { wallMs, deadlineMisses, final, observed };
+    return { wallMs, deadlineMisses, final, observed, cycleLog };
     });
-    const { wallMs, deadlineMisses, final, observed } = sequence;
-    return { slots: [{ slot: 'sequence', raw: { cycles: target.p0Checkpoints.length, wallMs, deadlineMisses, unhandled, unplannedLosses: s.losses.length, baseline, final, baselinePrepared: 1, returned1280: canvas.width === 1280 && canvas.height === 720 ? 1 : 0, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, maintenance }, timingMethod: G12_WALL_TIMING }], invalidations: [] };
+    const { wallMs, deadlineMisses, final, observed, cycleLog } = sequence;
+    return { slots: [{ slot: 'sequence', raw: { cycles: target.p0Checkpoints.length, wallMs, deadlineMisses, unhandled, unplannedLosses: s.losses.length, baseline, final, baselinePrepared: 1, returned1280: canvas.width === 1280 && canvas.height === 720 ? 1 : 0, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, maintenance, cycleLog }, timingMethod: G12_WALL_TIMING }], invalidations: [] };
   } catch (error) {
     return { slots: [{ slot: 'sequence', raw: { error: failure(s, error), cycles: target.p0Checkpoints.length, maintenance, unplannedLosses: s?.losses.length ?? 0 }, timingMethod: G12_WALL_TIMING }], invalidations: [failure(s, error)] };
   } finally { target.removeEventListener?.('error', onErr); target.removeEventListener?.('unhandledrejection', onErr); s?.close(); }

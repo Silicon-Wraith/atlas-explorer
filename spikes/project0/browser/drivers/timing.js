@@ -6,11 +6,12 @@ import { posesAt, burstSchedule } from '../paths.js';
 import { observeIntegrity, observeLongTasks, refreshHz } from '../integrity.js';
 import * as events from '../events.js';
 import { pageSupervisor } from '../supervisor.js';
+import { DRIVER } from '../../supervision-plan.js';   // the frozen driver configuration (fix round 3)
 import { G6_WINDOW_TIMING, G7_BURST_TIMING, G9_LONG_TASK_TIMING } from '../../timing-contract.js';
 const TIMING = { G6: G6_WINDOW_TIMING, G7: G7_BURST_TIMING };   // each slot's producer-supplied timing method (T9 registration)
 
 const VIEWS = ['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'];
-export const LATE_LIMIT_MS = 4;                    // the frozen issuance-deviation limit for the G7 burst schedule
+export const LATE_LIMIT_MS = DRIVER.lateLimitMs;    // the frozen issuance-deviation limit for the G7 burst schedule (4 ms)
 
 export async function followPath(s, fx, view, profile, seconds, override = {}) {
   const frames = [], t0 = performance.now(); let pending = 0, pendingMax = 0, off = null, endMs = null;
@@ -84,7 +85,7 @@ const stagesOf = (requestId, log = events) => {
 // injectable for Node tests only: Node refuses the shortened observations they produce (measure/timing.mjs), so they can never be accepted.
 const complete = (f, view, profile) => Boolean(f?.counts && f.view === view && f.W === profile.W && f.H === profile.H && f.counts.total === profile.W * profile.H);
 export async function runTiming(fx, status, { open, canvas, integrity = observeIntegrity, longTasks = observeLongTasks, hzOf = refreshHz, sup = pageSupervisor(),
-  warmupSeconds = 3, windowSeconds = 30, schedule = burstSchedule(fx), quietMs = fx.bursts.quietMs, now, lateLimitMs }) {
+  warmupSeconds = DRIVER.warmupSeconds, windowSeconds = DRIVER.g6WindowSeconds, schedule = burstSchedule(fx), quietMs = fx.bursts.quietMs, now, lateLimitMs }) {
   const lt = longTasks(), slots = [], tasksSeen = [], sources = [], draft = fx.profiles.draft;
   const hz = await hzOf(); let windows = 0;
   const stop = (slot, gate, s, error) => { slots.push({ slot, gate, raw: { error: failure(s, error) }, timingMethod: TIMING[gate] }); return { slots, invalidations: [failure(s, error)] }; };
@@ -93,17 +94,17 @@ export async function runTiming(fx, status, { open, canvas, integrity = observeI
     const slot = `${view}/${trial}`; let s = null;
     try {
       s = await open();
-      await followPath(s, fx, view, 'draft', warmupSeconds);                               // warm-up, discarded
+      const warm = await followPath(s, fx, view, 'draft', warmupSeconds);                  // warm-up: its frames are discarded, its span recorded
       let observed = null;
       const r = await sup.window(`G6/${slot}`, async () => { const watch = integrity(canvas); try { return await followPath(s, fx, view, 'draft', windowSeconds); } finally { observed = watch.stop(); } });
       const windowEnd = r.windowStart + windowSeconds * 1000;
       tasksSeen.push(...lt.take(r.windowStart, windowEnd)); windows++;
-      const raw = await events.harness(async () => { const ts = await s.renderer.readTimestamps(); return { ...r, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, timestamps: ts.method, diagnostics: bandDiagnostics(s.renderer.stats()) }; });
+      const raw = await events.harness(async () => { const ts = await s.renderer.readTimestamps(); return { ...r, warmupMs: warm.observedMs, config: { warmupSeconds, windowSeconds }, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, timestamps: ts.method, diagnostics: bandDiagnostics(s.renderer.stats()) }; });
       const incomplete = r.frames.filter(f => f.t >= r.windowStart && f.t < windowEnd && !complete(f, view, draft)).length;
       const problems = [...observed.violations, ...(incomplete ? [`${incomplete} incomplete frame${incomplete === 1 ? '' : 's'} in the window`] : [])];
       if (problems.length) return invalid(slot, 'G6', raw, `trial invalid: G6/${slot}: ${problems.join('; ')}`);
       slots.push({ slot, gate: 'G6', raw, timingMethod: G6_WINDOW_TIMING });
-      sources.push({ gate: 'G6', slot, windowStart: r.windowStart, windowEnd: r.windowStart + r.observedMs, valid: true });
+      sources.push({ gate: 'G6', slot, windowStart: raw.windowStart, windowEnd: raw.windowStart + raw.observedMs, valid: true });   // exactly the companion's observed interval
     } catch (error) { return stop(slot, 'G6', s, error); }
     finally { s?.close(); }
   }
@@ -112,7 +113,8 @@ export async function runTiming(fx, status, { open, canvas, integrity = observeI
     let s = null, off = null; const slot = String(trial), frames = [];
     try {
       s = await open();
-      await followPath(s, fx, 'bulb-overview', 'draft', warmupSeconds);
+      const warm = await followPath(s, fx, 'bulb-overview', 'draft', warmupSeconds);
+      const config = { warmupSeconds, quietMs, lateLimitMs: lateLimitMs ?? LATE_LIMIT_MS };   // recorded; Node refuses anything but the frozen values
       off = s.renderer.onPublish(p => frames.push(frameOf(p)));
       let observed = null, end = null, deviation = null;
       const bursts = await sup.window(`G7/${slot}`, async () => {
@@ -128,7 +130,7 @@ export async function runTiming(fx, status, { open, canvas, integrity = observeI
         // The late request was never issued; the trial's partial evidence is kept and the deviation is classified (never external interference).
         const d = deviation.scheduleDeviation, tasks = lt.take(deviation.t0, end);
         const cause = tasks.some(x => x.kind !== 'unattributed' && x.start < d.firedMs && x.start + x.ms > d.scheduledMs) ? 'application' : 'unknown';
-        return invalid(slot, 'G7', { windowStart: deviation.t0, observedMs: end - deviation.t0, issued: deviation.issued, deviation: { ...d, lateCause: cause }, frames, integrity: observed, refreshHz: hz },
+        return invalid(slot, 'G7', { windowStart: deviation.t0, observedMs: end - deviation.t0, issued: deviation.issued, deviation: { ...d, lateCause: cause }, frames, warmupMs: warm.observedMs, config, integrity: observed, refreshHz: hz },
           `${deviation.message} (cause: ${cause}); not accepted as execution of the frozen schedule`);
       }
       const { t0, issued } = bursts;
@@ -140,7 +142,7 @@ export async function runTiming(fx, status, { open, canvas, integrity = observeI
           const cause = late <= LATE_LIMIT_MS ? null : tasks.some(x => x.kind !== 'unattributed' && x.start < r.firedMs && x.start + x.ms > r.scheduledMs) ? 'application' : 'unknown';
           return { ...r, ...stagesOf(r.requestId, s.events ?? events), publishedMs: frames.find(f => f.requestId === r.requestId)?.t ?? null, lateByMs: late, lateCause: cause };
         });
-        return { windowStart: t0, observedMs: end - t0, issued: withStages, frames, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, diagnostics: bandDiagnostics(s.renderer.stats()) };
+        return { windowStart: t0, observedMs: end - t0, warmupMs: warm.observedMs, config, issued: withStages, frames, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed, refreshHz: hz, diagnostics: bandDiagnostics(s.renderer.stats()) };
       });
       const finals = raw.issued.filter(r => r.index === finalIndex);
       const unpublished = finals.map(r => [r.id, frames.filter(f => f.requestId === r.requestId)]).filter(([, fs]) => fs.length !== 1);
@@ -148,7 +150,7 @@ export async function runTiming(fx, status, { open, canvas, integrity = observeI
       const problems = [...observed.violations, ...unpublished.map(([id, fs]) => `final request ${id} was published ${fs.length} times`), ...(incomplete ? [`${incomplete} incomplete final frame${incomplete === 1 ? '' : 's'}`] : [])];
       if (problems.length) return invalid(slot, 'G7', raw, `trial invalid: G7/${slot}: ${problems.join('; ')}`);
       slots.push({ slot, gate: 'G7', raw, timingMethod: G7_BURST_TIMING });
-      sources.push({ gate: 'G7', slot, windowStart: t0, windowEnd: end, valid: true });
+      sources.push({ gate: 'G7', slot, windowStart: t0, windowEnd: t0 + raw.observedMs, valid: true });   // exactly the companion's observed interval
     } catch (error) { off?.(); return stop(slot, 'G7', s, error); }
     finally { off?.(); s?.close(); }
   }

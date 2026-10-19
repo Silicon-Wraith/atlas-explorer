@@ -51,61 +51,98 @@ export const stopReasonsOf = invalidations => stopReasons({ invalidations });
 // - A duplicate, out-of-order or unexpected declaration, a heartbeat, checkpoint or capture where none is allowed, or a result while a window is
 //   open, is refused and ends the wait (`harness timeout: window protocol: ...`). The absolute invocation deadline (deadlineMs) stays in place.
 // - A terminal failure (protocol, crash, close, expiry) takes precedence over a queued result, which is returned with it as incomplete evidence.
-const G6_VIEWS = ['bulb-overview', 'bulb-detail-0.05', 'bulb-detail-0.005'];
-// Fixed bounds, owned here: G6 is a 30 s path (+10 s), G7 the frozen 23.04 s burst schedule with its quiet period (+12 s), G8 a stress wait and a
-// sphere publication of at most 5 s each plus a 2 s drain (+3 s), G10 one settled frame within its 20 s deadline (+5 s), G12 sixty 10 s cycles
-// (+60 s) with a checkpoint at most 20 s apart, and G2 navigation to first publication within 45 s.
-export const WINDOW_PLANS = Object.freeze({
-  timing: [...G6_VIEWS.flatMap(v => [0, 1, 2].map(i => ({ name: `G6/${v}/${i}`, boundMs: 40000 }))), ...[0, 1, 2].map(i => ({ name: `G7/${i}`, boundMs: 35000 }))],
-  G8: Array.from({ length: 10 }, (_, i) => ({ name: `G8/${i}`, boundMs: 15000 })),
-  G10: G6_VIEWS.map(v => ({ name: `G10/${v}`, boundMs: 25000 })),
-  G12: [{ name: 'G12/sequence', boundMs: 660000, checkpointMs: 20000 }],
-  G2: [{ name: 'G2/navigation', boundMs: 45000, implicit: true }],
-});
-export const windowPlan = gate => (WINDOW_PLANS[gate] ?? []).map(w => ({ ...w }));
+// The window plans and their bounds live in supervision-plan.js (pure, shared with the drivers and the evidence checks).
+export { WINDOW_PLANS, windowPlan } from './supervision-plan.js';
+import { windowPlan } from './supervision-plan.js';
 const TRANSPORTS = new WeakMap();
-export async function installTransport(page, { gate, plan = windowPlan(gate) } = {}) {
+// T9 fix round 3 (Codex T9 r3, findings 1 and 2):
+// - Expiry is latched by the channel's own timer, independently of any consumer loop, and every deadline is also checked *before* a message is
+//   processed, so a late close or checkpoint can never clear or refresh an expired window, gap or silence. The silence bound applies while a
+//   result is awaited (between waits the page may legitimately be quiet, e.g. G2 between its fresh run and its warm reload).
+// - A clean result (no error, no invalidation of its own) is accepted only once the whole plan has run: every window declared, opened and
+//   closed in order, and G12's sequence closed with all its checkpoints. An early result must carry its own explicit invalidation.
+// - G12's checkpoints must be cycles 0, 1, 2, … in order, no more than planned.
+// - The supervision record (every window's open/close times and checkpoints, and whether the plan completed) is returned as evidence.
+export async function installTransport(page, { gate, plan = windowPlan(gate), roundTripMs = ROUND_TRIP_MS } = {}) {
   if (typeof page?.exposeBinding !== 'function') return null;
-  const ch = { plan, next: 0, lastId: 0, open: null, lastHeard: Date.now(), results: [], checkpoints: [], captures: [], failure: null, wake: new Set() };
+  const ch = { plan, next: 0, lastId: 0, open: null, lastHeard: Date.now(), waiting: false, roundTripMs, results: [], checkpoints: [], captures: [], failure: null, wake: new Set(), timer: null, windows: [] };
   const notify = () => { for (const wake of [...ch.wake]) wake(); };
-  const fail = reason => { ch.failure ??= reason; notify(); };
+  const fail = reason => { if (!ch.failure) { ch.failure = reason; clearTimeout(ch.timer); } notify(); };
   const refuse = reason => { fail(`harness timeout: window protocol: ${reason}`); return { ok: false, reason }; };
-  ch.fail = fail;
+  // The deadline in force now, if any: a window's bound and checkpoint gap, or (while a result is awaited) the silence bound outside windows.
+  const due = () => {
+    const o = ch.open;
+    if (o) {
+      const close = { at: o.openedAt + o.boundMs, reason: `browser hang: measured window ${o.name} did not close within ${o.boundMs} ms` };
+      const gap = o.checkpointMs ? { at: o.lastCheckpointAt + o.checkpointMs, reason: `browser hang: no checkpoint within ${o.checkpointMs} ms in window ${o.name}` } : null;
+      return gap && gap.at < close.at ? gap : close;
+    }
+    return ch.waiting && !ch.results.length ? { at: ch.lastHeard + ch.roundTripMs, reason: `browser hang: the page did not answer within ${ch.roundTripMs} ms` } : null;
+  };
+  const check = (now = Date.now()) => { const d = due(); if (!ch.failure && d && now >= d.at) fail(d.reason); return !ch.failure; };
+  const rearm = () => {
+    clearTimeout(ch.timer); ch.timer = null;
+    const d = due(); if (ch.failure || !d) return;
+    ch.timer = setTimeout(() => { check(); rearm(); }, Math.max(1, d.at - Date.now()));
+    ch.timer.unref?.();                                                              // never keeps a finished process alive
+  };
+  const planComplete = () => {
+    if (ch.open) return `window ${ch.open.name} is open`;
+    const unfinished = ch.windows.find(w => w.checkpoints !== undefined && w.expectedCheckpoints !== undefined && w.checkpoints < w.expectedCheckpoints);
+    if (unfinished) return `window ${unfinished.name} closed after ${unfinished.checkpoints} of ${unfinished.expectedCheckpoints} checkpoints`;
+    const declared = ch.windows.filter(w => w.closedAt !== null).length;
+    return declared < ch.plan.length ? `${declared} of ${ch.plan.length} windows` : null;
+  };
+  Object.assign(ch, { fail, check, rearm, planComplete });
   await page.exposeBinding('p0Push', (_source, message) => {
-    const type = message?.type, now = Date.now(), open = ch.open;
-    if (ch.failure) return type === 'capture' ? 0 : { ok: false, reason: ch.failure };
-    if (type === 'result') {
-      ch.results.push(message.result);
-      if (open) refuse(`result while window ${open.name} is open`); else { ch.lastHeard = now; notify(); }
-      return true;
-    }
-    if (type === 'heartbeat') { if (open) return refuse(`heartbeat inside window ${open.name}`); ch.lastHeard = now; return true; }
-    if (type === 'window-open') {
-      const { id, name } = message, expected = ch.plan[ch.next];
-      if (open) return refuse(`window ${open.name} is already open (declared ${name})`);
-      if (!Number.isInteger(id) || id <= ch.lastId) return refuse(`declaration id ${id} is not after ${ch.lastId}`);
-      if (!expected || expected.implicit || expected.name !== name) return refuse(`unexpected window ${name} (expected ${expected?.name ?? 'none'})`);
-      ch.open = { ...expected, id, openedAt: now, lastCheckpointAt: now }; ch.next++; ch.lastId = id; notify();
-      return { ok: true };
-    }
-    if (type === 'window-close') {
-      const { id, name } = message;
-      if (!open || open.name !== name) return refuse(`close of ${name} without an open window${open ? ` (${open.name} is open)` : ''}`);
-      if (id !== open.id) return refuse(`close of ${name} with id ${id}, opened as ${open.id}`);
-      ch.open = null; ch.lastHeard = now; notify();
-      return { ok: true };
-    }
-    if (type === 'checkpoint') {
-      if (!open || !open.checkpointMs) return refuse(open ? `checkpoint inside window ${open.name}, which takes none` : 'checkpoint outside a window that takes them');
-      ch.checkpoints.push(message.checkpoint); open.lastCheckpointAt = now; notify();
-      return true;
-    }
-    if (type === 'capture') {
-      if (open) { refuse(`capture inside window ${open.name}`); return 0; }
-      ch.lastHeard = now;
-      return new Promise(ack => { ch.captures.push({ seq: message.seq, name: message.name, ack }); notify(); });
-    }
-    return refuse(`unknown message ${JSON.stringify(type)}`);
+    const type = message?.type, now = Date.now();
+    check(now);                                                                      // an expired deadline is latched before anything can clear it
+    const open = ch.open;
+    if (ch.failure) { if (type === 'result') ch.results.push(message.result); return type === 'capture' ? 0 : { ok: false, reason: ch.failure }; }
+    try {
+      if (type === 'result') {
+        ch.results.push(message.result);
+        const r = message.result, explicit = Boolean(r?.error) || (Array.isArray(r?.invalidations) && r.invalidations.length > 0), missing = planComplete();
+        if (open) refuse(`result while window ${open.name} is open`);
+        else if (missing && !explicit) refuse(`a clean result before the window plan completed (${missing})`);
+        else { ch.lastHeard = now; notify(); }
+        return true;
+      }
+      if (type === 'heartbeat') { if (open) return refuse(`heartbeat inside window ${open.name}`); ch.lastHeard = now; return true; }
+      if (type === 'window-open') {
+        const { id, name } = message, expected = ch.plan[ch.next];
+        if (open) return refuse(`window ${open.name} is already open (declared ${name})`);
+        if (!Number.isInteger(id) || id <= ch.lastId) return refuse(`declaration id ${id} is not after ${ch.lastId}`);
+        if (!expected || expected.implicit || expected.name !== name) return refuse(`unexpected window ${name} (expected ${expected?.name ?? 'none'})`);
+        ch.open = { ...expected, id, openedAt: now, lastCheckpointAt: now, cycles: 0 }; ch.next++; ch.lastId = id;
+        ch.windows.push({ name, id, openedAt: now, closedAt: null, ...(expected.checkpoints !== undefined ? { checkpoints: 0, expectedCheckpoints: expected.checkpoints } : {}) });
+        notify();
+        return { ok: true };
+      }
+      if (type === 'window-close') {
+        const { id, name } = message;
+        if (!open || open.name !== name) return refuse(`close of ${name} without an open window${open ? ` (${open.name} is open)` : ''}`);
+        if (id !== open.id) return refuse(`close of ${name} with id ${id}, opened as ${open.id}`);
+        const w = ch.windows.findLast(x => x.name === name && x.closedAt === null); w.closedAt = now; w.complete = w.checkpoints === undefined || w.checkpoints === w.expectedCheckpoints;
+        ch.open = null; ch.lastHeard = now; notify();
+        return { ok: true };
+      }
+      if (type === 'checkpoint') {
+        if (!open || !open.checkpointMs) return refuse(open ? `checkpoint inside window ${open.name}, which takes none` : 'checkpoint outside a window that takes them');
+        const cycle = message.checkpoint?.cycle;
+        if (cycle !== open.cycles) return refuse(open.cycles >= open.checkpoints && Number.isInteger(cycle) && cycle >= open.checkpoints ? `checkpoint for cycle ${cycle} beyond the planned ${open.checkpoints}` : `checkpoint for cycle ${JSON.stringify(cycle)}, expected cycle ${open.cycles}`);
+        if (open.cycles >= open.checkpoints) return refuse(`checkpoint for cycle ${cycle} beyond the planned ${open.checkpoints}`);
+        open.cycles++; ch.windows.at(-1).checkpoints = open.cycles;
+        ch.checkpoints.push(message.checkpoint); open.lastCheckpointAt = now; notify();
+        return true;
+      }
+      if (type === 'capture') {
+        if (open) { refuse(`capture inside window ${open.name}`); return 0; }
+        ch.lastHeard = now;
+        return new Promise(ack => { ch.captures.push({ seq: message.seq, name: message.name, ack }); notify(); });
+      }
+      return refuse(`unknown message ${JSON.stringify(type)}`);
+    } finally { rearm(); }
   });
   page.on?.('crash', () => fail('browser hang or crash: the page crashed'));
   page.on?.('close', () => fail('browser hang or crash: the page closed'));
@@ -117,37 +154,36 @@ export function armWindow(page, name) {
   const ch = TRANSPORTS.get(page); if (!ch) return false;
   const w = ch.plan.find(x => x.name === name && x.implicit);
   if (!w || ch.open) { ch.fail(`harness timeout: window protocol: cannot arm ${name}`); return false; }
-  ch.open = { ...w, id: 0, openedAt: Date.now(), lastCheckpointAt: Date.now() };
+  const now = Date.now();
+  ch.open = { ...w, id: 0, openedAt: now, lastCheckpointAt: now, cycles: 0 };
+  ch.windows.push({ name, id: 0, openedAt: now, closedAt: null });
+  ch.next = ch.plan.indexOf(w) + 1; ch.rearm();
   return true;
 }
+// The supervision record of one wait, persisted beside the evidence.
+const supervisionOf = ch => ({ plan: ch.plan.map(w => w.name), windows: ch.windows.map(w => ({ ...w })), complete: !ch.failure && ch.planComplete() === null, failure: ch.failure });
 
 // Waits for the page's next result under the supervisor's bounds, with no page evaluation: checkpoints are persisted as they arrive (the last
 // one is kept), capture requests are served by screenshotting #view (each bounded), and the first terminal failure ends the wait.
 export async function waitResult(page, { gate, runDir, deadlineMs, roundTripMs = ROUND_TRIP_MS, writeFn = writeFile }) {
   const ch = TRANSPORTS.get(page), captures = []; let lastCheckpoint = null, written = 0;
-  const done = result => ({ result, captures, lastCheckpoint });
-  if (!ch) return done({ error: `harness timeout: no result transport was installed before navigation (${gate})` });
+  if (!ch) return { result: { error: `harness timeout: no result transport was installed before navigation (${gate})` }, captures, lastCheckpoint, supervision: null };
   const start = Date.now(), deadline = start + deadlineMs;
-  ch.lastHeard = Math.max(ch.lastHeard, start);
+  ch.roundTripMs = roundTripMs; ch.lastHeard = Math.max(ch.lastHeard, start); ch.waiting = true; ch.rearm();
+  const done = result => { ch.waiting = false; ch.rearm(); return { result, captures, lastCheckpoint, supervision: supervisionOf(ch) }; };
   for (;;) {
     while (ch.checkpoints.length) { const cp = ch.checkpoints.shift(); lastCheckpoint = cp; await writeFn(resolve(runDir, `checkpoint-${written++}.json`), JSON.stringify(cp)); }
     while (ch.captures.length && !ch.failure) {
       const request = ch.captures.shift();
       try {
         const png = await bounded(page.locator('#view').screenshot(), roundTripMs, 'browser hang: canvas capture');
-        captures.push({ name: request.name, png }); request.ack(request.seq); ch.lastHeard = Date.now();
+        captures.push({ name: request.name, png }); request.ack(request.seq); ch.lastHeard = Date.now(); ch.rearm();
       } catch (e) { request.ack(0); ch.fail(e.message); }
     }
-    const now = Date.now(), open = ch.open;
-    if (!ch.failure) {
-      if (now >= deadline) ch.fail(`browser hang: no result within the ${deadlineMs} ms outer deadline`);
-      else if (open && now >= open.openedAt + open.boundMs) ch.fail(`browser hang: measured window ${open.name} did not close within ${open.boundMs} ms`);
-      else if (open?.checkpointMs && now >= open.lastCheckpointAt + open.checkpointMs) ch.fail(`browser hang: no checkpoint within ${open.checkpointMs} ms in window ${open.name}`);
-      else if (!open && !ch.results.length && now >= ch.lastHeard + roundTripMs) ch.fail(`browser hang: the page did not answer within ${roundTripMs} ms`);
-    }
+    ch.check();
+    if (!ch.failure && Date.now() >= deadline) ch.fail(`browser hang: no result within the ${deadlineMs} ms outer deadline`);
     if (ch.failure) { const r = ch.results.shift(); return done(r && typeof r === 'object' ? { ...r, error: ch.failure } : { error: ch.failure }); }
     if (ch.results.length) return done(ch.results.shift());
-    const due = Math.min(deadline, open ? Math.min(open.openedAt + open.boundMs, open.checkpointMs ? open.lastCheckpointAt + open.checkpointMs : Infinity) : ch.lastHeard + roundTripMs);
-    await new Promise(r => { const wake = () => { clearTimeout(timer); ch.wake.delete(wake); r(); }; const timer = setTimeout(wake, Math.max(1, due - Date.now())); ch.wake.add(wake); });
+    await new Promise(r => { const wake = () => { clearTimeout(timer); ch.wake.delete(wake); r(); }; const timer = setTimeout(wake, Math.max(1, deadline - Date.now())); ch.wake.add(wake); });
   }
 }

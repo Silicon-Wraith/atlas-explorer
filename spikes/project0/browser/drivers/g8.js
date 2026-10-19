@@ -4,8 +4,9 @@ import { session, frameOf, sleep, failure, harnessTimeout } from './common.js';
 import { observeIntegrity } from '../integrity.js';
 import { G8_REPLACEMENT_TIMING } from '../../timing-contract.js';   // latencyMs: sphere request to its publication, page clock
 import { pageSupervisor } from '../supervisor.js';
+import { DRIVER } from '../../supervision-plan.js';
 
-export async function runG8(fx, status, { open, canvas, integrity = observeIntegrity, waitMs = 5000, sup = pageSupervisor() }) {
+export async function runG8(fx, status, { open, canvas, integrity = observeIntegrity, waitMs = DRIVER.g8WaitMs, sup = pageSupervisor() }) {
   const draft = fx.profiles.draft;
   const slots = [];
   for (let rep = 0; rep < 10; rep++) {
@@ -24,8 +25,8 @@ export async function runG8(fx, status, { open, canvas, integrity = observeInteg
       const sphereId = s.renderer.render({ view: 'sphere', profile: 'draft', label: 'sphere' });
       while (!frames.some(f => f.requestId === sphereId) && performance.now() - sphereRequested < waitMs) { s.abort.throwIfAborted(); await sleep(1); }
       if (!frames.some(f => f.requestId === sphereId)) throw harnessTimeout(s.abort, `the sphere frame was not published within ${waitMs} ms`);
-      await s.abort.race(Promise.race([s.device.queue.onSubmittedWorkDone(), sleep(2000)]));   // bounded drain: a stale stress result would publish now
-      await s.abort.race(sleep(50)); s.abort.throwIfAborted();                              // a stop latched in the settle is this repetition's error
+      await s.abort.race(Promise.race([s.device.queue.onSubmittedWorkDone(), sleep(DRIVER.g8DrainMs)]));   // bounded drain: a stale stress result would publish now
+      await s.abort.race(sleep(DRIVER.g8SettleMs)); s.abort.throwIfAborted();                              // a stop latched in the settle is this repetition's error
       const sphere = frames.find(f => f.requestId === sphereId); observed = watch.stop();
       return { stressRequestId, stressSubmit: stressSubmit ? { requestId: stressSubmit.requestId, epoch: stressSubmit.epoch, t: stressSubmit.t } : null, sphereRequestId: sphereId, sphereRequested, latencyMs: sphere.t - sphereRequested, sphere, stalePublications: frames.filter(f => f.label === 'bulb-stress').length, outstandingMax: s.renderer.stats().outstandingMax, integrity: observed };
       } finally { if (!observed) watch.stop(); }                                       // stopped exactly once
