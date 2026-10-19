@@ -80,3 +80,22 @@ qualification inputs, and are kept unchanged. No fixture reset or remediation fo
 5. **G2 `preparationVisible`.** The sensor is defective: it uses `offsetParent` on the
    fixed-position `#status` element. It must be repaired and reviewed before the qualifying GPU
    campaign. The existing G2 development evidence is kept unchanged.
+
+## E5 — User decisions on platform and remediation (user, 2026-10-19)
+
+1. **Browser requirement.** "Runs in the browser is a firm requirement until it can't be." It stays
+   the requirement until keeping it would compromise the design or lose features. At that point it
+   is escalated to the user again. Native or workstation rendering is not pursued while the browser
+   path remains viable.
+2. **Approved WebGPU remediation plan:**
+   - **G5-A:** compensated evaluation of the cancellation-prone quaternion sums of products. The form
+     is chosen by error analysis that is preregistered before any GPU result for it exists, and it is
+     validated independently.
+   - **G1-A:** headed G1 identity is corroborated through a Dawn/Vulkan diagnostic bound to the same
+     browser process and run.
+   - **G1-C:** the headless `requestDevice` failure is diagnosed, capped at half a day.
+
+   Together these form WebGPU's single documented remediation cycle (spec §6), run through T10
+   Step 7 after the `webgpu-1` campaign. Diagnosis consumes no remediation.
+
+Source: Codex open consult, run 20261019T230539Z-9cfe (`codex-T10-consult-r1-findings.md`).
