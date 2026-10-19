@@ -4,9 +4,13 @@ import assert from 'node:assert/strict';
 const { runLifecycle } = await import('../browser/drivers/lifecycle.js');
 const { metricsFor } = await import('../measure/index.mjs');
 const { CORRECTNESS_ONLY } = await import('../timing-contract.js');
+const { createAbort } = await import('../gpu/abort.js');
 
-function fakeWorld({ failRecovery = false, lossBeforeArm = false } = {}) {
-  let epoch = 0, seq = 0; const handlers = new Set();
+// Each fake session owns a real abort (gpu/abort.js), as common.session's does (T8 fix round 1). The stall options latch it the way the
+// session watchdog would: before a delayed loss notification, during the post-loss drain, or at the nth injected loss.
+const STALL = { kind: 'stall', outstanding: [] };
+function fakeWorld({ failRecovery = false, lossBeforeArm = false, stallBeforeLoss = false, stallInDrain = false, stallOnInject = 0 } = {}) {
+  let epoch = 0, seq = 0, current = null, injections = 0; const handlers = new Set();
   const signal = (reason, injected) => { const lost = epoch; epoch++; for (const h of [...handlers]) h({ epoch: lost, reason, message: '', injected }); };
   const counts = { total: 921600, hit: 250000, miss: 671600, point: 0, steps: 0, failure: 0 };
   const open = async () => {
@@ -14,11 +18,14 @@ function fakeWorld({ failRecovery = false, lossBeforeArm = false } = {}) {
     // Epoch-bound, as T7's Renderer is (Codex T7 r1, finding 3): once the epoch it was built in retires, render() throws, so a recovery must
     // come from a fresh session. The check precedes any loss render() itself signals, as the real renderer's does.
     const renderer = { render: () => { if (epoch !== e) throw new Error(`renderer device epoch ${e} has retired (current epoch ${epoch}): a replacement device needs a replacement renderer`); const id = ++seq; if (lossBeforeArm) { signal('unknown', false); return id; } events.push({ type: 'submit', requestId: id, generation: 1, epoch: e, batch: 1, t: 1 }); return id; }, onPublish: h => { pubs.add(h); return () => pubs.delete(h); } };
-    return { epoch: e, renderer, events: { list: () => events }, device: { destroy: () => signal('destroyed', false), queue: { onSubmittedWorkDone: async () => {} } }, armExpectedLoss() {}, close() {} };
+    const abort = createAbort(), first = e === 1;
+    const destroy = () => { if (stallBeforeLoss && first) { abort.abort(STALL); setTimeout(() => signal('destroyed', false), 30); } else signal('destroyed', false); };
+    const onSubmittedWorkDone = () => { if (stallInDrain && first) { abort.abort(STALL); return new Promise(() => {}); } return Promise.resolve(); };
+    return current = { epoch: e, renderer, abort, events: { list: () => events }, device: { destroy, queue: { onSubmittedWorkDone } }, armExpectedLoss() {}, close() {} };
   };
   let opened = 0;
   return {
-    open: async () => { opened++; return open(); }, opened: () => opened, onLoss: h => { handlers.add(h); return () => handlers.delete(h); }, injectLoss: () => signal('unknown', true), sleep: ms => new Promise(r => setTimeout(r, Math.min(ms, 2))),
+    open: async () => { opened++; return open(); }, opened: () => opened, onLoss: h => { handlers.add(h); return () => handlers.delete(h); }, injectLoss: () => { if (++injections === stallOnInject) current.abort.abort(STALL); signal('unknown', true); }, sleep: ms => new Promise(r => setTimeout(r, Math.min(ms, 2))),
     renderOnce: async (renderer, req) => {
       if (failRecovery) throw Object.assign(new Error('aborted: device-lost (unknown)'), { abort: { kind: 'device-lost', message: 'unknown' } });
       const id = renderer.render(req); return { requestId: id, generation: 1, epoch, view: req.view, label: req.view, W: 1280, H: 720, counts, t: 5 };
@@ -53,4 +60,32 @@ test('a loss before the intentional loss is armed is unexpected, and ends the in
   assert.equal(world.opened(), 1);
   assert.match(out.slots[0].raw.error, /unexpected loss/); assert.match(out.invalidations[0], /device lost/);
   assert.deepEqual(out.slots[0].timingMethod, CORRECTNESS_ONLY);
+});
+
+// T8 fix round 1 (Codex T8 r1, finding 1): the owning session's abort ends G13 with its own classified reason; nothing further is acquired.
+const STALLED = /^no observable progress for 5 s: /;
+test('a session abort latched before a delayed loss notification ends G13: no recovery, no further acquisition', async () => {
+  const world = fakeWorld({ stallBeforeLoss: true });
+  const out = await runLifecycle(world);
+  assert.equal(world.opened(), 1);
+  assert.deepEqual(out.slots.map(s => s.slot), ['intentional']); assert.ok(out.slots[0].raw.error, 'the slot keeps the failure');
+  assert.equal(out.slots[0].raw.recovery, null); assert.deepEqual(out.slots[0].timingMethod, CORRECTNESS_ONLY);
+  assert.equal(out.invalidations.length, 1); assert.match(out.invalidations[0], STALLED);
+});
+
+test('a session abort during the post-loss drain ends G13 at once, without waiting out the drain or recovering', async () => {
+  const world = fakeWorld({ stallInDrain: true });
+  const out = await runLifecycle(world);
+  assert.equal(world.opened(), 1);
+  assert.deepEqual(out.slots.map(s => s.slot), ['intentional']); assert.equal(out.slots[0].raw.recovery, null);
+  assert.equal(out.invalidations.length, 1); assert.match(out.invalidations[0], STALLED);
+});
+
+test('a recovery-session abort during the repeated-loss window ends G13: the repeated slot is a failure, not a pass', async () => {
+  const world = fakeWorld({ stallOnInject: 2 });
+  const out = await runLifecycle(world);
+  assert.equal(world.opened(), 4);
+  assert.deepEqual(out.slots.map(s => s.slot), ['intentional', 'injected', 'repeated']);
+  assert.ok(out.slots[2].raw.error, JSON.stringify(out.slots[2].raw));
+  assert.equal(out.invalidations.length, 1); assert.match(out.invalidations[0], STALLED);
 });

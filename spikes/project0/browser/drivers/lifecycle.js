@@ -12,8 +12,11 @@ export const REQUEST = Object.freeze({ view: 'bulb-overview', profile: 'settled'
 
 export async function runLifecycle({ open, onLoss, injectLoss, renderOnce, sleep }) {
   let unexpected = null;
-  const waitFor = async (get, ms, what) => { const t0 = Date.now(); let v; while (!(v = get())) { if (unexpected) throw new Error(`device lost: unexpected loss (${unexpected.reason}) at epoch ${unexpected.epoch}`); if (Date.now() - t0 > ms) throw harnessTimeout(null, `timed out waiting for ${what} within ${ms} ms`); await sleep(1); } return v; };
-  const settle = (p, ms) => Promise.race([Promise.resolve(p).catch(() => {}), sleep(ms)]);   // bounded drain, never an unbounded wait
+  // T8 fix round 1 (Codex T8 r1, finding 1): every poll, drain and observation window races the owning session's abort, and that abort is
+  // checked before the session is closed or replaced and before a slot is recorded, so a stall (or any other latched stop) ends G13 with its
+  // own classified reason; the catch reports it from `s`, which is still the owning session.
+  const waitFor = async (s, get, ms, what) => { const t0 = Date.now(); for (;;) { if (unexpected) throw new Error(`device lost: unexpected loss (${unexpected.reason}) at epoch ${unexpected.epoch}`); s.abort.throwIfAborted(); const v = get(); if (v) return v; if (Date.now() - t0 > ms) throw harnessTimeout(null, `timed out waiting for ${what} within ${ms} ms`); await s.abort.race(sleep(1)); } };
+  const settle = (s, p, ms) => Promise.race([s.abort.race(Promise.resolve(p)).catch(() => {}), sleep(ms)]).then(() => s.abort.throwIfAborted());   // bounded, abortable drain
   const slots = []; let acquisitions = 0;
   const acquire = async () => { acquisitions++; return open(); };
   for (const type of ['intentional', 'injected']) {
@@ -33,18 +36,19 @@ export async function runLifecycle({ open, onLoss, injectLoss, renderOnce, sleep
       const job = lc.begin(REQUEST);
       const lostId = raw.lostRequestId = s.renderer.render(REQUEST);
       const offPub = s.renderer.onPublish(p => { if (p.requestId === lostId) { if (lc.accept(job, p.epoch)) raw.publicationsOfLost++; else raw.latePublications++; } });
-      const sub = await waitFor(() => s.events.list().find(e => e.type === 'submit' && e.requestId === lostId && e.epoch === s.epoch), 10000, 'the request\'s first submission');
+      const sub = await waitFor(s, () => s.events.list().find(e => e.type === 'submit' && e.requestId === lostId && e.epoch === s.epoch), 10000, 'the request\'s first submission');
       raw.submittedBeforeLoss = { requestId: sub.requestId, generation: sub.generation, epoch: sub.epoch, batch: sub.batch, t: sub.t };   // the exact event
       arm();
       if (type === 'intentional') s.device.destroy(); else injectLoss();
-      await waitFor(() => decision, 10000, 'the loss notification');
+      await waitFor(s, () => decision, 10000, 'the loss notification');
       raw.decision = decision.action; raw.interrupted = decision.interrupted === job && job.state === 'interrupted'; raw.preserved = structuredClone(job.request);
-      await settle(s.device.queue.onSubmittedWorkDone(), 2000);                       // late completions arrive against a retired epoch
+      await settle(s, s.device.queue.onSubmittedWorkDone(), 2000);                    // late completions arrive against a retired epoch; throws if the session aborted
       offPub(); s.close();
       if (decision.action === 'recover') {
         s = await acquire(); lc.recovered(s.epoch);
         const again = lc.begin(job.request);
         const frame = await renderOnce(s.renderer, again.request, { timeoutMs: 30000 });   // races the recovery session's abort
+        s.abort.throwIfAborted();
         raw.recovery = { epoch: s.epoch, requestId: frame.requestId, frame };
       }
       slots.push({ slot: type, raw: structuredClone(raw), timingMethod: CORRECTNESS_ONLY });                            // a snapshot: later events cannot alter it
@@ -52,10 +56,10 @@ export async function runLifecycle({ open, onLoss, injectLoss, renderOnce, sleep
         active = 'repeated';
         const before = acquisitions; decision = null;
         lc.begin(REQUEST); arm(); injectLoss();
-        await waitFor(() => decision, 10000, 'the repeated loss notification');
+        await waitFor(s, () => decision, 10000, 'the repeated loss notification');
         const repeated = decision.action;
-        if (repeated === 'recover') { s.close(); s = await acquire(); }                  // what a broken policy would do — counted
-        await sleep(200);
+        if (repeated === 'recover') { s.abort.throwIfAborted(); s.close(); s = await acquire(); }   // what a broken policy would do — counted
+        await s.abort.race(sleep(200)); s.abort.throwIfAborted();
         slots.push({ slot: 'repeated', raw: { decision: repeated, acquisitionsBefore: before, acquisitionsAfter: acquisitions }, timingMethod: CORRECTNESS_ONLY });
       }
     } catch (error) {

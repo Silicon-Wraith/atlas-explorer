@@ -77,10 +77,16 @@ export async function exerciseResources(device, alloc, watchdog, abort, fx, prep
     }
     await abort.race(Promise.all(outstanding)); outstanding = [];
     raw.peakBytes = alloc.inventory().peakBytes;
-  } catch (error) { raw.errors.push(abort.invalidation() ?? error.message); }
+  } catch (error) { raw.errors.push(error?.abort && abort.aborted ? abort.invalidation() : error.message); }   // the original error, or the stop that raised it
   finally {
-    if (!abort.aborted) await Promise.allSettled(outstanding);       // after an abort, never wait for GPU promises to settle
-    for (const r of owned) r.destroy();
+    // T8 fix round 1 (Codex T8 r1, finding 2): the drain races the abort, so a later stop (the watchdog) ends it; after an abort it never
+    // waits for GPU promises to settle. Every resource is destroyed whatever the drain does, and a stop latched at any point is kept beside
+    // the original error.
+    try { if (!abort.aborted) await abort.race(Promise.allSettled(outstanding)); }
+    catch { /* the abort ended the drain: recorded below */ }
+    finally { for (const r of owned) r.destroy(); }
+    const stop = abort.invalidation();
+    if (stop && !raw.errors.includes(stop)) raw.errors.push(stop);
     raw.after = alloc.inventory();
   }
   return raw;
