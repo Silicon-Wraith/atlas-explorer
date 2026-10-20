@@ -169,10 +169,12 @@ try {
   pass('Arbitrary coordinate navigation enters extended GPU mode');
 
   await page.getByRole('button', { name: /Share view/ }).click();
-  assert.match(page.url(), /#re=-2/);
+  assert.match(page.url(), /#scene=[A-Za-z0-9_-]+$/);
+  const sharedScene = await ev(page, () => atlas.scene);
   const sharedPage = boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')); watchErrors(sharedPage); await sharedPage.goto(page.url(), { timeout: LIMITS.launch });
   await sharedPage.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
-  assert.equal(await ev(sharedPage, () => atlas.view.zoom), 40);
+  assert.deepEqual(await ev(sharedPage, () => atlas.view), { re: '-2', im: '0', zoom: 40 });
+  assert.deepEqual(await ev(sharedPage, () => atlas.scene), sharedScene, 'the generated link restores the complete scene');
   await closeWithin(sharedPage, 'sharedPage'); pass('Shared URL restores precision and settings');
 
   await page.getByRole('button', { name: 'Capture', exact: true }).click();
@@ -190,13 +192,17 @@ try {
   await page.getByRole('button', { name: 'Save location (.json)', exact: true }).click();
   await within((await within(locationDownload, LIMITS.operation, 'location download')).saveAs('artifacts/export-test.json'), LIMITS.operation, 'location save');
   const savedLocation = JSON.parse(await readFile('artifacts/export-test.json', 'utf8'));
-  assert.deepEqual(savedLocation.view, await ev(page, () => atlas.view));
+  assert.equal(savedLocation.schema, 'atlas.scene');
+  assert.deepEqual(savedLocation.model, { id: 'plane-mandelbrot', version: 1 });
+  assert.deepEqual(savedLocation.camera, await ev(page, () => atlas.view));
+  assert.deepEqual(savedLocation, await ev(page, () => atlas.scene), 'the file holds the complete live scene');
   await within(page.keyboard.press('Escape'), LIMITS.operation, 'keyboard.press');
   await within(page.evaluate(async () => { atlas.goTo({ re: '-.5', im: '0', zoom: 0 }); await atlas.whenIdle(); }), LIMITS.operation, 'move away before import');
   await page.getByRole('button', { name: 'Capture', exact: true }).click();
   await page.locator('#import-location').setInputFiles('artifacts/export-test.json');
   await idle(page);
-  assert.deepEqual(await ev(page, () => atlas.view), savedLocation.view);
+  assert.deepEqual(await ev(page, () => atlas.view), savedLocation.camera);
+  assert.deepEqual(await ev(page, () => atlas.scene), savedLocation, 'reimport restores the complete scene');
   assert.equal(await within(page.locator('#capture-dialog').evaluate(el => el.open), LIMITS.operation, 'locator evaluate'), false);
   pass('JSON location export and import preserve exact coordinates');
 

@@ -1,21 +1,26 @@
 import { GpuRenderer, CpuRenderer } from './plane/renderer.js';
-import { INITIAL_VIEW, moveView, zoomView, viewTransform, precisionFor, validateView } from './plane/math.js';
+import { moveView, zoomView, viewTransform, precisionFor, validateView } from './plane/math.js';
 import { PALETTES } from './plane/palettes.js';
 import { PLACES } from './plane/places.js';
 import { icon, installIcons } from './ui/icons.js';
+import { createHistory } from './shared/history.js';
+import { sceneCodec, createPlaneScene, toPlaneState, PLANE_INITIAL_SCENE, encodeShareHash, decodeShareHash, encodeSceneFile, decodeSceneFile, admitEnteredView } from './plane/scene-adapter.js';
+import { createGestureArbiter } from './plane/gestures.js';
 
 const $ = selector => document.querySelector(selector);
 installIcons();
 let canvas = $('#fractal');
 let renderer;
-let view = { ...INITIAL_VIEW };
-let settings = { palette: 'ember', phase: .11, frequency: 1, relief: 1, detail: 1, iterations: 1024 };
+// The scene history owns the one authoritative scene. `view` and `settings` are derived from it
+// and are assigned only in adopt().
+let sceneHistory, gestures, view, settings;
+// Ends captured pointer navigation (bindCanvas assigns it): a held pointer navigates no more.
+let stopPointers = () => {};
 let activePlace = 'seahorse';
 let busy = false, dirty = false, toastTimer, displayedView;
 let rendered = 0, requestVersion = 0, cycle = false, tour = null, captureBusy = false;
 let saved = [], savedTab = false;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const detailLevels = [512, 1024, 2048, 4096, 8192, 16384];
 
 function toast(message) {
   $('#toast').textContent = message; $('#toast').classList.add('visible');
@@ -29,27 +34,58 @@ try {
   }) : [];
 } catch { /* A privacy-restricted browser still supports exploration. */ }
 
-function loadHash() {
-  if (location.hash.length < 2) return;
-  try {
-    const params = new URLSearchParams(location.hash.slice(1));
-    if (!params.has('re')) return;
-    view = validateView({ re: params.get('re'), im: params.get('im'), zoom: Number(params.get('z')) });
-    settings = validatedSettings(Object.fromEntries(params), settings);
-    activePlace = '';
-  } catch { toast('That location link could not be read. Opening Seahorse valley.'); }
+function adoptScene(scene) {
+  const state = toPlaneState(scene);
+  view = state.view;
+  const { iterations, ...appearanceAndDetail } = state.settings;
+  settings = appearanceAndDetail;
 }
 
-function validatedSettings(input = {}, defaults = settings) {
-  const result = { ...defaults };
-  if (PALETTES.some(p => p.id === input.palette)) result.palette = input.palette;
-  for (const [key, min, max] of [['phase', 0, 1], ['frequency', .2, 2.5], ['relief', 0, 1], ['detail', 0, 5]]) {
-    if (input[key] !== undefined && Number.isFinite(Number(input[key]))) result[key] = Math.min(max, Math.max(min, Number(input[key])));
-  }
-  result.detail = Math.round(result.detail);
-  return result;
+// Startup: a native share link opens its scene; anything else opens fresh-start Plane.
+function startupScene() {
+  const link = decodeShareHash(location.hash);
+  if (link.kind === 'scene' && link.scene.workspace === 'plane') { activePlace = ''; return link.scene; }
+  if (link.kind === 'unsupported') toast(`${link.error.message[0].toUpperCase()}${link.error.message.slice(1)}. Opening Seahorse valley.`);
+  return PLANE_INITIAL_SCENE;
 }
-loadHash();
+sceneHistory = createHistory({ initialScene: startupScene(), codec: sceneCodec });
+adoptScene(sceneHistory.snapshot().scene);
+sceneHistory.subscribe(() => updateHistoryControls());
+
+// Every scene change arrives here: derive view and settings, then render or recolor.
+function adopt(transition, interactive = false) {
+  if (!transition) return;
+  adoptScene(transition.after);
+  if (!transition.render) return;
+  const geometry = transition.changed.some(domain => domain !== 'appearance');
+  if (transition.changed.some(domain => domain !== 'camera')) syncControls();
+  if (geometry) requestRender(interactive);
+  else { updateReadouts(); renderer.color(settings); }
+}
+
+gestures = createGestureArbiter({ history: sceneHistory, onTransition: (transition, interactive) => adopt(transition, interactive), stopAutomated: () => stopTour() });
+const preview = (kind, command, interactive) => gestures.preview(kind, command, interactive);
+const commitGesture = kind => gestures.commit(kind);
+const applyAction = (commands, kind, interactive = false) => gestures.apply(commands, kind, interactive);
+// A wheel burst or key-repeat run: one camera-history entry after a quiet period.
+function navigateGrouped(next) {
+  activePlace = '';
+  gestures.grouped({ type: 'setCamera', camera: next });
+  document.querySelectorAll('.destination-card.active').forEach(el => el.classList.remove('active'));
+}
+// A history step stops active navigation and the tour first (spec §6); the open gesture is settled
+// by the arbiter, so a held drag becomes the pose that Back then leaves.
+function historyStep(action) {
+  stopTour(); stopPointers();
+  const transition = gestures.step(action, action === 'back' || action === 'forward');
+  if (transition) { activePlace = ''; renderPlaces(); }
+}
+function updateHistoryControls() {
+  const snapshot = sceneHistory.snapshot();
+  for (const [id, enabled] of [['#undo-button', snapshot.canUndo], ['#redo-button', snapshot.canRedo], ['#back-button', snapshot.canBack], ['#forward-button', snapshot.canForward]]) {
+    const button = $(id); if (button) button.disabled = !enabled;
+  }
+}
 
 function makeRenderer() {
   try { return new GpuRenderer(canvas); }
@@ -82,7 +118,7 @@ function updateGraphicsDetails() {
 updateGraphicsDetails();
 
 function renderSettings() {
-  return { ...settings, iterations: detailLevels[settings.detail] + Math.max(0, Math.ceil((view.zoom - 3) * 32)) };
+  return toPlaneState(sceneHistory.snapshot().scene).settings;
 }
 function dimensions() {
   const width = innerWidth, height = innerHeight;
@@ -161,14 +197,23 @@ function syncControls() {
 function styleRange(input) {
   input.style.setProperty('--range', `${(input.value - input.min) / (input.max - input.min) * 100}%`);
 }
-function goTo(next, palette, place = '') {
-  view = validateView(next); activePlace = place;
-  if (Number.isInteger(next.detail)) settings.detail = Math.min(5, Math.max(0, next.detail));
-  if (palette) settings.palette = palette;
-  syncControls(); renderPlaces(); requestRender();
+// A jump to a place or entered coordinate: its camera goes to camera history and any
+// palette or detail it carries is one undoable content change.
+// The lexical and resource preflight runs before validateView materializes anything.
+function goTo(next, palette, place = '', { tourGesture = false } = {}) {
+  const target = admitEnteredView(next);
+  const commands = [{ type: 'setCamera', camera: { re: target.re, im: target.im, zoom: target.zoom } }];
+  if (Number.isInteger(next.detail)) commands.push({ type: 'setIteration', patch: { detail: Math.min(5, Math.max(0, next.detail)) } });
+  if (palette) commands.push({ type: 'setAppearance', patch: { palette } });
+  activePlace = place;
+  if (tourGesture) for (const command of commands) gestures.automate('tour', command);
+  else applyAction(commands, 'jump');
+  renderPlaces();
 }
-function navigate(next, interactive = true) {
-  stopTour(); activePlace = ''; view = next; requestRender(interactive);
+function navigate(next, interactive = true, kind = 'navigation') {
+  stopTour(); activePlace = '';
+  if (kind === 'jump') applyAction([{ type: 'setCamera', camera: next }], 'jump', interactive);
+  else preview(kind, { type: 'setCamera', camera: next }, interactive);
   document.querySelectorAll('.destination-card.active').forEach(el => el.classList.remove('active'));
 }
 function pointAt(clientX, clientY) {
@@ -179,45 +224,52 @@ $('#palette-grid').innerHTML = PALETTES.map(p => `<button class="palette-swatch"
 $('#palette-grid').addEventListener('click', event => {
   const button = event.target.closest('[data-palette]');
   if (!button) return;
-  settings.palette = button.dataset.palette; syncControls(); renderer.color(settings);
+  applyAction([{ type: 'setAppearance', patch: { palette: button.dataset.palette } }], 'edit');
 });
-$('#phase').addEventListener('input', event => { settings.phase = event.target.value / 1000; styleRange(event.target); renderer.color(settings); });
-$('#frequency').addEventListener('input', event => { settings.frequency = event.target.value / 100; syncControls(); renderer.color(settings); });
-$('#detail').addEventListener('input', event => { settings.detail = Number(event.target.value); styleRange(event.target); requestRender(); });
-$('#relief').addEventListener('change', event => { settings.relief = Number(event.target.checked); renderer.color(settings); });
+// One slider drag is one gesture: `input` previews, `change` (release) commits.
+$('#phase').addEventListener('input', event => { styleRange(event.target); preview('slider', { type: 'setAppearance', patch: { phase: event.target.value / 1000 } }); });
+$('#frequency').addEventListener('input', event => { preview('slider', { type: 'setAppearance', patch: { frequency: event.target.value / 100 } }); });
+$('#detail').addEventListener('input', event => { styleRange(event.target); preview('slider', { type: 'setIteration', patch: { detail: Number(event.target.value) } }); });
+for (const id of ['#phase', '#frequency', '#detail']) $(id).addEventListener('change', () => commitGesture('slider'));
+$('#relief').addEventListener('change', event => { applyAction([{ type: 'setAppearance', patch: { relief: Number(event.target.checked) } }], 'edit'); });
 $('#cycle-button').onclick = () => {
   cycle = !cycle; $('#cycle-button').setAttribute('aria-pressed', String(cycle));
+  if (!cycle) commitGesture('animation');
   if (cycle && !tour) requestAnimationFrame(animate);
 };
 let lastAnimation = 0;
 function animate(time) {
   const dt = Math.min(.08, (time - (lastAnimation || time)) / 1000); lastAnimation = time;
-  if (cycle) { settings.phase = (settings.phase + dt * .025) % 1; $('#phase').value = Math.round(settings.phase * 1000); styleRange($('#phase')); if (!captureBusy) renderer.color(settings); }
+  if (cycle && !captureBusy) { gestures.animate({ type: 'setAppearance', patch: { phase: (settings.phase + dt * .025) % 1 } }); $('#phase').value = Math.round(settings.phase * 1000); styleRange($('#phase')); }
   if (tour && !captureBusy) {
     const elapsed = time - tour.started;
     if (elapsed > 18000) {
       tour.index = (tour.index + 1) % PLACES.length; tour.started = time; tour.lastFrame = 0;
-      const place = PLACES[tour.index]; goTo(place, place.palette, place.id);
+      const place = PLACES[tour.index]; goTo(place, place.palette, place.id, { tourGesture: true });
       $('#tour-location').textContent = place.name;
     } else if (!busy && elapsed - tour.lastFrame > 90) {
       const step = (elapsed - tour.lastFrame) / 1000;
       tour.lastFrame = elapsed;
-      view = zoomView(view, view.zoom + Math.min(.2, step) * .07); requestRender(true);
+      gestures.automate('tour', { type: 'setCamera', camera: zoomView(view, view.zoom + Math.min(.2, step) * .07) }, true);
     }
   }
   if (cycle || tour) requestAnimationFrame(animate); else lastAnimation = 0;
 }
 function startTour() {
   if (tour) { stopTour(); return; }
+  gestures.settle();
   tour = { index: 1, started: performance.now(), lastFrame: 0 };
-  goTo(PLACES[1], PLACES[1].palette, PLACES[1].id);
+  goTo(PLACES[1], PLACES[1].palette, PLACES[1].id, { tourGesture: true });
   $('#tour-status').hidden = false; $('#tour-location').textContent = PLACES[1].name;
   $('#tour-button').innerHTML = `${icon('pause')} Pause the journey <span class="arrow">↗</span>`;
   if (reducedMotion) toast('Journey started. Use Pause at any time to stop motion.');
   if (!cycle) requestAnimationFrame(animate);
 }
 function stopTour() {
-  tour = null; $('#tour-status').hidden = true;
+  const running = tour;
+  tour = null;
+  if (running) commitGesture('tour');
+  $('#tour-status').hidden = true;
   $('#tour-button').innerHTML = `${icon('play')} Take a journey <span class="arrow">↗</span>`;
 }
 $('#tour-button').onclick = startTour;
@@ -229,13 +281,19 @@ function bindCanvas() {
     event.preventDefault();
     const [x, y] = pointAt(event.clientX, event.clientY);
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
-    navigate(zoomView(view, view.zoom - Math.max(-160, Math.min(160, delta)) * .0015, x, y));
+    navigateGrouped(zoomView(view, view.zoom - Math.max(-160, Math.min(160, delta)) * .0015, x, y));
   }, { passive: false });
-  surface.addEventListener('dblclick', event => { const [x, y] = pointAt(event.clientX, event.clientY); navigate(zoomView(view, view.zoom + Math.log10(4), x, y)); });
+  surface.addEventListener('dblclick', event => { const [x, y] = pointAt(event.clientX, event.clientY); navigate(zoomView(view, view.zoom + Math.log10(4), x, y), true, 'jump'); });
   const pointers = new Map();
+  stopPointers = () => {
+    for (const id of pointers.keys()) { try { surface.releasePointerCapture(id); } catch { /* the pointer is already gone */ } }
+    pointers.clear(); canvas.classList.remove('dragging');
+  };
   surface.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
-    stopTour(); canvas.focus({ preventScroll: true }); surface.setPointerCapture(event.pointerId);
+    // The first pointer settles earlier activity; a further finger joins the open drag or pinch.
+    stopTour(); if (!pointers.size) gestures.settle();
+    canvas.focus({ preventScroll: true }); surface.setPointerCapture(event.pointerId);
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY }); canvas.classList.add('dragging');
   });
   surface.addEventListener('pointermove', event => {
@@ -244,7 +302,7 @@ function bindCanvas() {
     const old = pointers.get(event.pointerId);
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.size === 1) {
-      navigate(moveView(view, (old.x - event.clientX) / innerWidth, (event.clientY - old.y) / innerWidth));
+      navigate(moveView(view, (old.x - event.clientX) / innerWidth, (event.clientY - old.y) / innerWidth), true, 'navigation-drag');
     } else if (pointers.size === 2) {
       const after = [...pointers.values()];
       const distance = values => Math.hypot(values[0].x - values[1].x, values[0].y - values[1].y);
@@ -252,12 +310,12 @@ function bindCanvas() {
       const previous = mid(before), current = mid(after);
       const [x, y] = pointAt(previous.x, previous.y);
       const next = zoomView(view, view.zoom + Math.log10(Math.max(1, distance(after)) / Math.max(1, distance(before))), x, y);
-      navigate(moveView(next, (previous.x - current.x) / innerWidth, (current.y - previous.y) / innerWidth));
+      navigate(moveView(next, (previous.x - current.x) / innerWidth, (current.y - previous.y) / innerWidth), true, 'navigation-drag');
     }
   });
   for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) surface.addEventListener(event, e => {
     pointers.delete(e.pointerId);
-    if (!pointers.size) canvas.classList.remove('dragging');
+    if (!pointers.size) { canvas.classList.remove('dragging'); commitGesture('navigation-drag'); }
   });
   canvas.addEventListener('webglcontextlost', event => {
     event.preventDefault(); $('#render-status').textContent = 'Graphics paused'; toast('The graphics device paused. Restoring the view…');
@@ -265,8 +323,12 @@ function bindCanvas() {
   canvas.addEventListener('webglcontextrestored', () => { renderer.destroy(); renderer = makeRenderer(); requestRender(); });
 }
 bindCanvas();
-$('#zoom-in').onclick = () => navigate(zoomView(view, view.zoom + Math.log10(2)));
-$('#zoom-out').onclick = () => navigate(zoomView(view, view.zoom - Math.log10(2)));
+$('#zoom-in').onclick = () => navigate(zoomView(view, view.zoom + Math.log10(2)), true, 'jump');
+$('#zoom-out').onclick = () => navigate(zoomView(view, view.zoom - Math.log10(2)), true, 'jump');
+$('#undo-button').onclick = () => historyStep('undo');
+$('#redo-button').onclick = () => historyStep('redo');
+$('#back-button').onclick = () => historyStep('back');
+$('#forward-button').onclick = () => historyStep('forward');
 const home = () => { stopTour(); goTo(PLACES[0], settings.palette, 'origin'); };
 $('#home-button').onclick = home;
 $('#brand-home').onclick = event => { event.preventDefault(); home(); };
@@ -303,8 +365,10 @@ function renderPlaces() {
     for (const [className, text] of fields) { const span = document.createElement('span'); span.className = className; span.textContent = text; button.append(span); }
     button.onclick = () => {
       stopTour();
-      if (savedTab) { settings = validatedSettings(place.settings); goTo(place.view, settings.palette, place.id); }
-      else goTo(place, place.palette, place.id);
+      if (savedTab) {
+        try { applyAction([{ type: 'restoreScene', scene: createPlaneScene({ view: place.view, settings: place.settings }) }], 'restore'); activePlace = place.id; renderPlaces(); }
+        catch (error) { toast(`This discovery could not be opened: ${error.message}`); }
+      } else goTo(place, place.palette, place.id);
     };
     if (savedTab) {
       const wrapper = document.createElement('div'); wrapper.className = 'saved-wrapper'; wrapper.append(button);
@@ -347,7 +411,7 @@ $('#coordinates-button').onclick = () => {
 $('#coordinate-form').onsubmit = event => {
   event.preventDefault();
   try {
-    const next = validateView({ re: $('#input-re').value.trim(), im: $('#input-im').value.trim(), zoom: Number($('#input-zoom').value) });
+    const next = admitEnteredView({ re: $('#input-re').value.trim(), im: $('#input-im').value.trim(), zoom: Number($('#input-zoom').value) });
     goTo(next); $('#coordinate-dialog').close();
   } catch (error) { $('#coordinate-error').textContent = error.message; }
 };
@@ -357,26 +421,37 @@ document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('c
   if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
 }));
 $('#share-button').onclick = async () => {
-  const params = new URLSearchParams({ re: view.re, im: view.im, z: String(view.zoom), palette: settings.palette, phase: String(settings.phase), frequency: String(settings.frequency), relief: String(settings.relief), detail: String(settings.detail) });
-  const url = `${location.origin}${location.pathname}#${params}`;
+  commitGesture();
+  const url = `${location.origin}${location.pathname}${encodeShareHash(sceneHistory.snapshot().scene)}`;
   history.replaceState(null, '', url);
   try { await navigator.clipboard.writeText(url); toast('View link copied. Every coordinate digit is included.'); }
   catch { toast('Your view is in the address bar. Copy that URL to share it.'); }
 };
-addEventListener('hashchange', () => { loadHash(); syncControls(); renderPlaces(); requestRender(); });
+// A link opened during an investigation: a valid scene is a whole-scene restoration;
+// anything else is reported and changes neither the scene nor either history.
+addEventListener('hashchange', () => {
+  const link = decodeShareHash(location.hash);
+  if (link.kind === 'scene' && link.scene.workspace === 'plane') { stopTour(); activePlace = ''; applyAction([{ type: 'restoreScene', scene: link.scene }], 'restore'); renderPlaces(); }
+  else if (link.kind === 'unsupported') toast(`${link.error.message[0].toUpperCase()}${link.error.message.slice(1)}. Your view is unchanged.`);
+});
 
 function download(blob, name) {
   const url = URL.createObjectURL(blob), link = document.createElement('a');
   link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
-const locationData = () => ({ application: 'ATLAS', version: 1, view: { ...view }, settings: { ...settings } });
-$('#download-location').onclick = () => { download(new Blob([JSON.stringify(locationData(), null, 2)], { type: 'application/json' }), 'atlas-discovery.json'); $('#capture-status').textContent = 'Location saved, including all coordinate digits.'; };
+$('#download-location').onclick = () => {
+  commitGesture();
+  download(new Blob([encodeSceneFile(sceneHistory.snapshot().scene)], { type: 'application/json' }), 'atlas-scene.json');
+  $('#capture-status').textContent = 'Location saved, including all coordinate digits.';
+};
 $('#import-location').onchange = async event => {
   const file = event.target.files[0]; if (!file) return;
   try {
-    if (file.size > 2000000) throw new Error('This location file is too large.');
-    const data = JSON.parse(await file.text()); const next = validateView(data.view);
-    settings = validatedSettings(data.settings); goTo(next); $('#capture-dialog').close(); toast('Welcome back to your discovery.');
+    // The bound adapter's limit (plan amendment A): the file is refused before it is read.
+    if (file.size > sceneCodec.maxSceneBytes) throw new Error('This location file is too large.');
+    const scene = decodeSceneFile(await file.text());
+    stopTour(); activePlace = ''; applyAction([{ type: 'restoreScene', scene }], 'restore'); renderPlaces();
+    $('#capture-dialog').close(); toast('Welcome back to your discovery.');
   } catch (error) { $('#capture-status').textContent = error.message || 'Could not open this location.'; }
   event.target.value = '';
 };
@@ -401,13 +476,18 @@ $('#download-image').onclick = async () => {
 };
 
 addEventListener('keydown', event => {
-  if (event.target.matches('input, textarea, select') || document.querySelector('dialog[open]') || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.target.matches('input, textarea, select') || document.querySelector('dialog[open]')) return;
   const key = event.key.toLowerCase();
+  const historyKey = (event.ctrlKey || event.metaKey) && !event.altKey
+    ? (key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null)
+    : event.altKey && !event.ctrlKey && !event.metaKey ? ({ arrowleft: 'back', arrowright: 'forward' })[key] : null;
+  if (historyKey) { event.preventDefault(); historyStep(historyKey); return; }
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
   const actions = {
-    '+': () => navigate(zoomView(view, view.zoom + Math.log10(2))), '=': () => navigate(zoomView(view, view.zoom + Math.log10(2))),
-    '-': () => navigate(zoomView(view, view.zoom - Math.log10(2))),
-    arrowleft: () => navigate(moveView(view, -.08, 0)), arrowright: () => navigate(moveView(view, .08, 0)),
-    arrowup: () => navigate(moveView(view, 0, .08)), arrowdown: () => navigate(moveView(view, 0, -.08)),
+    '+': () => navigateGrouped(zoomView(view, view.zoom + Math.log10(2))), '=': () => navigateGrouped(zoomView(view, view.zoom + Math.log10(2))),
+    '-': () => navigateGrouped(zoomView(view, view.zoom - Math.log10(2))),
+    arrowleft: () => navigateGrouped(moveView(view, -.08, 0)), arrowright: () => navigateGrouped(moveView(view, .08, 0)),
+    arrowup: () => navigateGrouped(moveView(view, 0, .08)), arrowdown: () => navigateGrouped(moveView(view, 0, -.08)),
     r: home, h: cinema, b: saveDiscovery, s: () => showDialog('#capture-dialog'), '?': () => showDialog('#help-dialog'),
     escape: () => { document.body.classList.remove('cinema'); stopTour(); },
   };
@@ -417,10 +497,22 @@ addEventListener('resize', () => requestRender(true));
 addEventListener('pagehide', () => renderer.destroy());
 
 // Small inspection API for numerical and browser regression tests.
+class IdleTimeoutError extends Error {
+  constructor(ms, state) { super(`ATLAS did not become idle within ${ms} ms (${JSON.stringify(state)}).`); this.name = 'IdleTimeoutError'; this.code = 'ATLAS_IDLE_TIMEOUT'; }
+}
 window.atlas = {
   get graphics() { return { ...renderer.diagnostics }; },
   get view() { return { ...view }; }, get settings() { return renderSettings(); }, get renderer() { return renderer; },
   get rendered() { return rendered; }, goTo,
-  async whenIdle() { while (busy || dirty || captureBusy) await new Promise(resolve => setTimeout(resolve, 30)); },
+  get scene() { return sceneHistory.snapshot().scene; },
+  get history() { const { scene, ...rest } = sceneHistory.snapshot(); return rest; },
+  undo: () => historyStep('undo'), redo: () => historyStep('redo'), back: () => historyStep('back'), forward: () => historyStep('forward'),
+  async whenIdle({ timeoutMs = 60000 } = {}) {
+    const deadline = performance.now() + timeoutMs;
+    while (busy || dirty || captureBusy) {
+      if (performance.now() > deadline) throw new IdleTimeoutError(timeoutMs, { busy, dirty, captureBusy });
+      await new Promise(resolve => setTimeout(resolve, 30));
+    }
+  },
 };
-syncControls(); renderPlaces(); requestRender();
+syncControls(); renderPlaces(); updateHistoryControls(); requestRender();
