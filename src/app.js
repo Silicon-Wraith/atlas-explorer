@@ -14,6 +14,8 @@ let renderer;
 // The scene history owns the one authoritative scene. `view` and `settings` are derived from it
 // and are assigned only in adopt().
 let sceneHistory, gestures, view, settings;
+// Ends captured pointer navigation (bindCanvas assigns it): a held pointer navigates no more.
+let stopPointers = () => {};
 let activePlace = 'seahorse';
 let busy = false, dirty = false, toastTimer, displayedView;
 let rendered = 0, requestVersion = 0, cycle = false, tour = null, captureBusy = false;
@@ -71,8 +73,10 @@ function navigateGrouped(next) {
   gestures.grouped({ type: 'setCamera', camera: next });
   document.querySelectorAll('.destination-card.active').forEach(el => el.classList.remove('active'));
 }
+// A history step stops active navigation and the tour first (spec §6); the open gesture is settled
+// by the arbiter, so a held drag becomes the pose that Back then leaves.
 function historyStep(action) {
-  stopTour();
+  stopTour(); stopPointers();
   const transition = gestures.step(action, action === 'back' || action === 'forward');
   if (transition) { activePlace = ''; renderPlaces(); }
 }
@@ -281,9 +285,15 @@ function bindCanvas() {
   }, { passive: false });
   surface.addEventListener('dblclick', event => { const [x, y] = pointAt(event.clientX, event.clientY); navigate(zoomView(view, view.zoom + Math.log10(4), x, y), true, 'jump'); });
   const pointers = new Map();
+  stopPointers = () => {
+    for (const id of pointers.keys()) { try { surface.releasePointerCapture(id); } catch { /* the pointer is already gone */ } }
+    pointers.clear(); canvas.classList.remove('dragging');
+  };
   surface.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
-    stopTour(); gestures.settle(); canvas.focus({ preventScroll: true }); surface.setPointerCapture(event.pointerId);
+    // The first pointer settles earlier activity; a further finger joins the open drag or pinch.
+    stopTour(); if (!pointers.size) gestures.settle();
+    canvas.focus({ preventScroll: true }); surface.setPointerCapture(event.pointerId);
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY }); canvas.classList.add('dragging');
   });
   surface.addEventListener('pointermove', event => {

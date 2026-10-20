@@ -6,6 +6,7 @@ import { Worker } from 'node:worker_threads';
 import { DENIED_METHODS, LaunchDeniedError, unitGuardActive } from '../support/no-launch.mjs';
 import { readFileSync } from 'node:fs';
 import { within, BoundedWaitTimeout, closeWithin, installSuiteDeadline, cleanupState, CHROME_TMPDIR, chromeSocketPathFits, chromeLaunchEnv } from '../support/bounded.mjs';
+import { cleanupWorkflow } from '../support/workflow-cleanup.mjs';
 
 test('the launch guard is active inside unit-test processes', () => {
   assert.equal(unitGuardActive, true, 'run unit tests through scripts/run-unit.mjs');
@@ -90,4 +91,45 @@ test('every Playwright input, CDP and locator evaluation in the browser suites i
     });
   }
   assert.deepEqual(offenders, []);
+});
+
+// T05 fix round 1 (Codex finding 3): the workflow suite's GPU drain runs in its cleanup, after the
+// report was written; a drain that fails while the bounded closes succeed must still fail the suite.
+function fakeCleanup({ drainFails = [] } = {}) {
+  const calls = [], written = [];
+  const options = {
+    pages: ['first', 'second'],
+    drain: page => { calls.push(`drain ${page}`); return drainFails.includes(page) ? Promise.reject(new BoundedWaitTimeout('drain GPU work', 5)) : Promise.resolve(); },
+    report: [{ name: 'Fresh start opens Plane at the default view' }, { name: 'No browser runtime errors' }],
+    writeReport: entries => { calls.push('write'); written.push(JSON.parse(JSON.stringify(entries))); return Promise.resolve(); },
+    closeAll: () => { calls.push('close'); return Promise.resolve(); },
+    log: () => {},
+  };
+  return { calls, written, options };
+}
+
+test('a drain failure fails the workflow suite even when its closes succeed', async () => {
+  const { calls, written, options } = fakeCleanup({ drainFails: ['second'] });
+  const failed = await cleanupWorkflow(options);
+  assert.equal(failed, true, 'the suite result is a failure');
+  const failures = options.report.filter(entry => entry.name === 'FAIL');
+  assert.equal(failures.length, 1);
+  assert.match(failures[0].error, /drain GPU work/);
+  assert.deepEqual(calls, ['drain first', 'drain second', 'write', 'close'], 'every page is drained, the report is written with the failure, then the closes run');
+  assert.ok(written.at(-1).some(entry => entry.name === 'FAIL'), 'the persisted report carries the failure');
+});
+
+test('a clean drain keeps the workflow suite successful and still closes everything', async () => {
+  const { calls, written, options } = fakeCleanup();
+  assert.equal(await cleanupWorkflow(options), false);
+  assert.equal(options.report.some(entry => entry.name === 'FAIL'), false);
+  assert.deepEqual(calls, ['drain first', 'drain second', 'write', 'close']);
+  assert.equal(written.length, 1);
+});
+
+test('a report that cannot be written is a failure, and the closes still run', async () => {
+  const { calls, options } = fakeCleanup();
+  options.writeReport = () => { calls.push('write'); return Promise.reject(new Error('disk full')); };
+  assert.equal(await cleanupWorkflow(options), true);
+  assert.deepEqual(calls, ['drain first', 'drain second', 'write', 'close']);
 });

@@ -6,6 +6,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { LIMITS, within, idleWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { cleanupWorkflow } from './support/workflow-cleanup.mjs';
 
 const { chromium } = await import('playwright');
 installSuiteDeadline('workflow');
@@ -17,6 +18,7 @@ const report = [], errors = [];
 const pass = (name, details = {}) => { report.push({ name, ...details }); console.log(`PASS ${name}`, details); };
 const INITIAL = { re: '-0.743643887037151', im: '0.13182590420533', zoom: 3.85 };
 let server, browser, context;
+const contexts = [];
 
 async function open(context, hash = '') {
   const page = boundContext(await within(context.newPage(), LIMITS.launch, 'newPage'));
@@ -39,6 +41,7 @@ try {
   }
   browser = await chromium.launch({ headless: true, timeout: LIMITS.launch, args: ['--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   context = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true }), LIMITS.launch, 'newContext'));
+  contexts.push(context);
   const page = await open(context);
 
   const fresh = await state(page);
@@ -131,6 +134,51 @@ try {
   assert.match(await earlier.locator('#toast').textContent(), /earlier ATLAS format/);
   pass('An earlier-format link opens fresh-start Plane with a notice');
 
+  // Pointer lifecycle (fix round 1, Codex findings 2 and 1). A held mouse drag, then Back: the drag
+  // settles as a pose, the previous pose is restored, and the still-held pointer navigates no more.
+  const beforeHold = await state(page);
+  await within(page.mouse.move(600, 420), LIMITS.operation, 'mouse.move'); await within(page.mouse.down(), LIMITS.operation, 'mouse.down');
+  await within(page.mouse.move(650, 450, { steps: 5 }), LIMITS.operation, 'mouse.move');
+  await idleWithin(page);
+  assert.notEqual((await state(page)).scene.camera.re, beforeHold.scene.camera.re, 'the held drag is previewing');
+  await press(page, 'Alt+ArrowLeft');
+  await idleWithin(page);
+  const restored = await state(page);
+  assert.deepEqual(restored.scene.camera, beforeHold.scene.camera, 'Back settles the held drag as a pose and restores the one before it');
+  assert.equal(restored.history.canForward, true, 'the settled drag is the forward pose');
+  await within(page.mouse.move(700, 500, { steps: 5 }), LIMITS.operation, 'mouse.move');
+  await idleWithin(page);
+  assert.deepEqual((await state(page)).scene.camera, beforeHold.scene.camera, 'the still-held pointer no longer navigates');
+  await within(page.mouse.up(), LIMITS.operation, 'mouse.up');
+  await idleWithin(page);
+  const released = await state(page);
+  assert.deepEqual(released.scene.camera, beforeHold.scene.camera, 'release changes nothing');
+  assert.deepEqual(released.history.camera, restored.history.camera, 'release records no pose');
+  assert.equal(released.history.canForward, true, 'the forward branch survives');
+  assert.equal(released.history.undoDepth, beforeHold.history.undoDepth);
+  pass('Back stops captured navigation and keeps the forward branch');
+
+  // A second finger joining a drag continues the same gesture: one camera-history entry at release.
+  const touchContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 }, hasTouch: true }), LIMITS.launch, 'newContext'));
+  contexts.push(touchContext);
+  const touchPage = await open(touchContext);
+  const touch = await within(touchContext.newCDPSession(touchPage), LIMITS.operation, 'newCDPSession');
+  const touchEvent = (type, touchPoints) => within(touch.send('Input.dispatchTouchEvent', { type, touchPoints }), LIMITS.operation, `touch ${type}`);
+  const beforePinch = await state(touchPage);
+  await touchEvent('touchStart', [{ x: 600, y: 500, id: 1 }]);
+  await touchEvent('touchMove', [{ x: 640, y: 520, id: 1 }]);
+  await touchEvent('touchStart', [{ x: 640, y: 520, id: 1 }, { x: 800, y: 520, id: 2 }]);
+  await touchEvent('touchMove', [{ x: 620, y: 520, id: 1 }, { x: 840, y: 520, id: 2 }]);
+  await touchEvent('touchEnd', []);
+  await idleWithin(touchPage);
+  const afterPinch = await state(touchPage);
+  assert.notEqual(afterPinch.scene.camera.re, beforePinch.scene.camera.re, 'the first finger dragged');
+  assert.ok(afterPinch.scene.camera.zoom > beforePinch.scene.camera.zoom, 'the second finger pinched');
+  assert.equal(afterPinch.history.camera.length, beforePinch.history.camera.length + 1, 'a drag that gains a finger is one camera-history entry');
+  assert.equal(afterPinch.history.undoDepth, beforePinch.history.undoDepth, 'navigation never adds an undo entry');
+  await within(touch.detach(), LIMITS.operation, 'touch.detach');
+  pass('A second finger joins the drag without committing it');
+
   assert.deepEqual(errors, []);
   pass('No browser runtime errors');
 } catch (error) {
@@ -138,20 +186,20 @@ try {
   process.exitCode = 1;
   console.error(error);
 } finally {
-  await writeFile(reportPath, JSON.stringify(report, null, 2));
   // Under SwiftShader the GPU draws are queued: render() and atlas.whenIdle() return before the
   // frames are computed (about a second each at this size), and closing the browser waits for that
   // backlog, which overran the 5 s cleanup bound (T05 report). A one-pixel readback drains each
-  // page's queue first (gl.finish does not, under ANGLE on SwiftShader), under the deep-render bound
-  // and failure-tolerant: a page that cannot drain is reported and cleanup proceeds under its own bounds.
-  for (const open of context?.pages() ?? []) {
-    try {
-      await ev(open, () => {
-        const gl = window.atlas?.renderer?.gl; if (!gl) return;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
-      }, undefined, 'drain GPU work', LIMITS.deep);
-    } catch (error) { console.error(`drain GPU work: ${error.message}`); }
-  }
-  await closeWithin(context, 'context');
-  await closeWithin(browser, 'browser'); server?.kill('SIGTERM');
+  // page's queue first (gl.finish does not, under ANGLE on SwiftShader), under the deep-render bound.
+  // A drain that fails is recorded in the report and fails the suite; the bounded closes still run
+  // (fix round 1, Codex finding 3; tests in tests/unit/no-launch.test.js).
+  const failed = await cleanupWorkflow({
+    pages: contexts.flatMap(open => open.pages()),
+    drain: open => ev(open, () => {
+      const gl = window.atlas?.renderer?.gl; if (!gl) return;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    }, undefined, 'drain GPU work', LIMITS.deep),
+    report, writeReport: entries => writeFile(reportPath, JSON.stringify(entries, null, 2)),
+    closeAll: async () => { for (const open of contexts) await closeWithin(open, 'context'); await closeWithin(browser, 'browser'); server?.kill('SIGTERM'); },
+  });
+  if (failed) process.exitCode = 1;
 }
