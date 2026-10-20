@@ -41,7 +41,9 @@ async function copyTree(root, paths) { for (const p of paths) { await mkdir(join
 test('E7: the committed amendment is exactly the designed object, canonically serialised, with the pinned hash', async () => {
   const bytes = readFileSync(join(ROOT, PATH), 'utf8');
   assert.equal(bytes, canonical(AMENDMENT) + '\n'); assert.equal(sha(bytes), HASH);
-  assert.deepEqual(Qn.QUALIFICATIONS, { [ID]: { path: PATH, sha256: HASH } }, 'the registry pins this one profile');
+  // G5-D (E8/E9, prereg webgpu-g5d-prereg.md §8.2) adds exactly one further authorised profile; the E7 entry itself is unchanged.
+  assert.deepEqual(Qn.QUALIFICATIONS[ID], { path: PATH, sha256: HASH }, 'the registry pins this profile unchanged');
+  assert.deepEqual(Object.keys(Qn.QUALIFICATIONS).sort(), [ID, 'project0-g5d-v1'], 'and no profile other than E7 and G5-D');
   const ctx = await load();
   assert.equal(Qn.isVerifiedQualification(ctx), true); assert.deepEqual(Qn.qualificationReference(ctx), REF);
   assert.equal(Qn.isVerifiedQualification(JSON.parse(JSON.stringify(ctx))), false, 'a serialised copy is not a verified context');

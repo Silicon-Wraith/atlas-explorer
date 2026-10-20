@@ -288,7 +288,9 @@ export function sourceProblems(record, records, raws) {
 // WebGPU remediation (prereg rev 2): a clean record whose saved launch carries the developer flag must also satisfy remediation/evidence-rules.mjs
 // (the compensated G5 form, the feature-request policy over every acquisition, and equality with attempt 1's comparable granted set, from
 // `baseline` = { records, raws } of webgpu-1). Every remediation-configuration record gets a feature-comparison row, returned as `featureComparison`.
-export async function recompute(records, fixtures, { root = ROOT, manifest = null, collect = false, baseline = null } = {}) {
+// G5-D: `qualification` (a verified context, or null) selects the G5 arithmetic contract of the evidence rules (never the developer flag alone),
+// and every G5 derivation receives the record's identity, which selects the historical G5-A shader expectation (prereg §8.5).
+export async function recompute(records, fixtures, { root = ROOT, manifest = null, collect = false, baseline = null, qualification = null } = {}) {
   const launches = [], raws = {}, errors = {}, featureRows = [];
   const at = path => join(root, 'artifacts/project0', path);
   const fail = (r, e) => { if (!collect) throw e; errors[r.id] = e.message; };
@@ -324,7 +326,7 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
       catch (e) { throw new Error(`record ${r.id}: its raw payload is not readable JSON (${e.message})`); }
       if (complete && underRemediation(info)) {
         featureRows.push(featureComparison(r, raws[r.id], baseline));
-        const problems = r.invalidations.length ? [] : remediationRecordProblems(r, raws[r.id], info, baseline);
+        const problems = r.invalidations.length ? [] : remediationRecordProblems(r, raws[r.id], info, baseline, qualification);
         if (problems.length) throw new Error(`record ${r.id}: remediation evidence rules: ${problems.join('; ')}`);
       }
     } catch (e) { fail(r, e); }
@@ -339,7 +341,7 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
     // observation and deliberately no metric derivation; its own failure stands. Only the real G5 slots are rederived.
     if (r.slot === 'incomplete') { g5Observations[r.id] = { slot: 'incomplete', collected: false }; continue; }
     try {
-      const obs = g5Observation(r.slot, raws[r.id], fixtures);
+      const obs = g5Observation(r.slot, raws[r.id], fixtures, { identity: r.identity });
       g5Observations[r.id] = obs;
       if (r.invalidations.length) {
         const saved = r.invalidations.filter(x => x.startsWith('metrics: ')), want = obs.invalidation ? [`metrics: ${obs.invalidation}`] : [];
@@ -369,7 +371,7 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
         const problems = sourceProblems(r, records.filter(x => !errors[x.id]), raws);
         if (problems.length) throw new Error(`record ${r.id}: its source windows are not bound to validated companions of its invocation: ${problems.join('; ')}`);
       }
-      const again = await metricsFor(r.gate, r.slot, raws[r.id], fixtures);
+      const again = await metricsFor(r.gate, r.slot, raws[r.id], fixtures, { identity: r.identity });
       if (canonical(again) !== canonical(r.metrics)) throw new Error(`metrics for ${r.id} do not recompute from its raw payload`);
     } catch (e) { fail(r, e); }
   }

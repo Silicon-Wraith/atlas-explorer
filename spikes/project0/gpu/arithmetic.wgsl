@@ -1,10 +1,13 @@
 // spikes/project0/gpu/arithmetic.wgsl — G4/G5 sample entry points and the policy readback.
+// G5-D (prereg docs/reports/project0/webgpu-g5d-prereg.md §3, §8.4): every G5 path (plane, operational, forced-continuation diagnostic)
+// calls q_update_g5d, the plain fields.wgsl polynomial qsq (unchanged) plus the parameter. The G5-A helpers below are kept unchanged for the
+// historical remediation_* validation entry points only; no G5 path uses q_update.
 struct Count { n: u32, cap: u32, _a: u32, _b: u32 }
 @group(0) @binding(0) var<uniform> count: Count;
 @group(0) @binding(1) var<storage, read> inputs: array<vec4f>;
 @group(0) @binding(2) var<storage, read_write> outputs: array<vec4u>;
 
-// G5-A (WebGPU remediation preregistration rev 2, §2.2): the compensated quaternion update. Each component is Ogita–Rump–Oishi Dot2 over
+// G5-A (WebGPU remediation preregistration rev 2, §2.2; historical, superseded for G5 by G5-D): the compensated quaternion update. Each component is Ogita–Rump–Oishi Dot2 over
 // the old state, with the parameter inside the compensated sum, evaluated in exactly this order with explicitly typed f32 intermediates:
 // ordinary multiplication for the product, the builtin fma(a, b, -p) for its residual, the six-operation TwoSum. Compensation is local to
 // one update; no low component is carried between iterations. WGSL may still fuse, contract or reassociate (prereg §2.4); the CPU models
@@ -55,6 +58,11 @@ fn q_update(q: vec4f, c: vec4f) -> vec4f {
   return vec4f(r0, r1, r2, r3);
 }
 
+// G5-D (prereg §3): the single arithmetic kernel; qsq is the existing fields.wgsl declaration.
+fn q_update_g5d(q: vec4f, c: vec4f) -> vec4f {
+  return qsq(q) + c;
+}
+
 @compute @workgroup_size(64)
 fn bulb_samples(@builtin(global_invocation_id) id: vec3u) {
   if (id.x >= count.n) { return; }
@@ -74,7 +82,7 @@ fn qjulia_plane(@builtin(global_invocation_id) id: vec3u) {
     let r = length(q);
     if (r > 2.0) { out = vec4u(ST_ESCAPED, n, bitcast<u32>(log(r)), 0u); break; }
     if (n == count.cap) { break; }
-    q = q_update(q, c);                                 // G5-A; |q| <= 2 here, so no overflow
+    q = q_update_g5d(q, c);                             // G5-D; |q| <= 2 here, so no overflow
   }
   outputs[id.x] = out;
 }
@@ -84,7 +92,30 @@ fn qjulia_plane(@builtin(global_invocation_id) id: vec3u) {
 fn qjulia_offplane() {
   var q = inputs[0];
   let c = inputs[1];
-  for (var n: u32 = 0u; n < 8u; n++) { q = q_update(q, c); outputs[n] = bitcast<vec4u>(q); }   // G5-A
+  for (var n: u32 = 0u; n < 8u; n++) { q = q_update_g5d(q, c); outputs[n] = bitcast<vec4u>(q); }   // G5-D forced-continuation diagnostic
+}
+
+// G5-D operational orbits (prereg §4.3; layout qualification/g5d-config.js), runtime inputs only: inputs[3i] = q0, inputs[3i + 1] = C,
+// inputs[3i + 2].x = the certified binary32 escape radius R. Escape is length(q) > R, tested at n = 0 and after each update n = 1 .. cap.
+// outputs[(cap + 1) i] = (status, index, log-radius word, completed updates); outputs[(cap + 1) i + n] = q_n for each completed update n.
+// A norm that is neither > R nor <= R (NaN) is a numerical failure at that update.
+@compute @workgroup_size(64)
+fn qjulia_operational(@builtin(global_invocation_id) id: vec3u) {
+  if (id.x >= count.n) { return; }
+  let base = (count.cap + 1u) * id.x;
+  var q = inputs[3u * id.x];
+  let c = inputs[3u * id.x + 1u];
+  let radius = inputs[3u * id.x + 2u].x;
+  var out = vec4u(ST_BUDGET, 0u, 0u, count.cap);
+  for (var n: u32 = 0u; n <= count.cap; n++) {
+    let r = length(q);
+    if (r > radius) { out = vec4u(ST_ESCAPED, n, bitcast<u32>(log(r)), n); break; }
+    if (!(r <= radius)) { out = vec4u(ST_FAILURE, n, 0u, n); break; }
+    if (n == count.cap) { break; }
+    q = q_update_g5d(q, c);
+    outputs[base + n + 1u] = bitcast<vec4u>(q);
+  }
+  outputs[base] = out;
 }
 
 @compute @workgroup_size(64)

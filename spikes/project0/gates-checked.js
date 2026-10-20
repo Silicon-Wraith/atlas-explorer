@@ -3,7 +3,7 @@
 // that turns saved records into a verdict (T10 qualify, T13 report) calls evaluateGateChecked, never evaluateGate directly. No hardware.
 import { evaluateGate, gatePlan } from './gates.js';
 import { validateRecords } from './contract.js';
-import { isVerifiedQualification, effectiveGatePlan, validateQualification } from './qualification.mjs';
+import { isVerifiedQualification, effectiveGatePlan, validateQualification, addedSlotsOf } from './qualification.mjs';
 import { validateRecordTiming } from './timing-contract.js';
 
 // Throws `timing method: ...` for the first record whose timing method is missing, malformed, not the one its gate expects, or (for a measured
@@ -32,8 +32,14 @@ export function evaluateGateChecked(gate, records, manifest, fixtures, { raws, q
   try { validateQualification(manifest, qualification ?? null); }
   catch (error) { return invalid([`qualification: ${error.message}`]); }
   if (qualification === null || qualification === undefined) return evaluateGate(gate, records, manifest, fixtures);
-  if (gate !== 'G1') return evaluateGate(gate, records, manifest, fixtures);
-  try { validateRecords(records, manifest, effectiveGatePlan(fixtures, qualification)); }
+  // G5-D (prereg §8.3): a profile that injects a slot validates every record once against the effective plan; an unchanged gate is then decided
+  // by the frozen evaluator over its own records only, so a selected G5/qjulia-operational record can never make other evidence invalid
+  // through the frozen plan's unknown-slot check. All of the frozen evaluator's invalidation, coverage and attribution checks still apply.
+  const amending = addedSlotsOf(qualification).length > 0, plan = effectiveGatePlan(fixtures, qualification);
+  if (amending) { try { validateRecords(records, manifest, plan); } catch (error) { return invalid([error.message]); } }
+  if (gate === 'G5' && addedSlotsOf(qualification).some(k => k.startsWith('G5/'))) return evaluateAmended(gate, records, plan, evidenceIds, invalid);
+  if (gate !== 'G1') return evaluateGate(gate, amending ? records.filter(row => row.gate === gate) : records, manifest, fixtures);
+  try { validateRecords(records, manifest, plan); }
   catch (error) { return invalid([error.message]); }
   const rows = records.filter(row => row.gate === 'G1');
   if (rows.length !== 1 || rows[0].slot !== 'headed') return invalid(['missing required trials']);
@@ -44,6 +50,24 @@ export function evaluateGateChecked(gate, records, manifest, fixtures, { raws, q
     const value = rows[0].metrics[key];
     const passed = operation === 'eq' ? value === a : operation === 'le' ? value <= a : operation === 'ge' ? value >= a : value >= a && value <= b;
     if (!passed) reasons.push(`headed: ${key}=${value}`);
+  }
+  return { gate, status: reasons.length ? 'fail' : 'pass', reasons, evidenceIds };
+}
+
+// G5-D: the amended G5 over the effective plan (the unchanged frozen qjulia-plane rules and the profile's qjulia-operational rules): exactly
+// one record per required slot, each with a headed execution identity, invalidations kept as invalid/inconclusive, then every rule.
+function evaluateAmended(gate, records, plan, evidenceIds, invalid) {
+  const rows = records.filter(row => row.gate === gate), expected = plan[gate];
+  if (rows.length !== Object.keys(expected).length || Object.keys(expected).some(slot => rows.filter(r => r.slot === slot).length !== 1)) return invalid(['missing required trials']);
+  const modes = rows.filter(r => r.identity?.mode !== 'headed');
+  if (modes.length) return invalid(modes.map(r => `${gate}/${r.slot}: execution identity ${r.identity?.mode} is not headed`));
+  const invalidations = rows.flatMap(row => row.invalidations);
+  if (invalidations.length) return invalid(invalidations);
+  const reasons = [];
+  for (const row of rows) for (const [key, [operation, a, b]] of Object.entries(expected[row.slot])) {
+    const value = row.metrics[key];
+    const passed = operation === 'eq' ? value === a : operation === 'le' ? value <= a : operation === 'ge' ? value >= a : value >= a && value <= b;
+    if (!passed) reasons.push(`${row.slot}: ${key}=${value}`);
   }
   return { gate, status: reasons.length ? 'fail' : 'pass', reasons, evidenceIds };
 }

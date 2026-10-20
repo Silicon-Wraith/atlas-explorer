@@ -52,7 +52,7 @@ export async function finalise({ gate, mode, campaign, runDir, identity, launchI
       for (const c of outcome.captures) { extra.push({ name: `${stamp}-presented-${c.name}.png`, data: c.png }); raw.presented[c.name] = classify(decodePng(c.png)); }
     }
     let metrics = {};
-    if (!experiment && s.slot !== 'incomplete') { try { metrics = await metricsFor(slotGate, s.slot, raw, fixtures); } catch (e) { recordInvalidations.push(`metrics: ${e.message}`); } }
+    if (!experiment && s.slot !== 'incomplete') { try { metrics = await metricsFor(slotGate, s.slot, raw, fixtures, { identity }); } catch (e) { recordInvalidations.push(`metrics: ${e.message}`); } }
     // A slot that names source windows (G9, T9 fix round 2) is bound to its companion records of the same invocation: a missing or invalid
     // companion invalidates it, whatever its own raw says. The companions precede it in the slot order, so they are already finalised.
     // Fix round 3: the binding compares each source interval with the companion's own raw observation (validateSources, also for read time).

@@ -22,6 +22,8 @@ export async function closeRemediation(values, deps = {}) {
   // E7 / G1-D: a manifest that names a qualification profile is closed only under that profile, reloaded and authenticated here (the registry's
   // pinned hash, not the manifest's), with its limitation evidence verified; loadCampaign and qualify then check the manifest against it.
   const named = JSON.parse(await readFile(resolve(root, values.manifest), 'utf8'));
+  // G5-D (prereg §8.6): the amended attempt closes only through close-g5d.mjs into webgpu-g5d-decision.json; webgpu-decision.json is never overwritten.
+  if (named.qualification?.id === 'project0-g5d-v1' || named.campaign === 'webgpu-g5d') throw new Error('a G5-D manifest closes only through close-g5d.mjs (webgpu-g5d-decision.json); webgpu-decision.json is never overwritten');
   const qualification = named.qualification ? await d.loadQualification(named.qualification.id, { root: d.qualificationRoot }) : null;
   if (qualification) await d.verifyKnownLimitations(qualification);
   const { manifest, records, attempts } = await d.loadCampaign(values.manifest, { root, qualification });

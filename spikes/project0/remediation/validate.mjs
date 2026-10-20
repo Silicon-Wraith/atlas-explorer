@@ -26,7 +26,20 @@ export function supplementary() {
 
 // Fix round 1 (finding 4): the shader identity a G5 record must report — the sha256 of the reviewed fields.wgsl + arithmetic.wgsl, exactly as
 // prepare() concatenates and compiles them, and the fixed entry points and pipeline descriptors (no extra, duplicate or altered entry).
-export function expectedShader() {
+// G5-D prereg §8.5: historical G5-A evidence is checked against its recorded, authenticated implementation, never the new checkout. The
+// remediation implementation 448d5ff (identity bound by the webgpu-remediation manifest's selected records) compiled exactly this source and
+// these seven pipelines; the G5-D profile binds the same expectation (qualification.mjs checks they agree when it authenticates the profile).
+// A record selects it only by its full implementation identity (commit and hash), never by the hash its raw declares.
+const g5aPipelines = ['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates'];
+export const HISTORICAL_G5A = Object.freeze({
+  implementationCommit: '448d5ff5eed70af1fbc579488d1f238cb155d3be',
+  implementationHash: '07f6b282d10cbc08a9c58db28ddab18a3b90bfc4e082a03ef9a3084d878a0a18',
+  shader: Object.freeze({ sha256: '58a506b905061e195be1ad22a4d39370a9db7082ebc068e318420b785a2388ea', entryPoints: Object.freeze([...g5aPipelines]),
+    pipelines: Object.freeze(g5aPipelines.map(entryPoint => Object.freeze({ entryPoint, module: 'arithmetic', layout: 'auto', label: entryPoint, constants: null }))) }),
+});
+const isHistoricalG5A = identity => identity?.implementationCommit === HISTORICAL_G5A.implementationCommit && identity?.implementationHash === HISTORICAL_G5A.implementationHash;
+export function expectedShader(identity = null) {
+  if (isHistoricalG5A(identity)) { const s = HISTORICAL_G5A.shader; return { sha256: s.sha256, entryPoints: [...s.entryPoints], pipelines: s.pipelines.map(p => ({ ...p })) }; }
   const code = readFileSync(new URL('../gpu/fields.wgsl', import.meta.url), 'utf8') + readFileSync(new URL('../gpu/arithmetic.wgsl', import.meta.url), 'utf8');
   return { sha256: createHash('sha256').update(code).digest('hex'), entryPoints: [...ARITHMETIC_ENTRY_POINTS], pipelines: arithmeticPipelines() };
 }
@@ -42,11 +55,12 @@ function checkedWords(name, words, length, problems) {
   return words;
 }
 
-export function compensationReport(raw, fx, supp = supplementary()) {
+// `identity` is the record's authenticated execution identity (G5-D §8.5): it selects the shader expectation, the historical one only for 448d5ff.
+export function compensationReport(raw, fx, supp = supplementary(), { identity = null } = {}) {
   const problems = [], s = raw?.supplementary;
   if (raw?.form !== COMPENSATED_FORM) problems.push(`the record does not declare the compensated form (${JSON.stringify(raw?.form ?? null)})`);
   if (!s || typeof s !== 'object') return { validated: false, problems: [...problems, 'no supplementary validation evidence'], matches: [], counts: {} };
-  const shader = s.shader, want = expectedShader();
+  const shader = s.shader, want = expectedShader(identity);
   if (!shader || typeof shader !== 'object') problems.push('shader-source hash, entry points or pipeline descriptors are not recorded');
   else {
     if (shader.sha256 !== want.sha256) problems.push(`shader source hash ${JSON.stringify(shader.sha256 ?? null)} is not the reviewed fields + arithmetic source ${want.sha256}`);

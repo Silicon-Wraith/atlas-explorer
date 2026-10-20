@@ -7,6 +7,7 @@
 //    holds none, the comparison is recorded as unavailable and nothing is inferred.
 import { DEVELOPER_FLAG } from '../launch.mjs';
 import { COMPENSATED_FORM } from './validate.mjs';
+import { isVerifiedQualification } from '../qualification.mjs';
 
 export const NO_FEATURE_GATES = Object.freeze(['G1', 'G3', 'G4', 'G5']);
 export const roleOf = gate => (NO_FEATURE_GATES.includes(gate) ? (gate === 'G1' ? 'g1' : 'checks') : 'session');
@@ -44,10 +45,18 @@ export function featureComparison(record, raw, baseline) {
   return { ...row, status: differs.length ? 'differs' : 'equal', baseline: candidates };
 }
 
-export function remediationRecordProblems(record, raw, launchInfo, baseline) {
+// G5-D prereg §8.4: the G5 arithmetic contract is selected by the authenticated profile, never by the developer flag alone. The E7 profile
+// (historical webgpu-remediation) and evidence without a profile keep the G5-A compensated rule; project0-g5d-v1 requires its plain form.
+export function requiredG5Form(qualification = null) {
+  if (qualification === null || qualification === undefined) return COMPENSATED_FORM;
+  if (!isVerifiedQualification(qualification)) throw new Error('the G5 arithmetic contract needs a verified qualification context (loadQualification)');
+  return qualification.doc.kernel?.form ?? COMPENSATED_FORM;
+}
+export function remediationRecordProblems(record, raw, launchInfo, baseline, qualification = null) {
   if (!underRemediation(launchInfo)) return [];
-  const problems = [];
-  if (record.gate === 'G5' && raw?.form !== COMPENSATED_FORM) problems.push(`G5 evidence under the remediation configuration must declare the compensated form (found ${JSON.stringify(raw?.form ?? null)})`);
+  const problems = [], form = requiredG5Form(qualification);
+  if (record.gate === 'G5' && raw?.form !== form) problems.push(form === COMPENSATED_FORM ? `G5 evidence under the remediation configuration must declare the compensated form (found ${JSON.stringify(raw?.form ?? null)})`
+    : `G5 evidence under ${qualification.id} must declare its plain form ${form} (found ${JSON.stringify(raw?.form ?? null)})`);
   problems.push(...acquisitionProblems(record.gate, raw?.acquisitions));
   const cmp = featureComparison(record, raw, baseline);
   if (cmp.status === 'differs') problems.push(`granted features ${JSON.stringify(cmp.remediation)} differ from attempt 1's comparable record(s) ${JSON.stringify(cmp.baseline)}`);

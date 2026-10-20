@@ -11,6 +11,8 @@
 // Fix round 1 (Codex T10 r1): G3-G5 headed; reuse rules (incl. whole timing invocation) before anything runs; the preflight with this campaign's
 // flags; auxiliary evidence bound by hash; source preflights verified; incomplete attempts kept; every correctness gate evaluated whatever
 // --gates names; a report is always written, failing closed.
+// G5-D (prereg §8.4, §10): under project0-g5d-v1 the request is fixed (every gate, headed, no reuse, the pinned remediation launch), the
+// historical references are verified before the preflight, and the G5 page alone is told the profile.
 import { parseArgs } from 'node:util';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve, basename } from 'node:path';
@@ -20,7 +22,8 @@ import { decideBackends } from './decision.js';
 import { buildManifest, checkCoherence, ABORTS, recompute, qualify, loadCampaign, loadBaseline, requiredSlots, gatesOf, verdictOf, preflightProblems, NON_QUALIFYING,
   validateReuseEntries, verifyPreflight, auxiliaryHashes } from './qualify.mjs';
 import { gatePlan } from './gates.js';
-import { REQUIRED_PROFILE_CAMPAIGNS, effectiveGatePlan, qualificationReference, excludedTrialsOf, knownLimitationsOf, SCOPE_DISCLOSURE, HEADLESS_ROW, loadQualification, verifyKnownLimitations } from './qualification.mjs';
+import { REQUIRED_PROFILE_CAMPAIGNS, effectiveGatePlan, qualificationReference, excludedTrialsOf, knownLimitationsOf, HEADLESS_ROW, loadQualification, verifyKnownLimitations, scopeOf, dispositionsOf, addedSlotsOf, verifyHistoricalReferences } from './qualification.mjs';
+import { canonical } from './contract.js';
 
 // Fix round 1 (Codex ruling): G3, G4 and G5 run headed, as T6's development checks did; the spec names no mode for them, and headless has no
 // usable device on this host (E1, E4). G1 keeps both modes (spec §4) and G2 stays headed.
@@ -47,7 +50,21 @@ export async function runCampaign(values, d) {
   const qualification = values.qualification ? await d.loadQualification(values.qualification) : null;
   if (qualification) {
     if (qualification.doc.campaign !== values.name) throw new Error(`qualification ${qualification.id} applies to campaign ${qualification.doc.campaign}, not ${values.name}`);
+    // G5-D (prereg §10): the single attempt requests every gate, headed, with no reuse, under the reviewed remediation launch configuration
+    // exactly as the profile pins it; anything else is refused before the preflight or any browser launch.
+    const request = qualification.doc.campaignRequest;
+    if (request) {
+      if (values.gates !== undefined) throw new Error(`campaign ${values.name} requests every gate (G1–G13) under ${qualification.id}; --gates ${values.gates} is not permitted`);
+      let reuse; try { reuse = JSON.parse(values.reuse ?? '[]'); } catch { reuse = null; }
+      if (canonical(reuse) !== canonical(request.reuse)) throw new Error(`campaign ${values.name} runs with no reuse under ${qualification.id} (--reuse '[]'), not ${values.reuse}`);
+      if ((values.args ?? 'attempt1') !== qualification.doc.launch.args) throw new Error(`campaign ${values.name} runs with --args ${qualification.doc.launch.args} (the reviewed remediation launch configuration), not ${values.args ?? 'attempt1'}`);
+      if (canonical(d.LAUNCH[qualification.doc.launch.args] ?? null) !== canonical(qualification.doc.launch.requestedArgs)) throw new Error(`the ${qualification.doc.launch.args} launch configuration ${JSON.stringify(d.LAUNCH[qualification.doc.launch.args] ?? null)} is not the one ${qualification.id} pins`);
+    }
     await d.verifyKnownLimitations(qualification);
+    if (qualification.doc.historical) {
+      if (!d.verifyHistoricalReferences) throw new Error('campaign: the verifyHistoricalReferences dependency is required under this profile');
+      await d.verifyHistoricalReferences(qualification);
+    }
   }
   const args = values.args ?? 'attempt1';
   const only = values.gates?.split(','), reuse = JSON.parse(values.reuse ?? '[]');
@@ -98,7 +115,10 @@ export async function runCampaign(values, d) {
       gatesOf(gate).forEach(g => attempted.add(g));
       // R2 (concern 3): once a gate is attempted, nothing ends the campaign without a report; a runner that throws stops it, failing closed.
       let out;
-      try { out = gate === 'G2' ? await d.runG2({ args, campaign: values.name }) : await d.runSession({ gate, mode, args, campaign: values.name }); }
+      // G5-D: only an invocation of a gate whose slots the profile amends tells its page the profile (the page cannot authenticate it; the read
+      // side checks the declared form, matrix and shader against the authenticated profile)
+      const extra = qualification && addedSlotsOf(qualification).some(k => gatesOf(gate).includes(k.split('/')[0])) ? `&qualification=${encodeURIComponent(qualification.id)}` : '';
+      try { out = gate === 'G2' ? await d.runG2({ args, campaign: values.name }) : await d.runSession({ gate, mode, args, campaign: values.name, ...(extra ? { extra } : {}) }); }
       catch (e) {
         const message = `the ${gate} ${mode} runner failed: ${e.message}`;
         stopped = `${gate}: ${message}`;
@@ -121,7 +141,7 @@ export async function runCampaign(values, d) {
       // (--gates is the rerun set, never a waiver), over the campaign's own and its reused records.
       try {
         const m = draft();
-        const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest: m, collect: true, baseline });
+        const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest: m, collect: true, baseline, qualification });
         for (const g of CORRECTNESS) {
           const r = verdictOf(g, { records: selected, attempts, manifest: m, fixtures, raws, rejected, errors: bindingErrors, gateErrors, qualification });
           if (r.status !== 'pass') { stopped = `correctness gate ${g} is ${r.status}`; if (r.status === 'fail') blockedBy = g; break; }
@@ -144,7 +164,7 @@ export async function runCampaign(values, d) {
     // Coherence binds the evidence that can support a verdict; an invalidated record (e.g. an honest failed launch with a fallback identity)
     // cannot pass and keeps its own identity.
     try { checkCoherence(selected.filter(r => !r.invalidations.length), manifest); } catch (e) { errors.push(e.message); }
-    const { raws, errors: rejected, g5Observations: observed } = await d.recompute([...selected, ...attempts], fixtures, { manifest, collect: true, baseline });
+    const { raws, errors: rejected, g5Observations: observed } = await d.recompute([...selected, ...attempts], fixtures, { manifest, collect: true, baseline, qualification });
     g5Observations = observed ?? {};
     ({ backend, decision } = qualify(manifest, selected, fixtures, { raws, attempts, rejected, errors, gateErrors, qualification }));
     // R2 (finding 13): every collected verification or invocation error is a tooling error, reported and reflected in the exit status
@@ -163,9 +183,11 @@ export async function runCampaign(values, d) {
     stopped, verificationErrors, ...(failure ? { verificationFailure: failure } : {}) };
   // Fix round 1 (finding 1): the rederived G5 observations are reported beside the verdicts; a numerical failure is named even when G5 is invalid.
   // E7: the scope disclosure, the excluded trial and the known limitation travel with the verdicts, separately from them (never a gate row).
-  const scope = qualification ? { qualification: qualificationReference(qualification), scope: SCOPE_DISCLOSURE, excludedTrials: excludedTrialsOf(qualification), knownLimitations: knownLimitationsOf(qualification), headlessRow: HEADLESS_ROW } : {};
+  const scope = qualification ? { qualification: qualificationReference(qualification), scope: scopeOf(qualification), excludedTrials: excludedTrialsOf(qualification), knownLimitations: knownLimitationsOf(qualification), headlessRow: HEADLESS_ROW,
+    ...(qualification.doc.dispositions ? { dispositions: dispositionsOf(qualification) } : {}) } : {};
   await d.writeReport(values.name, manifestDoc, { backend, decision, g5Observations, ...scope, ...(failure ? { verificationFailure: failure } : {}) });
-  if (qualification) d.log(SCOPE_DISCLOSURE);
+  if (qualification) d.log(scopeOf(qualification));
+  for (const [id, o] of Object.entries(g5Observations)) if (o.slot === 'qjulia-operational') d.log(`G5 operational ${id}: ${o.invalidation ? `INVALID: ${o.invalidation}` : `qualifying ${JSON.stringify(o.metrics)}`}; S3 diagnostics (E9, non-gating): ${o.diagnostics?.outsideNumericalCriteria ?? '?'} of ${o.diagnostics?.samples ?? '?'} outside the numerical criteria, ${o.diagnostics?.statusIndexDisagreements ?? '?'} status/index disagreements; forced continuation (E8 diagnostic): componentRatio=${o.continuation?.componentRatio ?? 'not collected'}${o.continuation ? ` matches ${o.continuation.matches.join(', ') || 'none'}` : ''}`);
   for (const [id, o] of Object.entries(g5Observations)) if (o.slot === 'qjulia-offplane') d.log(`G5 observation ${id}: componentRatio=${o.componentRatio}${o.numericalFailure ? ' (NUMERICAL FAILURE)' : ''}; compensation ${o.compensation ? (o.compensation.validated ? 'validated' : `unvalidated (matches ${o.compensation.matches.join(', ') || 'none'})`) : 'not declared'}`);
   for (const [g, r] of Object.entries(backend.gates)) d.log(`${g}: ${r.status}${r.reasons?.length ? ` — ${r.reasons.slice(0, 3).join('; ')}` : ''}`);
   d.log(`decision (remediation not yet closed): ${decision.outcome} — next: ${decision.next}${stopped ? `\nSTOPPED: ${stopped}` : ''}${failure ? `\nVERIFICATION FAILURE: ${failure}` : ''}`);
@@ -182,7 +204,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const { fixtureIdentity, implementationIdentity } = await import('./evidence.mjs');
   const dir = resolve(ROOT, 'docs/reports/project0');
   const result = await runCampaign(values, {
-    LAUNCH, runSession, runG2, runPreflight: runIntegrityPreflight, implementationIdentity, fixtureIdentity, loadCampaign, recompute, log: console.log, loadBaseline: () => loadBaseline(), loadQualification: id => loadQualification(id), verifyKnownLimitations: ctx => verifyKnownLimitations(ctx),
+    LAUNCH, runSession, runG2, runPreflight: runIntegrityPreflight, implementationIdentity, fixtureIdentity, loadCampaign, recompute, log: console.log, loadBaseline: () => loadBaseline(), loadQualification: id => loadQualification(id), verifyKnownLimitations: ctx => verifyKnownLimitations(ctx), verifyHistoricalReferences: ctx => verifyHistoricalReferences(ctx),
     verifyPreflight: (manifest, records) => verifyPreflight(manifest, records), bindAuxiliary: runDir => auxiliaryHashes(runDir),
     readFixtures: async () => JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8')),
     writeReport: async (name, manifest, gates) => {

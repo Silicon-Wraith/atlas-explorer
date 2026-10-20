@@ -28,7 +28,7 @@ export async function prepare(device, alloc, onStatus = () => {}) {
   const trace = await compile(device, fields + await source('./trace.wgsl'), 'trace');
   arithmeticRecord = { code: arithmeticCode, entryPoints: [...ARITHMETIC_ENTRY_POINTS], pipelines: arithmeticPipelines() };
   const jobs = [
-    ...['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates'].map(e => [e, { module: arithmetic, entryPoint: e }]),
+    ...ARITHMETIC_ENTRY_POINTS.map(e => [e, { module: arithmetic, entryPoint: e }]),            // G5-D: exactly the recorded configuration
     ...Object.entries(FIELDS).map(([f, id]) => [`trace_list/${f}`, { module: trace, entryPoint: 'trace_list', constants: { FIELD: id } }]),
   ];
   const pipelines = {}; let done = 0;

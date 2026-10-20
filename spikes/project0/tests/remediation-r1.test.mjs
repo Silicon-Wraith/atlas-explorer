@@ -11,6 +11,10 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { ROOT, DEVELOPER_FLAG } from '../launch.mjs';
+import { execFileSync } from 'node:child_process';
+// G5-D (prereg webgpu-g5d-prereg.md §8.4–§8.5): the G5-A implementation is historical; its source-level assertions are checked against the
+// authenticated remediation implementation 448d5ff, never the new checkout.
+const at448 = p => execFileSync('git', ['-C', ROOT, 'show', `448d5ff5eed70af1fbc579488d1f238cb155d3be:spikes/project0/${p}`], { encoding: 'utf8' });
 import { sha256, launchIdentity } from '../evidence.mjs';
 
 const fx = JSON.parse(readFileSync(new URL('../fixtures.json', import.meta.url), 'utf8'));
@@ -31,7 +35,10 @@ test('r1-4: the expected shader identity is the reviewed fields + arithmetic sou
   const code = readFileSync(new URL('../gpu/fields.wgsl', import.meta.url), 'utf8') + readFileSync(new URL('../gpu/arithmetic.wgsl', import.meta.url), 'utf8');
   const e = V.expectedShader();
   assert.equal(e.sha256, createHash('sha256').update(code).digest('hex'));
-  assert.deepEqual(e.entryPoints, ['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates']);
+  assert.deepEqual(e.entryPoints, ['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates', 'qjulia_operational'], 'G5-D appends qjulia_operational');
+  const h = V.expectedShader({ implementationCommit: '448d5ff5eed70af1fbc579488d1f238cb155d3be', implementationHash: '07f6b282d10cbc08a9c58db28ddab18a3b90bfc4e082a03ef9a3084d878a0a18' });
+  assert.equal(h.sha256, createHash('sha256').update(at448('gpu/fields.wgsl') + at448('gpu/arithmetic.wgsl')).digest('hex'), 'the historical G5-A expectation is its own reviewed source');
+  assert.deepEqual(h.entryPoints, ['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates']);
   assert.equal(V.compensationReport(rawFor({}), fx).validated, true);
   const webgpu = readFileSync(new URL('../gpu/webgpu.js', import.meta.url), 'utf8');
   assert.match(webgpu, /import \{ ARITHMETIC_ENTRY_POINTS, arithmeticPipelines \} from '\.\.\/remediation\/pipeline-config\.js';/, 'the page builds its record from the same configuration');
@@ -72,8 +79,8 @@ test('r1-2: a supplementary failure after the orbit, or after an intermediate re
     assert.ok(raw.supplementary.shader); assert.match(raw.supplementaryFailure, /dot/);
     assert.equal(V.compensationReport(raw, fx).validated, false, 'partial evidence is unvalidated, never passed');
   }
-  const checks = readFileSync(new URL('../browser/drivers/checks.js', import.meta.url), 'utf8');
-  assert.match(checks, /await collectOffplane\(/, 'the G5 driver uses the preserving collector');
+  assert.match(at448('browser/drivers/checks.js'), /await collectOffplane\(/, 'the historical G5-A driver used the preserving collector');
+  assert.match(readFileSync(new URL('../browser/drivers/checks.js', import.meta.url), 'utf8'), /await collectG5d\(/, 'the G5-D driver uses its preserving collector (behaviour: tests/g5d-qualification.test.mjs)');
 });
 
 // --- 3. baseline authentication ------------------------------------------------------------------------------------------------------------
