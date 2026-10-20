@@ -6,6 +6,8 @@
 
 > **Amendment B (2026-10-20; T04 review fix round, Codex run 20261020T203951Z-76f3, Claude review r2 APPROVED):** `createHistory` isolates each listener and takes an optional `onListenerError` hook (default: rethrow after the transition is returned); it requires `codec.equal`; a no-op command keeps its revision and requests no render; `step()` validates the target before moving a stack entry. T04's code blocks below are pre-amendment; `feat/project1a` is authoritative.
 
+> **Amendment C (2026-10-20; PLAN CHANGE from T06 review, Codex fix run 20261020T204535Z-9244, Claude review r2 APPROVED):** render reports read the backend and device when the render finishes (`finish()` evaluates an environment thunk over the captured renderer), not before it starts; the fake renderer varies mode and device per render and its `cancel()` rejects pending entries; `stillCurrent` treats a throwing check as not current. Codex's exact plan-text diffs are in `.superpowers/sdd/2026-10-20-project1a-foundations-plan/codex-T06-fix1-report.md`. T06's code blocks below are pre-amendment; `feat/project1a` is authoritative. Unit counts run +5 further from T06 on. T08's review must confirm the `busy` guard wraps every `adapter.render`.
+
 **Goal:** Move Plane into the workbench structure without changing its behaviour, and give it native
 versioned scenes, undo with a separate camera history, immutable render requests with truthful
 reports, an immutable image export, and a Discoveries control over durable local storage — with
