@@ -53,8 +53,8 @@ try {
       assert.match(entry.graphics.mode, /^GPU/);
       assert.equal(entry.graphics.error, 0);
       entry.samples = await within(page.evaluate(async () => {
-        const { GpuRenderer } = await import('/src/renderer.js');
-        const { fixed, spanFixed, precisionFor, escapeTimeExact } = await import('/src/math.js');
+        const { GpuRenderer } = await import('/src/plane/renderer.js');
+        const { fixed, spanFixed, precisionFor, escapeTimeExact } = await import('/src/plane/math.js');
         const renderer = new GpuRenderer(document.createElement('canvas'));
         const view = { re: '-0.743643887037151', im: '0.13182590420533', zoom: 4 };
         await renderer.render(view, { palette: 'ember', phase: .11, frequency: 1, relief: 1, iterations: 1500 }, 16, 12);
@@ -70,7 +70,7 @@ try {
       assert.equal(entry.samples.length, 6, 'all six GPU samples must be compared');
       for (const sample of entry.samples) assert.ok(Math.abs(sample.actual - sample.expected) < .5, JSON.stringify(sample));
       if (process.argv.includes('--benchmark')) entry.benchmarks = await within(page.evaluate(async () => {
-        const { GpuRenderer, CpuRenderer } = await import('/src/renderer.js');
+        const { GpuRenderer, CpuRenderer } = await import('/src/plane/renderer.js');
         const views = [
           { re: '-0.743735546648121901421502749766284274', im: '0.13180188244022899880486875943155304', zoom: 9.178000000000004 },
           { re: '-0.74373554655981392496378600769218837122', im: '0.13180188254868144746747814705787405605', zoom: 11.242000000000006 },

@@ -1,8 +1,8 @@
-import { GpuRenderer, CpuRenderer } from './renderer.js';
-import { INITIAL_VIEW, moveView, zoomView, viewTransform, precisionFor, validateView } from './math.js';
-import { PALETTES } from './palettes.js';
-import { PLACES } from './places.js';
-import { icon, installIcons } from './icons.js';
+import { GpuRenderer, CpuRenderer } from './plane/renderer.js';
+import { INITIAL_VIEW, moveView, zoomView, viewTransform, precisionFor, validateView } from './plane/math.js';
+import { PALETTES } from './plane/palettes.js';
+import { PLACES } from './plane/places.js';
+import { icon, installIcons } from './ui/icons.js';
 
 const $ = selector => document.querySelector(selector);
 installIcons();

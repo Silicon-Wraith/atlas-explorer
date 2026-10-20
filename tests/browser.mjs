@@ -46,9 +46,9 @@ async function checkLayout(page) {
 
 // Runs inside the browser; the exact recurrence is independent of both renderers.
 async function numericalProbe(backend) {
-  const { GpuRenderer, CpuRenderer } = await import('/src/renderer.js');
-  const { fixed, spanFixed, precisionFor, escapeTimeExact } = await import('/src/math.js');
-  const { colorPixel, paletteBytes, PALETTES } = await import('/src/palettes.js');
+  const { GpuRenderer, CpuRenderer } = await import('/src/plane/renderer.js');
+  const { fixed, spanFixed, precisionFor, escapeTimeExact } = await import('/src/plane/math.js');
+  const { colorPixel, paletteBytes, PALETTES } = await import('/src/plane/palettes.js');
   const renderer = new (backend === 'gpu' ? GpuRenderer : CpuRenderer)(document.createElement('canvas'));
   const cases = [
     { re: '-.5', im: '.1', zoom: 0, iterations: 700 },
