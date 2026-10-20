@@ -15,6 +15,8 @@ import { promisify } from 'node:util';
 import { ROOT } from '../launch.mjs';
 import { renderReport, authenticateImplementation, TIMING_CARRY, timingCarry, resultsGates, verifyPrecision, CHAIN } from '../report.mjs';
 import { sha256, launchIdentity } from '../evidence.mjs';
+import { loadFixtures } from '../qualify.mjs';
+import { SOURCE_PATHS, SPEC, FIXTURE } from '../fixture-files.mjs';
 import { GATES, canonical } from '../contract.js';
 
 const run = promisify(execFile);
@@ -87,8 +89,15 @@ test('precision rows carry their interpretation status', () => {
   const md = renderReport({ decision: { outcome: 'inconclusive' }, backend: { gates: timingInvalid, remediationClosed: true },
     precision: { interpretable: true, validated: true, primitiveFailures: [], observedDisagreementThreshold: null, firstStop: { distance: 0.01, reasons: ['anchor'] },
       rows: [{ distance: 0.1, interpreted: true, baseline: side(1, false), compensated: side(0, false), cost, extraBytes: 0 }, { distance: 0.01, interpreted: false, baseline: side(9, true), compensated: side(9, true), cost, extraBytes: 0 }] } });
-  const row = d => md.split('\n').find(l => l.startsWith(`| ${d} |`));
-  assert.match(row(0.1), /^\| 0\.1 \| yes \|/); assert.match(row(0.01), /^\| 0\.01 \| no \| not interpreted \| not interpreted \|/);
+  const cells = l => l.split('|').slice(1, -1).map(c => c.trim());
+  const header = cells(md.split('\n').find(l => l.startsWith('| d |'))), row = d => cells(md.split('\n').find(l => l.startsWith(`| ${d} |`)));
+  const col = (r, name) => r[header.findIndex(h => h.startsWith(name))];
+  assert.equal(col(row(0.1), 'interpreted'), 'yes'); assert.equal(col(row(0.1), 'eligible'), '100');
+  // Fix round 2 (Codex T13 r2 new finding): each cell of an uninterpreted row sits under its own header.
+  const u = row(0.01); assert.equal(u.length, header.length);
+  assert.equal(col(u, 'interpreted'), 'no'); assert.equal(col(u, 'eligible'), '100');
+  assert.equal(col(u, 'baseline status'), 'not interpreted'); assert.equal(col(u, 'compensated status'), 'not interpreted');
+  assert.equal(col(u, 'work median'), '1.00 / 2.00'); assert.equal(col(u, 'extra bytes'), '0');
 });
 
 // Finding 7 (adaptation 9): the brief's precision round trips, portable (synthetic evidence through the exported verifier seam, no raw evidence).
@@ -128,7 +137,8 @@ test('a summary claiming interpretability for a record with execution invalidati
 test('an honest assessment error is recomputed, kept separate from execution invalidations, and reported', async () => {
   const t = await precisionTree({ slot: 'precision', invalidations: [], raw: { primitives: [], sets: [] } });
   try {
-    assert.ok(t.args.saved.interpretationError || t.args.saved.timingError); assert.deepEqual(t.args.saved.executionInvalidations, []);
+    // Fix round 2 (Codex T13 r2): this fixture yields both a timing error and an interpretation error (round 1 wrongly said only the former).
+    assert.equal(typeof t.args.saved.timingError, 'string'); assert.equal(typeof t.args.saved.interpretationError, 'string'); assert.deepEqual(t.args.saved.executionInvalidations, []);
     assert.match(render(await verifyPrecision(t.args)), /Not interpretable:/);
     t.args.saved.interpretationError = t.args.saved.timingError = null;
     await assert.rejects(verifyPrecision(t.args), /does not recompute/);
@@ -244,5 +254,65 @@ test('every evidence reader is bound to the supplied root, not the module checko
     assert.equal(existsSync(join(mod, 'docs')) || existsSync(join(mod, 'artifacts')), false);
     await cli(root, join(mod, 'spikes/project0/report.mjs'));
     assert.match(await readFile(join(root, OUT, '2026-10-18-project0-qualification.md'), 'utf8'), /Mechanical outcome: \*\*inconclusive\*\*/);
+  } finally { await rm(root, { recursive: true, force: true }); await rm(mod, { recursive: true, force: true }); }
+});
+
+// ---- Fix round 2 (Codex T13 r2, finding 1): fixture provenance is verified in the supplied root, with its own .git ----
+// The supplied root gets a real repository: `git init`, the module repository's object store as an alternate (read-only), HEAD at the module HEAD.
+async function withGit(root) {
+  const head = (await run('git', ['-C', ROOT, 'rev-parse', 'HEAD'])).stdout.trim();
+  const objects = resolve(ROOT, (await run('git', ['-C', ROOT, 'rev-parse', '--git-common-dir'])).stdout.trim(), 'objects');
+  await run('git', ['init', '-q', root]);
+  await writeFile(join(root, '.git/objects/info/alternates'), `${objects}\n`);
+  await run('git', ['-C', root, 'update-ref', 'HEAD', head]);
+  assert.equal((await run('git', ['-C', root, 'rev-parse', 'HEAD'])).stdout.trim(), head);
+  assert.ok(existsSync(join(root, '.git')));
+}
+async function provenanceTree() {
+  const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
+  const root = await mkdtemp(join(base, 'p0-report-prov-'));
+  for (const p of [...SOURCE_PATHS, SPEC, FIXTURE]) { await mkdir(resolve(root, p, '..'), { recursive: true }); await cp(resolve(ROOT, p), join(root, p)); }
+  await withGit(root);
+  return root;
+}
+const fixtureManifest = async () => ({ fixture: { fixtureHash: sha256(await readFile(resolve(ROOT, FIXTURE))),
+  fixtureCommit: (await run('git', ['-C', ROOT, 'log', '-1', '--format=%H', 'HEAD', '--', FIXTURE])).stdout.trim() } });
+
+test('fixture provenance is verified against the supplied root and its own repository, not the module checkout', async () => {
+  const root = await provenanceTree(), manifest = await fixtureManifest();
+  try {
+    const fx = await loadFixtures(manifest, { root });
+    assert.ok(fx.provenance);
+    // a frozen source changed only in the supplied root (the module checkout is intact) must be refused
+    const src = join(root, 'spikes/project0/contract.js'); await writeFile(src, (await readFile(src, 'utf8')) + '\n');
+    await assert.rejects(loadFixtures(manifest, { root }), /uncommitted or changed frozen source: spikes\/project0\/contract\.js/);
+    await cp(resolve(ROOT, 'spikes/project0/contract.js'), src);
+    // a governing spec changed only in the supplied root must be refused
+    const spec = join(root, SPEC); await writeFile(spec, (await readFile(spec, 'utf8')) + '\n');
+    await assert.rejects(loadFixtures(manifest, { root }), /changed governing spec/);
+    await cp(resolve(ROOT, SPEC), spec);
+    // a supplied root whose own history does not contain the fixture commit is refused
+    await run('git', ['-C', root, 'update-ref', 'HEAD', manifest.fixture.fixtureCommit + '~1']);
+    await assert.rejects(loadFixtures(manifest, { root }));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('cross-root CLI with a .git in the supplied root: provenance is read there, never from a module checkout that lacks or differs from it', { skip, timeout: 600000 }, async () => {
+  const root = await tree(), mod = await mkdtemp(join(resolve(ROOT, 'artifacts/runtime'), 'p0-report-module-'));
+  try {
+    await withGit(root);
+    await cp(resolve(ROOT, 'spikes/project0'), join(mod, 'spikes/project0'), { recursive: true, filter: s => !s.endsWith('/tests') });
+    // the module checkout lacks the evidence and the spec, and its fixture file differs from the supplied root's
+    const modFixture = join(mod, FIXTURE); await writeFile(modFixture, (await readFile(modFixture, 'utf8')) + '\n');
+    assert.equal(existsSync(join(mod, 'docs')) || existsSync(join(mod, 'artifacts')) || existsSync(join(mod, '.git')), false);
+    await cli(root, join(mod, 'spikes/project0/report.mjs'));
+    assert.match(await readFile(join(root, OUT, '2026-10-18-project0-qualification.md'), 'utf8'), /Mechanical outcome: \*\*inconclusive\*\*/);
+    // and the supplied root's provenance is really checked: a frozen source changed only there is refused
+    await rm(join(root, OUT), { recursive: true, force: true });
+    const src = join(root, 'spikes/project0/reference/bulb.js'); await writeFile(src, (await readFile(src, 'utf8')) + '\n');
+    const err = await cli(root, join(mod, 'spikes/project0/report.mjs')).then(() => null, e => String(e.stderr ?? e.message));
+    assert.ok(err, 'a changed frozen source in the supplied root was accepted');
+    assert.match(err, /REPORT REFUSED[^]*uncommitted or changed frozen source: spikes\/project0\/reference\/bulb\.js/);
+    assert.equal(existsSync(join(root, OUT)), false);
   } finally { await rm(root, { recursive: true, force: true }); await rm(mod, { recursive: true, force: true }); }
 });

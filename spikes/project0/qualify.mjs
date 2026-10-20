@@ -26,7 +26,8 @@ import { metricsFor } from './measure/index.mjs';
 import { g5Observation } from './measure/arith.mjs';
 import { underRemediation, featureComparison, remediationRecordProblems, BASELINE_MANIFEST } from './remediation/evidence-rules.mjs';
 import { validateSources } from './measure/timing.mjs';
-import { readVerifiedFile } from './fixture-files.mjs';
+import { SOURCE_PATHS, SPEC, FIXTURE, decodeFixtures } from './fixture-files.mjs';
+import { execFileSync } from 'node:child_process';
 import { ROOT, assertSandboxed } from './launch.mjs';
 import { STOPS } from './session-utils.mjs';
 import { WINDOW_PLANS } from './supervision-plan.js';
@@ -151,11 +152,34 @@ export function requiredSlots(gate, mode, plan) {
   return gatesOf(gate).flatMap(g => Object.keys(plan[g] ?? {}).filter(slot => g !== 'G1' || slot === mode).map(slot => `${g}/${slot}`));
 }
 
-// The frozen fixture bytes bound to the manifest. In the repository the T4 provenance verification also applies.
+// T13 fix round 2 (Codex T13 r2, finding 1): the T4 provenance verification (fixture-files.mjs provenanceAt + readVerifiedFile(false)), applied to
+// the supplied root: its fixture bytes, frozen sources and spec, checked against its own repository. fixture-files.mjs is itself a frozen source and
+// is bound to the module checkout (ROOT, `git -C ROOT`), so it cannot take a root; this mirrors it check for check, with the same error messages.
+export async function verifiedFixtureIdentity(bytes, { root = ROOT, git = (...args) => execFileSync('git', ['-C', root, ...args], { maxBuffer: 256 * 1024 * 1024 }) } = {}) {
+  const fixtures = decodeFixtures(bytes), commit = fixtures.provenance?.generatorCommit;
+  if (!/^[a-f0-9]{40}$/.test(commit ?? '')) throw new Error('invalid generator commit');
+  git('merge-base', '--is-ancestor', commit, 'HEAD');
+  const sources = [];
+  for (const path of SOURCE_PATHS) {
+    const b = await readFile(join(root, path));
+    if (!b.equals(git('show', `${commit}:${path}`))) throw new Error('uncommitted or changed frozen source: ' + path);
+    sources.push({ path, sha256: sha256(b) });
+  }
+  const spec = await readFile(join(root, SPEC));
+  if (!spec.equals(git('show', `${commit}:${SPEC}`))) throw new Error('changed governing spec');
+  const expected = { specPath: SPEC, specHash: sha256(spec), generatorCommit: commit, nodeVersion: process.version, sources };
+  if (canonical(expected) !== canonical(fixtures.provenance)) throw new Error('fixture provenance mismatch (including Node version)');
+  const fixtureCommit = git('log', '-1', '--format=%H', 'HEAD', '--', FIXTURE).toString().trim();
+  if (!/^[a-f0-9]{40}$/.test(fixtureCommit) || !bytes.equals(git('show', `${fixtureCommit}:${FIXTURE}`))) throw new Error('fixture is not frozen in HEAD history');
+  git('merge-base', '--is-ancestor', commit, fixtureCommit);
+  return { fixtureHash: sha256(bytes), fixtureCommit, specHash: fixtures.provenance.specHash };
+}
+
+// The frozen fixture bytes bound to the manifest. In a repository the T4 provenance verification also applies — to the supplied root (fix round 2).
 export async function loadFixtures(manifest, { root = ROOT, provenance = existsSync(join(root, '.git')) } = {}) {
-  const bytes = await readFile(resolve(root, 'spikes/project0/fixtures.json'));
+  const bytes = await readFile(resolve(root, FIXTURE));
   if (sha256(bytes) !== manifest.fixture.fixtureHash) throw new Error('fixtures.json does not match the selected manifest\'s fixture hash');
-  if (provenance) { const { identity } = await readVerifiedFile(false); if (identity.fixtureHash !== manifest.fixture.fixtureHash || identity.fixtureCommit !== manifest.fixture.fixtureCommit) throw new Error('T4 provenance verification disagrees with the manifest'); }
+  if (provenance) { const identity = await verifiedFixtureIdentity(bytes, { root }); if (identity.fixtureHash !== manifest.fixture.fixtureHash || identity.fixtureCommit !== manifest.fixture.fixtureCommit) throw new Error('T4 provenance verification disagrees with the manifest'); }
   return JSON.parse(bytes);
 }
 
