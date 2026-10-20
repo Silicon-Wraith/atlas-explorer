@@ -1,0 +1,1 @@
+["--enable-gpu","--use-angle=vulkan","--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan","--enable-webgpu-developer-features"]

@@ -22,6 +22,7 @@ import { evaluateGateChecked } from './gates-checked.js';
 import { decideBackends } from './decision.js';
 import { sha256, launchIdentity } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
+import { underRemediation, featureComparison, remediationRecordProblems, BASELINE_MANIFEST } from './remediation/evidence-rules.mjs';
 import { validateSources } from './measure/timing.mjs';
 import { readVerifiedFile } from './fixture-files.mjs';
 import { ROOT, assertSandboxed } from './launch.mjs';
@@ -164,6 +165,13 @@ async function recordsIn(root, dir) {
 }
 const selectedIn = (manifest, r) => { const t = manifest.trials[`${r.gate}/${r.slot}`]; return Boolean(t) && t.id === r.id; };
 
+// WebGPU remediation (prereg rev 2 §3.5): attempt 1's verified records and raw payloads, the baseline of the granted-feature comparison.
+export async function loadBaseline(path = BASELINE_MANIFEST, { root = ROOT } = {}) {
+  const { manifest, records, attempts } = await loadCampaign(path, { root });
+  const fixtures = await loadFixtures(manifest, { root });
+  const { raws } = await recompute([...records, ...attempts], fixtures, { root, manifest, collect: true });
+  return { manifest: path, records: [...records, ...attempts], raws };
+}
 export async function loadCampaign(manifestPath, { root = ROOT } = {}) {
   const manifest = JSON.parse(await readFile(resolve(root, manifestPath), 'utf8'));
   validateStops(manifest.notRun, manifest.trials);
@@ -262,8 +270,11 @@ export function sourceProblems(record, records, raws) {
 // checkpoint files are read only through their manifest binding (finding 5); with `collect`, a record's verification failure is returned in
 // `errors` ({id: message}) instead of thrown, so a campaign can report it (finding 4). A G9 record is checked after its companions, and a
 // companion that failed verification does not count.
-export async function recompute(records, fixtures, { root = ROOT, manifest = null, collect = false } = {}) {
-  const launches = [], raws = {}, errors = {};
+// WebGPU remediation (prereg rev 2): a clean record whose saved launch carries the developer flag must also satisfy remediation/evidence-rules.mjs
+// (the compensated G5 form, the feature-request policy over every acquisition, and equality with attempt 1's comparable granted set, from
+// `baseline` = { records, raws } of webgpu-1). Every remediation-configuration record gets a feature-comparison row, returned as `featureComparison`.
+export async function recompute(records, fixtures, { root = ROOT, manifest = null, collect = false, baseline = null } = {}) {
+  const launches = [], raws = {}, errors = {}, featureRows = [];
   const at = path => join(root, 'artifacts/project0', path);
   const fail = (r, e) => { if (!collect) throw e; errors[r.id] = e.message; };
   // An auxiliary file is read only if its exact bytes are bound by the manifest. R2 (finding 10): only an absent optional file reads as undefined;
@@ -296,6 +307,11 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
       }
       try { raws[r.id] = JSON.parse(await readFile(at(rawFiles[0].path), 'utf8')); }
       catch (e) { throw new Error(`record ${r.id}: its raw payload is not readable JSON (${e.message})`); }
+      if (complete && underRemediation(info)) {
+        featureRows.push(featureComparison(r, raws[r.id], baseline));
+        const problems = r.invalidations.length ? [] : remediationRecordProblems(r, raws[r.id], info, baseline);
+        if (problems.length) throw new Error(`record ${r.id}: remediation evidence rules: ${problems.join('; ')}`);
+      }
     } catch (e) { fail(r, e); }
   }
   const order = [...records.filter(r => r.gate !== 'G9'), ...records.filter(r => r.gate === 'G9')];
@@ -324,7 +340,7 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
       if (canonical(again) !== canonical(r.metrics)) throw new Error(`metrics for ${r.id} do not recompute from its raw payload`);
     } catch (e) { fail(r, e); }
   }
-  return { records, launches, raws, errors };
+  return { records, launches, raws, errors, featureComparison: featureRows };
 }
 
 // From verified launch artefacts: the effective command line decides, and must be consistent with the requested arguments.

@@ -7,5 +7,7 @@ const DRIVERS = { 'derivative-policy': './checks.js', G3: './checks.js', G4: './
 export async function runGateDriver(gate, fixtures, params, status) {
   const path = DRIVERS[gate];
   if (!path) throw new Error(`no driver for ${gate}`);
-  return (await import(path)).run(gate, fixtures, params, status);
+  const result = await (await import(path)).run(gate, fixtures, params, status);
+  const { acquisitionLog } = await import('../../gpu/device.js');      // G1-A §3.5: every acquisition of the invocation, recorded with its features
+  return { ...result, acquisitions: acquisitionLog() };
 }

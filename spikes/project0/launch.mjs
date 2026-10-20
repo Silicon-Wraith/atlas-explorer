@@ -1,7 +1,7 @@
 // spikes/project0/launch.mjs — Node-side launcher. Never requests a GPU adapter or device.
 import { spawn as nodeSpawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, readdir } from 'node:fs/promises';
+import { mkdir, readdir, readFile } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { resolve, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -110,23 +110,53 @@ function labelled(text) {
   });
   return out;
 }
-export function activeGpuDriver(text) {
-  const fail = why => { throw new Error(`chrome://gpu driver identity: ${why}`); };
-  const unique = (values, what) => (values.length === 1 && values[0] ? values[0] : fail(`no unique non-empty driver ${what} ${values.length ? `(found ${JSON.stringify(values)})` : '(absent)'}`));
-  const tokens = labelled(text), records = tokens.filter(t => t.kind === 'gpu');
-  if (!records.length) {
-    const row = kind => tokens.filter(t => t.kind === kind).map(t => t.value);
-    return { vendor: unique(row('vendor'), 'vendor row'), version: unique(row('version'), 'version row') };
-  }
+// The reviewed record selection, shared by the driver identity and G1-A's device identity: labelled records, unique record indices, non-empty
+// record values and exactly one *ACTIVE* record. Returns the active record's value, or null when the page has no GPU records at all.
+function activeGpuRecord(text, fail) {
+  const records = labelled(text).filter(t => t.kind === 'gpu');
+  if (!records.length) return null;
   if (new Set(records.map(r => r.index)).size !== records.length) fail('a GPU record is listed twice');
   const empty = records.find(r => !r.value);
   if (empty) fail(`GPU${empty.index} has no value`);
   const active = records.filter(r => r.value.includes('*ACTIVE*'));
   if (active.length !== 1) fail(`${active.length} active GPU records (exactly one required)`);
-  // a field value ends at `,` or `*`, and a value that contains another `KEY=` is the next field, not this one's value (it is missing)
-  const field = key => [...active[0].value.matchAll(new RegExp(`(?:^|[\\s,])${key}=([^,*\\n]*)`, 'g'))].map(m => m[1].trim()).map(v => (/[A-Z_]+=/.test(v) ? '' : v));
-  return { vendor: unique(field('DRIVER_VENDOR'), 'vendor in the active GPU record'), version: unique(field('DRIVER_VERSION'), 'version in the active GPU record') };
+  return active[0].value;
 }
+// a field value ends at `,` or `*`, and a value that contains another `KEY=` is the next field, not this one's value (it is missing)
+const recordField = (value, key) => [...value.matchAll(new RegExp(`(?:^|[\\s,])${key}=([^,*\\n]*)`, 'g'))].map(m => m[1].trim()).map(v => (/[A-Z_]+=/.test(v) ? '' : v));
+export function activeGpuDriver(text) {
+  const fail = why => { throw new Error(`chrome://gpu driver identity: ${why}`); };
+  const unique = (values, what) => (values.length === 1 && values[0] ? values[0] : fail(`no unique non-empty driver ${what} ${values.length ? `(found ${JSON.stringify(values)})` : '(absent)'}`));
+  const active = activeGpuRecord(text, fail);
+  if (active === null) {
+    const tokens = labelled(text), row = kind => tokens.filter(t => t.kind === kind).map(t => t.value);
+    return { vendor: unique(row('vendor'), 'vendor row'), version: unique(row('version'), 'version row') };
+  }
+  return { vendor: unique(recordField(active, 'DRIVER_VENDOR'), 'vendor in the active GPU record'), version: unique(recordField(active, 'DRIVER_VERSION'), 'version in the active GPU record') };
+}
+// G1-A (WebGPU remediation prereg rev 2 §3.3): VENDOR= and DEVICE= of the single ACTIVE record, each exactly once, through the same field rule.
+// After trimming, a value is a leading 0x hexadecimal token of 1-8 digits, followed only by its end or a bracketed-name suffix (optionally
+// after whitespace; a suffix truncated at a comma by the field rule is permitted and never read as identity). Only the token is parsed. A
+// legacy driver-only page supplies no device corroboration. Every refusal throws; callers treat it as identity unavailable.
+const ID_VALUE = /^0x([0-9a-fA-F]{1,8})(?:\s*\[[^\]]*\]?)?$/;
+export function activeGpuIds(text) {
+  const fail = why => { throw new Error(`chrome://gpu ACTIVE identity: ${why}`); };
+  const active = activeGpuRecord(text ?? '', fail);
+  if (active === null) fail('a legacy driver-only record does not supply device corroboration');
+  const id = key => {
+    const values = recordField(active, key);
+    if (values.length !== 1) fail(`${key}= occurs ${values.length} times in the ACTIVE record (exactly one required)`);
+    const m = ID_VALUE.exec(values[0]);
+    if (!m) fail(`${key}= value ${JSON.stringify(values[0])} is not a 0x hexadecimal token with an optional bracketed name`);
+    return parseInt(m[1], 16);
+  };
+  return { vendorId: id('VENDOR'), deviceId: id('DEVICE') };
+}
+// G1-A (prereg rev 2 §3.1, §3.5): the session-local diagnostic flag, and the disclosure every launch record carries.
+export const DEVELOPER_FLAG = '--enable-webgpu-developer-features';
+export const launchDisclosures = args => (args.includes(DEVELOPER_FLAG)
+  ? { developerFeatures: true, timestampQuantization: 'browser timestamp quantization disabled' }
+  : { developerFeatures: false, timestampQuantization: 'browser default (100 µs quantization)' });
 // null when the page carries the sections and an unambiguous identity, else the reason it is not ready yet
 const gpuNotReady = text => { if (!text.includes('Graphics Feature Status')) return 'no Graphics Feature Status section'; try { activeGpuDriver(text); return null; } catch (e) { return e.message; } };
 
@@ -151,6 +181,22 @@ export async function chromeGpuText(context, { timeoutMs = 20000, pollMs = 250, 
     }
   } catch (error) { error.capturedText = latest; throw error; }   // the latest snapshot is evidence even when the capture fails
   finally { let timer; await Promise.race([page.close(), new Promise(r => { timer = setTimeout(r, 2000); })]).catch(() => {}); clearTimeout(timer); }
+}
+
+// G1-A (prereg rev 2 §3.2): the owned browser process's identity — the one process whose command line carries this launch's fresh profile and
+// no --type= (child processes carry one) — as its pid and kernel start time (/proc/<pid>/stat field 22), so a reused pid is not the same process.
+// Read-only; null when no such process, or more than one, exists.
+export async function browserProcess(profile, { procRoot = '/proc' } = {}) {
+  const found = [];
+  for (const name of await readdir(procRoot).catch(() => [])) {
+    if (!/^\d+$/.test(name)) continue;
+    const args = await readFile(join(procRoot, name, 'cmdline'), 'utf8').then(t => t.split('\0'), () => null);
+    if (!args || !args.includes(`--user-data-dir=${profile}`) || args.some(a => a.startsWith('--type='))) continue;
+    const stat = await readFile(join(procRoot, name, 'stat'), 'utf8').catch(() => null);
+    const start = stat?.slice(stat.lastIndexOf(') ') + 2).split(' ')[19];
+    if (start) found.push({ pid: Number(name), start });
+  }
+  return found.length === 1 ? found[0] : null;
 }
 
 export function assertSandboxed(commandLine) {

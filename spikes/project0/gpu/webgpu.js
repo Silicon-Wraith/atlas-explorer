@@ -16,12 +16,19 @@ export async function compile(device, code, label) {
   return module;
 }
 
+// G5-A (prereg rev 2 §2.6): the arithmetic module's exact source and its pipeline descriptors, recorded by the last prepare() so the G5
+// driver can bind its supplementary evidence to the module and entry points that produced it.
+let arithmeticRecord = null;
+export const arithmeticPreparation = () => arithmeticRecord;
 export async function prepare(device, alloc, onStatus = () => {}) {
   const fields = await source('./fields.wgsl');
-  const arithmetic = await compile(device, fields + await source('./arithmetic.wgsl'), 'arithmetic');
+  const arithmeticCode = fields + await source('./arithmetic.wgsl');
+  const arithmetic = await compile(device, arithmeticCode, 'arithmetic');
   const trace = await compile(device, fields + await source('./trace.wgsl'), 'trace');
+  const arithmeticEntries = ['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates'];
+  arithmeticRecord = { code: arithmeticCode, entryPoints: [...arithmeticEntries], pipelines: arithmeticEntries.map(entryPoint => ({ entryPoint, module: 'arithmetic', layout: 'auto', label: entryPoint, constants: null })) };
   const jobs = [
-    ...['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy'].map(e => [e, { module: arithmetic, entryPoint: e }]),
+    ...['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates'].map(e => [e, { module: arithmetic, entryPoint: e }]),
     ...Object.entries(FIELDS).map(([f, id]) => [`trace_list/${f}`, { module: trace, entryPoint: 'trace_list', constants: { FIELD: id } }]),
   ];
   const pipelines = {}; let done = 0;

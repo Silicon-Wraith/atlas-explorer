@@ -5,7 +5,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText as captureChromeGpuText } from './launch.mjs';
+import { ROOT, HARNESS_PATH, ATTEMPT1_ARGS, startServer, launchChrome, effectiveCommandLine, assertSandboxed, chromeVersion, chromeGpuText as captureChromeGpuText, browserProcess, launchDisclosures } from './launch.mjs';
 import { fixtureIdentity, implementationIdentity, launchIdentity, environmentIdentity, newRunDir, writeRecord, validateRecordTiming, notMeasured } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
 import { validateSources } from './measure/timing.mjs';
@@ -33,13 +33,18 @@ export async function environment(context, commandLine, invalidations, publish =
 }
 
 
-export async function finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, outcome, invalidations, fixtures, experiment, write = writeRecord }) {
+// G1 raws gain the session's own evidence (G1-A §3.2): the chrome://gpu text captured before the page, the capture after the probe and the
+// run/browser-process/target binding. These come from Node only; a page-supplied value under the same names is overwritten.
+export async function finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, outcome, invalidations, fixtures, experiment, write = writeRecord, g1Evidence = null }) {
   const records = [], raws = new Map(), stamp = runDir.split('/').at(-1), result = outcome?.result;
   const slots = result?.slots?.length ? result.slots : [{ slot: 'incomplete', raw: { error: result?.error ?? 'no result', lastCheckpoint: outcome?.lastCheckpoint ?? null } }];
   for (const s of slots) {
     const slotGate = s.gate ?? gate;
     const recordInvalidations = [...invalidations, ...(result?.invalidations ?? []), ...(s.invalidations ?? []), ...(result?.error ? [`page: ${result.error}`] : []), ...(s.slot === 'incomplete' ? ['incomplete: the session produced no result'] : [])];
-    let raw = slotGate === 'G1' ? { ...s.raw, chromeGpuText } : s.raw;
+    let raw = slotGate === 'G1' ? { ...s.raw, chromeGpuText, chromeGpuTextAfter: g1Evidence?.chromeGpuTextAfter, session: g1Evidence?.session } : s.raw;
+    if (Array.isArray(result?.acquisitions) && raw && typeof raw === 'object') raw = { ...raw, acquisitions: result.acquisitions };   // §3.5: every acquisition's features
+    // G1-A §3.5: timestamp-derived values under the developer flag are labelled, and never compared with attempt-1 timestamp values
+    if (launchInfo?.disclosures?.developerFeatures && raw && typeof raw === 'object' && ('timestamps' in raw || 'timestampQuery' in raw)) raw = { ...raw, timestampLabel: launchInfo.disclosures.timestampQuantization };
     const extra = [];
     if (slotGate === 'visible' && outcome?.captures?.length) {
       const { decodePng, classify } = await import('./measure/png.mjs');          // T9; loaded only for the visible experiment
@@ -97,7 +102,9 @@ const fallbackIdentity = (fixture, implementation, mode) => ({ backend: 'webgpu'
 
 // Dependencies are injectable for tests, as in runG2.
 export async function runSession({ gate, mode = 'headless', args = 'attempt1', campaign = 'dev', extra = '' }, deps = {}) {
-  const d = { startServer, launchChrome, effectiveCommandLine, waitResult, environment, fixtureIdentity, implementationIdentity, newRunDir, writeRecord, chromium,
+  const d = { startServer, launchChrome, effectiveCommandLine, waitResult, environment, fixtureIdentity, implementationIdentity, newRunDir, writeRecord, chromium, browserProcess,
+    postGpuText: (context, publishAfter) => captureChromeGpuText(context, { timeoutMs: GPU_TEXT_MS, onSnapshot: publishAfter }),
+    pageTarget: async (context, page) => { const cdp = await context.newCDPSession(page); try { return (await cdp.send('Target.getTargetInfo')).targetInfo.targetId; } finally { await cdp.detach().catch(() => {}); } },
     fixtures: async () => JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8')), launchMs: 60000, closeMs: 30000, deadlineMs: DEADLINE[gate] ?? 900000, ...deps };
   if (!LAUNCH[args]) throw new Error(`unknown launch configuration: ${args}`);
   if (!/^[a-z0-9-]+$/.test(campaign)) throw new Error('campaign identity required');
@@ -105,8 +112,11 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
   const fixtures = await d.fixtures();
   const fixture = await d.fixtureIdentity(), implementation = await d.implementationIdentity();
   const runDir = await d.newRunDir(`${campaign}-${gate.toLowerCase()}-${mode}`);
-  const invalidations = [], state = { expired: false, final: false }; let server, launched, outcome = null, chromeGpuText = '', identity = null, launchInfo = { args, requestedArgs: LAUNCH[args] };
+  const invalidations = [], state = { expired: false, final: false }; let server, launched, outcome = null, chromeGpuText = '', identity = null, launchInfo = { args, requestedArgs: LAUNCH[args], disclosures: launchDisclosures(LAUNCH[args]) };
   const publish = text => { if (text && !state.expired && !state.final) chromeGpuText = text; };   // session-owned chrome://gpu evidence; frozen once the session ends
+  const isG1 = gate === 'G1', stamp = runDir.split('/').at(-1);
+  const g1Evidence = isG1 ? { chromeGpuTextAfter: undefined, session: { run: stamp, browser: { before: null, after: null }, target: { before: null, after: null }, mainFrameNavigations: 0, crashed: false, closed: false } } : null;
+  const publishAfter = text => { if (text && !state.expired && !state.final) g1Evidence.chromeGpuTextAfter = text; };
   const note = x => { if (!state.final) invalidations.push(x); };
   const live = () => { if (state.expired) throw new Error('browser hang: session deadline passed'); };   // a late result cannot resume work
   const deadlineMs = d.deadlineMs, outerMs = d.outerMs ?? deadlineMs + 120000;
@@ -115,7 +125,7 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
       server = await arrived(await d.startServer(), state, s => s.stop(), live); live();
       launched = await arrived(await boundedStart(() => d.launchChrome({ headless: mode === 'headless', args: LAUNCH[args], profileKind: `${gate.toLowerCase()}-${mode}`, chromium: d.chromium }), d.launchMs, `browser hang: launch exceeded ${d.launchMs} ms`), state, r => bounded(r.context.close(), d.closeMs, 'late close'), live); live();
       const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
-      launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode };
+      launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode, disclosures: launchDisclosures(launched.requestedArgs) };
       const environmentInfo = await d.environment(launched.context, commandLine, invalidations, publish); live();
       publish(environmentInfo.chromeGpuText);
       identity = { backend: 'webgpu', ...fixture, ...implementation, ...launchIdentity(launchInfo), ...environmentInfo.env };
@@ -123,9 +133,23 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
       if (state.expired) page.close().catch(() => {});                                          // a late page is closed, never navigated
       live();
       watchPage(page, note);
+      if (isG1) {                                                                                  // G1-A §3.2 step 1: the binding, before navigation
+        const g = g1Evidence.session;
+        page.on('framenavigated', frame => { if (!state.final && frame === page.mainFrame()) g.mainFrameNavigations++; });
+        page.on('crash', () => { if (!state.final) g.crashed = true; });
+        page.on('close', () => { if (!state.final && !state.closing) g.closed = true; });
+        g.browser.before = await bounded(d.browserProcess(launched.profile), ROUND_TRIP_MS, 'browser hang: browser process identity'); live();
+        g.target.before = await bounded(d.pageTarget(launched.context, page), ROUND_TRIP_MS, 'browser hang: page target identity'); live();
+      }
       await bounded(installTransport(page, { gate }), ROUND_TRIP_MS, `browser hang: the result transport was not installed within ${ROUND_TRIP_MS} ms`); live();   // before navigation: the page pushes, Node supervises its gate's fixed window plan
-      await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}&runMode=${mode}${extra}`); live();
+      await page.goto(`${server.url}${HARNESS_PATH}?mode=gate&gate=${encodeURIComponent(gate)}&runMode=${mode}${extra}${isG1 ? `&run=${encodeURIComponent(stamp)}` : ''}`); live();
       const result = await d.waitResult(page, { gate, runDir, deadlineMs }); live();
+      if (isG1) {                                                                                  // §3.2 step 7: same browser, after the probe, before teardown
+        const g = g1Evidence.session;
+        g.target.after = await bounded(d.pageTarget(launched.context, page), ROUND_TRIP_MS, 'browser hang: page target identity').catch(e => { note(`G1 binding: ${e.message}`); return null; }); live();
+        publishAfter(await d.postGpuText(launched.context, publishAfter).catch(e => { publishAfter(e?.capturedText); note(`G1 post-probe chrome://gpu: ${e.message}`); return ''; })); live();
+        g.browser.after = await bounded(d.browserProcess(launched.profile), ROUND_TRIP_MS, 'browser hang: browser process identity'); live();
+      }
       // the supervision record (T9 fix round 3): every window's open/close times and checkpoints, and whether the plan completed
       if (result?.supervision) await writeFile(resolve(runDir, 'supervision.json'), JSON.stringify(result.supervision));
       outcome = result;
@@ -133,12 +157,13 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
   } catch (error) {
     state.expired = true; invalidations.push(`session: ${error.message}`);
   } finally {
+    state.closing = true;                                                                          // the harness's own teardown is not a page close
     await cleanup(launched, d.closeMs, gate, invalidations);
     await stopServer(server, invalidations);
   }
   state.final = true;   // finalisation: no snapshot arriving from here on can change the record
   identity ??= fallbackIdentity(fixture, implementation, mode);
-  const records = await finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, outcome, invalidations, fixtures, experiment, write: d.writeRecord });
+  const records = await finalise({ gate, mode, campaign, runDir, identity, launchInfo, chromeGpuText, outcome, invalidations, fixtures, experiment, write: d.writeRecord, g1Evidence });
   return { records, runDir, outcome };
 }
 
@@ -152,7 +177,7 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
   const fixture = await d.fixtureIdentity(), implementation = await d.implementationIdentity();
   const runDir = await d.newRunDir(`${campaign}-g2-headed`), records = [];
   for (let i = 0; i < 3; i++) {
-    const invalidations = [], slots = [], state = { expired: false, final: false }; let server, launched, chromeGpuText = '', identity = null, launchInfo = { args, requestedArgs: LAUNCH[args] };
+    const invalidations = [], slots = [], state = { expired: false, final: false }; let server, launched, chromeGpuText = '', identity = null, launchInfo = { args, requestedArgs: LAUNCH[args], disclosures: launchDisclosures(LAUNCH[args]) };
     const publish = text => { if (text && !state.expired && !state.final) chromeGpuText = text; };   // run-owned chrome://gpu evidence; frozen once the run ends
     const note = x => { if (!state.final) invalidations.push(x); };
     const live = () => { if (state.expired) throw new Error('browser hang: G2 run deadline passed'); };   // a late result cannot resume work
@@ -180,7 +205,7 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
           slots.push({ slot: 'warm', raw: warm.slots?.[0]?.raw ?? { error: warm.error }, invalidations: [...(warm.invalidations ?? []), ...(warm.error ? [`page: ${warm.error}`] : [])], timingMethod: warm.slots?.[0]?.timingMethod });
         }
         const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
-        launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode: 'headed' };
+        launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode: 'headed', disclosures: launchDisclosures(launched.requestedArgs) };
         // as in probe.mjs: the capture (and its version check) starts only with its full allowance left in the run window
         const windowLeft = runDeadline - Date.now(), allowance = d.gpuTextMs + d.versionMs;
         if (windowLeft < allowance) throw new Error(`harness timeout: chrome://gpu capture skipped: ${windowLeft} ms of the ${d.runMs} ms run window left, it needs ${allowance} ms`);

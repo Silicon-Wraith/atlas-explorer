@@ -2,7 +2,9 @@
 // fixtures; integrity violations, schedule deviations, driver errors and malformed observations invalidate.
 import { throughput, percentile, coverageValid } from '../metrics.js';
 import { maintenanceFailed } from './resources.mjs';
-import { activeGpuDriver } from '../launch.mjs';
+import { activeGpuDriver, activeGpuIds } from '../launch.mjs';
+import { compareArithmetic } from '../metrics.js';
+import { decodeArith } from './decode.mjs';
 import { DRIVER, WINDOW_PLANS } from '../supervision-plan.js';   // the frozen driver configuration and the supervised window bounds (fix round 3)            // the fail-closed Chrome 151 driver parser (T5 fix rounds 4-5)
 
 // The frozen observation durations (T9 fix round 2, Codex T9 r2 finding 3): a G6 window is the 30 s path, a G7 window the frozen burst schedule
@@ -31,40 +33,92 @@ function integrityOk(raw) { if (!raw.integrity || !Array.isArray(raw.integrity.v
 // A frame counts only if it is the expected view, at the expected profile's dimensions, complete, and coverage-valid for that view.
 function frameOk(f, view, profile) { return Boolean(f && f.counts && f.view === view && f.W === profile.W && f.H === profile.H && f.counts.total === profile.W * profile.H && coverageValid(view, f.counts)); }
 
-// Deviation from the plan (controller ruling 1, the T5 defect): Chrome 151 has no "Driver vendor"/"Driver version" rows, bullets its feature-status
-// rows ("*   WebGPU: ...") and puts the active GPU's ids in a bracketed `GPU0 :` record value (`VENDOR= 0x10de [Google Inc. (NVIDIA)], DEVICE=0x26b1
-// [...], DRIVER_VENDOR=..., DRIVER_VERSION=... *ACTIVE*`). The driver identity is launch.mjs activeGpuDriver's: exactly one *ACTIVE* GPU record
-// with a unique driver vendor and version (or, on a page with no GPU records, the legacy rows), otherwise its refusal invalidates. The active
-// VENDOR/DEVICE pair is read from the one line marked *ACTIVE*; anything but exactly one parseable line is refused.
+// G1 (rev. WebGPU remediation prereg rev 2, G1-A §3.2-§3.4). Corroboration needs, all at once:
+//  - a completed probe on the bound device whose returned samples pass the frozen arithmetic comparison (G4's bulb set and rules);
+//  - the selected adapter's identity, read from the very GPUAdapter that created the device, before and after requestDevice (and
+//    device.adapterInfo when exposed): vendor `nvidia`, backend `vulkan`, type `discrete gpu` (trimmed, case-normalised), isFallbackAdapter
+//    false and a `device` that is, as a whole string, ^(0x)?[0-9a-fA-F]{1,8}$; present overlapping fields must agree;
+//  - exactly one ACTIVE chrome://gpu record (launch.mjs activeGpuIds, the reviewed record selection) captured from the same browser after the
+//    probe, with vendor 0x10de and a device ID numerically equal to the selected adapter's, the hardware-accelerated WebGPU row and an
+//    unambiguous driver record; an earlier capture in the same session must not disagree;
+//  - the run binding: the page's run and document, the owned browser process (pid and start time) and the page target unchanged across the
+//    probe, one main-frame navigation, and no page crash or device loss.
+// Absent, malformed or ambiguous diagnostics are `identity unavailable`; disagreeing observations are `identity conflicting`; a value that is
+// present but not the required hardware is `identity not corroborated`; software execution is named first, independently of the rest.
 const WEBGPU_ROW = /^[ \t]*(?:\*[ \t]*)?WebGPU:[ \t]*(.+)$/m;
-function activeDevice(text) {
-  const lines = text.split('\n').filter(line => line.includes('*ACTIVE*'));
-  if (lines.length !== 1) return null;
-  const vendor = /(?:^|[\s,])VENDOR=\s*0x([0-9a-f]+)\b/i.exec(lines[0]), device = /(?:^|[\s,])DEVICE=\s*0x([0-9a-f]+)\b/i.exec(lines[0]);
-  return vendor && device ? { vendor: vendor[1].toLowerCase(), device: device[1].toLowerCase() } : null;
+const SELECTED_DEVICE = /^(0x)?[0-9a-fA-F]{1,8}$/;
+const norm = v => (typeof v === 'string' ? v.trim().toLowerCase() : v);
+function probeVerified(words, fx) {
+  if (!fx) return 'probe readback is not verified: no frozen fixtures to compare against';
+  try {
+    const p = fx.arithmeticProtocol.bulb, m = compareArithmetic(fx.arithmetic.bulb, decodeArith(words, fx.arithmetic.bulb.length, { minIndex: 1, cap: p.iterations, de: true }), p.tolerances);
+    const eligible = fx.arithmetic.bulb.filter(s => s.eligible).length;
+    if (m.samples !== fx.arithmetic.bulb.length || m.eligible !== eligible || m.statusErrors || m.indexErrors || !(m.logRRatio <= 1) || !(m.deRatio <= 1)) return `probe readback fails the frozen arithmetic comparison (${JSON.stringify(m)})`;
+    return null;
+  } catch (e) { return `probe readback is not verified: ${e.message}`; }
 }
-
-export function g1Metrics({ adapterInfo: a, chromeGpuText: text, probeOk }) {
-  const invalidations = [];
-  if (!a || (!a.vendor && !a.description)) invalidations.push('adapter.info is redacted or empty');
-  const desc = `${a?.vendor ?? ''} ${a?.architecture ?? ''} ${a?.description ?? ''}`;
-  const software = a?.isFallbackAdapter === true || /swiftshader|llvmpipe|lavapipe|software/i.test(desc) ? 1 : 0;
-  const nvidia = !software && /nvidia/i.test(desc) ? 1 : 0;
-  // T9 fix round 1 (Codex T9 r1, finding 5): software execution is named explicitly, independent of every corroboration error, so the shared stop
-  // classifier recognises the record even when the metrics cannot be returned.
-  if (software) invalidations.push(`software adapter: ${a?.isFallbackAdapter === true ? 'isFallbackAdapter is true' : `adapter identity names a software renderer: ${desc.trim()}`}`);
-  const webgpuRow = WEBGPU_ROW.exec(text ?? '')?.[1]?.trim();
-  if (!webgpuRow) invalidations.push('chrome://gpu has no WebGPU feature-status row');
-  let driver = null;
-  try { driver = activeGpuDriver(text ?? ''); } catch (e) { invalidations.push(e.message); }
-  const active = activeDevice(text ?? '');
-  if (!active) invalidations.push('chrome://gpu identifies no active GPU (exactly one *ACTIVE* line with a VENDOR=/DEVICE= pair is required)');
-  // Same-adapter evidence: a normalised device identity matched to the active NVIDIA device. Missing or unrecognised identity is
-  // inconclusive; a contradiction invalidates. A generic NVIDIA description alone does not establish the match.
-  if (!/^0x[0-9a-f]+$/i.test(a?.device || '')) invalidations.push(`adapter device identity is missing or unrecognised (${JSON.stringify(a?.device ?? null)})`);
-  else if (active && parseInt(a.device, 16) !== parseInt(active.device, 16)) invalidations.push(`adapter device ${a.device} contradicts the active GPU 0x${active.device}`);
+export function g1Metrics(raw, fx) {
+  const { adapterInfo: a, chromeGpuText: textBefore, chromeGpuTextAfter: text, probeOk } = raw ?? {};
+  const invalidations = [], unavailable = why => invalidations.push(`identity unavailable: ${why}`), conflicting = why => invalidations.push(`identity conflicting: ${why}`), notCorroborated = why => invalidations.push(`identity not corroborated: ${why}`);
+  const id = a?.identity, sel = id?.before?.present ?? null;
+  const desc = `${sel?.vendor ?? a?.vendor ?? ''} ${sel?.architecture ?? a?.architecture ?? ''} ${sel?.description ?? a?.description ?? ''}`;
+  const fallback = sel?.isFallbackAdapter ?? a?.isFallbackAdapter;
+  const software = fallback === true || norm(sel?.type) === 'cpu' || /swiftshader|llvmpipe|lavapipe|software/i.test(desc) ? 1 : 0;
+  if (software) invalidations.push(`software adapter: ${fallback === true ? 'isFallbackAdapter is true' : norm(sel?.type) === 'cpu' ? 'adapter type is CPU' : `adapter identity names a software renderer: ${desc.trim()}`}`);
+  const nvidia = !software && norm(sel?.vendor ?? a?.vendor) === 'nvidia' ? 1 : 0;
+  // the bound probe: completed on the device, and its samples verified here
   if (!probeOk) invalidations.push('probe dispatch did not complete on the selected adapter');
-  const corroborated = nvidia && webgpuRow === 'Hardware accelerated' && active && active.vendor === '10de' && driver && probeOk && invalidations.length === 0 ? 1 : 0;
+  const probe = probeVerified(raw?.probeWords, fx);
+  if (probe) invalidations.push(probe);
+  // the selected adapter
+  let selectedDevice = null;
+  if (!id || !id.before || !id.after) unavailable('no selected-adapter information snapshots (before and after requestDevice)');
+  else {
+    for (const k of ['vendor', 'backend', 'type', 'isFallbackAdapter', 'device']) if (id.before.absent?.includes(k) || !(k in id.before.present)) unavailable(`selected-adapter ${k} is absent`);
+    if ('vendor' in sel && norm(sel.vendor) !== 'nvidia') notCorroborated(`selected-adapter vendor ${JSON.stringify(sel.vendor)} is not nvidia`);
+    if ('backend' in sel && sel.backend !== 'vulkan') notCorroborated(`selected-adapter backend ${JSON.stringify(sel.backend)} is not vulkan`);
+    if ('type' in sel && norm(sel.type) !== 'discrete gpu') notCorroborated(`selected-adapter type ${JSON.stringify(sel.type)} is not a discrete GPU`);
+    if ('isFallbackAdapter' in sel && sel.isFallbackAdapter !== false) notCorroborated(`isFallbackAdapter is ${JSON.stringify(sel.isFallbackAdapter)}`);
+    if ('device' in sel) {
+      const d = typeof sel.device === 'string' ? sel.device.trim() : null;
+      if (d === null || !SELECTED_DEVICE.test(d)) unavailable(`selected-adapter device ${JSON.stringify(sel.device)} is not a whole hexadecimal identifier`);
+      else selectedDevice = parseInt(d.replace(/^0x/i, ''), 16);
+    }
+    for (const [name, other] of [['after requestDevice', id.after], ['device.adapterInfo', id.deviceAdapterInfo]]) {
+      if (!other) continue;
+      for (const [k, v] of Object.entries(other.present ?? {})) if (k in sel && sel[k] !== v) conflicting(`adapter ${k} ${JSON.stringify(sel[k])} before requestDevice, ${JSON.stringify(v)} in ${name}`);
+    }
+  }
+  // the ACTIVE record captured from the same browser after the probe
+  let active = null;
+  if (typeof text !== 'string' || !text) unavailable('no chrome://gpu capture after the probe');
+  else {
+    try { active = activeGpuIds(text); } catch (e) { unavailable(e.message); }
+    try { activeGpuDriver(text); } catch (e) { unavailable(e.message); }
+    const webgpuRow = WEBGPU_ROW.exec(text)?.[1]?.trim();
+    if (!webgpuRow) unavailable('chrome://gpu has no WebGPU feature-status row');
+    else if (webgpuRow !== 'Hardware accelerated') notCorroborated(`chrome://gpu WebGPU status is ${JSON.stringify(webgpuRow)}`);
+  }
+  if (active && active.vendorId !== 0x10de) notCorroborated(`the ACTIVE vendor is 0x${active.vendorId.toString(16)}, not 0x10de`);
+  if (active && selectedDevice !== null && active.deviceId !== selectedDevice) conflicting(`selected-adapter device 0x${selectedDevice.toString(16)} contradicts the ACTIVE device 0x${active.deviceId.toString(16)}`);
+  if (active && typeof textBefore === 'string' && textBefore) {
+    let earlier = null; try { earlier = activeGpuIds(textBefore); } catch { /* an unparseable earlier capture is not an identity observation */ }
+    if (earlier && (earlier.vendorId !== active.vendorId || earlier.deviceId !== active.deviceId)) conflicting(`the ACTIVE record changed during the session (0x${earlier.deviceId.toString(16)} before, 0x${active.deviceId.toString(16)} after)`);
+  }
+  // the run, browser-process and document binding
+  const s = raw?.session, doc = raw?.document;
+  const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+  if (!s || !doc) unavailable('binding: no session or document identity');
+  else {
+    if (typeof s.run !== 'string' || !s.run || s.run !== doc.run) conflicting(`binding: the page reports run ${JSON.stringify(doc.run)}, the session is ${JSON.stringify(s.run)}`);
+    if (typeof doc.id !== 'string' || !doc.id) unavailable('binding: no document identity');
+    if (!s.browser?.before?.pid || !same(s.browser.before, s.browser.after)) conflicting(`binding: browser process ${JSON.stringify(s.browser?.before ?? null)} became ${JSON.stringify(s.browser?.after ?? null)}`);
+    if (!s.target?.before || s.target.before !== s.target.after) conflicting(`binding: page target ${JSON.stringify(s.target?.before ?? null)} became ${JSON.stringify(s.target?.after ?? null)}`);
+    if (s.mainFrameNavigations !== 1) conflicting(`binding: ${s.mainFrameNavigations} main-frame navigations (exactly one required)`);
+    if (s.crashed || s.closed) conflicting('binding: the page crashed or closed before the evidence was complete');
+    if (s.deviceLost || raw.lossEvents > 0) conflicting('binding: a device-loss event was observed');
+  }
+  const corroborated = nvidia && !software && active && invalidations.length === 0 ? 1 : 0;
   return { metrics: { nvidia, software, corroborated }, invalidations };
 }
 
@@ -183,7 +237,7 @@ export function metrics(gate, slot, raw, fx) {
   const draft = fx.profiles.draft, settled = fx.profiles.settled;
   if (raw?.error) throw invalid(`driver error: ${raw.error}`);
   switch (gate) {
-    case 'G1': { const { metrics: m, invalidations } = g1Metrics(raw); if (invalidations.length) throw invalid(invalidations.join('; ')); return m; }
+    case 'G1': { const { metrics: m, invalidations } = g1Metrics(raw, fx); if (invalidations.length) throw invalid(invalidations.join('; ')); return m; }
     case 'G2': {
       integrityOk(raw);
       const prep = raw.statusLog.find(e => e.text.startsWith('preparing'));

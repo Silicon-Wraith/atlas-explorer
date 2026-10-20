@@ -14,10 +14,10 @@
 import { parseArgs } from 'node:util';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve, basename } from 'node:path';
-import { ROOT } from './launch.mjs';
+import { ROOT, DEVELOPER_FLAG } from './launch.mjs';
 import { GATES } from './contract.js';
 import { decideBackends } from './decision.js';
-import { buildManifest, checkCoherence, ABORTS, recompute, qualify, loadCampaign, requiredSlots, gatesOf, verdictOf, preflightProblems, NON_QUALIFYING,
+import { buildManifest, checkCoherence, ABORTS, recompute, qualify, loadCampaign, loadBaseline, requiredSlots, gatesOf, verdictOf, preflightProblems, NON_QUALIFYING,
   validateReuseEntries, verifyPreflight, auxiliaryHashes } from './qualify.mjs';
 import { gatePlan } from './gates.js';
 
@@ -39,6 +39,9 @@ export async function runCampaign(values, d) {
   validateReuseEntries(reuse);                                                          // R1 (findings 7, 8): before anything runs
   if (!d.LAUNCH[args]) throw new Error(`unknown launch configuration: ${args}`);
   const requestedArgs = d.LAUNCH[args];
+  // WebGPU remediation (prereg rev 2 §3.5): under the developer flag every recompute compares granted features with attempt 1's records.
+  if (requestedArgs.includes(DEVELOPER_FLAG) && !d.loadBaseline) throw new Error('campaign: the remediation configuration needs the attempt-1 baseline (the loadBaseline dependency)');
+  const baseline = requestedArgs.includes(DEVELOPER_FLAG) ? await d.loadBaseline() : null;
   const fixtures = await d.readFixtures();
   const fixture = await d.fixtureIdentity(), plan = gatePlan(fixtures);
   // The integrity preflight, at this exact implementation and with this campaign's launch configuration (R1, finding 9), before any GPU work.
@@ -67,7 +70,7 @@ export async function runCampaign(values, d) {
     await d.verifyPreflight(src, srcRecords);
     const dirs = new Set(records.map(r => (r.artifacts.find(a => a.path.endsWith('.raw.json'))?.path ?? '').split('/').slice(0, -1).join('/')));
     for (const [path, hash] of Object.entries(src.bindings ?? {})) if (dirs.has(path.split('/').slice(0, -1).join('/'))) bindings[path] = hash;
-    await d.recompute(records, fixtures, { manifest: src });
+    await d.recompute(records, fixtures, { manifest: src, baseline });
   }
   const draft = () => buildManifest({ records: selected, fixture, campaign: values.name, args, requestedArgs, runDirs, reuse, preflight, attempts, bindings });
   for (const [phase, steps] of PHASES) {
@@ -102,7 +105,7 @@ export async function runCampaign(values, d) {
       // (--gates is the rerun set, never a waiver), over the campaign's own and its reused records.
       try {
         const m = draft();
-        const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest: m, collect: true });
+        const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest: m, collect: true, baseline });
         for (const g of CORRECTNESS) {
           const r = verdictOf(g, { records: selected, attempts, manifest: m, fixtures, raws, rejected, errors: bindingErrors, gateErrors });
           if (r.status !== 'pass') { stopped = `correctness gate ${g} is ${r.status}`; if (r.status === 'fail') blockedBy = g; break; }
@@ -125,7 +128,7 @@ export async function runCampaign(values, d) {
     // Coherence binds the evidence that can support a verdict; an invalidated record (e.g. an honest failed launch with a fallback identity)
     // cannot pass and keeps its own identity.
     try { checkCoherence(selected.filter(r => !r.invalidations.length), manifest); } catch (e) { errors.push(e.message); }
-    const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest, collect: true });
+    const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest, collect: true, baseline });
     ({ backend, decision } = qualify(manifest, selected, fixtures, { raws, attempts, rejected, errors, gateErrors }));
     // R2 (finding 13): every collected verification or invocation error is a tooling error, reported and reflected in the exit status
     verificationErrors = [...errors, ...Object.entries(gateErrors).flatMap(([g, ms]) => ms.map(x => `${g}: ${x}`)), ...Object.entries(rejected).map(([id, x]) => `${id}: ${x}`)];
@@ -156,7 +159,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const { fixtureIdentity, implementationIdentity } = await import('./evidence.mjs');
   const dir = resolve(ROOT, 'docs/reports/project0');
   const result = await runCampaign(values, {
-    LAUNCH, runSession, runG2, runPreflight: runIntegrityPreflight, implementationIdentity, fixtureIdentity, loadCampaign, recompute, log: console.log,
+    LAUNCH, runSession, runG2, runPreflight: runIntegrityPreflight, implementationIdentity, fixtureIdentity, loadCampaign, recompute, log: console.log, loadBaseline: () => loadBaseline(),
     verifyPreflight: (manifest, records) => verifyPreflight(manifest, records), bindAuxiliary: runDir => auxiliaryHashes(runDir),
     readFixtures: async () => JSON.parse(await readFile(resolve(ROOT, 'spikes/project0/fixtures.json'), 'utf8')),
     writeReport: async (name, manifest, gates) => {

@@ -49,8 +49,18 @@ function g7raw(start = 1000) {   // fix round 3: placed at its G9 source interva
 }
 const R = fixtures.resources, textures = R.entries.filter(e => e.kind === 'texture').length;
 const good = { tableBytes: R.tableBytes, before: { bytes: 1, textures: 0, buffers: 1 }, after: { bytes: 1, textures: 0, buffers: 1 }, peakBytes: R.tableBytes + 1, written: Array(textures).fill(true), checks: Array.from({ length: R.readback.x.length * R.readback.y.length * textures }, () => ({ ok: true })), bandOk: true, fullBandBytes: 3932160, cancel: { before: 2, after: 0 }, outstandingMax: 2, errors: [] };
+import { snapshotInfo } from '../gpu/device.js';
+import { ARITH_STATUS } from '../contract.js';
+function bulbWords() {
+  const u = new Uint32Array(4 * fixtures.arithmetic.bulb.length), f = new Float32Array(u.buffer);
+  fixtures.arithmetic.bulb.forEach((s, i) => { const r = s.reference; u[4 * i] = ARITH_STATUS.indexOf(r.status); if (r.status === 'escaped') { u[4 * i + 1] = r.index; f[4 * i + 2] = r.logR; f[4 * i + 3] = r.de; } else if (r.status === 'failure') u[4 * i + 1] = r.index; });
+  return Array.from(u);
+}
 const RAW = {
-  G1: () => ({ adapterInfo: { vendor: 'nvidia', architecture: 'lovelace', device: '0x26b1', description: 'NVIDIA RTX 6000 Ada Generation', isFallbackAdapter: false, fallbackSource: 'adapter.info.isFallbackAdapter' }, probeOk: true }),
+  // G1-A: the selected-adapter snapshots, the verified probe samples and the page's document; the session binding and post-probe capture are
+  // the Node session's (finalise's g1Evidence, below)
+  G1: () => { const sel = { vendor: 'nvidia', architecture: 'lovelace', device: '0x26b1', description: 'NVIDIA RTX 6000 Ada Generation', isFallbackAdapter: false, backend: 'vulkan', type: 'discrete GPU' };
+    return { adapterInfo: { ...sel, fallbackSource: 'adapter.info.isFallbackAdapter', identity: { before: snapshotInfo(sel), after: snapshotInfo(sel), deviceAdapterInfo: null } }, probeOk: true, probeWords: bulbWords(), lossEvents: 0, document: { id: 'd', run: 'R' } }; },
   G2: () => ({ navigationMs: 900, statusLog: [{ t: 5, text: 'preparing: acquiring GPU', visible: true }], frame: overview(1, 900), outstandingMax: 2, integrity: ok, emptyProfile: 1, freshProcess: 1 }),
   G6: (start = 1000) => ({ windowStart: start, observedMs: 30012, warmupMs: 3005, config: { warmupSeconds: 3, windowSeconds: 30 }, frames: Array.from({ length: 950 }, (_, i) => overview(i + 1, start + i * 31.5)), pendingMax: 1, outstandingMax: 2, integrity: ok, refreshHz: 60, timestamps: 'timestamp-query', diagnostics: {} }),
   G7: g7raw,
@@ -67,7 +77,8 @@ const descriptorOf = gate => MEASURED[gate] ?? CORRECTNESS_ONLY;
 async function finalised(gate, slots, { experiment = false } = {}) {
   const dir = await scratch();
   try {
-    const records = await finalise({ gate, mode: 'headed', campaign: 'dev', runDir: dir, identity, launchInfo: {}, chromeGpuText: gpuText, invalidations: [], fixtures, experiment, outcome: { result: { slots, invalidations: [] } } });
+    const g1Evidence = { chromeGpuTextAfter: gpuText, session: { run: 'R', browser: { before: { pid: 1, start: '1' }, after: { pid: 1, start: '1' } }, target: { before: 'T', after: 'T' }, mainFrameNavigations: 1, crashed: false, closed: false } };
+    const records = await finalise({ gate, mode: 'headed', campaign: 'dev', runDir: dir, identity, launchInfo: {}, chromeGpuText: gpuText, invalidations: [], fixtures, experiment, outcome: { result: { slots, invalidations: [] } }, g1Evidence });
     const saved = [], raws = {};
     for (const rec of records) { const s = JSON.parse(await readFile(join(dir, `${rec.id}.json`), 'utf8')); saved.push(s); raws[s.id] = JSON.parse(await readFile(join(dir, `${rec.id}.raw.json`), 'utf8')); }
     return { records, saved, raws };

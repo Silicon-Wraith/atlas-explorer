@@ -1,6 +1,8 @@
 // spikes/project0/measure/arith.mjs — G3/G4/G5 metrics from raw readbacks and the frozen fixtures.
 import { compareArithmetic, compareRays } from '../metrics.js';
 import { decodeTrace, decodeArith } from './decode.mjs';
+import { compensationReport } from '../remediation/validate.mjs';
+const invalid = message => Object.assign(new Error(message), { invalidation: true });
 
 export function metrics(gate, slot, raw, fx) {
   if (gate === 'G3') {
@@ -22,6 +24,13 @@ export function metrics(gate, slot, raw, fx) {
     if (!raw.orbit.every(v => typeof v === 'number' && Number.isFinite(v))) throw new Error('off-plane orbit components must be finite numbers');
     let componentRatio = 0;
     raw.orbit.forEach((v, i) => { componentRatio = Math.max(componentRatio, Math.abs(v - expected[i]) / (p.absoluteTolerance + p.relativeTolerance * Math.abs(expected[i]))); });
+    // G5-A (prereg rev 2 §2.7): evidence that declares the compensated form, or carries supplementary readbacks, is validated here from its
+    // raw words at every read. Legacy (attempt-1) evidence, which carries neither, keeps its original derivation; qualify.mjs requires the
+    // compensated form for every G5 record launched with the remediation configuration. The frozen comparison is reported beside the verdict.
+    if (raw.form !== undefined || raw.supplementary !== undefined) {
+      const report = compensationReport(raw, fx);
+      if (!report.validated) throw invalid(`compensation unvalidated: ${report.problems.join('; ')}; observations match model(s) ${report.matches.length ? report.matches.join(', ') : 'none'}; frozen off-plane comparison recorded separately: ${componentRatio > 1 ? 'numerical failure: ' : ''}componentRatio=${componentRatio}`);
+    }
     return { components: 32, componentRatio };
   }
   throw new Error(`no metric derivation for ${gate}/${slot}`);
