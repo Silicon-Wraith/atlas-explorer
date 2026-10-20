@@ -1,0 +1,19 @@
+{
+  "name": "atlas-mandelbrot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "An immersive arbitrary-precision Mandelbrot observatory",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "dev:gpu": "node scripts/gpu-preview.mjs",
+    "start": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node tests/math.test.js",
+    "test:browser": "node tests/browser.mjs",
+    "test:navigation": "node tests/navigation.mjs",
+    "test:graphics": "node tests/graphics.mjs --chrome --headed --compositor --benchmark",
+    "thumbnails": "node scripts/thumbnails.mjs"
+  },
+  "devDependencies": { "playwright": "1.59.1" }
+}
