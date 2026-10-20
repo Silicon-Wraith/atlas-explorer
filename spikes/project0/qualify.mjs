@@ -325,6 +325,9 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
   const g5Observations = {};
   for (const r of records) {
     if (errors[r.id] || r.gate !== 'G5' || raws[r.id] === undefined) continue;
+    // Fix round 2 (Codex run 20261020T012231Z-93d3): finalise's synthetic `incomplete` slot (no slot completed) carries no numerical
+    // observation and deliberately no metric derivation; its own failure stands. Only the real G5 slots are rederived.
+    if (r.slot === 'incomplete') { g5Observations[r.id] = { slot: 'incomplete', collected: false }; continue; }
     try {
       const obs = g5Observation(r.slot, raws[r.id], fixtures);
       g5Observations[r.id] = obs;

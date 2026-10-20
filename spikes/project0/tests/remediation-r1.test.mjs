@@ -130,3 +130,30 @@ test('r1-1: a saved failure description that its raw does not reproduce is refus
     assert.equal(out.g5Observations['G5-lost'].compensation.validated, true); assert.equal(out.g5Observations['G5-lost'].numericalFailure, false);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+// --- fix round 2 (Codex run 20261020T012231Z-93d3): an honestly incomplete G5 invocation, writer to reader ---------------------------------
+test('r2-1: finalise → recompute: a synthetic G5/incomplete record keeps its failure, collects no observation, and neither collected nor closure-mode recompute rejects it', async () => {
+  const { finalise } = await import('../run.mjs');
+  const { recompute } = await import('../qualify.mjs');
+  const root = await scratch();
+  try {
+    const runDir = join(root, 'run'); await mkdir(runDir, { recursive: true });
+    const launchInfo = { args: 'remediation', requestedArgs: args, commandLine: `chrome ${args.join(' ')} --user-data-dir=/p`, profile: '/p', mode: 'headed' };
+    const identity = { mode: 'headed', ...launchIdentity(launchInfo) };
+    const common = { gate: 'G5', mode: 'headed', campaign: 'webgpu-remediation', runDir, identity, launchInfo, chromeGpuText: '', fixtures: fx, experiment: false };
+    // acquisition failed before any slot completed: no result at all
+    const incomplete = await finalise({ ...common, invalidations: ['session: browser hang: launch exceeded 60000 ms'], outcome: null });
+    assert.deepEqual(incomplete.map(r => r.slot), ['incomplete']);
+    // a second invocation whose real off-plane slot completed with DB words (an invalid record that must still be recomputed)
+    const runDir2 = join(root, 'run2'); await mkdir(runDir2, { recursive: true });
+    const real = await finalise({ ...common, runDir: runDir2, invalidations: [], outcome: { result: { slots: [{ slot: 'qjulia-offplane', raw: { ...rawFor({ updates: 'DB', offplane: 'DB' }) }, timingMethod: { kind: 'correctness-only' } }], invalidations: [], acquisitions } } });
+    const records = [...incomplete, ...real];
+    const collected = await recompute(records, fx, { manifest: { requestedArgs: args }, collect: true, baseline: { records: [], raws: {} } });
+    assert.deepEqual(collected.errors, {}, 'no spurious verification error');
+    assert.deepEqual(collected.g5Observations[incomplete[0].id], { slot: 'incomplete', collected: false });
+    assert.equal(collected.g5Observations[real[0].id].numericalFailure, true); assert.deepEqual(collected.g5Observations[real[0].id].compensation.matches, ['DB']);
+    const closing = await recompute(records, fx, { manifest: { requestedArgs: args }, baseline: { records: [], raws: {} } });   // close-remediation's default: throws on any error
+    assert.equal(Object.keys(closing.g5Observations).length, 2);
+    assert.ok(incomplete[0].invalidations.some(x => /launch exceeded/.test(x)), 'the original failure is kept');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
