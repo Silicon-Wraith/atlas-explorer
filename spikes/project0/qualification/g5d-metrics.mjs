@@ -20,13 +20,16 @@ import { frame, MODEL_NAMES } from './g5d-models.mjs';
 const sha = b => createHash('sha256').update(b).digest('hex');
 const invalid = message => Object.assign(new Error(message), { invalidation: true });
 const cache = new Map();
-// A file bound by the profile, read and authenticated against the pinned hash (the profile itself against the registry).
+// A file bound by the profile, read and authenticated against the pinned hash (the profile itself against the registry). Fix round 1 (Codex
+// run 20261020T161736Z-8d55, finding 1): the cached authenticated object is recursively frozen, so no caller can change what later reads
+// compare against (a mutation throws in module code).
+const deepFreeze = v => { if (v && typeof v === 'object' && !Object.isFrozen(v)) { for (const x of Object.values(v)) deepFreeze(x); Object.freeze(v); } return v; };
 function pinned(path, want, parse = true) {
   const key = `${path}@${want}`;
   if (cache.has(key)) return cache.get(key);
   const bytes = readFileSync(join(ROOT, path));
   if (sha(bytes) !== want) throw new Error(`${path} does not match its pinned hash ${want}`);
-  const out = parse ? JSON.parse(bytes.toString('utf8')) : bytes;
+  const out = parse ? deepFreeze(JSON.parse(bytes.toString('utf8'))) : Buffer.from(bytes);
   cache.set(key, out);
   return out;
 }

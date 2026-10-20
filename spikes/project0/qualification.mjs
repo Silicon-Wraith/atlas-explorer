@@ -20,7 +20,7 @@ import { G5D_FORM, OPERATIONAL_LAYOUT } from './qualification/g5d-config.js';
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export const QUALIFICATIONS = Object.freeze({
   'project0-e7-headed-v1': Object.freeze({ path: 'spikes/project0/qualification/e7-headed-v1.json', sha256: '99ea9a3030fd31f68a3cb39cc97b10227fd28afdfc38e55a82119618991d8c51' }),
-  'project0-g5d-v1': Object.freeze({ path: 'spikes/project0/qualification/g5d-v1.json', sha256: 'fb0484db657de36e4415b2c2d6e6a1a758246db62fcc4b5873c6e72cf9dbb3d1' }),
+  'project0-g5d-v1': Object.freeze({ path: 'spikes/project0/qualification/g5d-v1.json', sha256: 'e0f26d9e83e592f25fc6777134efca82427948df93257ce6eb485d48e8a91c24' }),
 });
 export const REQUIRED_PROFILE_CAMPAIGNS = Object.freeze({ 'webgpu-remediation': 'project0-e7-headed-v1', 'webgpu-g5d': 'project0-g5d-v1' });
 // The only slots each profile may remove from, or add to, the frozen plan.
@@ -121,6 +121,13 @@ export function validateQualification(manifest, ctx) {
   if (canonical(manifest.excludedTrials ?? null) !== canonical(excludedTrialsOf(ctx))) throw new Error(`excludedTrials ${JSON.stringify(manifest.excludedTrials ?? null)} contradict qualification ${ctx.id}`);
   if (canonical(manifest.knownLimitations ?? null) !== canonical(knownLimitationsOf(ctx))) throw new Error(`knownLimitations differ from qualification ${ctx.id}'s`);
   for (const key of ctx.doc.excludedRequiredSlots) if (manifest.trials?.[key]) throw new Error(`${key} is excluded under ${authorityOf(ctx, key)} and cannot be selected`);
+  // G5-D fix round 1 (Codex run 20261020T161736Z-8d55, finding 2): a profile that pins its launch configuration and its request binds every
+  // manifest, wherever it is built, loaded, evaluated or closed (not only in the campaign runner). Profiles without them (E7) are unchanged.
+  const launch = ctx.doc.launch;
+  if (launch && (manifest.args !== launch.args || canonical(manifest.requestedArgs ?? null) !== canonical(launch.requestedArgs)))
+    throw new Error(`qualification ${ctx.id} pins the launch configuration ${launch.args} ${JSON.stringify(launch.requestedArgs)}; the manifest declares ${manifest.args} ${JSON.stringify(manifest.requestedArgs ?? null)}`);
+  const request = ctx.doc.campaignRequest;
+  if (request && canonical(manifest.reuse ?? []) !== canonical(request.reuse)) throw new Error(`qualification ${ctx.id} requires no reuse; the manifest reuses ${JSON.stringify(manifest.reuse)}`);
 }
 
 // Records and attempts that may qualify under a profile: never an excluded slot, never a headless execution identity.

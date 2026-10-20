@@ -54,7 +54,9 @@ const effPlan = async () => (effective ??= Qn.effectiveGatePlan(fx, await load()
 const rec = (gate, slot, extra = {}, plan = effective) => ({ schema: 1, id: `${gate}-${slot.replace(/[^A-Za-z0-9.-]/g, '_')}-run`, gate, slot, campaign: 'webgpu-g5d', experiment: false, identity: identity('headed'),
   invalidations: [], artifacts: [{ path: 'r/x.raw.json', sha256: '0'.repeat(64) }], metrics: Object.fromEntries(Object.entries(plan?.[gate]?.[slot] ?? {}).map(([k, [, a]]) => [k, a])), timingMethod: EXPECTED_TIMING[gate][0], ...extra });
 const rawsOf = rs => Object.fromEntries(rs.map(r => [r.id, r.timingMethod?.field ? { [r.timingMethod.field]: 1 } : {}]));
-const base = ctx => ({ fixture, campaign: 'webgpu-g5d', args: 'remediation', requestedArgs: ['--enable-gpu'], qualification: ctx });
+// fix round 1 (finding 2): synthetic G5-D manifests carry the profile's actual pinned launch configuration
+const PINNED_ARGS = JSON.parse(readFileSync(join(ROOT, 'spikes/project0/launch-remediation.json'), 'utf8'));
+const base = ctx => ({ fixture, campaign: 'webgpu-g5d', args: 'remediation', requestedArgs: PINNED_ARGS, qualification: ctx });
 async function scratch() { const dir = resolve(ROOT, 'artifacts/runtime'); await mkdir(dir, { recursive: true }); return mkdtemp(join(dir, 'p0-g5d-')); }
 async function copyTree(root, paths) { for (const p of paths) { await mkdir(join(root, dirname(p)), { recursive: true }); await copyFile(join(ROOT, p), join(root, p)); } }
 const allEffective = async () => { const eff = await effPlan(); return Object.entries(eff).flatMap(([g, slots]) => Object.keys(slots).map(s => rec(g, s))); };
@@ -320,7 +322,7 @@ test('G5D-9.7: writer to reader: every completed observation survives finalise â
   const { closeG5d } = await imp('../close-g5d.mjs');
   const ctx = await load(), full = gpuRaw(committedMatrix(), 'F'), root = await scratch();
   try {
-    const args = ['--enable-gpu'];
+    const args = PINNED_ARGS;
     const launchInfo = { args: 'remediation', requestedArgs: args, commandLine: `chrome ${args.join(' ')} --user-data-dir=/p`, profile: '/p', mode: 'headed' };
     const id = { ...identity('headed'), ...launchIdentity(launchInfo) };
     const outcomes = {};
@@ -530,5 +532,70 @@ test('G5D-9.13: the complete concatenated fields + arithmetic source passes the 
     assert.equal(sha(readFileSync(path)), (await load()).doc.kernel.shader.sha256);
     const out = execFileSync(NAGA, [path], { encoding: 'utf8' });
     assert.match(out, /Validation successful/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+// --- fix round 1 (Codex run 20261020T161736Z-8d55) ----------------------------------------------------------------------------------------
+test('G5D r1-1: the authenticated profile, matrix and predictions behind the operational metric cannot be mutated; rejected shaders and numerical failures stay rejected', () => {
+  need(Mt);
+  const m = committedMatrix(), good = gpuRaw(m, 'F');
+  const zero = { ...good, shader: { ...good.shader, sha256: '0'.repeat(64) } };
+  assert.throws(() => Mt.operationalMetrics(zero, fx), e => e.invalidation === true && /shader/.test(e.message));
+  assert.throws(() => { Mt.profileDoc().kernel.shader.sha256 = '0'.repeat(64); }, TypeError);
+  assert.throws(() => { Mt.profileDoc().kernel.shader.pipelines[0].constants = { X: 1 }; }, TypeError);
+  assert.throws(() => { Mt.profileDoc().artifacts.matrix.sha256 = '1'.repeat(64); }, TypeError);
+  assert.throws(() => { Mt.profileDoc().kernel.layout.batch = 32; }, TypeError);
+  assert.throws(() => Mt.operationalMetrics(zero, fx), e => e.invalidation === true && /shader/.test(e.message), 'still rejected after the attempted mutation');
+  const target = m.cases.find(c => c.id === 'U000248') ?? m.cases.find(c => c.role === 'qualifying' && c.reference.rows.length > 3);
+  const n = target.reference.rows.length - 1;
+  const bad = gpuRaw(m, 'F', { mutate: (c, r) => (c.id === target.id ? { ...r, rows: r.rows.map((row, k) => (k === n ? [(parseInt(row[0], 16) ^ 0x00400000).toString(16).padStart(8, '0'), ...row.slice(1)] : row)) } : r) });
+  const before = Mt.operationalMetrics(bad, fx);
+  assert.equal(before.numericalFailures, 1); assert.ok(before.componentRatio > 1);
+  const cached = Mt.loadMatrix().cases.find(c => c.id === target.id);
+  assert.throws(() => { cached.reference.rows[n][0] = 0; }, TypeError);
+  assert.throws(() => { cached.reference.rows[n] = [0, 0, 0, 0]; }, TypeError);
+  assert.throws(() => { cached.role = 'diagnostic'; }, TypeError);
+  assert.throws(() => { cached.reference.e = 99; }, TypeError);
+  assert.throws(() => Mt.loadMatrix().cases.push(cached), TypeError);
+  assert.throws(() => { Mt.loadPredictions().models.F.continuation.rows[0] = 'x'; }, TypeError);
+  assert.throws(() => { Mt.loadPredictions().models.F.operational.sha256 = '0'.repeat(64); }, TypeError);
+  assert.deepEqual(Mt.operationalMetrics(bad, fx), before, 'the numerical failure is unchanged after the attempted mutations');
+  const e = Mt.expectedG5dShader(); e.sha256 = '0'.repeat(64);
+  assert.notEqual(Mt.expectedG5dShader().sha256, e.sha256, 'returned identities are detached copies');
+});
+
+test('G5D r1-2: the profile pins the launch configuration and empty reuse in the shared validator: direct evaluation, manifest load, qualify and closure refuse anything else', async () => {
+  const ctx = await load(), all = await allEffective(), raws = rawsOf(all);
+  const good = Q.buildManifest({ records: all, ...base(ctx) });
+  assert.equal(Q.qualify(good, all, fx, { raws, qualification: ctx, remediationClosed: true }).decision.outcome, 'WebGPU selected');
+  const reuse = [{ gate: 'G4', slot: 'bulb-samples', fromManifest: 'docs/reports/project0/webgpu-remediation-manifest.json', recordId: all.find(r => r.gate === 'G4').id, reason: 'reused' }];
+  const variants = {
+    attempt1: { ...good, args: 'attempt1', requestedArgs: ['--enable-gpu'] },
+    args: { ...good, args: 'attempt1' },
+    requestedArgs: { ...good, requestedArgs: ['--enable-gpu'] },
+    noDeveloperFlag: { ...good, requestedArgs: PINNED_ARGS.filter(a => a !== DEVELOPER_FLAG) },
+    reuse: { ...good, reuse },
+  };
+  assert.throws(() => Q.buildManifest({ records: all, ...base(ctx), args: 'attempt1', requestedArgs: ['--enable-gpu'] }), /launch/);
+  const root = await scratch();
+  try {
+    await mkdir(join(root, 'docs'), { recursive: true });
+    await writeFile(join(root, 'docs/h.md'), '# G5-D\n');
+    for (const [name, m] of Object.entries(variants)) {
+      const re = name === 'reuse' ? /reuse/ : /launch/;
+      assert.throws(() => Qn.validateQualification(m, ctx), re, name);
+      assert.throws(() => Q.qualify(m, all, fx, { raws, qualification: ctx, remediationClosed: true }), re, name);
+      for (const g of GATES) { const v = GC.evaluateGateChecked(g, all, m, fx, { raws, qualification: ctx }); assert.equal(v.status, 'invalid/inconclusive', `${name} ${g}`); }
+      const doc = { ...m, runDirs: [], trials: {} };
+      await writeFile(join(root, `docs/${name}.json`), JSON.stringify(doc));
+      await assert.rejects(Q.loadCampaign(`docs/${name}.json`, { root, qualification: ctx }), re, `${name} load`);
+      const { closeG5d } = await import('../close-g5d.mjs');
+      const writes = [];
+      await assert.rejects(closeG5d({ manifest: `docs/${name}.json`, history: 'docs/h.md' }, { root, loadFixtures: async () => fx, verifyPreflight: async () => {}, writeFile: async (p, d) => { writes.push(p, d); }, log: () => {} }), re, `${name} closure`);
+      assert.deepEqual(writes, [], `${name}: no decision written`);
+    }
+    // legacy profiles without these constraints are unchanged: an E7 manifest keeps its own declared configuration
+    const e7 = await Qn.loadQualification(E7);
+    assert.doesNotThrow(() => Q.buildManifest({ records: [], fixture, campaign: 'webgpu-remediation', args: 'remediation', requestedArgs: ['--enable-gpu'], qualification: e7 }));
   } finally { await rm(root, { recursive: true, force: true }); }
 });
