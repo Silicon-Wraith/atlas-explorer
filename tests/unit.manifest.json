@@ -2,6 +2,8 @@
   "files": [
     "tests/math.test.js",
     "tests/unit/no-launch.test.js",
-    "tests/unit/gate.test.js"
+    "tests/unit/gate.test.js",
+    "tests/unit/scene.test.js",
+    "tests/unit/plane-scene.test.js"
   ]
 }

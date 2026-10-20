@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Amendment A (2026-10-20, user directive; Codex design run 20261020T201409Z-18ac):** the scene size limit is configurable. `MAX_SCENE_BYTES` is replaced by `DEFAULT_MAX_SCENE_BYTES`; `createSceneCodec` takes `maxSceneBytes`; `src/plane/scene-adapter.js` adds `createPlaneSceneAdapter({maxSceneBytes})`, whose bound methods are also the module's named exports, including `sceneCodec`. Later tasks read the limit from `sceneCodec.maxSceneBytes`. T03's code blocks below show the pre-amendment text; the implementation on `feat/project1a` is authoritative.
+
 **Goal:** Move Plane into the workbench structure without changing its behaviour, and give it native
 versioned scenes, undo with a separate camera history, immutable render requests with truthful
 reports, an immutable image export, and a Discoveries control over durable local storage — with
@@ -123,7 +125,7 @@ reviewed the whole.
 - **Logging:** every peer exchange during execution is appended verbatim to
   `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md` and archived at milestones.
 - **Fixed values (spec):** scene schema `atlas.scene` v1; fingerprint `fnv1a64:` + 16 hex digits
-  over the canonical serialization's UTF-8 bytes; scene text limit 2,000,000 bytes; decimal budget
+  over the canonical serialization's UTF-8 bytes; scene text limit configurable, default 2,000,000 bytes (`DEFAULT_MAX_SCENE_BYTES`); decimal budget
   200,000 digits for the mantissa, the required precision and the fixed-point scaling power (so
   materialized values have at most 400,000 digits); undo and camera history 100 entries each;
   wheel and key-repeat grouping 200 ms quiet; IndexedDB `atlas-workbench` v1 with `discoveries`
@@ -2184,7 +2186,7 @@ is reported as *implemented, validation pending*.
 
 **Interfaces:**
 - Consumes: `PALETTES` (`src/plane/palettes.js`), `INITIAL_VIEW` (`src/plane/math.js`).
-- Produces (`src/shared/scene.js`): `APPLICATION_VERSION`, `MAX_SCENE_BYTES = 2_000_000`, `SceneError {code, path}` (codes: `invalid-value`, `missing-field`, `unknown-field`, `unsupported-format`, `unsupported-version`, `unsupported-model`, `too-large`, `invalid-json`, `resource-limit`, plus the link codes below), `isPlainObject`, `canonicalJson(value) → string`, `utf8Bytes(text)`, `fnv1a64(text) → "fnv1a64:<16 hex>"`, `deepFreeze`, `requireObject(value, path, keys)`, `MODEL_FIELDS`, `createSceneCodec({modelCodecs}) → {validate(input) → frozen Scene, parse(text), serialize(scene), fingerprint(scene) → {canonical, sceneHash}, equal(a, b)}`. A model codec is `{workspace, id, version, validateModel(input) → {conventions, parameters, camera, slices, iteration, tracing, appearance, sampling}}`.
+- Produces (`src/shared/scene.js`): `APPLICATION_VERSION`, `DEFAULT_MAX_SCENE_BYTES = 2_000_000`, `SceneError {code, path}` (codes: `invalid-value`, `missing-field`, `unknown-field`, `unsupported-format`, `unsupported-version`, `unsupported-model`, `too-large`, `invalid-json`, `resource-limit`, plus the link codes below), `isPlainObject`, `canonicalJson(value) → string`, `utf8Bytes(text)`, `fnv1a64(text) → "fnv1a64:<16 hex>"`, `deepFreeze`, `requireObject(value, path, keys)`, `MODEL_FIELDS`, `createSceneCodec({modelCodecs, maxSceneBytes = DEFAULT_MAX_SCENE_BYTES}) → {maxSceneBytes, validate(input) → frozen Scene, parse(text), serialize(scene), fingerprint(scene) → {canonical, sceneHash}, equal(a, b)}`. A model codec is `{workspace, id, version, validateModel(input) → {conventions, parameters, camera, slices, iteration, tracing, appearance, sampling}}`.
 - Produces (`src/plane/scene-adapter.js`): `PLANE_MODEL`, `PLANE_DEFAULTS`, `DETAIL_LEVELS`, `DECIMAL_BUDGET_DIGITS = 200_000`, `MAX_PLANE_ZOOM`, `planeIterations(detail, zoom)`, `checkDecimal(text, path)`, `preflightView(view)` (lexical and resource preflight, never materializes), `admitEnteredView(view, validate = validateView)` (preflight, then the coordinate-entry bounds), `planeModelCodec`, `sceneCodec`, `createPlaneScene({view, settings?, applicationVersion?})`, `PLANE_INITIAL_SCENE`, `toPlaneState(scene) → {view:{re, im, zoom}, settings:{palette, phase, frequency, relief, detail, iterations}}`, `planeDependencies(scene) → {geometry, appearance}` (canonical strings), `SHARE_PREFIX = "#scene="`, `encodeShareHash(scene)`, `decodeShareHash(hash) → {kind:"none"} | {kind:"scene", scene} | {kind:"unsupported", error}` (link codes `earlier-format`, `unrecognized-link`, `invalid-link`, `too-large`), `encodeSceneFile(scene)`, `decodeSceneFile(text)`.
 
 **Design assertions:**
@@ -4639,7 +4641,7 @@ $('#download-location').onclick = () => {
 $('#import-location').onchange = async event => {
   const file = event.target.files[0]; if (!file) return;
   try {
-    if (file.size > 2000000) throw new Error('This location file is too large.');
+    if (file.size > sceneCodec.maxSceneBytes) throw new Error('This location file is too large.');
     const scene = decodeSceneFile(await file.text());
     stopTour(); activePlace = ''; applyAction([{ type: 'restoreScene', scene }], 'restore'); renderPlaces();
     $('#capture-dialog').close(); toast('Welcome back to your discovery.');
@@ -6924,7 +6926,7 @@ $('#download-location').onclick = () => {
 $('#import-location').onchange = async event => {
   const file = event.target.files[0]; if (!file) return;
   try {
-    if (file.size > 2000000) throw new Error('This location file is too large.');
+    if (file.size > sceneCodec.maxSceneBytes) throw new Error('This location file is too large.');
     const scene = decodeSceneFile(await file.text());
     stopTour(); activePlace = ''; applyAction([{ type: 'restoreScene', scene }], 'restore'); renderPlaces();
     $('#capture-dialog').close(); toast('Welcome back to your discovery.');
@@ -10382,7 +10384,7 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   $('#import-location').onchange = async event => {
     const file = event.target.files[0]; if (!file) return;
     try {
-      if (file.size > 2000000) throw new Error('This location file is too large.');
+      if (file.size > sceneCodec.maxSceneBytes) throw new Error('This location file is too large.');
       const scene = decodeSceneFile(await file.text());
       stopTour(); activePlace = ''; applyAction([{ type: 'restoreScene', scene }], 'restore'); renderPlaces();
       $('#capture-dialog').close(); toast('Welcome back to your discovery.');
