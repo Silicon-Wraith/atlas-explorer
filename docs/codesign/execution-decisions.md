@@ -125,3 +125,24 @@ inputs, gates or evidence.
 **How it is implemented:** the change must not modify the 24 frozen sources, the fixtures or their
 provenance. The mechanism is agreed with Codex, then implemented, reviewed and committed before
 `webgpu-remediation` runs. This is a spec amendment, approved by the user.
+
+## E8 — G5-D authorized: G5 re-specified to operational orbits (user, 2026-10-20)
+
+**Context:** after `webgpu-remediation` (G5-A invalid; off-plane frozen ratio 4.7449; the cycle was
+closed as inconclusive in `webgpu-decision.json` at e0a4ed5), the user authorized Codex's G5-D
+(joint position, run 20261020T051335Z-a45a).
+
+**The re-specification:**
+- G5 validates quaternion orbits up to first escape or the iteration budget, which is how the
+  renderer uses them.
+- The cases come from a fresh matrix with nonzero j/k parameters, preregistered and chosen by a
+  deterministic generator fixed before any GPU run.
+- The tolerances and the plane gate are unchanged.
+
+**What stays on record:** the 8-iterate forced-continuation failure is kept as a diagnostic. G5-A
+remains recorded as invalid/inconclusive.
+
+**The §6 exception:** one extra qualifying attempt, every gate rerun.
+
+**How it is implemented:** without modifying the 24 frozen sources or `fixtures.json`, with the
+amendment text peer-reviewed by both authors and preregistered before the run.
