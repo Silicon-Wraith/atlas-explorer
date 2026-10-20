@@ -41,6 +41,13 @@ fn bulb_eval_ff(p: FF3, cap: u32) -> Eval {
 @group(0) @binding(2) var<storage, read> origin_ff: array<vec2f, 3>;        // (hi, lo) per component, from CPU doubles
 @group(0) @binding(3) var<storage, read> directions_f: array<vec4f>;          // d_ray, ordinary f32
 @group(0) @binding(4) var<storage, read_write> results_ff: array<vec4u>;
+// T12 fix round 1 (Codex T12 r1 finding 1; docs/reports/project0/t12-validation-prereg.md): operand/result captures at this kernel's own
+// arithmetic sites, in the pipeline the cost runs measure (always on; the writes are part of the measured compensated kernel). For ray
+// i < CAPTURE_RAYS and step s < CAPTURE_STEPS, four rows at (i * CAPTURE_STEPS + s) * 4: (t.hi, t.lo, inc, flag) with flag 1 = stepped by inc,
+// 2 = evaluated and ended; then (prod.hi, prod.lo, p.hi, p.lo) per component, prod = mul_ff_f32(t, d_k), p = add_ff(origin_ff[k], prod).
+override CAPTURE_RAYS: u32 = 8u;
+override CAPTURE_STEPS: u32 = 16u;
+@group(0) @binding(7) var<storage, read_write> capture_ff: array<vec4f>;
 
 @compute @workgroup_size(64)
 fn trace_ff_list(@builtin(global_invocation_id) id: vec3u) {
@@ -54,13 +61,18 @@ fn trace_ff_list(@builtin(global_invocation_id) id: vec3u) {
     var done = false;
     for (var step: u32 = 0u; step < prof.steps; step++) {
       if (t.x + t.y > iv.y) { out = vec4u(RAY_MISS, WHY_NONE, 0u, step); done = true; break; }
-      let p = FF3(add_ff(origin_ff[0], mul_ff_f32(t, d.x)), add_ff(origin_ff[1], mul_ff_f32(t, d.y)), add_ff(origin_ff[2], mul_ff_f32(t, d.z)));
+      let mx = mul_ff_f32(t, d.x); let my = mul_ff_f32(t, d.y); let mz = mul_ff_f32(t, d.z);
+      let p = FF3(add_ff(origin_ff[0], mx), add_ff(origin_ff[1], my), add_ff(origin_ff[2], mz));
+      let cap = i < CAPTURE_RAYS && step < CAPTURE_STEPS; let row = (i * CAPTURE_STEPS + step) * 4u;
+      if (cap) { capture_ff[row] = vec4f(t, 0.0, 2.0); capture_ff[row + 1u] = vec4f(mx, p.x); capture_ff[row + 2u] = vec4f(my, p.y); capture_ff[row + 3u] = vec4f(mz, p.z); }
       let e = bulb_eval_ff(p, prof.iterations);
       let tt = t.x + t.y;
       if (e.status == ST_BUDGET) { out = vec4u(RAY_UNRESOLVED, WHY_POINT, bitcast<u32>(tt), step + 1u); done = true; break; }
       if (e.status == ST_FAILURE) { out = vec4u(RAY_FAILURE, WHY_NONE, bitcast<u32>(tt), step + 1u); done = true; break; }
       if (e.de < max(prof.floor, prof.factor * prof.alpha * tt)) { out = vec4u(RAY_HIT, WHY_NONE, bitcast<u32>(tt), step + 1u); done = true; break; }
-      t = add_ff(t, vec2f(prof.k * e.de, 0.0));
+      let inc = prof.k * e.de;
+      if (cap) { capture_ff[row] = vec4f(t, inc, 1.0); }
+      t = add_ff(t, vec2f(inc, 0.0));
     }
     if (!done) { out = select(vec4u(RAY_UNRESOLVED, WHY_STEPS, bitcast<u32>(t.x + t.y), prof.steps), vec4u(RAY_MISS, WHY_NONE, 0u, prof.steps), t.x + t.y > iv.y); }
   }

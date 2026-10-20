@@ -21,23 +21,35 @@ export const SELECTION = Object.freeze({
   platform: 'docs/reports/project0/platform-decision.md', selected: '**Selected backend: WebGPU.**',
 });
 
-// Establish the selection from verified evidence, not from a mutable configuration name. Dependencies are injectable for tests; the default
-// recomputation is CPU only (no browser, no GPU).
-export async function verifySelection({ root = ROOT, read = path => readFile(resolve(root, path)), close = closeG5d, launch = LAUNCH } = {}) {
+// F7 (Codex T12 r1): the closure pinned its history's hash; the history may since have been appended to (progress notes), never edited. The
+// recorded hash must be that of a line-boundary prefix of the current history (the whole file included).
+export function historyPrefix(text, sha) {
+  if (sha256(text) === sha) return { appended: false };
+  for (let i = text.indexOf('\n'); i !== -1; i = text.indexOf('\n', i + 1)) if (sha256(text.slice(0, i + 1)) === sha) return { appended: true, prefixBytes: Buffer.byteLength(text.slice(0, i + 1)) };
+  return null;
+}
+
+// Establish the selection from verified evidence, not from a mutable configuration name. Dependencies are injectable for tests (F6: the closer,
+// the profile, campaign and fixture loaders, the reader and the launch table); the default recomputation is CPU only (no browser, no GPU), and
+// production verification rejects missing evidence.
+export async function verifySelection({ root = ROOT, read = path => readFile(resolve(root, path)), close = closeG5d, launch = LAUNCH, loadQ = loadQualification, load = loadCampaign, fixtures = loadFixtures } = {}) {
   const decisionBytes = await read(DECISION_PATH), recorded = JSON.parse(String(decisionBytes));
   if (sha256(await read(recorded.manifest)) !== recorded.manifestSha256) throw new Error('the manifest changed after the decision was recorded');
+  const history = historyPrefix(String(await read(recorded.history)), recorded.historySha256);
+  if (!history) throw new Error(`the history ${recorded.history} is not an append-only extension of the one the decision recorded (${recorded.historySha256})`);
   const recomputed = JSON.parse(JSON.stringify(await close({ manifest: recorded.manifest, history: recorded.history }, { root, qualificationRoot: root, historicalRoot: root, writeFile: async () => {}, log: () => {} })));
-  if (canonical(recomputed) !== canonical(recorded)) throw new Error(`the recorded G5-D decision (${DECISION_PATH}) does not reproduce from its evidence`);
+  // Everything else is compared in full; only the history hash is replaced by the authenticated prefix's (an appended history hashes differently).
+  if (canonical({ ...recomputed, historySha256: recorded.historySha256 }) !== canonical(recorded)) throw new Error(`the recorded G5-D decision (${DECISION_PATH}) does not reproduce from its evidence`);
   const decisions = await read(SELECTION.decisions), platform = await read(SELECTION.platform);
   if (!String(decisions).split('\n').includes(SELECTION.heading)) throw new Error(`the E10 user selection is not recorded in ${SELECTION.decisions}`);
   if (!String(platform).split('\n').includes(SELECTION.selected)) throw new Error(`the platform decision does not record WebGPU as selected (${SELECTION.platform})`);
-  const qualification = await loadQualification(G5D_PROFILE, { root });
-  const { manifest, records } = await loadCampaign(recorded.manifest, { root, qualification });
-  const fx = await loadFixtures(manifest, { root });
+  const qualification = await loadQ(G5D_PROFILE, { root });
+  const { manifest, records } = await load(recorded.manifest, { root, qualification });
+  const fx = await fixtures(manifest, { root });
   const args = Object.keys(launch).find(k => JSON.stringify(launch[k]) === JSON.stringify(manifest.requestedArgs));
   if (!args) throw new Error('no current launch configuration equals the selected configuration\'s flags');
   const selection = { basis: 'user decision E10', backend: 'webgpu', mechanicalOutcome: recomputed.decision.outcome,
-    decisionFile: DECISION_PATH, decisionSha256: sha256(decisionBytes), manifest: recorded.manifest, manifestSha256: recorded.manifestSha256,
+    decisionFile: DECISION_PATH, decisionSha256: sha256(decisionBytes), history: recorded.history, historySha256: recorded.historySha256, historyAppended: history.appended, manifest: recorded.manifest, manifestSha256: recorded.manifestSha256,
     decisions: SELECTION.decisions, decisionsSha256: sha256(decisions), platform: SELECTION.platform, platformSha256: sha256(platform) };
   return { fx, manifest, records, args, selection };
 }

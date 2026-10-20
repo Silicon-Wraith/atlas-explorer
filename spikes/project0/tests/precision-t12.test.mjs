@@ -13,6 +13,8 @@ import { ROOT } from '../launch.mjs';
 import { EXPECTED_TIMING, PRECISION_COST_TIMING, CORRECTNESS_ONLY, QUEUE_COMPLETION_WORKMS, validateRecordTiming, validateTimingMethod } from '../timing-contract.js';
 import { validateEvidence } from '../gates-checked.js';
 import { assessPrecision } from '../measure/precision.mjs';
+import { completeRaw } from './precision-helpers.mjs';
+import { existsSync } from 'node:fs';
 const { finalise } = await import('../run.mjs');
 
 const fx = JSON.parse(await readFile(new URL('../fixtures.json', import.meta.url), 'utf8'));
@@ -26,7 +28,8 @@ const f32bits = x => new Uint32Array(new Float32Array([x]).buffer)[0];
 const echo = (set, variant) => set.rows.flatMap(r => { const p = r[variant].primary; const code = { hit: 0, miss: 1, unresolved: 2, failure: 3 }[p.status]; return [code, p.status === 'unresolved' ? (p.reason === 'point' ? 1 : 2) : 0, p.status === 'miss' ? 0 : f32bits(p.t), Math.max(1, p.steps)]; });
 const goodPrims = () => fx.primitives.map(p => { const v = p.value; const hi = Math.fround(v), lo = Math.fround(v - hi); return { hi, lo, thenHi: p.thenValue ?? 0, thenLo: 0 }; });
 const sample = () => Array.from({ length: 10 }, (_, i) => 10 + i);
-const driverRaw = () => ({ primitives: goodPrims(), sets: fx.precision.results.map(set => ({ distance: set.distance, baseline: { words: echo(set, 'baselineInput'), workMs: sample(), readMs: sample(), peakBytes: 1000 }, compensated: { words: echo(set, 'compensatedInput'), workMs: sample(), readMs: sample(), peakBytes: 1500 } })), validationBytes: 64, costProtocolMs: 4321.5 });
+// T12 fix round 1: the complete raw also carries the supplement, captures and batch evidence (tests/precision-helpers.mjs).
+const driverRaw = () => completeRaw(fx, { primitives: goodPrims(), sets: fx.precision.results.map(set => ({ distance: set.distance, baseline: { words: echo(set, 'baselineInput'), workMs: sample(), readMs: sample(), peakBytes: 1000 }, compensated: { words: echo(set, 'compensatedInput'), workMs: sample(), readMs: sample(), peakBytes: 1500 } })) });
 
 test('precision is registered with one measured page-clock descriptor (the existing rows are pinned by their own tests)', () => {
   assert.deepEqual(EXPECTED_TIMING.precision, [PRECISION_COST_TIMING]);
@@ -93,11 +96,17 @@ test('the driver turns an acquisition failure into its invalidation, without lea
   } finally { if (had) globalThis.navigator = before; else delete globalThis.navigator; }
 });
 
-// The selection (E10). The real check recomputes the G5-D decision from its saved evidence (CPU only, no browser).
+// The selection (E10). T12 fix round 1 (Codex r1 finding 6): the unit tests inject the campaign, profile and fixture loaders, so they need no
+// local campaign evidence; the real reproduction is an integration test that states its evidence prerequisite and is skipped without it.
 const { verifySelection, SELECTION } = await import('../precision.mjs');
 const recorded = JSON.parse(await readFile(resolve(ROOT, 'docs/reports/project0/webgpu-g5d-decision.json'), 'utf8'));
+const selectedRecords = [{ id: 'G4-x', campaign: 'webgpu-g5d', identity: { ...identity } }];
+const loaders = { close: async () => structuredClone(recorded), loadQ: async () => ({ doc: {} }), load: async () => ({ manifest: { requestedArgs: [...recorded.requestedArgs] }, records: selectedRecords }), fixtures: async () => fx };
+const evidenceManifest = JSON.parse(await readFile(resolve(ROOT, recorded.manifest), 'utf8'));
+const evidencePresent = existsSync(resolve(ROOT, 'artifacts/project0', evidenceManifest.runDirs[0]));
 
-test('the selection is verified from evidence: the G5-D decision reproduces (mechanically inconclusive), and WebGPU is selected by the recorded E10 user decision', async () => {
+test('integration: the G5-D decision reproduces from its saved evidence (mechanically inconclusive), and WebGPU is selected by the recorded E10 user decision',
+  { skip: !evidencePresent && `the webgpu-g5d campaign evidence (artifacts/project0/${evidenceManifest.runDirs[0]}, not in git) is not present` }, async () => {
   const v = await verifySelection();
   assert.equal(v.args, 'remediation');
   assert.deepEqual(v.manifest.requestedArgs, recorded.requestedArgs);
@@ -107,12 +116,19 @@ test('the selection is verified from evidence: the G5-D decision reproduces (mec
   assert.ok(v.records.length > 0 && v.records.every(r => r.identity.mode === 'headed' && r.campaign === 'webgpu-g5d'));
 });
 
+test('the selection, with injected loaders, returns the selected launch configuration, records and basis', async () => {
+  const v = await verifySelection(loaders);
+  assert.equal(v.args, 'remediation'); assert.equal(v.records, selectedRecords); assert.equal(v.fx, fx);
+  assert.equal(v.selection.basis, 'user decision E10'); assert.equal(v.selection.mechanicalOutcome, 'inconclusive');
+});
+
 test('the selection is refused when the decision does not reproduce, the E10 record or the platform decision is absent, the manifest changed, or no launch configuration matches', async () => {
-  const fast = { close: async () => structuredClone(recorded) };                                           // skip the 6 s recomputation where it is not under test
-  await assert.rejects(verifySelection({ close: async () => ({ ...structuredClone(recorded), decision: { ...recorded.decision, outcome: 'WebGPU selected' } }) }), /does not reproduce from its evidence/);
+  await assert.rejects(verifySelection({ ...loaders, close: async () => ({ ...structuredClone(recorded), decision: { ...recorded.decision, outcome: 'WebGPU selected' } }) }), /does not reproduce from its evidence/);
   const reading = (path, edit) => p => readFile(resolve(ROOT, p)).then(b => (p === path ? Buffer.from(edit(String(b))) : b));
-  await assert.rejects(verifySelection({ ...fast, read: reading(SELECTION.decisions, t => t.replace(SELECTION.heading, '## E10 — something else')) }), /E10 user selection is not recorded/);
-  await assert.rejects(verifySelection({ ...fast, read: reading(SELECTION.platform, t => t.replace(SELECTION.selected, '**Selected backend: none.**')) }), /platform decision does not record WebGPU/);
-  await assert.rejects(verifySelection({ ...fast, read: reading(recorded.manifest, t => `${t} `) }), /the manifest changed after the decision was recorded/);
-  await assert.rejects(verifySelection({ ...fast, launch: { attempt1: ['--enable-gpu'] } }), /no current launch configuration equals the selected configuration's flags/);
+  await assert.rejects(verifySelection({ ...loaders, read: reading(SELECTION.decisions, t => t.replace(SELECTION.heading, '## E10 — something else')) }), /E10 user selection is not recorded/);
+  await assert.rejects(verifySelection({ ...loaders, read: reading(SELECTION.platform, t => t.replace(SELECTION.selected, '**Selected backend: none.**')) }), /platform decision does not record WebGPU/);
+  await assert.rejects(verifySelection({ ...loaders, read: reading(recorded.manifest, t => `${t} `) }), /the manifest changed after the decision was recorded/);
+  await assert.rejects(verifySelection({ ...loaders, launch: { attempt1: ['--enable-gpu'] } }), /no current launch configuration equals the selected configuration's flags/);
+  // production verification still rejects missing evidence: a loader that cannot find the campaign is an error, never a skip
+  await assert.rejects(verifySelection({ ...loaders, load: async () => { throw new Error('ENOENT: no such run directory'); } }), /ENOENT/);
 });

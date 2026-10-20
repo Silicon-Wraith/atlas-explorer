@@ -3,13 +3,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { precisionMetrics, medianOf, assessPrecision } from '../measure/precision.mjs';
+import { completeRaw } from './precision-helpers.mjs';                                // T12 fix round 1: a complete raw (supplement, captures, batches)
+import { PRECISION_COST_TIMING } from '../timing-contract.js';                            // T12 fix round 1 (Codex r1 finding 4): assessment checks timing
 
 const fx = JSON.parse(await readFile(new URL('../fixtures.json', import.meta.url), 'utf8'));
 const f32bits = x => new Uint32Array(new Float32Array([x]).buffer)[0];
 const echo = (set, variant) => set.rows.flatMap(r => { const p = r[variant].primary; const code = { hit: 0, miss: 1, unresolved: 2, failure: 3 }[p.status]; return [code, p.status === 'unresolved' ? (p.reason === 'point' ? 1 : 2) : 0, p.status === 'miss' ? 0 : f32bits(p.t), Math.max(1, p.steps)]; });
 const goodPrims = () => fx.primitives.map(p => { const v = p.value; const hi = Math.fround(v), lo = Math.fround(v - hi); return { hi, lo, thenHi: p.thenValue ?? 0, thenLo: 0 }; });
 const sample = () => Array.from({ length: 10 }, (_, i) => 10 + i);
-const raw = () => ({ primitives: goodPrims(), sets: fx.precision.results.map(set => ({ distance: set.distance, baseline: { words: echo(set, 'baselineInput'), workMs: sample(), readMs: sample(), peakBytes: 1000 }, compensated: { words: echo(set, 'compensatedInput'), workMs: sample(), readMs: sample(), peakBytes: 1500 } })) });
+const raw = () => completeRaw(fx, { primitives: goodPrims(), sets: fx.precision.results.map(set => ({ distance: set.distance, baseline: { words: echo(set, 'baselineInput'), workMs: sample(), readMs: sample(), peakBytes: 1000 }, compensated: { words: echo(set, 'compensatedInput'), workMs: sample(), readMs: sample(), peakBytes: 1500 } })) });
 
 test('a perfect echo of the CPU references shows no disagreement at the first distance, with matched costs', () => {
   const m = precisionMetrics(fx, raw());
@@ -54,7 +56,7 @@ test('cost evidence must follow the frozen protocol exactly', () => {
 test('the assessment is derived from evidence: invalidations, completeness and the selected environment decide interpretability', () => {
   const identity = { browserVersion: 'v', browserExecutable: 'x', driver: 'd', session: 's', mode: 'headed', launchHash: 'f'.repeat(64) };
   const selected = [{ identity }];
-  const clean = { slot: 'precision', invalidations: [], identity };
+  const clean = { gate: 'precision', slot: 'precision', invalidations: [], identity, timingMethod: PRECISION_COST_TIMING };
   assert.equal(assessPrecision({ fx, record: clean, raw: raw(), selected }).interpretable, true);
   assert.equal(assessPrecision({ fx, record: { ...clean, invalidations: ['device lost: unknown'] }, raw: raw(), selected }).interpretable, false);
   assert.equal(assessPrecision({ fx, record: { ...clean, slot: 'incomplete' }, raw: {}, selected }).interpretable, false);
