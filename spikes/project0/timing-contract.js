@@ -41,6 +41,14 @@ export const G10_SETTLED_TIMING = pageClock('elapsedMs', 'requestedMs: performan
 export const G12_WALL_TIMING = pageClock('wallMs', 'performance.now() after the baseline is recorded and integrity observation starts, before cycle 0',
   'performance.now() after the last cycle\'s checkpoint (the span includes every cycle\'s publications and the maintenance readbacks)');
 
+// T12: the precision experiment (browser/drivers/precision.js). Its cost evidence is nested per distance and implementation, as samples the
+// contract's top-level field cannot name: the field is the page-clock span of the whole matched cost protocol, which contains every sample, and
+// the start and end texts state exactly what each nested workMs and readMs sample measures. No GPU timestamp queries are used.
+export const PRECISION_COST_TIMING = Object.freeze({ kind: 'page-clock', clock: 'page.performance.now', unit: 'ms', field: 'costProtocolMs',
+  start: 'costStart: performance.now() after the primitive validation has been read back and its resources released, before the first distance\'s inputs are packed. Inside the span, per distance, fixtures.costProtocol.warmups unrecorded and then fixtures.costProtocol.measured recorded runs alternate baseline (traceList) then compensated (trace_ff_list); each recorded run of each implementation contributes one workMs sample (queue-completion time from before the first batch is prepared, after the input buffers are uploaded, to after the final onSubmittedWorkDone promise resolves; readback excluded) and one readMs sample (readBack(): from before the staging buffer is allocated, through the copy submission and its onSubmittedWorkDone, to after mapAsync resolves and the mapped range is copied and unmapped)',
+  end: 'performance.now() after the last distance\'s runs and the release of its allocators; costProtocolMs = end - costStart, so it includes every warm-up, every readback and the host work between runs. The nested workMs and readMs samples are the cost evidence (medians and ranges, measure/precision.mjs); costProtocolMs only bounds them',
+  readbackIncluded: true, timestampQueriesUsed: false });
+
 // The expected timing method of every completed record, by gate (or experiment): the list of descriptors a completed slot may carry, matched
 // exactly. A gate that is not listed fails closed. T7-T9 add their gates' rows here (see the T6 report, "Fix round 4"); rows are never loosened.
 const freeze = list => Object.freeze(list.map(d => Object.freeze({ ...d })));
@@ -62,6 +70,7 @@ export const EXPECTED_TIMING = Object.freeze({
   G10: freeze([G10_SETTLED_TIMING]),                     // T9: elapsedMs (range 0..2000)
   G12: freeze([G12_WALL_TIMING]),                        // T9: wallMs (at least 600000)
   visible: freeze([CORRECTNESS_ONLY]),                   // T9: visible-output evidence (an experiment): colour classes and captures, no timing
+  precision: freeze([PRECISION_COST_TIMING]),            // T12: the A.10/A.11 experiment; costProtocolMs spans the nested workMs/readMs samples
 });
 
 const MEASURED_FIELDS = ['kind', 'clock', 'unit', 'field', 'start', 'end', 'readbackIncluded', 'timestampQueriesUsed'];
