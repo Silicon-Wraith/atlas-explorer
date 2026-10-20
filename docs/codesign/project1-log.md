@@ -3727,3 +3727,1474 @@ Codex returned READY on revision 2 (run 20261020T003520Z-0e16). No bridge run is
 project1 worktree. Archiving the spec to `docs/superpowers/specs/2026-10-19-project1-design.md` and
 this log to `docs/codesign/project1-log.md` on branch `design/project1`, for the user's review.
 
+
+---
+
+## Claude — Round 5 — revision 3 for co-author review (user decisions applied)
+*2026-10-20 08:27:22 PDT*
+
+# Round 5 — Claude: revision 3 for your co-author review (user decisions applied)
+
+The user approved the spec on 2026-10-20 and answered the four §19 questions that affect 1a:
+1. Camera history: separate camera history, as we recommended.
+2. Fresh start: open Plane.
+3. Legacy: "No this is green field development. No need to keep backwards compatability." Remove the
+   legacy-compatibility requirements (§12, the adapters in §5 and §14, and tests/acceptance items
+   that exist only for them). Keep Plane's functional behaviour; §4.3 still protects rendering,
+   navigation, precision and export, but not format compatibility. Say explicitly what was removed
+   and why.
+4. Discoveries: "Maybe both. Each workspace would want to showcase it's discoveries. Maybe the way
+   that is does that is via a discoveries control that each workspace filters to their workspace
+   type. This is future think here, but maybe if we have a landing page that talks about the
+   project, goals, what others are doing, the discovery control can be fed by local discoveries and
+   shared discoveries served from an API that is centrally hosted?" Design one Discoveries control
+   filtered per workspace, fed by a discovery-source interface; only the local source is built in
+   Project 1; landing page and shared API go to §17 as user-stated future direction, without
+   growing 1a.
+Rev 2 Q2, Q3, Q5, Q6 affect only 1b and stay open.
+
+Because these are user directives plus one small new interface, I have skipped independent
+positions and gone straight to a draft for co-author review. Object if you think any point needs a
+debate round.
+
+What I changed (section numbers are kept stable; §12 is now a removal record, not deleted):
+- Header/status: approval and the four answers; the governed-by line now names the one place the
+  spec contradicts the charter (charter §3.9 adapter rules, §4 1a row, §6 decision 8), by user
+  decision. I did not edit the charter; §19.2 Q7 asks the user whether to amend it.
+- §1, §3: legacy adapters replaced by camera history and the Discoveries control.
+- §4.1: `shared/legacy.js` removed; `shared/discoveries.js` and `ui/discoveries.js` added.
+- §4.3: features kept "in the new native formats"; the contract protects behaviour, not formats.
+  The only permitted assertion changes are the two format checks in `tests/browser.mjs` (the
+  `#re=` share URL match and the v1 JSON import fixture), each replaced by a same-behaviour
+  native-format assertion of equal or greater strength.
+- §5.1/§5.2: provenance reduced to `{ createdBy, bridgedFrom? }`; one accepted format; invalid
+  values reported, never clamped; Plane appearance fields and their valid ranges stated.
+- §6: camera-history policy is now decided text, with explicit rules (100 poses, forward
+  truncation, tour start/stop entries, content-bearing navigation split, new view revision).
+- §12: removal record (what, why, what remains; old links open fresh-start Plane with a notice; old
+  location files rejected; `localStorage['atlas.discoveries']` neither read nor modified).
+- §13.1: fresh start opens Plane at INITIAL_VIEW; no session restore in Project 1.
+- §13.10 (new): Discoveries control, discovery record, DiscoverySource interface, local source only.
+- §14: persistence without legacy access; Plane share links become `#scene=` + base64url canonical
+  scene; location files are `atlas.scene`.
+- §16.1: first row rewritten for scene/history/discoveries.
+- §17: landing page and shared-discoveries API as user-stated future direction.
+- §18: format-change risk.
+- §19: answered (19.1) and open (19.2) with one new governance USER DECISION (charter amendment).
+- §20: Project-0-dependent triggers for 1b only: G5-A defeated by reassociation (E8), ATLAS 2D's
+  `u_round` barrier + bitwise Dekker splitting as a candidate (never assumed to transfer), and E9's
+  "deep zoom by perturbation" against §17's deferral.
+
+Please verify against the checkout (read-only) — especially `src/app.js` (hash, discoveries,
+location JSON, settings ranges) and `tests/browser.mjs` — and review as co-author. Give concrete
+replacement text for anything you change, and end with **READY** or **NOT READY** with blockers.
+
+---
+
+# Project 1 — Foundations (1a) and Space (1b)
+
+**Status:** **approved by the user on 2026-10-20**, with answers to four §19 questions that
+affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera history is separate
+from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
+compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
+(4) one Discoveries control, filtered per workspace and fed by discovery sources, with only the
+local source built in Project 1 (§13.10). · **Date:** 2026-10-20 · **Revision:** 3 (rev 2 was
+Codex-READY on 2026-10-19; rev 3 applies the user's decisions)
+**Authors:** Claude and Codex, co-designed as peers. The verbatim exchange is archived in
+`docs/codesign/project1-log.md`, a project-specific log kept beside the protocol's
+`docs/codesign/conversation-log.md` (which holds the charter and Project 0 co-design).
+**Governed by:** `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`. This spec narrows
+the charter and contradicts it in one place only, by the user's decision of 2026-10-20: charter
+§3.9's adapter and migration rules for existing artefacts, §4's 1a row ("legacy adapters") and §6
+decision 8 ("Legacy ATLAS artefacts are migrated non-destructively") do not apply to Project 1
+(§12). Charter §3.9's final paragraph (requested Plane parameter digits are preserved and the
+effective Space precision shown) still applies. Section references like "charter §3.4" point
+there.
+**Depends on:** Project 0 (`2026-10-18-project0-space-qualification-design.md`) for the Space
+backend and its qualified arithmetic (§2).
+
+## 1. Problem and outcome
+
+The charter outlines Project 1 as two parts sharing one acceptance demonstration:
+- **1a, Foundations:** Plane moved without behaviour change, versioned scenes, undoable scene
+  commands with a separate camera history, immutable render requests with truthful outcomes and
+  reports, and the Discoveries control over a local discovery store.
+- **1b, Space:** a 3D workspace for the Mandelbulb and the quaternion Julia set, delivered in three
+  usable milestones.
+
+This spec fixes the scope, contracts and verification of both. It authorizes no implementation.
+Implementation of each part follows a user-approved plan.
+
+## 2. Relationship to Project 0
+
+- **Backend assumption.** Per user decision E6, this spec assumes **WebGPU, provisionally**.
+  Project 0's recorded backend-selection outcome confirms or revises this assumption. For the
+  WebGPU path, that is the verified decision record produced after closing
+  qualification/remediation (`docs/reports/project0/webgpu-decision.json`, Project 0 plan T10); the
+  `webgpu-remediation` campaign name alone does not establish selection. Per E5, the browser
+  remains a firm requirement until keeping it would compromise the design or lose features; that
+  point is escalated to the user, never decided here.
+- **Independence.** 1a has no dependency on the Space backend and may be planned and built once
+  this spec and its plan are approved. 1b's implementation starts only after Project 0 records a
+  selected backend.
+- **Isolation.** Project 1 never touches the Project 0 worktree, its branch, `spikes/`, or Project 0's
+  frozen inputs, gates or evidence. Project 1 changes are not merged, rebased or otherwise
+  propagated into Project 0 during qualification. Project 1 defers its GPU acceptance runs while
+  Project 0 needs the workstation's GPU.
+- **Inheritance.** Project 0's prototype code is disposable and is not imported. What carries
+  forward is Project 0's fixture definitions, measurement protocols and report. Project 1
+  re-expresses the fixtures it needs in `tests/`, and independently implements and validates every
+  product kernel.
+
+| Project 0 outcome | Consequence for Project 1 |
+|---|---|
+| WebGPU selected (including after its remediation cycle) | Finalize the WebGPU backend annex (§9) against the recorded configuration and the validated numerical formulation (§10.3); proceed with 1b. |
+| WebGL 2 selected | Revise §9 and the 1b plan around T11's frozen API mapping; one Space backend is still maintained. This spec takes an amendment before 1b starts. |
+| Inconclusive | 1a proceeds after approval; Space implementation is blocked until the limitation is resolved. |
+| No-go | Space implementation stops and the browser-path limitation goes to the user. Features are never cut silently, and nothing moves to a native application. |
+
+E6 advances design timing. It selects no backend, relaxes no gate, and authorizes no Space
+implementation before Project 0 resolves.
+
+**Project 0 findings this design accounts for** (as relayed by the user; not yet in a final
+report, and not turned into Project 1 performance claims): WebGPU frame interval about 9–10 ms p95,
+latency 18–22 ms, 10 minutes stable on the RTX 6000 Ada; WGSL may fuse multiply-adds, so
+precision-sensitive arithmetic needs designed numerics (remediation G5-A, compensated evaluation,
+in progress); Chrome 151 reports empty adapter device strings; headless WebGPU is unreliable on
+this host.
+
+## 3. Releases and the acceptance demonstration
+
+Each release is usable on its own.
+
+| Release | Usable outcome |
+|---|---|
+| **1a — Foundations** | Every existing Plane workflow preserved (in the new native formats); scenes round-trip; parameter edits undo and camera moves have back/forward history; exports capture immutable state; Plane discoveries are kept in the durable local store and shown by the Discoveries control. |
+| **1b.1 — Render and recover** | Explore the calibration objects, Mandelbulb and quaternion Julia; orbit and basic flight; recover from bad camera positions, cancellation, allocation failure and device loss; save and reopen scene JSON. Estimator category, pending marks and distinct statuses are present from this release. |
+| **1b.2 — Connect and inspect** | Pick a parameter in Plane and open its quaternion Julia set; compare the invariant section with the independent complex-Julia instrument; inspect an orbit; read the precision indicator. |
+| **1b.3 — Complete the workflow** | Scoped presets, saved compositions, discovery cards, viewport and 4K PNG export with companion scene and report. |
+
+| Acceptance step (charter §4) | Works from |
+|---|---|
+| 1. Pick c in Plane | 1a (Plane unchanged) |
+| 2. Open its quaternion Julia set in Space | 1b.2 (bridge) |
+| 3. Find a feature | 1b.1 |
+| 4. With κ = 0, compare the invariant section with the complex-Julia instrument | 1b.2 (§13.5) |
+| 5. Inspect a point's orbit | 1b.2 |
+| 6. Change a parameter, then undo | 1a mechanism; in Space from 1b.1 |
+| 7. Save a discovery card, reload, reproduce the view | 1b.3 (the Discoveries control and local store exist from 1a) |
+
+1b.2 makes steps 1–6 work end to end. The complete seven-step demonstration is 1b.3's exit
+criterion, run as one recorded investigation, headed, on the physical GPU. It includes a parameter
+edit that visibly changes the scene and an undo that restores it. Reload must restore the scene,
+the selected point, the inspector settings and the effective numerical parameters, not merely a
+similar-looking camera.
+
+## 4. Architecture
+
+### 4.1 Source layout (responsibilities, not a requirement to create every file at once)
+```text
+src/
+  app.js                    small composition root
+  plane/
+    workspace.js            Plane lifecycle and controls
+    navigation.js           existing pointer, wheel, touch and key behaviour
+    scene-adapter.js        scene ↔ existing view/settings
+    render-adapter.js       existing renderers ↔ shared job contract
+    math.js  perturbation.js  reference.worker.js  renderer.js  shaders.js
+    graphics.js             WebGL-specific diagnostics
+    places.js
+  space/
+    workspace.js  camera.js  navigation.js
+    models/                 registry.js analytic.js menger.js mandelbulb.js quaternion-julia.js
+    numerics/               parameters.js validation-domains.js
+    render/                 renderer.js (pass graph) profiles.js backend.js webgpu/ (selected backend only)
+    instruments/            slice.js complex-julia.js inspector.js evaluation.worker.js
+  shared/
+    scene.js commands.js history.js render-request.js render-report.js scheduler.js
+    diagnostics.js palettes.js persistence.js
+    discoveries.js          discovery record, DiscoverySource interface, local source
+  ui/
+    shell.js dialogs.js notifications.js workspace-switcher.js discoveries.js
+                            (plus icons.js, style.css)
+tests/
+  reference/                independent CPU references (share no code with src/)
+```
+- `space/models/` and `space/numerics/` import no DOM or GPU code; a test parses their imports.
+- `shared/` never holds BigInt coordinates, perturbation, quaternion operations, camera matrices,
+  GPU handles or a universal `Renderer`. The shared scheduler controls admission and priority;
+  workspace renderers decide how admitted work executes.
+- Palette definitions and interpolation are shared. Plane's `colorPixel(mu, stripe, …)`
+  interpretation remains Plane-owned.
+- Two workspaces, two canvases: Plane keeps its WebGL 2 context; Space owns its backend device.
+  Plane starts without acquiring a Space device.
+
+### 4.2 Extraction order (1a)
+1. **Move first.** One commit moves the Plane-owned modules (and `icons.js`, `style.css` to `ui/`)
+   and updates only the necessary references: imports, worker URLs, `index.html`, tests'
+   `/src/…` imports and `scripts/thumbnails.mjs`. It does not split palette functions, change
+   renderer behaviour or reorganize function bodies. Review compares moved file contents after
+   import-path substitution, and the complete Plane verification gate (§16.3) passes.
+2. Introduce the scene adapter around today's `view` and `settings`.
+3. Route edits through commands without changing numerical functions or render cadence.
+4. Extract the shell's genuinely common dialogs and notifications.
+5. Extract navigation and lifecycle code as workspace switching requires.
+
+When 1a begins, `AGENTS.md` and `HANDOFF.md` are updated as charter §6 item 10 requires, together
+with the affected `README.md` paths and commands. That documentation change is its own commit,
+separate from the mechanical move.
+
+### 4.3 Plane regression contract ("behaviour unchanged")
+- Exact coordinate strings and effectively unbounded navigation remain.
+- Existing zoom thresholds, the adaptive iteration policy, reference-orbit machinery and shader
+  arithmetic remain.
+- Palette-only changes continue to reuse the field.
+- A wheel step still produces one committed frame, with stable backing dimensions.
+- Pending navigation retains and transforms the previous complete image.
+- Pointer release does not introduce a second refinement render.
+- CPU fallback, worker cancellation, tours, touch gestures, saved discoveries, share links, location
+  files and image exports remain available, in the new native formats (§12, §14).
+- Existing layouts and controls remain usable at the tested desktop, laptop and mobile sizes.
+
+The contract protects rendering, navigation, precision and export **behaviour**, not file or URL
+formats. Space's draft/settled policy never replaces Plane's rendering policy: the shared scheduler
+accommodates Plane's existing cadence. Existing browser assertions survive, with import-path and
+narrowly justified shell adjustments, never weakened expectations. The one permitted class of change
+is an assertion that checks an old **format**: the share-link check (`tests/browser.mjs`, which
+matches `#re=…`) and the v1 location-file import fixture. Each is replaced by an assertion of the
+same behaviour in the native format (a share link round-trips every coordinate digit and setting;
+a location file round-trips the scene), at equal or greater strength. No other existing assertion
+changes.
+
+## 5. Scene contract
+
+A scene describes an experiment. Runtime state describes its execution and is not part of a scene.
+
+### 5.1 Envelope
+```js
+{
+  application: "ATLAS",
+  schema: "atlas.scene",
+  schemaVersion: 1,
+  applicationVersion: "…",
+  workspace: "plane" | "space",
+  model: { id, version },            // e.g. "plane-mandelbrot"@1, "mandelbulb"@1, "quaternion-julia"@1,
+                                     //      "sphere"@1, "box"@1, "menger"@1
+  conventions: "atlas-plane-v1" | "atlas-space-rh-zup-abcd-v1",
+  parameters: { … },                 // model-specific; requested values as decimal strings
+  camera: { … },                     // see 5.2
+  slices: [ … ],                     // origin, basis, extent, sampling settings
+  iteration: { maxIterations, bailoutPolicy } | { policy: "plane-detail-zoom-v1", detail },
+  tracing: { profile: "surface-v1", … },   // resolved settings
+  appearance: { … },                 // material, palette, lighting, fog, view mode
+  sampling: { seed, sequence: "atlas-aa-v1", targetSamples },
+  provenance: { createdBy: "atlas", bridgedFrom? }   // bridgedFrom: the originating Plane scene (§13.4)
+}
+```
+- Scenes are frozen; every edit produces a new validated scene. A canonical serialization gives a
+  stable `sceneHash`.
+- The scene excludes GPU objects, generation counters, progress, hover/selection state, panel
+  layout and hardware identity. Reports and discovery cards are separate records.
+- Whole-scene validation precedes any commit, including import. Unknown schema or model versions
+  are reported as unsupported, never guessed. Invalid or out-of-range values are reported, never
+  repaired or clamped. Imported scenes contain data only. There is exactly one accepted input
+  format, `atlas.scene` (§12).
+
+### 5.2 Model-specific fields
+- **Plane:** camera `{ re, im, zoom }`. `re` and `im` are exact decimal strings; `zoom` is the
+  base-10 magnification exponent. `zoom` remains a finite JSON number, preserving its numerical
+  rendering meaning (`validateView` requires a finite number); negative zero may normalize to zero.
+  Appearance is `{ palette, phase, frequency, relief }` and `iteration.detail` is an integer 0–5;
+  values outside today's control ranges (phase [0, 1], frequency [0.2, 2.5], relief [0, 1]) are
+  invalid, not clamped. The iteration
+  policy is named and versioned: `plane-detail-zoom-v1` =
+  `[512, 1024, 2048, 4096, 8192, 16384][detail] + max(0, ceil((zoom − 3) · 32))` (today's
+  `app.js:85`).
+- **Space camera:** `{ kind: "perspective", position, orientationWxyz, focus, verticalFovDegrees }`,
+  CPU doubles. World Z defines up. Orbit and basic flight use upright navigation without a
+  dedicated roll control. The orientation control may set a full camera orientation; axis
+  constraints and orientation reset remain available. Serialization preserves the orientation.
+- **Space parameters:** requested values are decimal strings (for example
+  `C: ["-0.2", "0.8", "0", "0"]`, `kappa: "0"`, `power: "8"`). Render preparation derives effective
+  binary32 values and their bit patterns. Effective values appear in requests, reports and
+  inspection results beside the requested strings, and never overwrite them.
+
+## 6. Commands and history
+
+- **Commands** (`setParameter`, `setCamera`, `setSlice`, `setTracing`, `applyAppearancePreset`,
+  `restoreScene`, …) produce validated scenes. Each command declares the **domains** it owns
+  (`mathematics`, `tracing`, `appearance`, `camera`, `slice`, `whole-scene`). Invalidation is
+  derived from before/after scenes, so a caller cannot mislabel a mathematical change as
+  appearance-only.
+- **Gestures:** `begin → update* → commit | cancel`. Updates render as previews. One slider drag,
+  one camera drag or one wheel burst is one gesture. Cancel restores the pre-gesture scene. Commit
+  does not trigger another render when the final preview already shows that state. Tours and
+  palette animation never create one entry per frame.
+- **Exact restoration:** undo restores stored values, never an inverse floating-point delta. Undo
+  restores only the domains its command owns. For example, *change palette → navigate → undo
+  palette* yields the previous palette and the current camera. `restoreScene` (opening a
+  discovery, importing) is atomic and restores every domain, camera included.
+- **Bounds:** 100 committed edits per workspace.
+- **New execution identity:** an undo or redo always receives a new view revision (§7.2), so a
+  late result from an earlier identical state can never be admitted.
+- **Camera history (user decision, 2026-10-20):** a per-workspace pose history (back/forward),
+  separate from undo, plus overview and orientation reset, always one action away (charter §3.10).
+  Continuous navigation (one drag, one pinch, one wheel burst, one key repeat run) and camera-only
+  jumps (zoom buttons, coordinate entry, double-click, focus) each add one camera-history entry.
+  Ordinary undo covers parameters, tracing, slices, appearance and whole-scene restorations, and
+  never moves the camera except through `restoreScene`. Navigation actions that also change palette,
+  detail or other content (for example Plane's curated places, which carry a palette, applied by
+  `goTo`) record their content change as one undoable edit and their camera change as one
+  camera-history entry. Opening a complete scene or discovery is an atomic whole-scene restoration:
+  one undo entry restoring every domain, and one camera-history entry for the pose it opens.
+- **Camera-history rules:** at most 100 poses per workspace. Moving back or forward changes only the
+  camera and records nothing new; a new pose after moving back discards the forward poses. A tour
+  adds one entry where it starts and one where it stops, never one per frame. A camera-history
+  move, like an undo, receives a new view revision (§7.2).
+
+## 7. Render contracts and scheduling (`shared/`)
+
+### 7.1 Request
+```js
+{ requestId, jobId, viewId,
+  sceneSnapshot, sceneHash,
+  output: { width, height, purpose: "interactive" | "export" | "instrument" | "swatch" | "thumbnail" },
+  quality: { /* explicit stage settings and total work limits */ },
+  generation: { deviceEpoch, viewRevision, geometryRevision, appearanceRevision },
+  keys: { geometryKey, appearanceKey } }
+```
+Requests are frozen. Every batch additionally identifies its pass, region and sample index.
+
+### 7.2 Revisions and keys
+- **Revisions** are monotonic execution identities: `viewRevision` advances for every new requested
+  state; `geometryRevision` and `appearanceRevision` advance when their dependencies change.
+- **Keys** identify resolved pass inputs, including request-specific settings, rather than scene
+  fields alone. The base geometry key includes model and numerical implementation versions,
+  effective mathematical inputs, camera and slice definitions, internal dimensions and sample
+  mapping, actual iteration and tracing limits, normal-evaluation settings, and the required orbit
+  attributes. A geometry sample additionally identifies the sampling-sequence version, seed and
+  sample index. (Resolution matters because the hit tolerance does: at t = 1 and a 60° vertical
+  field of view, τ ≈ 8.019 × 10⁻⁴ at height 720 and ≈ 2.673 × 10⁻⁴ at height 2160.)
+- The **appearance key** includes the resolved appearance settings and the actual lighting stage,
+  including shadow, AO and fog settings. **Accumulation** identifies the compatible geometry,
+  appearance and sampling sequence. Increasing the target sample count may extend an existing
+  compatible sequence; changing its inputs cannot mix old and new samples.
+- Dependency revisions advance whenever these resolved inputs change, including resize and
+  quality-stage changes. Content-key equality permits cache consideration but never overrides the
+  epoch, request-identity or resource-lifetime checks. An appearance edit and its undo leave
+  geometry untouched. A geometry sequence A → B → A returns to A's key but receives a new geometry
+  revision.
+- **Publishability:** a result is publishable only if its device epoch, view/request identity and
+  required dependency revisions all still match. Completed valid geometry may be rebound to a new
+  request after checking its key, device epoch and resource lifetime; a late completion from the
+  original A request never becomes publishable merely because its content matches again.
+
+### 7.3 Lifecycle and outcomes
+```text
+queued → preparing → running → completed
+                         ↘ superseded | cancelled | interrupted | failed | budget-exceeded
+```
+- Cancelling a running job stops future submissions and enters a draining condition. The outcome
+  records whether nothing was submitted, submitted work drained, or device loss interrupted it.
+  "Cancelled" never implies that submitted GPU work was preempted. Rejecting a stale result is not
+  cancelling it.
+- **Pause** is a scheduler condition: calculation stops, editing continues, and the retained image
+  stays marked as reflecting earlier settings. **Update** renders one frozen current snapshot and
+  returns to paused operation.
+
+### 7.4 Render reports
+A report records: scene hash; request identity; model, numerics and shader versions; backend,
+browser and hardware identity, where every identity field may be `unavailable` and each observed
+field names its evidence source (Chrome 151 returns empty adapter strings, so no device string is
+ever invented); requested and completed dimensions, iterations, tracing settings and samples;
+outcome and its reason; counts of each ray termination status and of unavailable normals;
+estimator category, derivation version and applicable validation record; requested versus
+effective parameters and the sampling conditions; preparation, admission, submission, completion,
+publication and readback timings, with GPU timing labelled `timestamp` or `queue-completion`; peak
+tracked allocations and maximum outstanding batches. Job completion and per-pixel numerical status
+are separate facts: an image may complete while containing diagnostic pixels, and both facts are
+expressible. Workspace-specific fields are optional or explicitly marked inapplicable: Plane never
+manufactures ray-termination counts or a Space estimator category to fill the shared envelope.
+
+Plane adopts requests, outcomes and reports in 1a through `plane/render-adapter.js`, without
+changing its scheduling behaviour.
+
+### 7.5 Scheduler
+- At most **two outstanding Space batches per device epoch**, across all views and jobs.
+- A normal target of **8 ms of completed GPU work per batch**. This is a measured target adapted
+  from completion evidence, not a hardware deadline. Batch descriptors also bound pixels, ray steps,
+  recurrence iterations and secondary samples; bands subdivide horizontally when one row is too
+  expensive.
+- A **5-second no-progress watchdog** stops admission and reports; it never claims cancellation.
+- One coalesced pending interactive request per view.
+- Priority: active navigation → explicit inspection → active-view refinement → export → background
+  swatches. Secondary instruments update at most twice per second during interaction. Hidden views
+  are paused. Exports may pause while the user interacts. A minimal export job exists; a general
+  render queue is Project 3.
+
+### 7.6 Space quality profiles and work budgets (initial, provisional)
+These limits apply only to Space. Plane retains its existing iteration policy, supported depths and
+rendering cadence.
+
+| Profile | Internal resolution | Iterations | Primary steps | Lighting and AA |
+|---|---:|---:|---:|---|
+| Moving draft | ½ width and height | up to 64 | 256 | direct light, 1 sample |
+| Settled | full target | default 128 | 512 | shadows, restrained AO, target 8 samples |
+| Supported explicit limits | requested target | at most 512 | at most 1,024 | at most 64 AA samples |
+
+- A draft's reduced iteration budget is reported as preview quality. Instrument comparisons use the
+  same actual budget as the result being compared.
+- Initial elapsed-work budgets: 1 s per draft attempt, 10 s for settled refinement, 120 s per export,
+  excluding time paused by scheduling. Exceeding one gives `budget-exceeded` with an explicit
+  continuation or lower-cost choice. It never changes the requested mathematics or quietly reduces
+  export resolution.
+- These values are development defaults. The acceptance workload and thresholds (§16.4) are frozen
+  before acceptance measurements; measurements may motivate a documented revision but never silently
+  redefine a passing target.
+
+## 8. Space renderer
+
+### 8.1 Pass graph (`space/render/renderer.js`)
+1. Prepare pipelines (asynchronously, before interaction, with visible status) and validate
+   resource requirements. Parameter edits update uniforms and buffers, never recompile.
+2. Trace primary rays into depth, termination status (with reason), step count and orbit-derived
+   attributes.
+3. Compute normals with explicit availability status.
+4. Evaluate direct lighting, bounded shadows and restrained AO, preserving secondary-ray failure
+   status (failures never turn into confident lighting). Apply enabled depth fog to each shaded
+   sample in linear colour. Diagnostic values bypass decorative lighting and fog.
+5. Accumulate compatible complete samples in linear colour.
+6. Apply display mapping and present a complete image.
+
+Fog is per sample, before accumulation, because the two orders differ: for two samples with colours
+(1, 0), depths (1, 2), unit density and black fog, averaging the fogged samples gives ≈ 0.18394,
+while fogging the average colour at the average depth gives ≈ 0.11157.
+
+- **Invalidation:** geometry changes invalidate geometry and dependent accumulation.
+  Lighting/appearance changes keep eligible geometry and reset appearance accumulation. Orbit-colour
+  controls reuse geometry only if the required orbit attributes were recorded. Samples under
+  different appearance keys are never accumulated together.
+- **Antialiasing traces seeded, jittered primary rays.** Reshading one centre-sampled geometry
+  buffer is not silhouette antialiasing. Sample indices and seeds are independent of batch order.
+  The current geometry sample may be retained for appearance reuse without storing every AA sample.
+- **Publication:** the canvas stays stable. A complete draft replaces the previous image; complete
+  refinement samples then replace it. Partial tiles and mixed generations never become the ordinary
+  viewport image. A retained previous image is visibly marked *pending*.
+
+### 8.2 View modes
+Shaded, normals, depth, step count, termination reason, orbit colour. Diagnostic modes bypass fog
+and decorative lighting. Invalid and unresolved values use explicit colours or patterns with
+legends (Project 0 A.5 colours as the starting legend: unresolved magenta, numerical failure red,
+unavailable normal mid-grey). An unavailable normal does not erase an otherwise available
+approximate-hit depth; its normal-status flag stays visible. Step count is labelled computational
+cost, never estimator error. 1b.1 ships all modes except orbit colour, which arrives with the
+inspector in 1b.2.
+
+### 8.3 Resources
+- Project 0's A.8 4K layout totals 405,995,520 B (387.1875 MiB); adding a separate 32-bit
+  step-count image gives 439,173,120 B (≈ 418.83 MiB) before further declared buffers. This is a
+  starting design, not a measured product peak.
+- Space keeps a **1 GiB tracked-allocation cap** across its views, staging and overlapping
+  generations. Plane allocations and opaque driver resources are reported separately and never
+  hidden inside a claim about total VRAM.
+
+## 9. Space backend interface
+
+`space/render/backend.js` defines the product boundary:
+```text
+acquire()                      → identity (fields may be unavailable), limits, features
+prepare(pipelineSet)           → asynchronous, with progress events
+configureTargets(targetDesc)   → allocates through the tracked allocator
+submitBatch(batchDesc)         → ticket with completion identity (queue completion, labelled)
+readback(readbackDesc)         → asynchronous, banded staging
+present(completedDisplayHandle)
+release(handle)
+onLoss(callback)
+currentEpoch()
+diagnostics()                  → tracked inventory and peak
+destroy()
+```
+- `space/render/renderer.js` owns the pass graph. The backend owns GPU resources, command encoding,
+  submission and completion, presentation and readback. Shared and UI code never see `GPUDevice`
+  or WebGL handles.
+- **Allocator:** every application-owned allocation, including staging and transients, goes through
+  the backend's tracked allocator; the cap is checked before allocating. `release()` does not remove
+  bytes from accounting while in-flight work still owns the resource; retiring allocations count
+  until safely reclaimable.
+- **Relation to T11.** T11's frozen method list is the qualification drivers' interface, not a
+  production renderer API. Acquisition and preparation, bounded viewport work, resource accounting,
+  epochs and loss recovery keep their T11 meaning. `arith`, `traceList`, resource exercises and
+  `injectLoss` are **test adapters** around the production interface. Nothing imports
+  `spikes/project0/`.
+- **Keeping WebGL 2 possible** costs portable result formats and status semantics, bounded
+  rectangular work regions, an asynchronous completion and readback abstraction, isolation of
+  shader source, allocation and device APIs, and no product design that requires compute-only
+  facilities. It does not justify a second backend, a shader translator or a universal GPU
+  framework. There is no runtime Space fallback.
+- **Fake backend:** a deterministic Node implementation of this interface, with controllable
+  completion ordering, failures and loss notifications, drives scheduler, lifecycle and recovery
+  tests (headless WebGPU is unreliable here).
+- **Backend annex.** The WebGPU specifics (pipeline set, G-buffer formats, timestamp-query use,
+  loss mapping) are finalized as an annex to this spec after Project 0 records its configuration.
+
+## 10. Numerics and precision
+
+### 10.1 Representation
+Camera and scene state are CPU doubles. GPU fields are binary32. Kernels receive camera-relative
+values. Camera-relative transport does not translate the mathematical model: before recurrence
+evaluation, the effective field input represents the point in the model's native coordinates.
+Navigation precision, field precision and rendering tolerance are three separate problems
+(charter §3.5); camera-relative coordinates address only the first.
+
+### 10.2 WGSL floating-point rules
+WGSL permits reassociation and fusion, and permits implementations to assume runtime infinities
+and NaNs are absent; after a runtime overflow the result is an *indeterminate value*. Therefore:
+- domain and range checks precede every dangerous operation; post-hoc NaN or infinity detection is
+  insufficient;
+- source-level temporaries are not arithmetic barriers;
+- product GPU-versus-CPU tolerances come from an error analysis written before measuring that covers
+  both fused and unfused evaluation, never from tuning to results.
+
+### 10.3 Quaternion arithmetic and G5-A
+The quaternion square is evaluated in the **arithmetic formulation Project 0 records as qualified**.
+If G5-A's compensated evaluation is part of the selected configuration, Project 1 independently
+re-implements and re-validates that formulation in `space/render/webgpu/`, citing Project 0's
+preregistered error analysis. That evidence covers the recurrence evaluation only. It does not
+establish quaternion surface accuracy, validate the estimator or promise deeper detail. This is a
+named revision trigger (§20).
+
+### 10.4 Range-safe derivative (normative)
+The running derivative can exceed binary32's range inside the supported budgets (illustration: the
+recurrence D ← 8D + 1 from 0 first exceeds the binary32 maximum at update 44).
+- **Representation.** The derivative has an explicit zero state and a normalized positive
+  mantissa/exponent state, D = m·2ᵉ. Mandelbulb initialization uses the zero state, and its first
+  derivative update produces a positive one (on the power-8 axis orbit from parameter (0, 0, 1),
+  iterates 0 → 1 → 2 → 257 have derivatives 0 → 1 → 9 → 9217). Derivative updates preserve the
+  specified recurrence without materializing an overflowing scalar.
+- **Estimator availability is separate from orbit classification.** Zero sensitivity at escape, or
+  a guard preventing an unsafe derivative or estimator operation, makes the estimate unavailable.
+  It does not itself classify the orbit as non-escaped or numerically failed: orbit evaluation
+  continues to escape, iteration exhaustion or a recurrence failure. (Quaternion Julia with q₀ = 0
+  and C = (2, 0, 0, 0): the orbit 0 → 2 → 6 escapes at update 2, while sensitivity becomes zero at
+  update 1 and stays zero; the point is escaped with an unavailable estimate.) An unsafe recurrence
+  operation produces mathematical point status `numerical failure`.
+- **Log-domain estimate.** For an escaped point with positive valid sensitivity, the estimate is
+  evaluated in the log domain. For the Mandelbulb:
+
+    log₂ DE = −1 + log₂ r + log₂(ln r) − (log₂ m + e),
+
+  compared with log₂ τ before materializing a step. Conversion and advancement are guarded
+  separately. A representationally tiny positive estimate is not replaced by zero. Derivative
+  guards are failure handling, never the normal substitute for range-safe evaluation within the
+  supported workload.
+
+### 10.5 Precision indicator and tested conditions
+- Space promises **validated detail ranges**, never infinite zoom, and never a universal f32 zoom
+  floor. Each family has validation records bound to the product implementation, profile and
+  effective inputs (§16.2). Project 0's precision results inform these experiments but do not
+  automatically validate a changed product kernel or profile.
+- The viewport badge reads **within tested conditions**, **outside tested conditions** or
+  **no matching validation**. Outside tested conditions is allowed and flagged, never blocked or
+  silently clamped.
+- Expanded, it shows: the applicable tested domain, implementation and validation record; whether
+  the current scene matches that coverage; requested versus effective parameters; the iteration
+  budget and hit tolerance; the estimated world-space pixel footprint at the inspected or visible
+  depth; and any coordinate or sample collapse or marching stagnation.
+- **Plane → Space parameters:** a Plane parameter with more digits than Space evaluates keeps its
+  requested decimal strings; Space shows the effective double and binary32 values (charter §3.9).
+
+## 11. Families and tracing
+
+Every model record:
+```js
+{ id, recurrenceVersion, initialization, escapeRule, supportedParameters,
+  estimator: { category, semantics, derivationVersion },
+  validation: { recordId, implementationVersion, testedParameters, testedSamplingConditions } }
+```
+Supported input ranges and empirically tested coverage stay separate. The category appears in model
+metadata, the inspector, diagnostics, reports, and as a compact viewport indicator from 1b.1.
+
+### 11.1 Mandelbulb (`mandelbulb`@1)
+- Power p ∈ {2, 3, 4, 5, 6, 7, 8}, **default 8**; each power has its own validation coverage.
+  Fractional powers are deferred (among other reasons, non-integer multiples of the `atan2`
+  azimuth are discontinuous across φ = ±π).
+- z₀ = 0, d₀ = 0; zₙ₊₁ = P_p(zₙ) + x; dₙ₊₁ = p·|zₙ|ᵖ⁻¹·dₙ + 1 (range-safe, §10.4).
+- P_p uses charter §3.7's Z-polar spherical coordinates, θ = acos(clamp(z/r, −1, 1)),
+  φ = atan2(y, x), and
+  P_p(x, y, z) = rᵖ(sin(pθ)cos(pφ), sin(pθ)sin(pφ), cos(pθ));
+  at r = 0 the power map is zero; on the polar axis φ = 0.
+- Escape after each update when |z| > 2. Default full-quality budget 128.
+- For an escaped point with a valid derivative: DE = ½·ln(r)·r/d.
+- **Category: heuristic, exterior-only.** The scalar derivative recurrence is part of the
+  approximation, not a proof of an exact spatial derivative or a conservative distance; the
+  derivation document states that.
+- Bounding sphere radius 2. It is valid for the supported powers p ≥ 2: the power map has norm rᵖ,
+  so for a parameter of norm s > 2 the first iterate has norm s and the reverse triangle inequality
+  gives growth thereafter. Project 0's power-8 bound of 1.25 is not reused.
+
+### 11.2 Quaternion Julia (`quaternion-julia`@1)
+- q = a + b**i** + c**j** + d**k** stored as (a, b, c, d); default slice q₀ = (x, y, z, κ) per
+  charter §3.7. Defaults C = (−0.2, 0.8, 0, 0), κ = 0; supported input box: each component of C, and
+  κ, in [−4, 4].
+- qₙ₊₁ = qₙ² + C with q² = (a² − b² − c² − d², 2ab, 2ac, 2ad), keeping all four components. Iterates
+  are never projected back into the slice.
+- R(C) = max(2, (1 + √(1 + 4‖C‖))/2), which follows from ‖q² + C‖ ≥ ‖q‖² − ‖C‖. Escape occurs when
+  ‖qₙ‖ > R(C), tested at initialization and after each update. R is computed from the **effective**
+  C actually evaluated, with outward rounding covering the bound calculation and conversion. The
+  empty-slice comparison uses effective κ and the outward-rounded bound: if |κ| > R(C) (strictly),
+  the slice contains no non-escaping points under this bound. For the default C, R(C) = 2.
+- Scalar sensitivity d₀ = 1, dₙ₊₁ = 2‖qₙ‖·dₙ (range-safe); DE = ½·ln‖q‖·‖q‖/d. The differential
+  h ↦ qh + hq has norm at most 2‖q‖‖h‖, but using that bound in this estimator does not establish a
+  conservative distance. **Category: heuristic, exterior-only.** Default budget 128.
+- Invariant plane exactly as charter §3.7: with κ = 0 and C = C_r + C_i**i**, world z = 0 is
+  invariant and the recurrence is exactly the complex recurrence; no correspondence is claimed
+  otherwise, and exact correspondence of the recurrence does not make a finite-tolerance surface
+  match the mathematical boundary.
+- Zero sensitivity, unavailable estimates and range failures have explicit outcomes. An escaped
+  orbit with an unusable estimator is neither a non-escaped orbit nor a surface hit.
+
+### 11.3 Calibration objects
+Sphere (radius 1, exact signed distance), the rotated box (exact exterior distance) and the finite
+Menger union at depths 1 and 2 (20 and 400 boxes; the minimum exterior box distance is exact
+outside the union in real arithmetic), as defined in Project 0 A.4. **Category: exact distance**
+(signed for the sphere, exterior-only for box and Menger). A compact folded Menger needs a separate
+specification and validation.
+
+### 11.4 Tracing profile `surface-v1` and statuses
+- Hit tolerance τ(t) = max(10⁻⁶, 0.5·α·t), α = 2·tan(fov_y/2)/H_internal. A sampling rule, not an
+  error certificate. A separately versioned inspection profile may tighten it for convergence
+  studies.
+- **Starting conditions.** Rays use model-native world coordinates and unit-length directions, so
+  t measures world-space distance. The forward ray is intersected with the model's declared
+  enclosing volume, using outward-safe bounds. An empty intersection gives **miss**; otherwise
+  marching starts at t = max(0, t_enter) and t_exit is retained. Invalid ray or intersection
+  arithmetic gives **numerical failure**, not miss.
+- **Enclosing volumes.** The bulb uses its radius-2 sphere. Quaternion Julia uses a conservative
+  enclosing sphere derived from the outward-rounded R(C) and effective κ; a world-space radius of
+  R(C) suffices when |κ| ≤ R(C) (since ‖q₀‖ ≥ ‖(x, y, z)‖). The strict empty-slice case is handled
+  before tracing. The plan may choose tighter quaternion bounds if they are derived and tested.
+  Calibration objects use their Project 0 A.2 enclosing volumes.
+- **Analytic applicability.** Analytic evaluations provide distance semantics and applicability;
+  they do not fabricate fractal escape statuses. This exterior profile never accepts an interior
+  signed value, or an interior zero from an exterior-distance function, as a hit. Such a start gives
+  **unresolved** (`estimate-unavailable`) with an interior/applicability detail and offers camera
+  recovery. An analytic boundary value of zero remains a valid hit.
+- **Each step**, evaluate the field at the current position, in this order:
+  1. A recurrence or field-domain failure → **numerical failure**.
+  2. A valid fractal orbit not escaped within its iteration budget → **unresolved**
+     (`point-budget`). The ray stops; no interior distance is invented and no speculative step is
+     taken.
+  3. An escaped orbit without a usable estimate → **unresolved** (`estimate-unavailable`).
+  4. Otherwise the hit and advancement rules below apply.
+  - A valid exterior estimate below τ(t) → **approximate hit** (the only hit criterion).
+  - Otherwise compute the guarded candidate advance t + 0.9·DE. If it exits the enclosing interval
+    → **miss**. If the effective ray parameter does not increase, or the next effective field-input
+    position equals the current one → **unresolved** (`stagnation`, subreason `ray-parameter` or
+    `field-coordinate`). (In binary32, t may increase while the position does not: with o = 1,
+    t = 2⁻²⁶ and t = 2⁻²⁵ both give o + t = 1.)
+  - Step cap → **unresolved** (`ray-step-budget`).
+- No minimum step is forced, and no hit is manufactured, to escape stagnation.
+- Statuses stay distinct (charter §3.4):
+  - point: `escaped`, `not escaped within iteration budget`, `numerical failure`;
+  - ray: `approximate hit`, `miss`, `unresolved` (`point-budget`, `estimate-unavailable`,
+    `ray-step-budget`, `stagnation`), `numerical failure`.
+- A heuristic marcher's miss does not prove that the mathematical ray misses the set; a small DE
+  certifies nothing. Normals are unavailable when required samples are unresolved, invalid,
+  indistinguishable at effective precision, or give a zero gradient.
+- There is no live "error heatmap".
+
+## 12. Removed: legacy compatibility (user decision, 2026-10-20)
+
+The user decided that ATLAS is greenfield development: "No this is green field development. No need
+to keep backwards compatability." Revision 2's §12 (legacy artefact reading and migration) is
+therefore removed, together with everything that existed only to serve it.
+
+**Removed:**
+- the adapters for the old `#re=…&im=…&z=…&palette=…` share links, the
+  `localStorage['atlas.discoveries']` bookmarks and the `{ application: 'ATLAS', version: 1 }`
+  location JSON (rev 2 §12.1);
+- the legacy rules (rev 2 §12.2): context-dependent defaults and `provenance.resolvedFromContext`,
+  the entry-path-specific `view.detail` handling, legacy coercions and `provenance.clamped`, bulk
+  migration with read-back, idempotence, tombstones and retained unsupported records;
+- `shared/legacy.js`, the `legacy-*` provenance sources and the original-hash-text provenance;
+- the non-destructive adapter wording in §5 and §14, and old-format writing (rev 2 §19 Q7);
+- the tests and acceptance items that existed only for these (rev 2 §16.1's captured context,
+  entry-path `view.detail`, migration idempotence and tombstones, unsupported-record retention).
+
+**Why:** none of these protects what a user does in ATLAS. They protected files and links made by
+earlier copies, and the user has said those need not keep working. Removing them takes a whole
+compatibility layer, with its own data-loss risks, out of 1a.
+
+**What remains:** Plane's functional behaviour is unchanged (§4.3). Its share links, saved
+discoveries, location files and image exports keep working, in the native formats: share links and
+location files carry an `atlas.scene` (§14), and saved discoveries are discovery records in the local
+store (§13.10). Old-format input is recognized only far enough to say so: an old share link opens the
+fresh-start Plane view (§13.1) with a notice that the link is from an earlier ATLAS format, and an old
+location file is rejected as an unsupported format. ATLAS neither reads nor modifies
+`localStorage['atlas.discoveries']`; existing data there is left untouched. Charter §3.9's adapter
+rules and §6 decision 8 are superseded for Project 1 by this decision (see the header and §19.2).
+
+## 13. Workspaces and interface
+
+### 13.1 Shell
+Two retained investigations, one active view. A workspace switch preserves each workspace's scene,
+camera, undo history and camera history; hidden work pauses, captured input is released, and
+transient resources may be reclaimed. Shared surfaces: the Discoveries control (§13.10), palettes,
+graphics diagnostics (extended with the Space backend and its tracked inventory).
+
+**Start (user decision, 2026-10-20):** a fresh start opens **Plane** at its existing default view
+(`INITIAL_VIEW`, Seahorse valley, default appearance and detail) without acquiring a Space device.
+A native share link opens the workspace its scene names. Project 1 does not restore the previous
+session on reload; reopening work is done through discoveries, scene files and share links.
+
+### 13.2 Space layout
+Viewport; parameter panel (family, parameters, iterations, tracing, appearance); viewport indicators
+(estimator category, precision badge, pending, pause, view mode); docked instruments (1b.2); a
+composition strip (1b.3).
+
+### 13.3 Navigation (1b.1)
+- Orbit, pan and dolly; focus on a point (asynchronous depth readback of the picked pixel); overview;
+  orientation reset; a Bryce-style orientation control with axis constraints and reset (§5.2).
+- Basic flight: look plus move and strafe, explicit speed. Escape releases input; blur or visibility
+  loss stops movement immediately. No inertia, collision avoidance or vehicle model. Estimator-scaled
+  slow-down is deferred unless it proves useful, and is never collision protection.
+- **Camera exterior status.** The CPU double evaluator classifies the camera position on each
+  committed camera. Either an unresolved CPU classification or an unresolved evaluation under the
+  renderer's effective inputs shows "camera exterior status unresolved" with overview and reset.
+  Neither proves interior membership.
+
+### 13.4 Plane → Space bridge (1b.2)
+An explicit transfer, not a coupled global parameter:
+1. Select a parameter with Plane's exact coordinate machinery.
+2. Preserve its decimal strings and the originating Plane scene (`provenance.bridgedFrom`).
+3. Open `quaternion-julia` with C = (c_r, c_i, 0, 0), κ = 0, and an overview camera.
+4. Show requested and effective Space values.
+5. Offer a return action to the originating Plane view.
+
+Space edits never move Plane. Returning a modified complex-compatible C to Plane is a separate
+explicit command. A general four-component C has no faithful complex conversion; any projection must
+be named and deliberate.
+
+### 13.5 Instruments and the invariant-section comparison (1b.2)
+- **Independent recurrence slice** (`instruments/slice.js`) and **complex-Julia instrument**
+  (`instruments/complex-julia.js`): worker-based CPU double evaluation, default 256 × 256, bounded
+  cancellable tiles. These are 2D mathematical instruments, not an interactive CPU Space renderer.
+  They evaluate initial points directly and do not sample the ray marcher's DE surface. The
+  complex-Julia instrument uses a separately implemented scalar complex recurrence.
+- **Compare section** (a bounded operation):
+  - freeze the scene and a shared grid (default 256 × 256);
+  - construct the effective binary32 starting points once; the CPU instrument receives those same
+    values widened to doubles;
+  - use identical effective C, bailout and iteration budget;
+  - evaluate the grid with the **product GPU quaternion recurrence** (no ray marching, no DE-based
+    membership) and read back point status, escape index and log escape radius asynchronously;
+  - show the GPU section and the CPU-complex result side by side, with a discrepancy overlay,
+    counts, and linked point selection;
+  - show the sampled plane's position and extent in Space;
+  - mark results stale after relevant edits; cancellation follows the ordinary scheduler.
+- The comparison is enabled as an invariant-section comparison only when κ = 0, C_j = C_k = 0 and the
+  sampled plane is world z = 0; otherwise it states that the correspondence is not claimed.
+- Discrepancies are labelled as differences between the named evaluators. They are not
+  automatically excused as precision effects: a discrepancy that violates a validated implementation
+  contract is a failure.
+- Clipping and a rendered cut face are deferred: colouring a solid-looking cap from "not escaped
+  within budget" would present finite recurrence classification as established solid geometry.
+
+### 13.6 Orbit inspector (1b.2)
+Picking a rendered point is asynchronous and records that the selection came from an approximate
+hit. The production CPU double evaluator (in `space/models/`, separate from `tests/reference/`)
+gives all four quaternion components (or the bulb's three), radius, escape index, status, estimate
+and evaluator precision; a one-point GPU evaluation is shown beside it with the difference. A plotted
+3D orbit projection is labelled as a projection. Results carry their inputs, effective inputs,
+settings and evaluator version. Parameter edits keep the selected location and mark measurements
+stale.
+
+### 13.7 Scoped presets (1b.3)
+Appearance-only and lighting-only presets with explicit allowed fields, previewed on the current
+scene, undoable, never touching mathematics or camera; a neutral inspection lighting preset is always
+available. Swatches use immutable preview requests behind interaction and inspection: at most 12
+visible, a 24-entry cache keyed by scene, preset and renderer versions.
+
+### 13.8 Compositions and discovery cards (1b.3)
+- **Compositions:** a thumbnail strip of camera and focus states scoped to their model context. They
+  restore no mathematics or appearance.
+- **Discovery card:**
+  ```js
+  { id, name, note, sceneSnapshot, selectedPoint,
+    inspection: { inputs, effectiveInputs, settings, evaluatorVersion, results },
+    thumbnail: { sourceSceneHash, sourceReportId, blob }, reportId }
+  ```
+  A stale inspection never becomes a current-looking card silently: saving either refreshes it or
+  records its stale provenance. Opening a card is a whole-scene restoration.
+
+### 13.9 Fog, pause and update (1b.3)
+Minimal exponential depth fog, applied in the appearance pass only, off in diagnostic modes, with an
+obvious off switch. Pause and update per §7.3.
+
+### 13.10 Discoveries control and discovery sources (user decision, 2026-10-20; built in 1a)
+One **Discoveries control** (`ui/discoveries.js`) serves every workspace. Each workspace shows it
+filtered to its own workspace type; a filter is a query parameter, not a separate store or view
+implementation. In 1a it replaces Plane's "Your discoveries" tab with the same visible behaviour:
+save with B or the bookmark button, a thumbnail list, open, delete, and the empty-state message.
+
+- **Discovery record** (`shared/discoveries.js`), versioned and validated as a whole like a scene:
+  ```js
+  { schema: "atlas.discovery", schemaVersion: 1, id, workspace: "plane" | "space",
+    name, note, createdAt, sceneSnapshot, sceneHash,
+    thumbnail: { sourceSceneHash, mediaType, blob },
+    card?: { selectedPoint, inspection, reportId } }    // Space discovery cards, 1b.3 (§13.8)
+  ```
+  `sceneSnapshot.workspace` equals `workspace`. A Plane discovery is name, scene and thumbnail; a
+  Space discovery card adds `card`. Opening any discovery is a whole-scene restoration (§6).
+- **DiscoverySource interface:** each source has an `id`, a display label and declared
+  capabilities (`save`, `remove`), and implements
+  `list({ workspace, limit, cursor, signal }) → { items, nextCursor }`, `get(id, { signal })`,
+  `save(record)` and `remove(id)` where it declares them, and `subscribe(listener) → unsubscribe`
+  for change notifications. Every call is asynchronous and cancellable, and the control bounds each
+  with a timeout. A failing or slow source is shown as unavailable in the control; it never hides
+  another source's results or blocks exploration.
+- **Records from a source are data.** The control validates every record and its scene before it
+  is shown or opened; an invalid record is listed as unsupported and never opened. Source records
+  carry the source id, so identical ids from different sources never collide.
+- **Project 1 builds one source: `local`,** backed by the IndexedDB store (§14), with `save` and
+  `remove`. Ordering is newest first; a deletion is immediate and final. Storage failure leaves
+  exploration usable, offers the scene file, and never reports a save that did not happen.
+- **Future direction (user-stated, not Project 1 scope):** a project landing page, and a shared
+  source served by a centrally hosted API, feeding the same control beside the local source (§17).
+  Project 1 adds no network code, account, sharing or remote source; the interface exists so a
+  later source can be added without changing the control or the record.
+
+## 14. Persistence and export
+
+- **Persistence:** IndexedDB for discoveries (and their thumbnail blobs), reports, compositions and
+  later Space cards; `localStorage` only for small preferences. Storage failure leaves exploration
+  usable, offers downloadable scene data, and never reports a save that did not happen.
+- **Scene files:** export and import of scene JSON (`atlas.scene`), from 1a for Plane and 1b.1 for
+  Space. Plane's "Save location" and "Open location" use this format; it is the only accepted
+  location-file format.
+- **Share links (Plane, 1a):** `#scene=` followed by the canonical scene serialization, encoded as
+  base64url UTF-8. It carries every coordinate digit and every scene field; opening one is a
+  whole-scene restoration after whole-scene validation. An invalid or unsupported link opens the
+  fresh-start view (§13.1) with a notice. Space share links remain an open question (§19 Q6).
+- **Export invariant (normative, Plane and Space):** the complete export request is captured
+  **before the first asynchronous wait**. Later edits may update the live scene but cannot alter the
+  export's geometry, appearance, dimensions, sampling, companion data or report. The export publishes
+  an immutable encoded image with matching metadata, then live rendering resumes. Today's Plane path
+  violates this in two ways: it captures state only after `busy` clears (`app.js:383`), and
+  `CpuRenderer.color` can replace the pending render's settings (`renderer.js:208`). The plan chooses
+  the mechanism (a separate target, or exclusive use of the existing renderer); tests cover an edit
+  while waiting for admission and an edit during rendering.
+- **Space export (1b.3):** viewport dimensions, or "4K" = 3840 pixels wide at the selected aspect
+  (3840 × 2160 at 16:9). A separate render target with banded computation and readback; arbitrarily
+  large tiled stills are Project 3. Output is a PNG plus a companion experiment JSON with separate
+  scene and report objects, joined by an export ID and the scene hash, both from the same immutable
+  job. Plane's existing image-export choices remain; its location file is the scene JSON above.
+- **Failure:** on device loss the job and snapshot are kept, the export is marked interrupted and a
+  restart is offered; at most one automatic viewport recovery attempt, and repeated loss stops
+  automatic retry. Allocation failure releases obsolete resources and offers an explicit lower-cost
+  choice. Neither silently changes the export's dimensions.
+
+## 15. Failure behaviour (charter §3.10, applied)
+| Failure | Project 1 behaviour |
+|---|---|
+| First-use compilation | Space pipelines prepared asynchronously before interaction, with visible status; the current view stays. |
+| Pathological cost | Batch bounds, per-request budgets, the watchdog; `budget-exceeded` with explicit choices. |
+| Device loss during export | §14. |
+| Repeated device loss | Automatic retry stops; saved scenes and Plane remain available. |
+| Allocation failure | §14; the cap is checked before allocating. |
+| Invalid numerical domain | Guards before operations; `numerical failure` as its own status. |
+| Competing linked views | Priority order and throttling (§7.5); hidden views paused. |
+| Parameter edits | Probes, inspections, comparisons and thumbnails marked stale. |
+| Import over limits | Whole-scene validation; reported, never silently changed. |
+| Lost or stuck input | Blur stops movement; overview, orientation reset and camera history one action away. |
+
+## 16. Verification
+
+### 16.1 Layers
+| Layer | Execution | Required evidence |
+|---|---|---|
+| Scene, history, discoveries | Node | Exact strings, canonical serialization and hashes, whole-scene validation (invalid values reported, never clamped; old formats rejected), share-link and scene-file round trips, domain-scoped undo, grouped gestures, camera-history rules, discovery-record validation, source failure and timeout isolation, local-store save, list, delete and storage failure |
+| Scheduler and lifecycle | Node, fake backend | Stale results, A → B → A late completions, epoch races, queue depth, cancellation outcomes, priority, retiring resource accounting; resize, draft-to-settled transitions, sample identity and direct-light-to-shadowed refinement as well as scene edits (direct-light-only samples never enter the accumulator for the later shadowed/AO appearance) |
+| Mathematical models | Node, `tests/reference/` | Analytic answers, recurrence identities, full four-component quaternion updates, escape bounds, singular and range cases, stagnation including coordinate collapse |
+| GPU numerics | Headed installed Chrome, physical GPU | Readback against independent references with preregistered tolerances and exclusions |
+| Rendering | Headed, physical GPU | Silhouettes, depth, normals and termination coverage before colour; adversarial rays; convergence studies |
+| Interaction and recovery | Browser | Intermediate frames, workspace switching, pause/edit/update, blur, cancellation, device loss (destroy and injected), failed allocation, stale instruments, both export races |
+| Complete workflow | Headed browser, recorded | All seven acceptance steps, reload, immutable export, reproduction |
+
+### 16.2 Validation matrix (frozen in the plan before any GPU comparison)
+All seven bulb powers; origin and polar-axis cases; full off-plane quaternion parameters; nonzero κ;
+supported-domain boundaries; iteration budgets 64, 128, 256 and 512; detail approaches with
+independently prepared anchors and reference-convergence checks (after Project 0 A.10). Samples,
+exclusions and quantity-specific tolerances are frozen before GPU comparison. Nothing is validated
+merely because Project 0 tested power 8 and one quaternion parameter.
+
+### 16.3 Plane gate (every 1a commit)
+`npm test`, `npm run test:browser` (SwiftShader and `--hardware`), `npm run test:navigation`,
+`npm run test:graphics` and `npm run build` stay green, including the deep-coordinate and actual
+worker checks at 10¹⁰⁰⁰ and the deliberately delayed navigation tests. Shared and Space suites are
+added beside them, never replacing Plane coverage.
+
+### 16.4 Performance acceptance (Space, frozen Project 1 workload)
+Project 0's measurement discipline: per-trial results; completed work, publication and readback
+reported separately; coverage checks; visible-output verification; no single average-FPS figure.
+Initial targets at 1280 × 720: ≥ 30 completed drafts per second with consecutive-interval p95
+≤ 50 ms; interaction p95 ≤ 100 ms; stress replacement ≤ 250 ms; no application main-thread task over
+50 ms; and the settled target of ≤ 2 s from the settled request to publication of the first complete
+full-resolution geometry, normals and direct-light image at the settled iteration and tracing
+settings (not an upscaled draft; the clock does not restart on admission). Shadows, AO and the
+eight-sample target refine afterwards; the report records both milestones, and the first image does
+not mark the full-quality job completed. Shadows, AA, quaternion rendering and linked instruments
+need their own evidence: Project 0 did not qualify them.
+
+### 16.5 Hardware
+Headless browser tests remain for non-GPU behaviour and the existing Plane paths. GPU acceptance runs
+headed on the physical NVIDIA GPU. Software-device results are identified as software results and
+may support those test suites; they never satisfy Space's physical-GPU numerical, performance or
+stability acceptance requirements.
+Project 1 does not reinterpret Project 0's G1 requirements.
+
+## 17. Deferred
+Temporal reprojection, path tracing, volumetrics and meshing (charter); Mandelbox; fractional and
+higher bulb powers; arbitrary 4D slice rotations; section clipping and cut faces; deep 3D
+compensation or perturbation research (G5-A's recurrence correction, if adopted, is not this);
+estimator-scaled flight assist (unless it proves useful); inertia and collision; general render
+queues; tiled giant stills; parameter maps, variations and publication animation.
+
+**User-stated future direction (2026-10-20), outside Project 1:** a landing page that presents the
+project, its goals and what others are doing; and shared discoveries served from a centrally hosted
+API, consumed as a second discovery source by the same Discoveries control (§13.10). These need their
+own spec (hosting, identity, moderation, privacy and trust of remote records) and do not grow 1a.
+
+## 18. Risks
+- Plane regressions during extraction → move-first, path-only diffs, the full Plane gate.
+- Losing Plane functions while changing formats → behaviour assertions replace format assertions at
+  equal strength (§4.3); share-link, location-file and discovery round trips are tested.
+- Quaternion estimator usability and stop-on-unresolved coverage → early family validation.
+- Precision outside measured domains → the tested-conditions badge; no universal claims.
+- Compounded cost of shadows, AA and instruments → shared admission limits, frozen acceptance workload.
+- Loss-recovery and stale-result races → explicit epochs and revisions; fake-backend tests.
+- WebGL 2 and WebGPU contexts coexisting in one page → verified early in 1b.1.
+- Pipeline preparation time → prepared before interaction, measured.
+
+## 19. Questions for the user
+
+### 19.1 Answered (2026-10-20)
+- **Fresh start** (rev 2 Q1): open Plane (§13.1).
+- **Camera moves in undo** (rev 2 Q4): separate camera history, as recommended (§6).
+- **Legacy output** (rev 2 Q7) and legacy reading: "No this is green field development. No need to
+  keep backwards compatability." (§12).
+- **Discoveries presentation** (rev 2 Q8): "Maybe both. Each workspace would want to showcase it's
+  discoveries. Maybe the way that is does that is via a discoveries control that each workspace
+  filters to their workspace type. This is future think here, but maybe if we have a landing page
+  that talks about the project, goals, what others are doing, the discovery control can be fed by
+  local discoveries and shared discoveries served from an API that is centrally hosted?" Applied as
+  §13.10, with the landing page and shared API recorded in §17.
+
+### 19.2 Open
+These affect only 1b, except Q7, which is a governance question; the architecture supports either
+answer to each.
+2. **Space's initial look:** neutral inspection or atmospheric exploration? Both remain available as
+   presets.
+3. **Bridge flow:** should the bridge open the linked instruments immediately, or offer a compact
+   "Compare the section" action?
+5. **Touch/mobile Space navigation** in Project 1, or desktop-first? (Plane's mobile behaviour is
+   preserved regardless.)
+6. **Space share URLs** in Project 1, or files and discovery cards only? (Plane's native share links
+   exist from 1a regardless.)
+7. **USER DECISION — charter amendment:** the 2026-10-20 greenfield decision supersedes charter
+   §3.9's adapter rules, §4's 1a "legacy adapters" and §6 decision 8. Should the charter itself be
+   amended to say so (recommended, as a separate, user-approved charter revision), or should this
+   spec's record of the override stand alone? Project 1 proceeds on the decision either way.
+
+## 20. Revision triggers
+None of these affects 1a.
+- Project 0 records its decision: confirm or revise §2, §9 (backend annex) and §10.3.
+- Project 0's precision section reports: revisit §10.5 and the §16.2 matrix.
+- **Project-0-dependent (1b, §10):** Project 0 recorded its G5-A compensated evaluation as invalid:
+  compiler reassociation defeated it (execution decision E8). §10.3's "if G5-A is part of the selected
+  configuration" is therefore expected not to apply; §10.3 is revised against whatever formulation
+  Project 0 finally records (currently G5-D, E8). ATLAS 2D already solved driver reassociation with a
+  runtime `u_round` barrier and bitwise Dekker splitting (`src/shaders.js`, perturbation fragment;
+  `HANDOFF.md`); that technique is a candidate for 1b's WGSL numerics, subject to the same
+  preregistered error analysis (§10.2), never assumed to transfer.
+- **Project-0-dependent (1b, §10.5, §17):** per E9, Space's deep zoom is to be addressed by
+  perturbation, as in ATLAS 2D, not by qualification. §17 defers "deep 3D compensation or
+  perturbation research"; when Project 0 closes, the spec is amended to place Space perturbation
+  either in a 1b milestone or in a named later project, and §10.5's validated detail ranges are
+  revisited accordingly.
+- Any user answer in §19.2 that changes scope: amend §3 and the affected sections.
+
+
+---
+
+## Codex (run 20261020T152731Z-e23c) — Co-author review of draft rev 3
+*2026-10-20 08:33:58 PDT*
+
+I agree with applying the user’s decisions directly; another independent-position round is unnecessary. The compatibility removal, Plane startup and local-only Discoveries scope are accepted. Revision 3 needs corrections to three new contracts before I can mark it READY.
+
+I verified the relevant application code and browser tests. The checkout remains unchanged; no GPU tests ran.
+
+**1. §13.10: make source cancellation and write outcomes explicit**
+
+“Every call is asynchronous and cancellable” contradicts the synchronous `subscribe() → unsubscribe` signature, while `save` and `remove` accept no cancellation signal. More importantly, timing out a write does not establish whether it committed. “Deletion is immediate and final” could otherwise permit a false success or failure message.
+
+Replace the interface paragraph with:
+
+> `list({ workspace, limit, cursor, signal })` and `get(id, { signal })` return promises. Sources declaring write capabilities implement `save(record, { signal })` and `remove(id, { signal })`, also returning promises. `subscribe(listener) → unsubscribe` establishes a subscription synchronously; notifications describe committed changes.
+>
+> Reads are cancellable and bounded by a control-level timeout. Results carry their source and query identity; a late result for an obsolete workspace, filter or request is discarded even if cancellation was ineffective.
+>
+> Write cancellation requests an abort; it does not establish the outcome. The local source saves each discovery and its thumbnail atomically, and reports success only after commit. A cancellation arriving after commit cannot turn that success into an aborted write. If a timeout occurs before the outcome is known, the control reports that it is still checking the result and reconciles against the local store. It never claims that a save or deletion succeeded—or did not occur—solely because waiting ended.
+>
+> Source failures remain isolated and never block exploration.
+
+Replace “a deletion is immediate and final” with:
+
+> Deletion has no application-level undo or soft-delete stage. The control confirms removal only after the local operation commits; failure leaves the record available.
+
+Add tests for cancellation before commit, cancellation after commit, timeout followed by a committed result, and late list results after workspace switching. These are local correctness requirements; they need no remote implementation.
+
+**2. §§13.8, 13.10 and 14: use one discovery/card representation**
+
+There are now two competing shapes:
+
+- §13.8 stores `selectedPoint`, `inspection` and `reportId` at the top level.
+- §13.10 stores them inside `card`.
+- §13.8’s thumbnail has `sourceReportId`; §13.10 drops it.
+- §14 can be read as requiring a separate Space-card store.
+
+Keep §13.10 as the canonical record. Replace §13.8’s card object with:
+
+> A Space discovery card is an `atlas.discovery` record (§13.10) whose optional `card` payload contains:
+>
+> ```js
+> {
+>   selectedPoint,
+>   inspection: { inputs, effectiveInputs, settings, evaluatorVersion, results },
+>   reportId
+> }
+> ```
+>
+> Name, note, scene snapshot, scene hash and thumbnail belong to the enclosing discovery record. Cards do not introduce another record format or independent store. The stale-inspection rules below apply to this payload.
+
+Restore thumbnail provenance in §13.10:
+
+```js
+thumbnail: {
+  sourceSceneHash,
+  sourceReportId,   // identifies the render used for the thumbnail
+  mediaType,
+  blob
+}
+```
+
+Add:
+
+> Validation checks that `sceneHash` matches the canonical scene snapshot. Thumbnail and inspection provenance must not silently represent an earlier scene as current. Source identity is attached by the registered source adapter; record identity in the control is `(sourceId, id)`.
+
+Replace §14’s persistence sentence with:
+
+> IndexedDB stores discovery records and their thumbnail blobs, reports and compositions. Space cards use the discovery record’s `card` payload from 1b.3.
+
+**3. §6: synchronize camera history with whole-scene undo**
+
+The new rules specify what happens when a discovery opens, but not when its whole-scene restoration is undone or redone.
+
+For example: start at A, open discovery B, then undo to A. Without another rule, the current camera is A while the camera-history cursor still names B; Back can appear to do nothing.
+
+Add:
+
+> Camera history is seeded with the workspace’s initial accepted camera. Its current entry always matches the committed camera. Every committed camera change outside Back/Forward—including undo or redo of a whole-scene restoration—appends the resulting pose, suppresses consecutive identical poses, and truncates any forward branch. Content-only undo and redo leave camera history unchanged.
+>
+> A tour captures its starting pose before its first automated jump and its final pose when stopped, without intermediate entries or consecutive duplicates. Back/Forward stops active navigation or a tour before restoring a pose.
+
+This resolves the interaction between the two histories without changing the user’s chosen policy. Add the A → open B → undo → Back/Forward case to the history tests.
+
+**4. §4.3: correct the description of the existing format tests**
+
+The checkout does not contain a separate v1 import fixture. The browser test downloads an actual location file and reimports that same file.
+
+The format-dependent assertions are:
+
+- The `#re=-2` match at [browser.mjs:166](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1/tests/browser.mjs:166).
+- The exported `savedLocation.view` comparison at [browser.mjs:187](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1/tests/browser.mjs:187).
+- The post-import comparison against `savedLocation.view` at [browser.mjs:193](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1/tests/browser.mjs:193).
+
+Replace the final part of §4.3 with:
+
+> Format-dependent assertions in the existing share-link and location export/reimport tests are updated for `atlas.scene`. The share test opens the URL actually generated by the application and verifies exact coordinates and resolved scene settings. The location test inspects the actual downloaded file, changes the live scene, reimports that same file, and verifies complete scene restoration. These replace the old URL match and both `savedLocation.view` comparisons without weakening behavioral coverage.
+>
+> Import-path and justified shell-selector changes remain permitted. Tests may add explicit synchronization for asynchronous discovery loading, while retaining their existing persistence expectations. Other behavioral assertions remain unchanged.
+
+That last allowance matters: [browser.mjs:145](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1/tests/browser.mjs:145) currently waits for rendering readiness and then immediately checks the discovery count. Rendering readiness need not imply that the new asynchronous source has loaded. Do not block exploration on discovery loading merely to preserve that timing assumption.
+
+**5. §§2, 10.3, 17 and 20: reconcile the Project 0 update**
+
+I verified the runtime `u_round` value and bitwise splitting in [shaders.js:53](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1/src/shaders.js:53), its assignment in [renderer.js:122](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1/src/renderer.js:122), and the documented native-driver fix in [HANDOFF.md:21](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1/HANDOFF.md:21).
+
+E8 and E9 are not in this checkout, so I can acknowledge them as relayed decisions, not independently verified execution evidence. §2 still says G5-A is in progress, which conflicts with §20.
+
+Replace that part of §2 with:
+
+> The original relayed findings identified precision-sensitive quaternion arithmetic as requiring remediation. The subsequent update relayed on 2026-10-20 says E8 invalidated the G5-A formulation and identifies replacement work as G5-D. These reports do not establish qualification; the final recorded decision and numerical evidence control the product formulation.
+
+Make §10.3 independent of candidate names:
+
+> Project 1 independently implements and validates the arithmetic formulation recorded for Project 0’s selected configuration, citing its numerical analysis and qualification evidence. No remediation candidate is adopted merely because it was proposed or attempted. This evidence concerns recurrence evaluation only.
+
+In §20, narrow “ATLAS 2D already solved driver reassociation” to:
+
+> Plane contains a runtime `u_round` factor and bitwise splitting; `HANDOFF.md` records that these addressed the observed GLSL driver issue. They are candidates for investigation, not established WGSL arithmetic barriers.
+
+Keep E9 as a revision trigger, adding:
+
+> This relayed product direction changes no Project 0 inputs, gates or evidence. Placement in 1b or a later project requires an explicit scope amendment and family-specific independent validation before any deeper-detail promise.
+
+In §17, replace the G5-A-specific parenthetical with “a qualified recurrence correction is distinct from this deeper-precision research.”
+
+**Other narrow edits**
+
+- **Remove §19.2 Q7.** The user has already decided the compatibility policy. Reconciling the charter with that decision is documentation maintenance, not another taste or intent question. Record the dated amendment in the Project 1 checkout after this review, preserving the requested-versus-effective precision requirement and leaving Project 0’s frozen checkout untouched.
+- **Limit §13.1’s share-link promise:** “A supported Plane share link opens Plane with its scene. Space share-link support remains subject to §19.2 Q6.”
+- **Distinguish startup from an existing session in §14:** invalid startup links use the fresh-start view; invalid links encountered during an existing investigation report the problem without replacing its scene or histories.
+- **Narrow §5.1:** say “There is exactly one accepted *scene* format, `atlas.scene`.” Discovery records are separately versioned containers.
+- **Replace §12’s rationale** with: “The user explicitly removed compatibility with artefacts from earlier copies. Project 1 therefore omits their readers, migration machinery and format-specific rules while retaining the native workflows listed below.” Existing artefacts can protect real workflows; their removal is justified by the user’s scope decision.
+- The stated Plane appearance ranges and `INITIAL_VIEW` match the checkout. Specify that native scenes contain all required fields and a registered palette ID, with no inheritance from current settings.
+
+**Agreed so far**
+
+- All four user decisions and the removal of legacy compatibility.
+- Plane behavior protection, native scene files and Plane share links.
+- One workspace-filtered Discoveries control, one local source, and no network implementation in Project 1.
+- The previously approved rendering and numerical contracts.
+
+**Still disputed**
+
+- No disagreement with the user’s direction.
+- The source-operation contract, canonical discovery/card representation and camera-history synchronization need the corrections above.
+
+**NOT READY — blockers: discovery-source write/cancellation outcomes, conflicting discovery/card schemas, and camera-history behavior during whole-scene undo/redo.**
+
+---
+
+## Claude — Round 6 — revision 3.1 and charter amendment for co-author review
+*2026-10-20 08:35:40 PDT*
+
+# Round 6 — Claude: revision 3.1 (your review applied)
+
+I verified your test-line claims before applying them: `tests/browser.mjs` has no separate v1
+fixture; it downloads a location file at line 183–187 (`savedLocation.view` comparison at 187),
+reimports that same file and compares again at 193; the share check is the `#re=-2` match at 166;
+and the reload at 145 checks `#saved-count` right after `ready`. You were right on all four.
+
+Applied, verbatim or nearly so:
+1. §13.10: the promise-returning read/write interface with `signal` on writes, synchronous
+   `subscribe`, read cancellation with query identity and late-result discard, write outcome rules
+   (atomic local save with thumbnail, success only after commit, timeout → "still checking" and
+   reconcile), isolation, and deletion confirmed only after commit. §16.1 gains the four tests.
+2. One discovery/card representation: §13.8 now defines a card as the `card` payload of an
+   `atlas.discovery` record; `sourceReportId` restored to the thumbnail; sceneHash validation,
+   provenance honesty and `(sourceId, id)` identity added; §14's persistence sentence replaced.
+3. §6: your synchronization paragraph, plus the tour/Back-Forward wording, with a worked
+   A → open B → undo example (history A, B, A, cursor on the last A, Back goes to B). Please check
+   that example matches your rule. §16.1 gains the case.
+4. §4.3: your replacement text, with "bounded" added to the synchronization allowance.
+5. §2, §10.3 (now titled "Quaternion arithmetic"), §17, §20: your Project 0 wording.
+Narrow edits: §19.2 Q7 removed; §13.1 share-link scope; §14 startup vs `hashchange` invalid links;
+§5.1 "one accepted scene format", complete native scenes with a registered palette and no
+inheritance; §12 rationale replaced.
+
+Charter: as you proposed, a dated amendment in the Project 1 checkout (it is not committed yet, and
+the Project 0 checkout is untouched). Draft, to be appended after the charter's §6:
+
+
+## 7. Amendments
+
+### A1 — Greenfield: no backwards compatibility with earlier artefacts (user, 2026-10-20)
+The user decided: "No this is green field development. No need to keep backwards compatability."
+This amends the charter as follows; the text above is left as approved on 2026-10-18 and is read
+subject to this amendment.
+- **§3.9:** the list of existing artefacts and the five adapter rules no longer apply. ATLAS does not
+  read, migrate or modify the old `#re=…` share URLs, `localStorage['atlas.discoveries']` bookmarks
+  or `{application: 'ATLAS', version: 1}` JSON exports. §3.9's final paragraph is unchanged: when a
+  Plane parameter carries more digits than Space can evaluate, the requested value is preserved and
+  the effective Space precision is shown, never silently rounded.
+- **§4, the 1a row:** "Versioned scene envelope and legacy adapters" reads "Versioned scene
+  envelope"; Plane's existing workflows are preserved in native formats.
+- **§6, decision 8** is withdrawn.
+
+The Project 1 design (`2026-10-19-project1-design.md`, rev 3, §12) records what this removes and
+what remains. Project 0's frozen inputs, gates and evidence are unaffected.
+
+Diff from rev 3 to rev 3.1:
+
+```diff
+8,9c8,9
+< local source built in Project 1 (§13.10). · **Date:** 2026-10-20 · **Revision:** 3 (rev 2 was
+< Codex-READY on 2026-10-19; rev 3 applies the user's decisions)
+---
+> local source built in Project 1 (§13.10). · **Date:** 2026-10-20 · **Revision:** 3.1 (rev 2 was
+> Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1 applies Codex's co-author review)
+17c17
+< (§12). Charter §3.9's final paragraph (requested Plane parameter digits are preserved and the
+---
+> (§12). The charter carries a dated amendment recording this. Charter §3.9's final paragraph (requested Plane parameter digits are preserved and the
+69,70c69,72
+< precision-sensitive arithmetic needs designed numerics (remediation G5-A, compensated evaluation,
+< in progress); Chrome 151 reports empty adapter device strings; headless WebGPU is unreliable on
+---
+> precision-sensitive quaternion arithmetic requires remediation. The subsequent update relayed on
+> 2026-10-20 says E8 invalidated the G5-A formulation and identifies replacement work as G5-D. These
+> reports do not establish qualification; the final recorded decision and numerical evidence control
+> the product formulation. Chrome 151 reports empty adapter device strings; headless WebGPU is unreliable on
+169,174c171,183
+< narrowly justified shell adjustments, never weakened expectations. The one permitted class of change
+< is an assertion that checks an old **format**: the share-link check (`tests/browser.mjs`, which
+< matches `#re=…`) and the v1 location-file import fixture. Each is replaced by an assertion of the
+< same behaviour in the native format (a share link round-trips every coordinate digit and setting;
+< a location file round-trips the scene), at equal or greater strength. No other existing assertion
+< changes.
+---
+> narrowly justified shell adjustments, never weakened expectations. The one permitted class of
+> assertion change is a format-dependent assertion in the existing share-link and location
+> export/reimport tests (`tests/browser.mjs`: the `#re=-2` URL match and both `savedLocation.view`
+> comparisons). These are updated for `atlas.scene`. The share test opens the URL actually generated
+> by the application and verifies exact coordinates and resolved scene settings. The location test
+> inspects the actual downloaded file, changes the live scene, reimports that same file, and verifies
+> complete scene restoration. These replace the old URL match and both `savedLocation.view`
+> comparisons without weakening behavioural coverage.
+> 
+> Import-path and justified shell-selector changes remain permitted. Tests may add explicit, bounded
+> synchronization for asynchronous discovery loading, while retaining their existing persistence
+> expectations; exploration is never blocked on discovery loading to preserve a test's timing
+> assumption. Other behavioural assertions remain unchanged.
+207,208c216,219
+<   repaired or clamped. Imported scenes contain data only. There is exactly one accepted input
+<   format, `atlas.scene` (§12).
+---
+>   repaired or clamped. Imported scenes contain data only. There is exactly one accepted scene
+>   format, `atlas.scene` (§12); discovery records (§13.10) are separately versioned containers.
+>   Native scenes contain every required field, and a Plane scene names a registered palette ID;
+>   nothing is inherited from the current settings.
+259,260c270,280
+<   adds one entry where it starts and one where it stops, never one per frame. A camera-history
+<   move, like an undo, receives a new view revision (§7.2).
+---
+>   captures its starting pose before its first automated jump and its final pose when stopped,
+>   without intermediate entries or consecutive duplicates. Back/Forward stops active navigation or a
+>   tour before restoring a pose. A camera-history move, like an undo, receives a new view revision
+>   (§7.2).
+> - **Synchronization of the two histories:** camera history is seeded with the workspace's initial
+>   accepted camera, and its current entry always matches the committed camera. Every committed
+>   camera change outside Back/Forward, including undo or redo of a whole-scene restoration, appends
+>   the resulting pose, suppresses consecutive identical poses, and truncates any forward branch.
+>   Content-only undo and redo leave camera history unchanged. (Start at A, open discovery B, undo:
+>   the camera returns to A and camera history reads A, B, A with the cursor on the last A, so Back
+>   goes to B.)
+465,471c485,491
+< ### 10.3 Quaternion arithmetic and G5-A
+< The quaternion square is evaluated in the **arithmetic formulation Project 0 records as qualified**.
+< If G5-A's compensated evaluation is part of the selected configuration, Project 1 independently
+< re-implements and re-validates that formulation in `space/render/webgpu/`, citing Project 0's
+< preregistered error analysis. That evidence covers the recurrence evaluation only. It does not
+< establish quaternion surface accuracy, validate the estimator or promise deeper detail. This is a
+< named revision trigger (§20).
+---
+> ### 10.3 Quaternion arithmetic
+> Project 1 independently implements and validates the arithmetic formulation recorded for Project 0's
+> selected configuration, citing its numerical analysis and qualification evidence, in
+> `space/render/webgpu/`. No remediation candidate is adopted merely because it was proposed or
+> attempted. This evidence concerns recurrence evaluation only. It does not establish quaternion
+> surface accuracy, validate the estimator or promise deeper detail. This is a named revision trigger
+> (§20).
+631,633c651,653
+< **Why:** none of these protects what a user does in ATLAS. They protected files and links made by
+< earlier copies, and the user has said those need not keep working. Removing them takes a whole
+< compatibility layer, with its own data-loss risks, out of 1a.
+---
+> **Why:** the user explicitly removed compatibility with artefacts from earlier copies. Project 1
+> therefore omits their readers, migration machinery and format-specific rules while retaining the
+> native workflows listed below.
+642c662,663
+< rules and §6 decision 8 are superseded for Project 1 by this decision (see the header and §19.2).
+---
+> rules, §4's 1a "legacy adapters" and §6 decision 8 are superseded by this decision; the charter
+> carries a dated amendment recording it (see the header).
+654,655c675,677
+< A native share link opens the workspace its scene names. Project 1 does not restore the previous
+< session on reload; reopening work is done through discoveries, scene files and share links.
+---
+> A supported Plane share link opens Plane with its scene; Space share-link support remains subject
+> to §19.2 Q6. Project 1 does not restore the previous session on reload; reopening work is done
+> through discoveries, scene files and share links.
+728c750,751
+< - **Discovery card:**
+---
+> - **Discovery card:** a Space discovery card is an `atlas.discovery` record (§13.10) whose optional
+>   `card` payload contains:
+730c753
+<   { id, name, note, sceneSnapshot, selectedPoint,
+---
+>   { selectedPoint,
+732c755
+<     thumbnail: { sourceSceneHash, sourceReportId, blob }, reportId }
+---
+>     reportId }
+733a757,759
+>   Name, note, scene snapshot, scene hash and thumbnail belong to the enclosing discovery record.
+>   Cards do not introduce another record format or independent store. The stale-inspection rules
+>   below apply to this payload.
+751c777
+<     thumbnail: { sourceSceneHash, mediaType, blob },
+---
+>     thumbnail: { sourceSceneHash, sourceReportId, mediaType, blob },  // sourceReportId: the render used
+755a782,784
+>   Validation checks that `sceneHash` matches the canonical scene snapshot. Thumbnail and inspection
+>   provenance must not silently represent an earlier scene as current. Source identity is attached by
+>   the registered source adapter; record identity in the control is `(sourceId, id)`.
+757,761c786,800
+<   capabilities (`save`, `remove`), and implements
+<   `list({ workspace, limit, cursor, signal }) → { items, nextCursor }`, `get(id, { signal })`,
+<   `save(record)` and `remove(id)` where it declares them, and `subscribe(listener) → unsubscribe`
+<   for change notifications. Every call is asynchronous and cancellable, and the control bounds each
+<   with a timeout. A failing or slow source is shown as unavailable in the control; it never hides
+---
+>   capabilities (`save`, `remove`). `list({ workspace, limit, cursor, signal }) → { items, nextCursor }`
+>   and `get(id, { signal })` return promises. Sources declaring write capabilities implement
+>   `save(record, { signal })` and `remove(id, { signal })`, also returning promises.
+>   `subscribe(listener) → unsubscribe` establishes a subscription synchronously; notifications
+>   describe committed changes.
+> - **Reads** are cancellable and bounded by a control-level timeout. Results carry their source and
+>   query identity; a late result for an obsolete workspace, filter or request is discarded even if
+>   cancellation was ineffective.
+> - **Writes:** cancellation requests an abort; it does not establish the outcome. The local source
+>   saves each discovery and its thumbnail atomically, and reports success only after commit. A
+>   cancellation arriving after commit cannot turn that success into an aborted write. If a timeout
+>   occurs before the outcome is known, the control reports that it is still checking the result and
+>   reconciles against the local store. It never claims that a save or deletion succeeded, or did not
+>   occur, solely because waiting ended.
+> - **Isolation:** a failing or slow source is shown as unavailable in the control; it never hides
+767c806,808
+<   `remove`. Ordering is newest first; a deletion is immediate and final. Storage failure leaves
+---
+>   `remove`. Ordering is newest first. Deletion has no application-level undo or soft-delete stage;
+>   the control confirms removal only after the local operation commits, and failure leaves the record
+>   available. Storage failure leaves
+776,777c817,818
+< - **Persistence:** IndexedDB for discoveries (and their thumbnail blobs), reports, compositions and
+<   later Space cards; `localStorage` only for small preferences. Storage failure leaves exploration
+---
+> - **Persistence:** IndexedDB stores discovery records and their thumbnail blobs, reports and
+>   compositions. Space cards use the discovery record's `card` payload from 1b.3. `localStorage` only for small preferences. Storage failure leaves exploration
+784,785c825,827
+<   whole-scene restoration after whole-scene validation. An invalid or unsupported link opens the
+<   fresh-start view (§13.1) with a notice. Space share links remain an open question (§19 Q6).
+---
+>   whole-scene restoration after whole-scene validation. An invalid or unsupported link at startup
+>   opens the fresh-start view (§13.1) with a notice; one encountered during an existing investigation
+>   (a `hashchange`) reports the problem without replacing its scene or either history. Space share links remain an open question (§19 Q6).
+823c865
+< | Scene, history, discoveries | Node | Exact strings, canonical serialization and hashes, whole-scene validation (invalid values reported, never clamped; old formats rejected), share-link and scene-file round trips, domain-scoped undo, grouped gestures, camera-history rules, discovery-record validation, source failure and timeout isolation, local-store save, list, delete and storage failure |
+---
+> | Scene, history, discoveries | Node | Exact strings, canonical serialization and hashes, whole-scene validation (invalid values reported, never clamped; old formats rejected), share-link and scene-file round trips, domain-scoped undo, grouped gestures, camera-history rules, discovery-record validation, source failure and timeout isolation, write cancellation before and after commit, a timeout followed by a committed result, late list results after a workspace switch, the A → open B → undo → Back/Forward case, local-store save, list, delete and storage failure |
+866c908,909
+< compensation or perturbation research (G5-A's recurrence correction, if adopted, is not this);
+---
+> compensation or perturbation research (a qualified recurrence correction is distinct from this
+> deeper-precision research);
+901,902c944
+< These affect only 1b, except Q7, which is a governance question; the architecture supports either
+< answer to each.
+---
+> These affect only 1b; the architecture supports either answer to each.
+911,914d952
+< 7. **USER DECISION — charter amendment:** the 2026-10-20 greenfield decision supersedes charter
+<    §3.9's adapter rules, §4's 1a "legacy adapters" and §6 decision 8. Should the charter itself be
+<    amended to say so (recommended, as a separate, user-approved charter revision), or should this
+<    spec's record of the override stand alone? Project 1 proceeds on the decision either way.
+920,926c958,964
+< - **Project-0-dependent (1b, §10):** Project 0 recorded its G5-A compensated evaluation as invalid:
+<   compiler reassociation defeated it (execution decision E8). §10.3's "if G5-A is part of the selected
+<   configuration" is therefore expected not to apply; §10.3 is revised against whatever formulation
+<   Project 0 finally records (currently G5-D, E8). ATLAS 2D already solved driver reassociation with a
+<   runtime `u_round` barrier and bitwise Dekker splitting (`src/shaders.js`, perturbation fragment;
+<   `HANDOFF.md`); that technique is a candidate for 1b's WGSL numerics, subject to the same
+<   preregistered error analysis (§10.2), never assumed to transfer.
+---
+> - **Project-0-dependent (1b, §10):** per the relayed execution decision E8, Project 0's G5-A
+>   compensated evaluation was defeated by compiler reassociation and recorded as invalid; replacement
+>   work is G5-D. §10.3 is confirmed against whatever formulation Project 0 finally records. Plane
+>   contains a runtime `u_round` factor and bitwise splitting (`src/shaders.js`, perturbation
+>   fragment); `HANDOFF.md` records that these addressed the observed GLSL driver issue. They are
+>   candidates for investigation, not established WGSL arithmetic barriers, and remain subject to the
+>   preregistered error analysis (§10.2).
+931c969,971
+<   revisited accordingly.
+---
+>   revisited accordingly. This relayed product direction changes no Project 0 inputs, gates or
+>   evidence. Placement in 1b or a later project requires an explicit scope amendment and
+>   family-specific independent validation before any deeper-detail promise.
+```
+
+Please review rev 3.1 and the charter amendment as co-author (read-only) and end with **READY** or
+**NOT READY** with blockers.
+
+
+---
+
+## Codex (run 20261020T153544Z-52cb) — Co-author review of rev 3.1 and the charter amendment
+*2026-10-20 08:37:10 PDT*
+
+Revision 3.1 resolves all three blockers. I accept the charter amendment as the record of the user’s compatibility decision.
+
+- **Discovery sources:** cancellation requests, commit outcomes, timeouts and late read results are now distinguished correctly.
+- **Discovery records:** one canonical record contains the optional Space-card payload, with thumbnail provenance and source-qualified identity.
+- **Camera history:** the synchronization rule closes the whole-scene undo/redo gap.
+
+The worked example is correct: **A → open B → undo** produces camera history **A, B, A**, with the cursor on the final A. Back restores **B’s camera only**; mathematics and appearance remain those restored by undo. Forward returns to A’s camera.
+
+The test changes and Project 0 qualifications also match the review.
+
+Three editorial alignments remain; none requires another design round:
+
+1. **Header:** once A1 is applied, the spec conforms to the amended charter. Replace the “contradicts it” wording with:
+
+   > **Governed by:** `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`, including amendment A1 recording the user’s decision of 2026-10-20. A1 removes compatibility obligations for earlier artefacts. The remaining charter requirements, including preservation of requested Plane parameters and disclosure of effective Space precision, continue to apply.
+
+2. **A1’s “does not read” wording:** distinguish unsupported-format recognition from compatibility loading:
+
+   > ATLAS does not restore or migrate the earlier share-link and location-file formats. Incoming links and files may be recognized only to report unsupported input. ATLAS neither reads nor modifies `localStorage['atlas.discoveries']`.
+
+   The amendment’s reference to “rev 3” can simply become “the Project 1 design, §12,” avoiding a stale revision reference.
+
+3. **§12’s old-link behavior:** align it with the revised §14:
+
+   > An old share link encountered at startup opens fresh-start Plane with an unsupported-format notice. During an existing investigation, it reports the problem without replacing the scene or either history. Old location files are rejected without changing the investigation.
+
+The review applies to the pasted revision and amendment; the checkout still contains revision 2 and remains unchanged.
+
+**Agreed so far**
+
+- Revision 3.1’s design contracts and all four user decisions.
+- Charter amendment A1, with the recognition wording above.
+- All three previous blockers are closed.
+
+**Still disputed**
+
+- None.
+
+**READY**
+
+---
+
+## Claude — Closing: READY on rev 3.1, editorial alignments applied as rev 3.2
+*2026-10-20 08:37:26 PDT*
+
+Codex returned READY on revision 3.1 and charter amendment A1 (run 20261020T153544Z-52cb), with three
+editorial alignments, applied verbatim as revision 3.2: the governed-by header now cites amendment
+A1 instead of saying the spec contradicts the charter; A1 distinguishes unsupported-format
+recognition from compatibility loading and drops its stale "rev 3" reference; §12's old-link
+behaviour matches §14 (startup vs an existing investigation). No bridge run is active. Committing
+the spec (rev 3.2), the charter amendment and this log on `design/project1`. Per the coordinator's
+change of sequence, the 1a implementation plan is not started; the user reviews rev 3 first.
+

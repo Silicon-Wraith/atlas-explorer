@@ -1,6 +1,6 @@
 # ATLAS Workbench — Architectural Charter
 
-**Status:** approved by the user 2026-10-18 · **Date:** 2026-10-18
+**Status:** approved by the user 2026-10-18; amended 2026-10-20 (A1, §7) · **Date:** 2026-10-18
 **Authors:** Claude and Codex, co-designed as peers
 **Governs:** every ATLAS Workbench project spec. A project spec may narrow this charter but not
 contradict it; changing the charter takes a revision approved by the user.
@@ -320,3 +320,22 @@ renderer; native (non-browser) applications.
 9. Project 1 splits into 1a (Foundations) and 1b (Space), with one shared acceptance demonstration.
 10. Git is now in use. This supersedes the `HANDOFF.md` instruction not to initialise it, and
     `AGENTS.md` and `HANDOFF.md` are updated when Project 1a starts.
+
+## 7. Amendments
+
+### A1 — Greenfield: no backwards compatibility with earlier artefacts (user, 2026-10-20)
+The user decided: "No this is green field development. No need to keep backwards compatability."
+This amends the charter as follows; the text above is left as approved on 2026-10-18 and is read
+subject to this amendment.
+- **§3.9:** the list of existing artefacts and the five adapter rules no longer apply. ATLAS does not
+  restore or migrate the earlier share-link and location-file formats. Incoming links and files may
+  be recognized only to report unsupported input. ATLAS neither reads nor modifies
+  `localStorage['atlas.discoveries']`. §3.9's final paragraph is unchanged: when a
+  Plane parameter carries more digits than Space can evaluate, the requested value is preserved and
+  the effective Space precision is shown, never silently rounded.
+- **§4, the 1a row:** "Versioned scene envelope and legacy adapters" reads "Versioned scene
+  envelope"; Plane's existing workflows are preserved in native formats.
+- **§6, decision 8** is withdrawn.
+
+The Project 1 design (`2026-10-19-project1-design.md`, §12) records what this removes and
+what remains. Project 0's frozen inputs, gates and evidence are unaffected.
