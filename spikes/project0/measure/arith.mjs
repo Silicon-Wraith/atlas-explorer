@@ -22,8 +22,7 @@ export function metrics(gate, slot, raw, fx) {
     const p = fx.arithmeticProtocol.offplane, expected = fx.arithmetic.offplane.orbit.flat();
     if (!Array.isArray(raw.orbit) || raw.orbit.length !== 32 || expected.length !== 32) throw new Error('off-plane orbit must have exactly 32 components');
     if (!raw.orbit.every(v => typeof v === 'number' && Number.isFinite(v))) throw new Error('off-plane orbit components must be finite numbers');
-    let componentRatio = 0;
-    raw.orbit.forEach((v, i) => { componentRatio = Math.max(componentRatio, Math.abs(v - expected[i]) / (p.absoluteTolerance + p.relativeTolerance * Math.abs(expected[i]))); });
+    const componentRatio = offplaneRatio(raw.orbit, expected, p);
     // G5-A (prereg rev 2 §2.7): evidence that declares the compensated form, or carries supplementary readbacks, is validated here from its
     // raw words at every read. Legacy (attempt-1) evidence, which carries neither, keeps its original derivation; qualify.mjs requires the
     // compensated form for every G5 record launched with the remediation configuration. The frozen comparison is reported beside the verdict.
@@ -34,4 +33,20 @@ export function metrics(gate, slot, raw, fx) {
     return { components: 32, componentRatio };
   }
   throw new Error(`no metric derivation for ${gate}/${slot}`);
+}
+
+const offplaneRatio = (orbit, expected, p) => orbit.reduce((m, v, i) => Math.max(m, Math.abs(v - expected[i]) / (p.absoluteTolerance + p.relativeTolerance * Math.abs(expected[i]))), 0);
+// Fix round 1 (finding 1; prereg rev 2 §2.7): a G5 record's observations, rederived from its raw whatever its saved status. The frozen
+// comparison and the compensation verdict are separate fields: `numericalFailure` (componentRatio > 1) is never hidden by an unvalidated
+// compensation, nor the reverse. `invalidation` is exactly what the metric derivation throws (null when it returns metrics).
+export function g5Observation(slot, raw, fx) {
+  let derived = null, invalidation = null;
+  try { derived = metrics('G5', slot, raw, fx); } catch (e) { invalidation = e.message; }
+  if (slot !== 'qjulia-offplane') return { slot, metrics: derived, invalidation };
+  const p = fx.arithmeticProtocol.offplane, expected = fx.arithmetic.offplane.orbit.flat();
+  const ok = Array.isArray(raw?.orbit) && raw.orbit.length === 32 && raw.orbit.every(v => typeof v === 'number' && Number.isFinite(v));
+  const componentRatio = ok ? offplaneRatio(raw.orbit, expected, p) : null;
+  const report = raw?.form !== undefined || raw?.supplementary !== undefined ? compensationReport(raw, fx) : null;
+  return { slot, componentRatio, numericalFailure: componentRatio === null ? null : componentRatio > 1,
+    compensation: report ? { validated: report.validated, matches: report.matches, problems: report.problems } : null, metrics: derived, invalidation };
 }

@@ -6,6 +6,8 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { R, add, mul, fromBits, toBits, isExactSum, hex } from './exact.js';
+import { canonical } from '../contract.js';
+import { ARITHMETIC_ENTRY_POINTS, arithmeticPipelines } from './pipeline-config.js';
 
 export const COMPENSATED_FORM = 'g5a-compensated-dot2-prereg-rev2';
 export const VALIDATION_ENTRY_POINTS = Object.freeze(['remediation_primitives', 'remediation_dot', 'remediation_updates']);
@@ -22,6 +24,12 @@ export function supplementary() {
   return (cached = JSON.parse(text));
 }
 
+// Fix round 1 (finding 4): the shader identity a G5 record must report — the sha256 of the reviewed fields.wgsl + arithmetic.wgsl, exactly as
+// prepare() concatenates and compiles them, and the fixed entry points and pipeline descriptors (no extra, duplicate or altered entry).
+export function expectedShader() {
+  const code = readFileSync(new URL('../gpu/fields.wgsl', import.meta.url), 'utf8') + readFileSync(new URL('../gpu/arithmetic.wgsl', import.meta.url), 'utf8');
+  return { sha256: createHash('sha256').update(code).digest('hex'), entryPoints: [...ARITHMETIC_ENTRY_POINTS], pipelines: arithmeticPipelines() };
+}
 const isWord = w => typeof w === 'number' && Number.isInteger(w) && w >= 0 && w <= 0xffffffff;
 const finiteWord = w => ((w >>> 23) & 0xff) !== 0xff;
 const norm = w => (w === 0x80000000 ? 0 : w);                         // ±0 normalised for supplementary bit comparisons only
@@ -38,12 +46,12 @@ export function compensationReport(raw, fx, supp = supplementary()) {
   const problems = [], s = raw?.supplementary;
   if (raw?.form !== COMPENSATED_FORM) problems.push(`the record does not declare the compensated form (${JSON.stringify(raw?.form ?? null)})`);
   if (!s || typeof s !== 'object') return { validated: false, problems: [...problems, 'no supplementary validation evidence'], matches: [], counts: {} };
-  const shader = s.shader;
-  if (!shader || !/^[0-9a-f]{64}$/.test(shader.sha256 ?? '') || !Array.isArray(shader.entryPoints) || !Array.isArray(shader.pipelines)) problems.push('shader-source hash, entry points or pipeline descriptors are not recorded');
-  else for (const e of [...VALIDATION_ENTRY_POINTS, ...QUALIFICATION_ENTRY_POINTS]) {
-    if (!shader.entryPoints.includes(e)) problems.push(`entry point ${e} is not recorded`);
-    const p = shader.pipelines.find(d => d?.entryPoint === e);
-    if (!p || p.module !== 'arithmetic' || p.layout !== 'auto') problems.push(`pipeline descriptor of ${e} is missing or not the arithmetic module with layout auto`);
+  const shader = s.shader, want = expectedShader();
+  if (!shader || typeof shader !== 'object') problems.push('shader-source hash, entry points or pipeline descriptors are not recorded');
+  else {
+    if (shader.sha256 !== want.sha256) problems.push(`shader source hash ${JSON.stringify(shader.sha256 ?? null)} is not the reviewed fields + arithmetic source ${want.sha256}`);
+    if (canonical(shader.entryPoints ?? null) !== canonical(want.entryPoints)) problems.push(`shader entry points ${JSON.stringify(shader.entryPoints ?? null)} are not the reviewed arithmetic entry points`);
+    if (canonical(shader.pipelines ?? null) !== canonical(want.pipelines)) problems.push('shader pipeline descriptors differ from the reviewed arithmetic configuration (missing, duplicate, extra or altered module, layout, label or constants)');
   }
   const nPrim = supp.primitives.inputs.length, nDot = supp.dots.inputs.length, nUpd = supp.updates.inputs.length;
   const prim = checkedWords('primitives', s.primitives, 4 * nPrim, problems), dots = checkedWords('dots', s.dots, 4 * nDot, problems), upd = checkedWords('updates', s.updates, 4 * nUpd, problems);

@@ -21,9 +21,9 @@ await verifyPreflight(manifest, records);
 // WebGPU remediation (prereg rev 2 §3.5): under the developer flag the granted features are compared with attempt 1's (equal / differs /
 // unavailable); a difference refuses the record, and every row is written beside the decision with the flag's disclosures.
 const baseline = manifest.requestedArgs?.includes(DEVELOPER_FLAG) ? await loadBaseline() : null;
-const { launches, raws, featureComparison } = await recompute([...records, ...attempts], fixtures, { manifest, baseline });
+const { launches, raws, featureComparison, g5Observations } = await recompute([...records, ...attempts], fixtures, { manifest, baseline });
 const { backend, decision } = qualify(manifest, records, fixtures, { remediationClosed: true, raws, attempts });
 const unsafeFlag = unsafeFromLaunches(launches);                                          // the verified effective command lines decide
-const out = { backend: 'webgpu', manifest: values.manifest, manifestSha256: sha256(await readFile(resolve(ROOT, values.manifest))), history: values.history, historySha256: sha256(history), args: manifest.args, requestedArgs: manifest.requestedArgs, unsafeFlag, disclosures: launchDisclosures(manifest.requestedArgs ?? []), featureComparison, decision, gates: backend.gates };
+const out = { backend: 'webgpu', manifest: values.manifest, manifestSha256: sha256(await readFile(resolve(ROOT, values.manifest))), history: values.history, historySha256: sha256(history), args: manifest.args, requestedArgs: manifest.requestedArgs, unsafeFlag, disclosures: launchDisclosures(manifest.requestedArgs ?? []), featureComparison, g5Observations, decision, gates: backend.gates };
 await writeFile(resolve(ROOT, 'docs/reports/project0/webgpu-decision.json'), JSON.stringify(out, null, 2));
 console.log(`WebGPU remediation closed: ${decision.outcome}${unsafeFlag ? ' — DEPENDS ON --enable-unsafe-webgpu' : ''}`);

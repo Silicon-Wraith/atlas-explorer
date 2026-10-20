@@ -38,10 +38,15 @@ test('the Mandelbulb recurrence, escape tests and output layout are untouched', 
   assert.ok(body(arithmetic, 'qjulia_offplane').includes('outputs[n] = bitcast<vec4u>(q);'));
 });
 
-test('the validation entry points live in the qualification module and are prepared with the same descriptor shape', () => {
+test('the validation entry points live in the qualification module and are prepared with the same descriptor shape', async () => {
   for (const e of ['remediation_primitives', 'remediation_dot', 'remediation_updates']) { assert.ok(arithmetic.includes(`fn ${e}(`)); assert.ok(webgpu.includes(`'${e}'`)); }
   assert.match(webgpu, /\['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates'\]\.map\(e => \[e, \{ module: arithmetic, entryPoint: e \}\]\)/);
-  assert.ok(checks.includes("raw: { orbit: Array.from(orbit), orbitWords: Array.from(new Uint32Array(orbit.buffer)), form: COMPENSATED_FORM, supplementary"), 'the off-plane slot carries the qualification words, the form and the supplementary readbacks');
+  assert.deepEqual([...(await import('../remediation/pipeline-config.js')).ARITHMETIC_ENTRY_POINTS], ['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates'], 'the recorded configuration lists the prepared entry points');
+  // fix round 1 (finding 2): the off-plane slot is built by the preserving collector, which carries the qualification words, the form and
+  // the supplementary readbacks (behaviour: tests/remediation-r1.test.mjs)
+  const collect = read('../remediation/collect.js');
+  assert.ok(collect.includes("const raw = { orbit: Array.from(words), orbitWords: Array.from(new Uint32Array(words.buffer, words.byteOffset, words.length)), form, supplementary: {} };"));
+  assert.ok(checks.includes('}, slots, COMPENSATED_FORM);'));
 });
 
 test('the supplementary inputs are packed bit-exactly as runtime words', () => {

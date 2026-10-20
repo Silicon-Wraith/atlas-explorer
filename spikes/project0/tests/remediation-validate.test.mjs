@@ -3,13 +3,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { compensationReport, supplementary, COMPENSATED_FORM, VALIDATION_ENTRY_POINTS, QUALIFICATION_ENTRY_POINTS } from '../remediation/validate.mjs';
+import { compensationReport, supplementary, COMPENSATED_FORM, expectedShader } from '../remediation/validate.mjs';
 import { metrics } from '../measure/arith.mjs';
 
 const fx = JSON.parse(readFileSync(new URL('../fixtures.json', import.meta.url), 'utf8'));
 const supp = supplementary();
 const w = h => parseInt(h, 16);
-const shader = { sha256: 'a'.repeat(64), entryPoints: [...QUALIFICATION_ENTRY_POINTS, ...VALIDATION_ENTRY_POINTS, 'bulb_samples'], pipelines: [...QUALIFICATION_ENTRY_POINTS, ...VALIDATION_ENTRY_POINTS].map(entryPoint => ({ entryPoint, module: 'arithmetic', layout: 'auto' })) };
+// fix round 1 (finding 4): the shader identity must be the reviewed one, so the fixture reports exactly that
+const shader = expectedShader();
 function rawFor(models) {                       // models: which model's words each part reports
   const m = { primitives: 'F', dots: 'F', updates: 'F', offplane: 'F', ...models };
   const orbitWords = supp.offplane.rows[m.offplane].flatMap(r => r.split(' ').map(w));
@@ -53,7 +54,7 @@ test('±0 is normalised for supplementary bit comparisons; nonfinite words, malf
   assert.equal(compensationReport({ ...rawFor({}), supplementary: undefined }, fx).validated, false);
   assert.equal(compensationReport({ ...rawFor({}), form: undefined }, fx).validated, false);
   const noShader = rawFor({}); noShader.supplementary.shader = { ...shader, pipelines: shader.pipelines.filter(p => p.entryPoint !== 'qjulia_offplane') };
-  assert.ok(compensationReport(noShader, fx).problems.some(p => /qjulia_offplane/.test(p)));
+  assert.ok(compensationReport(noShader, fx).problems.some(p => /pipeline descriptors differ/.test(p)));
   const mixed = rawFor({}); mixed.orbit[0] += 1;
   assert.ok(compensationReport(mixed, fx).problems.some(p => /disagree/.test(p)));
 });

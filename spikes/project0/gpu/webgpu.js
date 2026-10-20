@@ -1,6 +1,7 @@
 // spikes/project0/gpu/webgpu.js — WebGPU helpers. Every buffer goes through the session allocator, every batch through the
 // watchdog, and every wait races the experiment's abort signal (gpu/abort.js).
 import { vec4 } from '../browser/packing.js';
+import { ARITHMETIC_ENTRY_POINTS, arithmeticPipelines } from '../remediation/pipeline-config.js';
 export const FIELDS = Object.freeze({ sphere: 0, box: 1, menger: 2, bulb: 3 });
 const noAbort = { race: p => p, throwIfAborted() {}, aborted: false };
 
@@ -25,8 +26,7 @@ export async function prepare(device, alloc, onStatus = () => {}) {
   const arithmeticCode = fields + await source('./arithmetic.wgsl');
   const arithmetic = await compile(device, arithmeticCode, 'arithmetic');
   const trace = await compile(device, fields + await source('./trace.wgsl'), 'trace');
-  const arithmeticEntries = ['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates'];
-  arithmeticRecord = { code: arithmeticCode, entryPoints: [...arithmeticEntries], pipelines: arithmeticEntries.map(entryPoint => ({ entryPoint, module: 'arithmetic', layout: 'auto', label: entryPoint, constants: null })) };
+  arithmeticRecord = { code: arithmeticCode, entryPoints: [...ARITHMETIC_ENTRY_POINTS], pipelines: arithmeticPipelines() };
   const jobs = [
     ...['bulb_samples', 'qjulia_plane', 'qjulia_offplane', 'derivative_policy', 'remediation_primitives', 'remediation_dot', 'remediation_updates'].map(e => [e, { module: arithmetic, entryPoint: e }]),
     ...Object.entries(FIELDS).map(([f, id]) => [`trace_list/${f}`, { module: trace, entryPoint: 'trace_list', constants: { FIELD: id } }]),

@@ -121,14 +121,15 @@ export async function runCampaign(values, d) {
   }
   // R1 (finding 4): verification never prevents the report. A record that fails verification makes its gate invalid/inconclusive; any other
   // failure here leaves every attempted gate invalid/inconclusive and the decision inconclusive, with the failure recorded.
-  let manifest = null, backend, decision, failure = null, verificationErrors = [];
+  let manifest = null, backend, decision, failure = null, verificationErrors = [], g5Observations = {};
   try {
     manifest = buildManifest({ records: selected, fixture, campaign: values.name, args, requestedArgs, runDirs, notRun, reuse, preflight, attempts, bindings });
     const errors = [...bindingErrors];
     // Coherence binds the evidence that can support a verdict; an invalidated record (e.g. an honest failed launch with a fallback identity)
     // cannot pass and keeps its own identity.
     try { checkCoherence(selected.filter(r => !r.invalidations.length), manifest); } catch (e) { errors.push(e.message); }
-    const { raws, errors: rejected } = await d.recompute([...selected, ...attempts], fixtures, { manifest, collect: true, baseline });
+    const { raws, errors: rejected, g5Observations: observed } = await d.recompute([...selected, ...attempts], fixtures, { manifest, collect: true, baseline });
+    g5Observations = observed ?? {};
     ({ backend, decision } = qualify(manifest, selected, fixtures, { raws, attempts, rejected, errors, gateErrors }));
     // R2 (finding 13): every collected verification or invocation error is a tooling error, reported and reflected in the exit status
     verificationErrors = [...errors, ...Object.entries(gateErrors).flatMap(([g, ms]) => ms.map(x => `${g}: ${x}`)), ...Object.entries(rejected).map(([id, x]) => `${id}: ${x}`)];
@@ -143,7 +144,9 @@ export async function runCampaign(values, d) {
   const manifestDoc = { ...(manifest ?? { fixture, campaign: values.name, args, requestedArgs, runDirs, notRun, reuse, preflight, bindings,
     selected: selected.map(r => r.id), attempts: Object.fromEntries(attempts.map(a => [a.id, { gate: a.gate, slot: a.slot, identity: a.identity }])) }),
     stopped, verificationErrors, ...(failure ? { verificationFailure: failure } : {}) };
-  await d.writeReport(values.name, manifestDoc, { backend, decision, ...(failure ? { verificationFailure: failure } : {}) });
+  // Fix round 1 (finding 1): the rederived G5 observations are reported beside the verdicts; a numerical failure is named even when G5 is invalid.
+  await d.writeReport(values.name, manifestDoc, { backend, decision, g5Observations, ...(failure ? { verificationFailure: failure } : {}) });
+  for (const [id, o] of Object.entries(g5Observations)) if (o.slot === 'qjulia-offplane') d.log(`G5 observation ${id}: componentRatio=${o.componentRatio}${o.numericalFailure ? ' (NUMERICAL FAILURE)' : ''}; compensation ${o.compensation ? (o.compensation.validated ? 'validated' : `unvalidated (matches ${o.compensation.matches.join(', ') || 'none'})`) : 'not declared'}`);
   for (const [g, r] of Object.entries(backend.gates)) d.log(`${g}: ${r.status}${r.reasons?.length ? ` — ${r.reasons.slice(0, 3).join('; ')}` : ''}`);
   d.log(`decision (remediation not yet closed): ${decision.outcome} — next: ${decision.next}${stopped ? `\nSTOPPED: ${stopped}` : ''}${failure ? `\nVERIFICATION FAILURE: ${failure}` : ''}`);
   return { manifest, backend, decision, stopped, failure, verificationErrors };

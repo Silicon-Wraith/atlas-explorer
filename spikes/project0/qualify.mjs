@@ -22,6 +22,7 @@ import { evaluateGateChecked } from './gates-checked.js';
 import { decideBackends } from './decision.js';
 import { sha256, launchIdentity } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
+import { g5Observation } from './measure/arith.mjs';
 import { underRemediation, featureComparison, remediationRecordProblems, BASELINE_MANIFEST } from './remediation/evidence-rules.mjs';
 import { validateSources } from './measure/timing.mjs';
 import { readVerifiedFile } from './fixture-files.mjs';
@@ -166,10 +167,14 @@ async function recordsIn(root, dir) {
 const selectedIn = (manifest, r) => { const t = manifest.trials[`${r.gate}/${r.slot}`]; return Boolean(t) && t.id === r.id; };
 
 // WebGPU remediation (prereg rev 2 §3.5): attempt 1's verified records and raw payloads, the baseline of the granted-feature comparison.
-export async function loadBaseline(path = BASELINE_MANIFEST, { root = ROOT } = {}) {
-  const { manifest, records, attempts } = await loadCampaign(path, { root });
-  const fixtures = await loadFixtures(manifest, { root });
-  const { raws } = await recompute([...records, ...attempts], fixtures, { root, manifest, collect: true });
+// Fix round 1 (finding 3): every baseline record must verify. A collected verification error refuses the baseline (and so the campaign, before
+// its preflight), so an existing attempt-1 record that cannot be authenticated is never read as an honestly absent one ("unavailable").
+export async function loadBaseline(path = BASELINE_MANIFEST, { root = ROOT, load = loadCampaign, fixturesOf = loadFixtures, verify = recompute } = {}) {
+  const { manifest, records, attempts } = await load(path, { root });
+  const fixtures = await fixturesOf(manifest, { root });
+  const { raws, errors } = await verify([...records, ...attempts], fixtures, { root, manifest, collect: true });
+  const failed = Object.entries(errors ?? {});
+  if (failed.length) throw new Error(`the attempt-1 baseline ${path} failed verification: ${failed.map(([id, e]) => `${id}: ${e}`).join('; ')}`);
   return { manifest: path, records: [...records, ...attempts], raws };
 }
 export async function loadCampaign(manifestPath, { root = ROOT } = {}) {
@@ -314,6 +319,21 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
       }
     } catch (e) { fail(r, e); }
   }
+  // Fix round 1 (finding 1; prereg §2.7): every G5 record's observations are rederived from its authenticated raw, invalid records included, and
+  // returned as `g5Observations`. A saved description must be what the raw reproduces: an invalid record's own `metrics:` invalidation must equal
+  // the rederived one, and a rederived invalidation must be saved; a ratio above 1 is reported as a numerical failure in its own right.
+  const g5Observations = {};
+  for (const r of records) {
+    if (errors[r.id] || r.gate !== 'G5' || raws[r.id] === undefined) continue;
+    try {
+      const obs = g5Observation(r.slot, raws[r.id], fixtures);
+      g5Observations[r.id] = obs;
+      if (r.invalidations.length) {
+        const saved = r.invalidations.filter(x => x.startsWith('metrics: ')), want = obs.invalidation ? [`metrics: ${obs.invalidation}`] : [];
+        if (canonical(saved) !== canonical(want)) throw new Error(`record ${r.id}: its saved G5 observation does not recompute from its raw payload (saved ${JSON.stringify(saved)}, rederived ${JSON.stringify(want)})`);
+      }
+    } catch (e) { fail(r, e); }
+  }
   const order = [...records.filter(r => r.gate !== 'G9'), ...records.filter(r => r.gate === 'G9')];
   for (const r of order) {
     if (errors[r.id] || r.invalidations.length) continue;
@@ -340,7 +360,7 @@ export async function recompute(records, fixtures, { root = ROOT, manifest = nul
       if (canonical(again) !== canonical(r.metrics)) throw new Error(`metrics for ${r.id} do not recompute from its raw payload`);
     } catch (e) { fail(r, e); }
   }
-  return { records, launches, raws, errors, featureComparison: featureRows };
+  return { records, launches, raws, errors, featureComparison: featureRows, g5Observations };
 }
 
 // From verified launch artefacts: the effective command line decides, and must be consistent with the requested arguments.

@@ -1,7 +1,7 @@
 // spikes/project0/browser/drivers/checks.js — G3/G4/G5 and policy drivers: raw readbacks only, never a verdict.
 import { acquire, destroy, onLoss } from '../../gpu/device.js';
 import { prepare, upload, readBack, traceList, dispatchOnce, TRACE_LIST_TIMING, arithmeticPreparation } from '../../gpu/webgpu.js';
-import { supplementaryInputs } from '../../remediation/inputs.js';
+import { collectOffplane } from '../../remediation/collect.js';
 // G5-A (prereg rev 2): the form identifier; must equal remediation/validate.mjs COMPENSATED_FORM (pinned by tests/remediation-wgsl.test.mjs)
 const COMPENSATED_FORM = 'g5a-compensated-dot2-prereg-rev2';
 import { CORRECTNESS_ONLY } from '../../timing-contract.js';   // the timing-method contract: no timing measured
@@ -47,19 +47,24 @@ export async function run(gate, fx, params, status) {
     } else if (gate === 'G5') {
       const plane = await arith(device, alloc, watchdog, abort, pipelines, 'qjulia_plane', packRows(fx.arithmetic.plane, s => s.input), fx.arithmeticProtocol.plane.iterations, fx.arithmetic.plane.length);
       slots.push({ slot: 'qjulia-plane', raw: { words: Array.from(plane), form: COMPENSATED_FORM }, timingMethod: CORRECTNESS_ONLY });
-      const { q, C } = fx.arithmetic.offplane;
-      const orbit = new Float32Array((await arith(device, alloc, watchdog, abort, pipelines, 'qjulia_offplane', Float32Array.from([...q, ...C]), 0, 8)).buffer);
       // G5-A supplementary validation (prereg rev 2 §2.6): same module, same preparation, runtime inputs, raw words read back; bound to the
       // off-plane slot and judged only at read time (remediation/validate.mjs). It runs in the correctness phase, outside any timing window.
-      const response = await abort.race(fetch(new URL('../../remediation/supplementary.json', import.meta.url)));
-      if (!response.ok) throw new Error(`remediation/supplementary.json: HTTP ${response.status}`);
-      const packed = supplementaryInputs(await abort.race(response.json()));
-      const run = async (entry, { data, n }) => Array.from(await arith(device, alloc, watchdog, abort, pipelines, entry, data, 0, n, n));
-      const prepared = arithmeticPreparation();
-      const digest = await abort.race(crypto.subtle.digest('SHA-256', new TextEncoder().encode(prepared.code)));
-      const shader = { sha256: [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join(''), entryPoints: prepared.entryPoints, pipelines: prepared.pipelines };
-      const supplementary = { shader, primitives: await run('remediation_primitives', packed.primitives), dots: await run('remediation_dot', packed.dots), updates: await run('remediation_updates', packed.updates) };
-      slots.push({ slot: 'qjulia-offplane', raw: { orbit: Array.from(orbit), orbitWords: Array.from(new Uint32Array(orbit.buffer)), form: COMPENSATED_FORM, supplementary }, timingMethod: CORRECTNESS_ONLY });
+      // Fix round 1 (finding 2): the off-plane slot is kept from the moment its orbit is read; each supplementary readback is kept as it completes.
+      const { q, C } = fx.arithmetic.offplane;
+      await collectOffplane({
+        orbit: async () => new Float32Array((await arith(device, alloc, watchdog, abort, pipelines, 'qjulia_offplane', Float32Array.from([...q, ...C]), 0, 8)).buffer),
+        shader: async () => {
+          const prepared = arithmeticPreparation();
+          const digest = await abort.race(crypto.subtle.digest('SHA-256', new TextEncoder().encode(prepared.code)));
+          return { sha256: [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join(''), entryPoints: prepared.entryPoints, pipelines: prepared.pipelines };
+        },
+        supplementaryJson: async () => {
+          const response = await abort.race(fetch(new URL('../../remediation/supplementary.json', import.meta.url)));
+          if (!response.ok) throw new Error(`remediation/supplementary.json: HTTP ${response.status}`);
+          return abort.race(response.json());
+        },
+        entry: async (name, { data, n }) => Array.from(await arith(device, alloc, watchdog, abort, pipelines, name, data, 0, n, n)),
+      }, slots, COMPENSATED_FORM);
     } else if (gate === 'derivative-policy') {
       const words = await arith(device, alloc, watchdog, abort, pipelines, 'derivative_policy', packRows(fx.derivativePolicy, v => [v.grow, v.dr, 0, 0]), 0, fx.derivativePolicy.length);
       slots.push({ slot: 'vectors', raw: { fits: fx.derivativePolicy.map((_, i) => words[4 * i]) }, timingMethod: CORRECTNESS_ONLY });
