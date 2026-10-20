@@ -167,6 +167,9 @@ export async function runSession({ gate, mode = 'headless', args = 'attempt1', c
   return { records, runDir, outcome };
 }
 
+// WebGPU remediation (prereg rev 2 §3.5): a G2 slot keeps its own document's acquisition log (each browser and the warm reload is a new document).
+const acquisitionsOf = result => (Array.isArray(result?.acquisitions) ? { acquisitions: result.acquisitions } : {});
+
 // G2: three fresh processes with fresh empty profiles; navigation first, chrome://gpu only after the measurement. Each run is inspected
 // for a stop immediately; if fresh-2 stops there is no warm reload; the shared classifier decides. Dependencies are injectable for tests.
 export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps = {}) {
@@ -196,13 +199,13 @@ export async function runG2({ args = 'attempt1', campaign = 'dev' } = {}, deps =
         const firstWait = await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 }), first = firstWait.result; live();
         if (firstWait?.supervision) await writeFile(resolve(runDir, `supervision-fresh-${i}.json`), JSON.stringify(firstWait.supervision));
         const firstInvalidations = [...(first.invalidations ?? []), ...(first.error ? [`page: ${first.error}`] : [])];
-        slots.push({ slot: `fresh-${i}`, raw: { ...(first.slots?.[0]?.raw ?? { error: first.error }), emptyProfile: 1, freshProcess: 1 }, invalidations: firstInvalidations, timingMethod: first.slots?.[0]?.timingMethod });
+        slots.push({ slot: `fresh-${i}`, raw: { ...(first.slots?.[0]?.raw ?? { error: first.error }), ...acquisitionsOf(first), emptyProfile: 1, freshProcess: 1 }, invalidations: firstInvalidations, timingMethod: first.slots?.[0]?.timingMethod });
         const stopNow = stopReasons({ invalidations: [...invalidations, ...firstInvalidations] }).length > 0;
         if (i === 2 && !stopNow) {                                                            // never reload after a stop
           live(); armWindow(page, 'G2/navigation'); await page.reload(); live();
           const warmWait = await d.waitResult(page, { gate: 'G2', runDir, deadlineMs: 60000 }), warm = warmWait.result; live();
           if (warmWait?.supervision) await writeFile(resolve(runDir, 'supervision-warm.json'), JSON.stringify(warmWait.supervision));
-          slots.push({ slot: 'warm', raw: warm.slots?.[0]?.raw ?? { error: warm.error }, invalidations: [...(warm.invalidations ?? []), ...(warm.error ? [`page: ${warm.error}`] : [])], timingMethod: warm.slots?.[0]?.timingMethod });
+          slots.push({ slot: 'warm', raw: { ...(warm.slots?.[0]?.raw ?? { error: warm.error }), ...acquisitionsOf(warm) }, invalidations: [...(warm.invalidations ?? []), ...(warm.error ? [`page: ${warm.error}`] : [])], timingMethod: warm.slots?.[0]?.timingMethod });
         }
         const commandLine = await d.effectiveCommandLine(launched.context); live(); assertSandboxed(commandLine);
         launchInfo = { args, requestedArgs: launched.requestedArgs, commandLine, profile: launched.profile, mode: 'headed', disclosures: launchDisclosures(launched.requestedArgs) };

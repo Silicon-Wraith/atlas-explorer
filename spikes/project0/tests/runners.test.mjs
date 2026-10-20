@@ -317,3 +317,17 @@ test('the ray-list timing descriptor states what workMs measures: queue completi
   const { TRACE_LIST_TIMING } = await import('../gpu/webgpu.js');
   assert.deepEqual(TRACE_LIST_TIMING, { kind: 'queue-completion', clock: 'page.performance.now', unit: 'ms', field: 'workMs', start: 'before the first batch is prepared', end: 'after the final onSubmittedWorkDone promise resolves', readbackIncluded: false, timestampQueriesUsed: false });
 });
+
+// WebGPU remediation (prereg rev 2 §3.5): each G2 browser's acquisition log reaches its own slot's raw, fresh and warm alike.
+test('G2: every fresh and warm slot keeps its own document\'s acquisition log', async () => {
+  const dir = await scratch(), counters = { reloads: 0 };
+  try {
+    const withLog = n => ({ ...ok(), acquisitions: [{ epoch: n, requestedFeatures: ['timestamp-query'], features: ['timestamp-query'], grantedFeatures: ['timestamp-query'] }] });
+    const { records } = await runG2({}, g2deps(dir, [withLog(1), withLog(2), withLog(3), withLog(4)], counters));
+    assert.deepEqual(records.map(r => r.slot), ['fresh-0', 'fresh-1', 'fresh-2', 'warm']);
+    for (const [i, r] of records.entries()) {
+      const raw = JSON.parse(await readFile(join(dir, `${r.id}.raw.json`), 'utf8'));
+      assert.deepEqual(raw.acquisitions.map(a => a.epoch), [i + 1], r.slot);
+    }
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});

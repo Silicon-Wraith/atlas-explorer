@@ -104,3 +104,13 @@ test('loadBaseline verifies the committed webgpu-1 campaign read-only and finds 
   const rows = b.records.map(r => [r.gate, r.identity.mode, featureComparison({ ...r }, { acquisitions: [acq(requestedFor(r.gate), [])] }, b).status]);
   assert.deepEqual(rows.filter(([, , s]) => s !== 'unavailable').map(([g, m]) => `${g} ${m}`), ['G1 headed']);
 });
+
+test('prereg §1: the original webgpu-1 evidence still verifies and recomputes under this change set, with no errors', async () => {
+  const { loadCampaign, loadFixtures } = await import('../qualify.mjs');
+  const { manifest, records, attempts } = await loadCampaign('docs/reports/project0/webgpu-1-manifest.json');
+  const { errors, featureComparison: rows } = await recompute([...records, ...attempts], await loadFixtures(manifest), { manifest, collect: true });
+  assert.deepEqual(errors, {});
+  assert.deepEqual(rows, [], 'attempt-1 launches are not under the remediation rules');
+  const g5 = records.find(r => r.gate === 'G5' && r.slot === 'qjulia-offplane');
+  assert.equal(g5.metrics.componentRatio, 2.7497713106862958, 'the original G5 failure recomputes unchanged');
+});
