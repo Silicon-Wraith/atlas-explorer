@@ -1,17 +1,19 @@
-# Project 1 — Foundations (1a) and Space (1b)
+# Project 1 — Foundations (1a), Space (1b) and Space deep zoom (1c)
 
 **Status:** **approved by the user on 2026-10-20** (rev 3.2, including charter amendment A1, approved after review; the 1a implementation plan is `docs/superpowers/plans/2026-10-20-project1a-foundations-plan.md`), with answers to four §19 questions that
 affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera history is separate
 from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
 compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
 (4) one Discoveries control, filtered per workspace and fed by discovery sources, with only the
-local source built in Project 1 (§13.10). · **Date:** 2026-10-20 · **Revision:** 3.2 (rev 2 was
-Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply Codex's co-author reviews)
+local source built in Project 1 (§13.10). · **Date:** 2026-10-20 · **Revision:** 4 (rev 2 was
+Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply Codex's co-author reviews;
+rev 4 adds Project 1c, Space deep zoom, by the user's decision "Yes, add deep zoom as 1c in Project 1."
+(2026-10-20) — §21; rev 4 is a draft amendment awaiting the user's review)
 **Authors:** Claude and Codex, co-designed as peers. The verbatim exchange is archived in
 `docs/codesign/project1-log.md`, a project-specific log kept beside the protocol's
 `docs/codesign/conversation-log.md` (which holds the charter and Project 0 co-design).
-**Governed by:** `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`, including amendment
-A1 recording the user's decision of 2026-10-20. A1 removes compatibility obligations for earlier
+**Governed by:** `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`, including amendments
+A1 and A2 recording the user's decisions of 2026-10-20. A1 removes compatibility obligations for earlier
 artefacts. The remaining charter requirements, including preservation of requested Plane parameters
 and disclosure of effective Space precision, continue to apply. Section references like "charter
 §3.4" point there.
@@ -20,14 +22,18 @@ backend and its qualified arithmetic (§2).
 
 ## 1. Problem and outcome
 
-The charter outlines Project 1 as two parts sharing one acceptance demonstration:
+The charter outlines Project 1 (with amendment A2) as three parts:
 - **1a, Foundations:** Plane moved without behaviour change, versioned scenes, undoable scene
   commands with a separate camera history, immutable render requests with truthful outcomes and
   reports, and the Discoveries control over a local discovery store.
 - **1b, Space:** a 3D workspace for the Mandelbulb and the quaternion Julia set, delivered in three
   usable milestones.
+- **1c, Space deep zoom** (user decision, 2026-10-20): after 1b, extend Space's validated detail
+  range using high-precision coordinates, reference orbits and family-specific GPU evaluation. A
+  bounded precision spike establishes the supported families, numerical formulations and tested
+  domains before product integration (§21).
 
-This spec fixes the scope, contracts and verification of both. It authorizes no implementation.
+This spec fixes the scope, contracts and verification of all three. It authorizes no implementation.
 Implementation of each part follows a user-approved plan.
 
 ## 2. Relationship to Project 0
@@ -80,6 +86,8 @@ Each release is usable on its own.
 | **1b.1 — Render and recover** | Explore the calibration objects, Mandelbulb and quaternion Julia; orbit and basic flight; recover from bad camera positions, cancellation, allocation failure and device loss; save and reopen scene JSON. Estimator category, pending marks and distinct statuses are present from this release. |
 | **1b.2 — Connect and inspect** | Pick a parameter in Plane and open its quaternion Julia set; compare the invariant section with the independent complex-Julia instrument; inspect an orbit; read the precision indicator. |
 | **1b.3 — Complete the workflow** | Scoped presets, saved compositions, discovery cards, viewport and 4K PNG export with companion scene and report. |
+| **1c.0 — Precision spike** (feasibility milestone, not a product release) | A preregistered, bounded feasibility study per family and numerical profile, with a go / partial / no-go decision report for the user (§21.2). |
+| **1c.1 — Deep zoom** | For each family the spike qualified: deep navigation, anchored tracing, deep inspection, discovery reload and immutable export within the frozen deep matrix (§21.3–§21.6). |
 
 | Acceptance step (charter §4) | Works from |
 |---|---|
@@ -96,6 +104,9 @@ criterion, run as one recorded investigation, headed, on the physical GPU. It in
 edit that visibly changes the scene and an undo that restores it. Reload must restore the scene,
 the selected point, the inspector settings and the effective numerical parameters, not merely a
 similar-looking camera.
+
+1c does not change this demonstration or make 1b incomplete. It has its own recorded deep
+investigation as its exit criterion (§21.6).
 
 ## 4. Architecture
 
@@ -226,14 +237,23 @@ A scene describes an experiment. Runtime state describes its execution and is no
   policy is named and versioned: `plane-detail-zoom-v1` =
   `[512, 1024, 2048, 4096, 8192, 16384][detail] + max(0, ceil((zoom − 3) · 32))` (today's
   `app.js:85`).
-- **Space camera:** `{ kind: "perspective", position, orientationWxyz, focus, verticalFovDegrees }`,
-  CPU doubles. World Z defines up. Orbit and basic flight use upright navigation without a
+- **Space camera:** `anchored-perspective-v1` (rev 4, so that 1b and 1c share one representation):
+  `{ kind: "anchored-perspective-v1", anchor: [x, y, z] exact decimal strings, scale: { mantissa,
+  exponent } (a normalized finite mantissa and a bounded integer binary exponent), positionLocal,
+  focusLocal: three CPU doubles each, orientationWxyz, verticalFovDegrees }`. The represented world
+  position is `anchor + scale × positionLocal`. CPU navigation performs the anchor arithmetic at
+  controlled high precision; recentring preserves represented positions to a declared bound and never
+  reconstructs a world position through a single `Number`. Ordinary Space (1b) uses the same
+  representation at modest scales while its field evaluator stays binary32. The representation is
+  defined before 1b implementation, so introducing 1c does not require a camera-format migration. World Z defines up. Orbit and basic flight use upright navigation without a
   dedicated roll control. The orientation control may set a full camera orientation; axis
   constraints and orientation reset remain available. Serialization preserves the orientation.
-- **Space parameters:** requested values are decimal strings (for example
-  `C: ["-0.2", "0.8", "0", "0"]`, `kappa: "0"`, `power: "8"`). Render preparation derives effective
-  binary32 values and their bit patterns. Effective values appear in requests, reports and
-  inspection results beside the requested strings, and never overwrite them.
+- **Space parameters:** requested values remain decimal strings (for example
+  `C: ["-0.2", "0.8", "0", "0"]`, `kappa: "0"`, `power: "8"`). Ordinary-profile preparation derives
+  effective binary32 values and bit patterns. Deep-profile preparation derives the effective
+  parameter representation specified by its qualified numerical profile (§21.5). Requests, reports
+  and inspection results identify that representation and its precision beside the requested
+  strings; effective values never overwrite requested values.
 
 ## 6. Commands and history
 
@@ -465,11 +485,16 @@ destroy()
 ## 10. Numerics and precision
 
 ### 10.1 Representation
-Camera and scene state are CPU doubles. GPU fields are binary32. Kernels receive camera-relative
-values. Camera-relative transport does not translate the mathematical model: before recurrence
-evaluation, the effective field input represents the point in the model's native coordinates.
-Navigation precision, field precision and rendering tolerance are three separate problems
-(charter §3.5); camera-relative coordinates address only the first.
+Space cameras use the anchored representation in §5.2. Anchor arithmetic uses controlled high
+precision; local camera coordinates, orientation and field of view use CPU doubles. Ordinary Space
+evaluates fields in binary32. Qualified 1c profiles use the reference, perturbation and range
+representations specified by §21; their use of binary32 components does not require collapsing a
+represented point into one binary32 value.
+
+Camera-relative transport does not translate the mathematical model: recurrence inputs represent
+points in the model's native coordinates. Navigation precision, field precision and rendering
+tolerance remain separate problems. Neither the anchored camera nor camera-relative transport alone
+establishes field accuracy.
 
 ### 10.2 WGSL floating-point rules
 WGSL permits reassociation and fusion, and permits implementations to assume runtime infinities
@@ -515,7 +540,10 @@ recurrence D ← 8D + 1 from 0 first exceeds the binary32 maximum at update 44).
 
 ### 10.5 Precision indicator and tested conditions
 - Space promises **validated detail ranges**, never infinite zoom, and never a universal f32 zoom
-  floor. Each family has validation records bound to the product implementation, profile and
+  floor. Outside recorded coverage, the badge reports which tested condition is exceeded or that no
+  matching validation exists. Coordinate collapse, sample collapse and stagnation are reported
+  separately when observed; they are not inferred merely from being outside coverage. It never
+  blocks navigation. Each family has validation records bound to the product implementation, profile and
   effective inputs (§16.2). Project 0's precision results inform these experiments but do not
   automatically validate a changed product kernel or profile.
 - The viewport badge reads **within tested conditions**, **outside tested conditions** or
@@ -903,10 +931,11 @@ Project 1 does not reinterpret Project 0's G1 requirements.
 
 ## 17. Deferred
 Temporal reprojection, path tracing, volumetrics and meshing (charter); Mandelbox; fractional and
-higher bulb powers; arbitrary 4D slice rotations; section clipping and cut faces; deep 3D
-compensation or perturbation research (a qualified recurrence correction is distinct from this
-deeper-precision research);
-estimator-scaled flight assist (unless it proves useful); inertia and collision; general render
+higher bulb powers; arbitrary 4D slice rotations; section clipping and cut faces; for 1c (§21):
+general formula perturbation, reference reuse across parameter changes and speculative reference
+prediction, a general GPU arbitrary-precision framework, a second runtime backend or an interactive
+CPU Space fallback, and unlimited depth, universal accuracy claims or guaranteed performance at every
+admitted depth; estimator-scaled flight assist (unless it proves useful); inertia and collision; general render
 queues; tiled giant stills; parameter maps, variations and publication animation.
 
 **User-stated future direction (2026-10-20), outside Project 1:** a landing page that presents the
@@ -924,6 +953,12 @@ own spec (hosting, identity, moderation, privacy and trust of remote records) an
 - Loss-recovery and stale-result races → explicit epochs and revisions; fake-backend tests.
 - WebGL 2 and WebGPU contexts coexisting in one page → verified early in 1b.1.
 - Pipeline preparation time → prepared before interaction, measured.
+- 1c: compiler transformations of compensated arithmetic → treated as candidates, validated on the
+  compiled backend; poorly conditioned reference differences and reference upload error → derived
+  error analysis; reference proliferation across a 3D ray workload and preparation cost → bounded
+  reference jobs and separate budgets; derivative error amplification → spike stage 2; bulb
+  singularities → family-specific spike; coordinate collapse in downstream passes (normals, shadows,
+  depth, picking) despite a correct orbit kernel → the anchored representation everywhere (§21.5).
 
 ## 19. Questions for the user
 
@@ -939,8 +974,11 @@ own spec (hosting, identity, moderation, privacy and trust of remote records) an
   local discoveries and shared discoveries served from an API that is centrally hosted?" Applied as
   §13.10, with the landing page and shared API recorded in §17.
 
+- **Deep zoom** (2026-10-20): "Yes, add deep zoom as 1c in Project 1." Applied as §21 and charter
+  amendment A2.
+
 ### 19.2 Open
-These affect only 1b; the architecture supports either answer to each.
+These affect only 1b and 1c; the architecture supports either answer to each.
 2. **Space's initial look:** neutral inspection or atmospheric exploration? Both remain available as
    presets.
 3. **Bridge flow:** should the bridge open the linked instruments immediately, or offer a compact
@@ -949,6 +987,12 @@ These affect only 1b; the architecture supports either answer to each.
    preserved regardless.)
 6. **Space share URLs** in Project 1, or files and discovery cards only? (Plane's native share links
    exist from 1a regardless.)
+9. **USER DECISION — partial deep zoom:** if the Mandelbulb spike is partial or no-go, may 1c ship
+   quaternion-Julia deep zoom while the bulb stays at ordinary precision (recommended), or must 1c
+   wait for both families?
+10. **USER DECISION — deepest-range interaction:** at the deepest supported settings, is progressive
+    exploration with visible reference-preparation pauses acceptable (recommended), or is
+    continuous interactive motion a release requirement?
 
 ## 20. Revision triggers
 None of these affects 1a.
@@ -961,11 +1005,141 @@ None of these affects 1a.
   fragment); `HANDOFF.md` records that these addressed the observed GLSL driver issue. They are
   candidates for investigation, not established WGSL arithmetic barriers, and remain subject to the
   preregistered error analysis (§10.2).
-- **Project-0-dependent (1b, §10.5, §17):** per E9, Space's deep zoom is to be addressed by
-  perturbation, as in ATLAS 2D, not by qualification. §17 defers "deep 3D compensation or
-  perturbation research"; when Project 0 closes, the spec is amended to place Space perturbation
-  either in a 1b milestone or in a named later project, and §10.5's validated detail ranges are
-  revisited accordingly. This relayed product direction changes no Project 0 inputs, gates or
-  evidence. Placement in 1b or a later project requires an explicit scope amendment and
-  family-specific independent validation before any deeper-detail promise.
+- **1c (resolved by rev 4):** E9's direction — Space deep zoom by perturbation, as in ATLAS 2D — is
+  placed in Project 1c (§21), gated on Project 0's recorded backend and arithmetic decision. It
+  changes no Project 0 inputs, gates or evidence. The 1c.0 spike result is a revision trigger: the
+  spec is amended to record each family's go / partial / no-go outcome and its numerical profile
+  before 1c.1 is planned.
 - Any user answer in §19.2 that changes scope: amend §3 and the affected sections.
+## 21. Project 1c — Space deep zoom (rev 4; user decision, 2026-10-20)
+
+### 21.1 Placement and gates
+- 1c follows 1b.3 and never delays 1b or its acceptance demonstration.
+- It starts only after Project 0 records its selected backend and arithmetic formulation. That
+  record is a prerequisite, not evidence that 1c's additional formulations work. A failed 1c
+  experiment does not reopen Project 0 or block the ordinary-precision 1b release.
+- Mathematical preparation (derivations, independent references) may begin earlier; compiled-backend
+  experiments need the selected backend and an available GPU (§2 isolation still applies).
+- 1c.0 and 1c.1 each follow a user-approved plan. 1c.1 is planned only after the spike's decision
+  report has been reviewed by the user (§19.2 Q9).
+- **Relationship to ordinary profiles:** §7.6's work limits and elapsed-work budgets, §10.3's
+  Project-0-derived arithmetic, §13.3–§13.6's CPU-double/binary32 evaluation paths, and §16.2/§16.4's
+  workload and performance targets describe ordinary Space. Deep profiles replace the applicable
+  numerical representations, evaluator paths and budgets through §21's qualified profile. Shared
+  lifecycle, publication, status, cancellation, export and allocation rules continue to apply. No
+  deep-profile limit is inferred to be unbounded.
+
+### 21.2 1c.0 — the bounded precision spike
+A disposable, preregistered study, never imported by `src/`. Sample sets, error criteria, work
+limits and the maximum number of candidate revisions are frozen before any GPU measurement: one
+candidate and one bounded remediation cycle per family; further research needs a recorded amendment.
+
+| Stage | Required result |
+|---|---|
+| 1. Arithmetic | Compiled primitives preserve the identities and error bounds their algorithms require, including cases where the low component changes the answer. Normal-range compensation is tested separately from exponent extension; deep range never depends on subnormals surviving (WGSL may flush them). |
+| 2. Field evaluation | Complete perturbed orbits, escape classifications and sensitivity/estimator values agree with independent higher-precision references within preregistered bounds. |
+| 3. Deep tracing | Anchored rays, rebasing, hit decisions, normals and depth readback keep meaningful distinctions beyond ordinary precision. |
+| 4. Cost and recovery | Reference preparation, GPU work, memory, cancellation and recovery fit explicit budgets. |
+
+- **Arithmetic candidate:** ATLAS 2D's runtime `u_round` factor and bitwise split, ported as
+  `bitcast<f32>(bitcast<u32>(x) & 0xfffff000u)`. It is a candidate, not a WGSL rounding guarantee:
+  WGSL permits reassociation and fusion around it (Project 0 precision note). Evidence is bound to
+  the shader, pipeline, uniform values and available device and browser identity; a failing
+  arithmetic self-check makes that numerical profile unavailable.
+- **Outcomes, per family and numerical profile:** **go** — every stage passes for the frozen domain
+  with useful detail beyond the ordinary renderer; **partial** — a named subset passes (for example
+  quaternion Julia, or selected bulb powers or domains), failed coverage stays explicit; **no-go** —
+  correctness or useful cost cannot be established; the report and the ordinary renderer remain, and
+  nothing is silently substituted (no double CPU evaluation, dropped assertions or enlarged
+  tolerances). An extended-exponent claim needs passing cases beyond ordinary binary32 delta range;
+  an arbitrary-precision positioning claim needs cases where absolute binary64 coordinates collapse.
+- **Exit:** a decision report, reviewed by both peers and given to the user.
+
+### 21.3 Family formulations
+- **Quaternion Julia (primary candidate).** With reference Qₙ₊₁ = Qₙ² + C_ref, actual qₙ = Qₙ + δₙ
+  and C = C_ref + ΔC: δₙ₊₁ = Qₙδₙ + δₙQₙ + δₙ² + ΔC. The non-commutative terms are essential (for
+  Q = i, δ = j: Qδ + δQ = 0, whereas 2Qδ = 2k). The first product version ties references to the
+  current C; editing C rebuilds them. The spike also covers: reference representation error
+  (uploading a high-precision orbit as finite components, with its rounding and residuals in the
+  error analysis); rebasing that preserves the represented point and the actual iteration count
+  (δ′ = δ + Qᵢ − Rⱼ at the selected indices — Plane's reset-to-zero rule does not transfer, because
+  a Julia reference does not generally start at zero); and bounded replacement when a reference escapes early,
+  becomes poorly conditioned or runs out, never silently restarting the orbit or its derivative.
+- **Mandelbulb (separate feasibility).** δₙ₊₁ = P_p(Qₙ + δₙ) − P_p(Qₙ) + Δx must be evaluated without
+  moving the cancellation into the power-map subtraction: a stable difference formulation of the
+  specified spherical power map, or a bounded higher-order expansion only if its remainder and
+  applicability are controlled. A Jacobian-only update is an approximation whose neglected terms
+  cannot be ignored. Cases: the origin, the polar axis, the azimuth seam, small transverse offsets and
+  transitions between applicable regions. The independent reference supports the required
+  high-precision transcendental operations. Powers 2–8 have separate evidence; power 8 qualifies only
+  power 8. Delivery is quaternion-first, bulb conditional on its spike result (§19.2 Q9).
+
+### 21.4 Sensitivity, estimator and deep tracing
+- Sensitivity is in the spike's scope. For quaternion Julia's scalar sensitivity, with d = D + η,
+  R = ‖Q‖ and Δr = ‖Q + δ‖ − R: η′ = 2Rη + 2Δr·D + 2Δr·η, and, where the denominator is nonzero,
+  Δr = (2⟨Q, δ⟩ + ‖δ‖²) / (‖Q + δ‖ + ‖Q‖). These are candidates; the spike compares the perturbed
+  form with direct scaled/log accumulation of the actual sensitivity. η and Δr are signed
+  corrections; §10.4's nonnegative representation applies to the actual and reference
+  sensitivities. Both forms preserve the zero state (§10.4), avoid overflow and carry the actual orbit's derivative history across rebasing.
+- The estimator stays **heuristic and exterior-only**; better arithmetic does not make it a
+  conservative distance.
+- A separately versioned deep tracing profile replaces `surface-v1`'s fixed 10⁻⁶ floor: a
+  pixel-footprint tolerance in scaled or log form; an estimate too uncertain for the decision yields
+  unresolved or bounded higher-precision work; no forced minimum step, fabricated zero estimate or
+  manufactured hit; ray parameter, advancement and stagnation in the anchored representation; normal
+  offsets, shadow biases, AO distances and depth reconstruction under the same scale policy. A small
+  local ray parameter is not the distance from the camera.
+
+### 21.5 Representation and product integration
+- **Scenes:** the anchored camera (§5.2) plus a versioned numerical profile and requested precision
+  and resource settings. Requested C and κ strings stay authoritative; 1c evaluates parameters at
+  high precision, and a mode that still evaluates rounded binary32 C says so. Escape bounds come from
+  the parameters actually evaluated, outward-rounded. Deep picked points and inspection inputs are
+  stored anchored or exact. Reference arrays and GPU resources never enter scenes; reports identify
+  their generator, precision, representation and content. Lexical size and exponent checks precede
+  any BigInt allocation, with Space's own measured resource limits.
+- **Modules:** Space-owned `space/precision/` (coordinates, reference orbits, perturbation, deep
+  validation). The shared scheduler keeps admission and lifecycle only.
+- **Reference jobs:** bounded worker jobs with generation identities, explicit precision and iteration
+  limits, cancellation and classified failures. (Plane's worker computes references synchronously;
+  that structure is not copied.)
+- **Requests and reports** add the numerical profile, anchor and scale, effective parameter
+  representation, reference identity and precision, and rebase policy; resource accounting adds CPU
+  reference memory and preparation time. Epoch, stale-result, export and 1 GiB GPU rules still apply.
+- **Instruments:** the deep inspector and the invariant-section comparison use evaluators that can
+  represent deep inputs; widening a collapsed binary32 point to double verifies nothing. Deep
+  comparisons freeze one shared set of represented starting points, effective parameters, bailout and
+  iteration settings, and both evaluators consume those same inputs. Camera classification,
+  inspection and slice results identify their evaluator and input precision; an ordinary-precision
+  result is never presented as a current deep-profile measurement.
+- **Identity:** reference caches identify the model, effective parameters, reference anchor,
+  precision, iteration coverage, generator version and stored representation. Resolved geometry
+  dependencies include the numerical profile and the reference and rebase inputs that can affect
+  results; changes follow §7.2's revision and accumulation rules. Runtime job identities stay distinct
+  from content identities.
+
+### 21.6 Verification and acceptance
+- Three independent layers: arithmetic and recurrence against direct high-precision evaluation
+  independent of production code (exact identities where they apply, reference convergence or
+  bounded uncertainty elsewhere); estimator and tracing (sensitivity comparisons, independently
+  prepared rays, convergence studies, silhouette, depth and normal checks, explicit unresolved
+  coverage); and the complete workflow (deep navigation, picking, parameter edit and undo, camera
+  history, discovery reload, immutable viewport and 4K export).
+- A **frozen deep matrix**, prepared before GPU comparison: a depth ladder with independently prepared
+  anchors; full quaternion components and nonzero κ (invariant-plane cases as a subset); reference
+  cancellation, upload precision, early escape and rebase boundaries; zero sensitivity, exponent
+  extremes, component imbalance and lost low parts; every claimed bulb power and its singular-region
+  policy; adjacent pixels and AA samples that collapse in the ordinary representation; viewport and
+  export sampling; device loss, stale reference completion, cancellation and resource exhaustion.
+  Reference uncertainty is reported; unresolved reference cases never count as passes.
+- **Budgets:** 1c does not inherit 1b's frame-rate and settled-image targets; separate preparation,
+  interaction and refinement budgets, with cold- and warm-reference trials, are frozen before
+  acceptance (subject to §19.2 Q10).
+- **Product validation:** the spike qualifies a candidate formulation; the product implementation must
+  reproduce the applicable frozen numerical and tracing checks before it receives a product
+  validation record.
+- **Exit:** one recorded deep investigation per qualified family, including a witnessed improvement
+  over the ordinary path on matched inputs (not merely navigation outside its previously tested
+  domain), headed, on the physical GPU: navigate
+  beyond the ordinary renderer's tested limits, inspect a point, edit a parameter and undo, save a
+  discovery, reload and reproduce, export.
