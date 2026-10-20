@@ -993,6 +993,12 @@ These affect only 1b and 1c; the architecture supports either answer to each.
 10. **USER DECISION — deepest-range interaction:** at the deepest supported settings, is progressive
     exploration with visible reference-preparation pauses acceptable (recommended), or is
     continuous interactive motion a release requirement?
+    **User answers (2026-10-20):**
+    - **Q9:** yes. 1c may ship quaternion-Julia deep zoom while the bulb stays at ordinary
+      precision.
+    - **Q10:** the 1c spike proposes the reference-preparation pause budgets (typical and deepest)
+      for the user's approval before acceptance. The user's stated expectation is that pauses are
+      "way lower than a second".
 
 ## 20. Revision triggers
 None of these affects 1a.
