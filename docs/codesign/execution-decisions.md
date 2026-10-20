@@ -162,3 +162,35 @@ backend.
 - **Unchanged:** the tolerances, the sensitivity screen and the plane gate.
 - **Rendering depth:** Space's deep zoom is addressed by perturbation (as in ATLAS 2D), not by
   qualification.
+
+## E10 — WebGPU selected by user decision (user, 2026-10-20)
+
+**The user's decision, verbatim:** "Select WebGPU now. That is my decision."
+
+**The evidence it rests on:** `webgpu-g5d` (the E8 attempt, at f754534; evidence committed at ae0871d).
+- **Pass:** G1, G2, G3, G4, G5 (as amended by E8 and E9: operational 223/223, worst componentRatio
+  0.192; plane 0.2745), G8, G10, G11, G12 (60 cycles, 0 deadline misses) and G13.
+- **G6, G7 and G9 are invalid/inconclusive.**
+  - G7/1 request 160 was issued 4.30 ms late, against the harness's 4 ms issuance limit; the cause
+    is not established. That ended the timing invocation, so G7/2 and G9 were never produced.
+  - Every G6 metric lay within its limit (intervalP95 8.6–9.4 ms), but G6 shares the invalidated
+    invocation.
+
+**How the tooling's output relates to this decision:**
+- The frozen decision procedure, applied mechanically, yields "inconclusive". That computed result
+  is recorded unchanged and is not overwritten.
+- The selection is the user's decision. It is recorded as such and is never described as a
+  mechanical qualification.
+
+**Carried limitations, disclosed in T13:**
+- G6, G7 and G9 are not qualified (a harness timer-issuance problem).
+- Headless execution is not required (E7); the Chrome 151 headless GPU-process crash remains a
+  known limitation.
+- G5 passes only as amended (E8, E9). S3 long-escape orbits are not validated at f32 input
+  precision. The 2.7498 (webgpu-1) and 4.7449 (G5-A) failures stand.
+- G5-A compensation was defeated by compiler reassociation.
+
+**Consequences:**
+- Project 1's provisional WebGPU assumption (E6) is confirmed.
+- Project 0 proceeds to T12 (the precision experiment) and T13 (the report).
+- Space deep zoom is Project 1c.
