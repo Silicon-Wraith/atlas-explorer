@@ -23,7 +23,7 @@ The evidence is the final campaign, `webgpu-g5d`: implementation f754534, all ga
 | G4 Mandelbulb arithmetic | pass | deRatio 0.062, logRRatio 0.790 |
 | G5 quaternion arithmetic | pass **as amended (E8, E9)** | operational orbits 223/223, worst componentRatio 0.192; plane logRRatio 0.274 |
 | G6 sustained frame rate | **invalid/inconclusive** | all nine windows within limits (interval P95 8.6–9.4 ms), but they share the invalidated timing invocation |
-| G7 interaction latency | **invalid/inconclusive** | trial 0 passed (P95 9.6 ms); trial 1 was rejected because a request was issued 4.30 ms late (limit 4 ms); trial 2 was never run |
+| G7 interaction latency | **invalid/inconclusive** | trial 0 met its limit (P95 9.6 ms) but carries the invocation invalidation; trial 1 was rejected because a request was issued 4.30 ms late (limit 4 ms); trial 2 was never run |
 | G8 stress latency | pass | 16–20 ms |
 | G9 main-thread attribution | **invalid/inconclusive** | never produced |
 | G10 view preparation | pass | 10–40 ms |
@@ -42,6 +42,8 @@ The evidence is the final campaign, `webgpu-g5d`: implementation f754534, all ga
   - Long-escape (S3) orbits are not validated at f32 input precision. They were measured as a diagnostic only.
   - The original failures stand under their own contracts: 2.7498 for the eight-iterate continuation (webgpu-1) and 4.7449 for the G5-A remediation.
 - **G5-A compensated arithmetic was defeated by compiler reassociation.** The TwoSum error term was eliminated, so compensated binary32 arithmetic is not available on this path.
+- **G1 identity depends on a developer flag.** G1 identity corroboration was collected only under `--enable-webgpu-developer-features`, plus the launcher's default `--enable-unsafe-swiftshader`. Neither flag is claimed as a product runtime requirement, and dependence on `--enable-unsafe-swiftshader` was not tested.
+- **Full carry-forward list:** [carry-forward.md](carry-forward.md).
 
 ## Carry-forward: the harness timer defect
 
@@ -56,6 +58,8 @@ The evidence is the final campaign, `webgpu-g5d`: implementation f754534, all ga
 - record rearm counts and long-task entries, including on failure.
 
 ## Records
+
+**History must not be rewritten.** The evidence provenance is bound to commit ids (`bd978e6`, `448d5ff`, `f754534`, `4465b3c`, `ff11b35`, `31fde5f`, `5638678`): the tools resolve them with `git show`, `git ls-tree` and `git merge-base --is-ancestor`. This history must therefore be merged with a merge commit (or fast-forwarded) and never squashed or rebased.
 
 **Decisions:**
 - `docs/codesign/execution-decisions.md`, decisions E1–E10.

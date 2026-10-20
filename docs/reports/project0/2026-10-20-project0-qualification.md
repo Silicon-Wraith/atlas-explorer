@@ -109,4 +109,4 @@ Superseded evidence (listed, not used):
 ---
 
 <!-- Appended by hand after generation; everything above this rule is the report tool's output, byte-identical. Regeneration drops this trailer. -->
-**Narrative.** The environment, remediation history, visible-output captures, interpretation and limitations are in the companion document [2026-10-20-project0-qualification-narrative.md](2026-10-20-project0-qualification-narrative.md) (draft for joint review).
+**Narrative.** The environment, remediation history, visible-output captures, interpretation and limitations are in the companion document [2026-10-20-project0-qualification-narrative.md](2026-10-20-project0-qualification-narrative.md) (reviewed jointly; Codex co-author READY, run 20261020T205527Z-6c6b; final review done; pull request pending).

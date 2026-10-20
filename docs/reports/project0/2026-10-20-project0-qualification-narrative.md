@@ -1,6 +1,6 @@
 # Project 0 — Qualification report: narrative
 
-**Status:** Claude's draft for joint review with Codex (T13 Step 5). It is not yet approved by the co-author.
+**Status:** reviewed jointly; Codex co-author READY (run 20261020T205527Z-6c6b). The final whole-branch review is done, and the pull request is pending.
 
 **Companion to:** [2026-10-20-project0-qualification.md](2026-10-20-project0-qualification.md) and [2026-10-20-project0-results.json](2026-10-20-project0-results.json). `spikes/project0/report.mjs` generated both from the verified evidence:
 
@@ -54,6 +54,7 @@ The final campaign is `webgpu-g5d` at implementation `f754534`, recorded in [web
 - **Not `--enable-unsafe-webgpu`.** `--enable-unsafe-swiftshader` is a different flag. `--enable-unsafe-webgpu` does not appear in the launch file or in the `chrome://gpu` capture. The adapter was hardware, not SwiftShader (above).
 - **No dependence on `--enable-unsafe-webgpu`.** The results JSON records `unsafeFlag: false`, so the selected evidence does not depend on that flag. `unsafeFlag: false` refers specifically to `--enable-unsafe-webgpu`, which is absent from all 68 inventory launch command lines. It does not mean the command line contains no switches named "unsafe". The effective launch includes `--enable-unsafe-swiftshader`, in all 68 launch captures, while the selected adapter is NVIDIA hardware. Dependence on that switch was not tested.
 - **Disclosed by the launch file:** developer features are on, and browser timestamp quantization is disabled.
+- **Flag dependence of G1.** The G1 identity evidence depends on the launch flags. Both G1 passes (webgpu-remediation and webgpu-g5d) were collected only under `--enable-webgpu-developer-features`, which exposes the selected adapter's extended `adapterInfo` fields (`backend`, `type`, `device`) that G1's corroboration requires. The one headed G1 run without that flag (webgpu-1, `bd978e6`) was invalid/inconclusive with an empty adapter device. Implementation changes between those runs mean the flag's effect was not isolated. All 124 saved launch command lines, including every G1 launch, also carry the launcher's default `--enable-unsafe-swiftshader`; dependence on it was not tested. Neither flag is claimed as a product runtime requirement, and Project 1 must not inherit either one silently ([carry-forward.md](carry-forward.md)).
 
 **Features: advertised, requested, granted, used.**
 - **Advertised.** The G1 adapter advertises 18 features, among them `timestamp-query` and `subgroups`.
@@ -86,7 +87,8 @@ The final campaign is `webgpu-g5d` at implementation `f754534`, recorded in [web
 - **Implementation identities.** The generated report lists all five as authenticated: `bd978e6`, `448d5ff`, `f754534`, `4465b3c` and `ff11b35`.
 - **Inputs.** The three campaign manifests are [webgpu-1-manifest.json](webgpu-1-manifest.json), [webgpu-remediation-manifest.json](webgpu-remediation-manifest.json) and [webgpu-g5d-manifest.json](webgpu-g5d-manifest.json). The generated [results JSON](2026-10-20-project0-results.json) holds the hashes of the input files it read (`files`).
 - **The 68-record inventory.** The results JSON `records[]` array holds 68 records: webgpu-1 13, webgpu-remediation 12, webgpu-g5d 41, accepted precision 1 and superseded precision 1. For each record it lists the campaign, role, gate, slot, mode, invalidations, metrics, full identity, and artifact paths with SHA-256 hashes. It is the verified inventory; this narrative does not restate it.
-- **Local evidence.** The raw payloads, launch captures, `chrome://gpu` text, supervision and checkpoint files, and images under `artifacts/project0/` are git-ignored. The repository records their hashes (records, manifests, results JSON), not their bytes. Regenerating the report needs that local evidence as well as the repository and its history. The report tool also requires Git, and it fails rather than skip provenance checks.
+- **Local evidence.** The raw payloads, launch captures, `chrome://gpu` text, supervision and checkpoint files, and images under `artifacts/project0/` are git-ignored. The repository records their hashes (records, manifests, results JSON), not their bytes. Regenerating the report needs that local evidence as well as the repository and its history. The report tool also requires Git, and it fails rather than skip provenance checks. The 19 tests that read this evidence (in `report.test.mjs`, `precision-t12.test.mjs`, `qualification-e7.test.mjs`, `g5d-qualification.test.mjs` and `remediation-features.test.mjs`) skip with a stated reason when it is absent. A clean clone therefore runs 493 of the 512 tests, and only a checkout with the evidence runs all 512.
+- **History.** The provenance checks resolve the recorded commit ids in Git, so this history must be merged with a merge commit and never squashed or rebased ([platform-decision.md](platform-decision.md#records)).
 
 ## 4. Campaign and remediation history
 
@@ -290,4 +292,5 @@ These are costs of the instrumented prototype. See the precision record's `timin
 - **Projects 1a/1b** follow the E10 selection, which confirms E6's provisional assumption.
 - **Precision research** belongs to Project 1c, through the fractal iteration itself, such as perturbation against a high-precision reference orbit.
 - **Not to be drawn from this evidence:** 10⁻⁵ must not become a universal camera clamp, and A.11 must not be enabled generally.
-- **Next steps:** after the joint review of this report with Codex, the verbatim exchanges are archived in `docs/codesign/conversation-log.md` and `docs/codesign/plan-log.md`, and the planned handoff to the user follows.
+- **Carry-forward list:** the known limitations, deferred minor defects and test-hygiene notes for Project 1 are archived in [carry-forward.md](carry-forward.md).
+- **Status:** the joint review with Codex is complete (co-author READY, run 20261020T205527Z-6c6b), and the verbatim exchanges are archived in `docs/codesign/conversation-log.md` and `docs/codesign/plan-log.md`. The final whole-branch review is done, and the pull request is pending.

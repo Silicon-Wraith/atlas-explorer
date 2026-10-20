@@ -2,6 +2,7 @@
 // compensated-form declaration, the unchanged feature-request policy over every recorded acquisition, the attempt-1 granted-set comparison
 // (equal / differs / unavailable, never inferred), and their enforcement in qualify.mjs recompute. CPU only; fixtures under artifacts/runtime.
 import test from 'node:test';
+import { readFileSync, existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
@@ -10,6 +11,12 @@ import { sha256, launchIdentity } from '../evidence.mjs';
 import { acquisitionProblems, featureComparison, remediationRecordProblems, requestedFor } from '../remediation/evidence-rules.mjs';
 import { COMPENSATED_FORM } from '../remediation/validate.mjs';
 import { recompute } from '../qualify.mjs';
+
+// Tests that read the git-ignored local evidence (artifacts/project0: the webgpu-1 and webgpu-remediation run directories) skip with a
+// reason when it is absent, as report.test.mjs and precision-t12.test.mjs do, so a clean clone does not fail on it.
+const EVIDENCE_SKIP = ['webgpu-1', 'webgpu-remediation']
+  .flatMap(c => JSON.parse(readFileSync(join(ROOT, `docs/reports/project0/${c}-manifest.json`), 'utf8')).runDirs)
+  .every(d => existsSync(join(ROOT, 'artifacts/project0', d))) ? false : 'the git-ignored raw evidence (artifacts/project0) is not present';
 
 const acq = (requested, available, granted = requested.filter(f => available.includes(f))) => ({ requestedFeatures: requested, features: available, grantedFeatures: granted, epoch: 1 });
 const REM = { requestedArgs: ['--enable-gpu', DEVELOPER_FLAG] }, A1 = { requestedArgs: ['--enable-gpu'] };
@@ -80,7 +87,7 @@ test('the driver registry returns the document\'s acquisition log with every res
   assert.match(src, /return \{ \.\.\.result, acquisitions: acquisitionLog\(\) \};/);
 });
 
-test('the campaign refuses the remediation configuration without the attempt-1 baseline, and loads it before the preflight', async () => {
+test('the campaign refuses the remediation configuration without the attempt-1 baseline, and loads it before the preflight', { skip: EVIDENCE_SKIP }, async () => {
   const { runCampaign } = await import('../campaign.mjs');
   const calls = [], options = [];
   const d = { LAUNCH: { remediation: ['--enable-gpu', DEVELOPER_FLAG] },
@@ -99,7 +106,7 @@ test('the campaign refuses the remediation configuration without the attempt-1 b
   assert.deepEqual(calls, ['preflight'], 'the baseline is loaded before the preflight');
 });
 
-test('loadBaseline verifies the committed webgpu-1 campaign read-only and finds attempt 1\'s only comparable acquired-device record (G1 headed, granted [])', async () => {
+test('loadBaseline verifies the committed webgpu-1 campaign read-only and finds attempt 1\'s only comparable acquired-device record (G1 headed, granted [])', { skip: EVIDENCE_SKIP }, async () => {
   const { loadBaseline } = await import('../qualify.mjs');
   const b = await loadBaseline();
   const g1 = b.records.find(r => r.gate === 'G1' && r.identity.mode === 'headed');
@@ -108,7 +115,7 @@ test('loadBaseline verifies the committed webgpu-1 campaign read-only and finds 
   assert.deepEqual(rows.filter(([, , s]) => s !== 'unavailable').map(([g, m]) => `${g} ${m}`), ['G1 headed']);
 });
 
-test('prereg §1: the original webgpu-1 evidence still verifies and recomputes under this change set, with no errors', async () => {
+test('prereg §1: the original webgpu-1 evidence still verifies and recomputes under this change set, with no errors', { skip: EVIDENCE_SKIP }, async () => {
   const { loadCampaign, loadFixtures } = await import('../qualify.mjs');
   const { manifest, records, attempts } = await loadCampaign('docs/reports/project0/webgpu-1-manifest.json');
   const { errors, featureComparison: rows } = await recompute([...records, ...attempts], await loadFixtures(manifest), { manifest, collect: true });

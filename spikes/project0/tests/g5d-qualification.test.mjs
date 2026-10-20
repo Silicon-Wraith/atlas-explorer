@@ -28,6 +28,11 @@ const Cf = await imp('../qualification/g5d-config.js');
 const Col = await imp('../qualification/g5d-collect.js');
 const Pf = await imp('../qualification/g5d-profile.mjs');
 const V = await import('../remediation/validate.mjs');
+// Tests that read the git-ignored local evidence (artifacts/project0: the webgpu-1 and webgpu-remediation run directories) skip with a
+// reason when it is absent, as report.test.mjs and precision-t12.test.mjs do, so a clean clone does not fail on it.
+const EVIDENCE_SKIP = ['webgpu-1', 'webgpu-remediation']
+  .flatMap(c => JSON.parse(readFileSync(join(ROOT, `docs/reports/project0/${c}-manifest.json`), 'utf8')).runDirs)
+  .every(d => existsSync(join(ROOT, 'artifacts/project0', d))) ? false : 'the git-ignored raw evidence (artifacts/project0) is not present';
 const ER = await import('../remediation/evidence-rules.mjs');
 const need = (...mods) => { for (const m of mods) assert.equal(m.__missing, undefined, m.__missing); };
 const sha = b => createHash('sha256').update(b).digest('hex');
@@ -175,7 +180,7 @@ test('G5D-8.3 regression: a selected operational G5 record never invalidates oth
 });
 
 // --- §9.6 legacy preservation -------------------------------------------------------------------------------------------------------------
-test('G5D-9.6: webgpu-1 and webgpu-remediation recompute exactly as filed under their own rules; G5-D can never reinterpret the original G5', async () => {
+test('G5D-9.6: webgpu-1 and webgpu-remediation recompute exactly as filed under their own rules; G5-D can never reinterpret the original G5', { skip: EVIDENCE_SKIP }, async () => {
   const one = await Q.loadCampaign('docs/reports/project0/webgpu-1-manifest.json');
   const f1 = await Q.loadFixtures(one.manifest);
   const r1 = await Q.recompute([...one.records, ...one.attempts], f1, { manifest: one.manifest, collect: true });
@@ -206,7 +211,7 @@ test('G5D-9.6: webgpu-1 and webgpu-remediation recompute exactly as filed under 
   assert.equal(sha(readFileSync(join(ROOT, 'docs/reports/project0/webgpu-decision.json'))), HISTORY['docs/reports/project0/webgpu-decision.json']);
 });
 
-test('G5D-8.6: the historical references verify through their authenticated manifests and keep their original results', async () => {
+test('G5D-8.6: the historical references verify through their authenticated manifests and keep their original results', { skip: EVIDENCE_SKIP }, async () => {
   const ctx = await load();
   const h = await Qn.verifyHistoricalReferences(ctx);
   assert.deepEqual(h.offplane.map(o => [o.campaign, o.sha256, o.componentRatio, o.numericalFailure]),
@@ -267,7 +272,7 @@ test('G5D-9.8: the current G5-D shader identity is the reviewed source and descr
   defect({ ...good, layout: { ...good.layout, batch: 32 } }, /layout/);
 });
 
-test('G5D-8.5: historical G5-A evidence is checked against its recorded implementation, never the new checkout, and never by its own self-declared hash', () => {
+test('G5D-8.5: historical G5-A evidence is checked against its recorded implementation, never the new checkout, and never by its own self-declared hash', { skip: EVIDENCE_SKIP }, () => {
   const hist = (git('show', '448d5ff:spikes/project0/gpu/fields.wgsl').toString() + git('show', '448d5ff:spikes/project0/gpu/arithmetic.wgsl').toString());
   assert.equal(sha(hist), G5A.sha256);
   const raw = JSON.parse(readFileSync(join(ROOT, 'artifacts/project0/20261020T051013812Z-webgpu-remediation-g5-headed/G5-qjulia-offplane-20261020T051013812Z-webgpu-remediation-g5-headed.raw.json'), 'utf8'));
@@ -316,7 +321,7 @@ test('G5D-9.7: the page collector keeps every completed readback: failure before
   assert.deepEqual(Array.from(packed), m.cases.slice(0, 2).flatMap(c => [...c.inputWords, c.radiusWord, '00000000', '00000000', '00000000'].map(h => parseInt(h, 16))));
 });
 
-test('G5D-9.7: writer to reader: every completed observation survives finalise → recompute, and a closure round trip reports them beside the verdict', async () => {
+test('G5D-9.7: writer to reader: every completed observation survives finalise → recompute, and a closure round trip reports them beside the verdict', { skip: EVIDENCE_SKIP }, async () => {
   need(Col, Cf, Mt);
   const { finalise } = await import('../run.mjs');
   const { closeG5d } = await imp('../close-g5d.mjs');
@@ -472,7 +477,7 @@ test('G5D-9.10: the campaign requests G1–G13 headed with a fresh preflight at 
 });
 
 // --- §9.11 closure ------------------------------------------------------------------------------------------------------------------------
-test('G5D-9.11: closure writes only webgpu-g5d-decision.json, with the profile, matrix and kernel identities, exclusions, diagnostics, historical hashes and manifest hash; webgpu-decision.json is untouched', async () => {
+test('G5D-9.11: closure writes only webgpu-g5d-decision.json, with the profile, matrix and kernel identities, exclusions, diagnostics, historical hashes and manifest hash; webgpu-decision.json is untouched', { skip: EVIDENCE_SKIP }, async () => {
   const { closeG5d } = await imp('../close-g5d.mjs');
   assert.equal(typeof closeG5d, 'function');
   const { closeRemediation } = await import('../close-remediation.mjs');
@@ -564,7 +569,7 @@ test('G5D r1-1: the authenticated profile, matrix and predictions behind the ope
   assert.notEqual(Mt.expectedG5dShader().sha256, e.sha256, 'returned identities are detached copies');
 });
 
-test('G5D r1-2: the profile pins the launch configuration and empty reuse in the shared validator: direct evaluation, manifest load, qualify and closure refuse anything else', async () => {
+test('G5D r1-2: the profile pins the launch configuration and empty reuse in the shared validator: direct evaluation, manifest load, qualify and closure refuse anything else', { skip: EVIDENCE_SKIP }, async () => {
   const ctx = await load(), all = await allEffective(), raws = rawsOf(all);
   const good = Q.buildManifest({ records: all, ...base(ctx) });
   assert.equal(Q.qualify(good, all, fx, { raws, qualification: ctx, remediationClosed: true }).decision.outcome, 'WebGPU selected');

@@ -3,7 +3,7 @@
 // representation, and the campaign/qualify/closure integration. CPU only: no browser, no GPU; filesystem fixtures under artifacts/runtime.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { mkdtemp, mkdir, writeFile, rm, readFile, copyFile } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -19,6 +19,11 @@ const Q = await import('../qualify.mjs');
 const GC = await import('../gates-checked.js');
 const fx = JSON.parse(readFileSync(new URL('../fixtures.json', import.meta.url), 'utf8'));
 const sha = b => createHash('sha256').update(b).digest('hex');
+// Tests that read the git-ignored local evidence (artifacts/project0: the webgpu-1 and webgpu-remediation run directories) skip with a
+// reason when it is absent, as report.test.mjs and precision-t12.test.mjs do, so a clean clone does not fail on it.
+const EVIDENCE_SKIP = ['webgpu-1', 'webgpu-remediation']
+  .flatMap(c => JSON.parse(readFileSync(join(ROOT, `docs/reports/project0/${c}-manifest.json`), 'utf8')).runDirs)
+  .every(d => existsSync(join(ROOT, 'artifacts/project0', d))) ? false : 'the git-ignored raw evidence (artifacts/project0) is not present';
 const ID = 'project0-e7-headed-v1', PATH = 'spikes/project0/qualification/e7-headed-v1.json', HASH = '99ea9a3030fd31f68a3cb39cc97b10227fd28afdfc38e55a82119618991d8c51';
 const REF = { id: ID, path: PATH, sha256: HASH };
 const AMENDMENT = { schema: 1, id: ID, authority: { decision: 'E7', commit: 'e3ee2c0a584c5daa4df750332e82d64b88aa5251' },
@@ -107,7 +112,7 @@ test('legacy: without E7 the checked G1 evaluator still requires both modes, and
   assert.doesNotThrow(() => Qn.validateQualification(m, null));
 });
 
-test('legacy: the committed webgpu-1 evidence loads, verifies and evaluates exactly as filed', async () => {
+test('legacy: the committed webgpu-1 evidence loads, verifies and evaluates exactly as filed', { skip: EVIDENCE_SKIP }, async () => {
   const { manifest, records, attempts } = await Q.loadCampaign('docs/reports/project0/webgpu-1-manifest.json');
   assert.equal(manifest.qualification, undefined);
   const fixtures = await Q.loadFixtures(manifest);
@@ -155,7 +160,7 @@ test('E7: headless G1 cannot be selected, substituted, attempted or reported as 
   assert.throws(() => Q.qualify(m, [rec('G1', 'headed')], fx, { raws: rawsOf([rec('G1', 'headed')]) }), /verified qualification/, 'an E7 manifest is never evaluated without its context');
 });
 
-test('E7: the known limitation names the diagnosis record, the original webgpu-1 manifest and its headless record, bound by hash and verified', async () => {
+test('E7: the known limitation names the diagnosis record, the original webgpu-1 manifest and its headless record, bound by hash and verified', { skip: EVIDENCE_SKIP }, async () => {
   const ctx = await load();
   const lim = Qn.knownLimitationsOf(ctx);
   assert.equal(lim.length, 1);
@@ -228,7 +233,7 @@ test('campaign: webgpu-remediation requires the authenticated profile, validated
   assert.deepEqual(d.calls, []);
 });
 
-test('campaign: under E7 no headless invocation is scheduled, every other invocation is requested headed, and the phases follow the headed verdicts', async () => {
+test('campaign: under E7 no headless invocation is scheduled, every other invocation is requested headed, and the phases follow the headed verdicts', { skip: EVIDENCE_SKIP }, async () => {
   const { runCampaign, phasesFor, PHASES } = await import('../campaign.mjs');
   const ctx = await load();
   assert.deepEqual(phasesFor(null), PHASES, 'the legacy schedule is unchanged');
@@ -317,7 +322,7 @@ test('E7 r1-2: the authenticated amendment is deeply immutable; only G1/headless
   assert.deepEqual(Q.buildManifest({ records: [], ...base(ctx) }).excludedTrials, EXCLUDED);
 });
 
-test('E7 r1-3: closure executes with controlled reads and captured writes: the decision carries the reference, exclusions, limitations and manifest hash; stripped or mismatched metadata is refused', async () => {
+test('E7 r1-3: closure executes with controlled reads and captured writes: the decision carries the reference, exclusions, limitations and manifest hash; stripped or mismatched metadata is refused', { skip: EVIDENCE_SKIP }, async () => {
   const { closeRemediation } = await import('../close-remediation.mjs');
   const ctx = await load(), root = await scratch();
   try {

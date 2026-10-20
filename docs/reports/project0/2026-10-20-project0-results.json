@@ -10,7 +10,7 @@
     "text": "WebGPU, chosen by explicit user override (E10); timing qualification incomplete",
     "decisions": "docs/codesign/execution-decisions.md",
     "platform": "docs/reports/project0/platform-decision.md",
-    "platformSha256": "08002bd4988ff956d8b3a8ac2907920f79afbcaad218c0dffdd6dec052acfe4b"
+    "platformSha256": "e054618c23a619f7d0f4a23573a3ff9c2cc3f50506bc7f0b30529076523236bc"
   },
   "scope": "Qualification scope: headed execution only, under E7; G5 as amended by E8 and E9 (operational orbits through first escape or 128 updates; S3 measured as a non-gating diagnostic).",
   "unsafeFlag": false,
@@ -5711,7 +5711,7 @@
     "docs/reports/project0/webgpu-1-manifest.json": "d733e85046a39d64d7fefe7f50ff0c39d822b0ca0ae69fe9ec92b8fbb7c9dfdd",
     "docs/reports/project0/webgpu-1-gates.json": "b34c99bb132040e35ee446f775f46aa5dcbeb8ab4fdc09cf5ac28c10e82d8da4",
     "docs/codesign/execution-decisions.md": "947200226e66d04bb3a9e91b33f8754dada8ad8e51a9993296e9fcf410c3979c",
-    "docs/reports/project0/platform-decision.md": "08002bd4988ff956d8b3a8ac2907920f79afbcaad218c0dffdd6dec052acfe4b",
+    "docs/reports/project0/platform-decision.md": "e054618c23a619f7d0f4a23573a3ff9c2cc3f50506bc7f0b30529076523236bc",
     "docs/reports/project0/precision.json": "320470da0a950644b8547a9f525e2bdaa3593447b2d76e499b80ead8aaf57621",
     "docs/reports/project0/precision-interpretation.md": "bb90f65d8af7ae67986a40fa652ad8ccf196e0c61d022cc7ca7cba4e82d744b4"
   }
