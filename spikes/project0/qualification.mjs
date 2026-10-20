@@ -32,8 +32,12 @@ const LIMITATIONS = Object.freeze({
   }],
 });
 
-const VERIFIED = new WeakSet();
-export const isVerifiedQualification = ctx => Boolean(ctx) && typeof ctx === 'object' && VERIFIED.has(ctx);
+// E7 fix round 1 (finding 2): the authenticated document is deeply frozen, and every use re-checks it against the authenticated bytes kept
+// privately, so neither a mutation nor a substituted object can change what a context authorises. Only G1/headless is ever removable.
+const VERIFIED = new WeakMap();                                                           // context -> authenticated canonical bytes
+const REMOVABLE = Object.freeze(['G1/headless']);
+const deepFreeze = value => { if (value && typeof value === 'object' && !Object.isFrozen(value)) { for (const v of Object.values(value)) deepFreeze(v); Object.freeze(value); } return value; };
+export const isVerifiedQualification = ctx => Boolean(ctx) && typeof ctx === 'object' && VERIFIED.has(ctx) && canonical(ctx.doc) + '\n' === VERIFIED.get(ctx);
 const requireVerified = ctx => { if (!isVerifiedQualification(ctx)) throw new Error('a verified qualification context is required (load it with loadQualification)'); return ctx; };
 
 export async function loadQualification(id, { root = ROOT } = {}) {
@@ -49,8 +53,9 @@ export async function loadQualification(id, { root = ROOT } = {}) {
   let prereg;
   try { prereg = await readFile(join(root, doc.preregistration.path)); } catch (e) { throw new Error(`qualification ${id}: the preregistration ${doc.preregistration.path} cannot be read (${e.code ?? e.message})`); }
   if (sha256(prereg) !== doc.preregistration.sha256) throw new Error(`qualification ${id}: the preregistration ${doc.preregistration.path} does not match the amendment's hash`);
-  const ctx = Object.freeze({ id, path: entry.path, sha256: entry.sha256, doc: Object.freeze(doc) });
-  VERIFIED.add(ctx);
+  if (doc.excludedRequiredSlots.some(k => !REMOVABLE.includes(k))) throw new Error(`qualification ${id}: only ${REMOVABLE.join(', ')} may be excluded`);
+  const ctx = deepFreeze({ id, path: entry.path, sha256: entry.sha256, doc });
+  VERIFIED.set(ctx, bytes.toString('utf8'));
   return ctx;
 }
 
@@ -67,7 +72,7 @@ export function effectiveGatePlan(fixtures, ctx) {
   const plan = gatePlan(fixtures);
   if (ctx === null || ctx === undefined) return plan;
   requireVerified(ctx);
-  for (const key of ctx.doc.excludedRequiredSlots) { const [g, s] = key.split('/'); delete plan[g][s]; }
+  for (const key of ctx.doc.excludedRequiredSlots) { if (!REMOVABLE.includes(key)) throw new Error(`only ${REMOVABLE.join(', ')} may be removed`); const [g, s] = key.split('/'); delete plan[g][s]; }
   return plan;
 }
 

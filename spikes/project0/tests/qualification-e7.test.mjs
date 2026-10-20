@@ -265,8 +265,7 @@ test('round trip: an E7 manifest reloads only with its authenticated profile; st
     const { excludedTrials, ...stripped } = m; void excludedTrials;
     await writeFile(join(root, 'docs/s.json'), JSON.stringify(stripped));
     await assert.rejects(Q.loadCampaign('docs/s.json', { root, qualification: ctx }), /excludedTrials/);
-    const close = readFileSync(new URL('../close-remediation.mjs', import.meta.url), 'utf8');
-    assert.match(close, /loadQualification\(named\.qualification\.id\)/); assert.match(close, /excludedTrials/); assert.match(close, /knownLimitations/); assert.match(close, /SCOPE_DISCLOSURE/);
+    // closure itself is executed with captured writes in 'E7 r1-3' (fix round 1, finding 3), replacing a source-text check here
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -280,4 +279,67 @@ test('frozen boundary: the 24 sources, the governing specification and fixtures.
   assert.equal(sha(readFileSync(join(ROOT, p.specPath))), p.specHash); assert.equal(p.specHash, AMENDMENT.baseSpecHash);
   assert.ok(readFileSync(join(ROOT, 'spikes/project0/fixtures.json')).equals(at('e3ee2c0', 'spikes/project0/fixtures.json')));
   assert.equal(sha(readFileSync(join(ROOT, 'spikes/project0/fixtures.json'))), AMENDMENT.fixtureHash);
+});
+
+// --- E7 fix round 1 (Codex run 20261020T044717Z-36ea) --------------------------------------------------------------------------------------
+test('E7 r1-1: the checked evaluator binds the manifest to the context: a removed or zeroed reference, an extra exclusion, a legacy manifest or a missing context never pass', async () => {
+  const ctx = await load(), good = rec('G1', 'headed');
+  const m = Q.buildManifest({ records: [good], ...base(ctx) }), raws = rawsOf([good]);
+  const ev = (man, q = ctx) => GC.evaluateGateChecked('G1', [good], man, fx, { raws, qualification: q });
+  assert.equal(ev(m).status, 'pass');
+  const { qualification: _drop, ...noRef } = m; void _drop;
+  const cases = {
+    'reference removed': noRef,
+    'hash zeroed': { ...m, qualification: { ...m.qualification, sha256: '0'.repeat(64) } },
+    'extra exclusion': { ...m, excludedTrials: { ...m.excludedTrials, 'G2/fresh-0': m.excludedTrials['G1/headless'] } },
+    'legacy manifest': { fixture, campaign: 'webgpu-1', trials: m.trials },
+  };
+  for (const [name, man] of Object.entries(cases)) { const v = ev(man); assert.equal(v.status, 'invalid/inconclusive', name); assert.ok(v.reasons.some(r => /qualification|excludedTrials/.test(r)), `${name}: ${JSON.stringify(v.reasons)}`); }
+  for (const gate of ['G4']) { const g4 = rec('G4', 'bulb-samples'); const mm = { ...Q.buildManifest({ records: [g4], ...base(ctx) }), qualification: undefined };
+    assert.equal(GC.evaluateGateChecked(gate, [g4], mm, fx, { raws: rawsOf([g4]), qualification: ctx }).status, 'invalid/inconclusive', 'every gate is bound, not only G1'); }
+  assert.equal(ev(m, null).status, 'invalid/inconclusive', 'an E7 manifest without its context');
+  const legacy = { fixture, campaign: 'webgpu-1', trials: { 'G4/bulb-samples': { id: rec('G4', 'bulb-samples').id, identity: identity('headed') } } };
+  const g4 = rec('G4', 'bulb-samples', { campaign: 'webgpu-1' });
+  assert.equal(GC.evaluateGateChecked('G4', [g4], legacy, fx, { raws: rawsOf([g4]) }).status, 'pass', 'ordinary legacy evaluation without a profile is preserved');
+});
+
+test('E7 r1-2: the authenticated amendment is deeply immutable; only G1/headless can ever be removed', async () => {
+  const ctx = await load();
+  assert.throws(() => ctx.doc.excludedRequiredSlots.push('G2/fresh-0'), TypeError);
+  assert.throws(() => { ctx.doc.authority.decision = 'unapproved'; }, TypeError);
+  assert.throws(() => { ctx.doc.preregistration.sha256 = '0'.repeat(64); }, TypeError);
+  assert.throws(() => { ctx.doc.excludedRequiredSlots[0] = 'G2/fresh-0'; }, TypeError);
+  assert.deepEqual([...ctx.doc.excludedRequiredSlots], ['G1/headless']); assert.equal(ctx.doc.authority.decision, 'E7');
+  const plan = Qn.effectiveGatePlan(fx, ctx), frozen = gatePlan(fx); delete frozen.G1.headless;
+  assert.equal(canonical(plan), canonical(frozen));
+  assert.deepEqual(Q.buildManifest({ records: [], ...base(ctx) }).excludedTrials, EXCLUDED);
+});
+
+test('E7 r1-3: closure executes with controlled reads and captured writes: the decision carries the reference, exclusions, limitations and manifest hash; stripped or mismatched metadata is refused', async () => {
+  const { closeRemediation } = await import('../close-remediation.mjs');
+  const ctx = await load(), root = await scratch();
+  try {
+    const m = Q.buildManifest({ records: [], ...base(ctx), runDirs: [] });
+    await mkdir(join(root, 'docs'), { recursive: true });
+    const history = '# h\n\n## Classification\nx\n\n## Change set\ny\n';
+    await writeFile(join(root, 'docs/h.md'), history);
+    const put = async (name, value) => { const text = JSON.stringify(value); await writeFile(join(root, `docs/${name}`), text); return text; };
+    const text = await put('m.json', m);
+    const writes = [];
+    const deps = { root, loadFixtures: async () => fx, verifyPreflight: async () => {}, writeFile: async (path, data) => { writes.push({ path, data }); }, log: () => {} };
+    await closeRemediation({ manifest: 'docs/m.json', history: 'docs/h.md' }, deps);
+    assert.equal(writes.length, 1); assert.ok(writes[0].path.endsWith('docs/reports/project0/webgpu-decision.json'));
+    const out = JSON.parse(writes[0].data);
+    assert.deepEqual(out.qualification, REF); assert.deepEqual(out.excludedTrials, EXCLUDED); assert.deepEqual(out.knownLimitations, Qn.knownLimitationsOf(ctx));
+    assert.equal(out.scope, 'Qualification scope: headed execution only, under E7.'); assert.equal(out.manifestSha256, sha(text)); assert.equal(out.historySha256, sha(history));
+    assert.ok(!('G1/headless' in out.gates)); assert.notEqual(out.decision.outcome, 'WebGPU selected');
+    const { excludedTrials, ...stripped } = m; void excludedTrials;
+    await put('s.json', stripped);
+    await assert.rejects(closeRemediation({ manifest: 'docs/s.json', history: 'docs/h.md' }, deps), /excludedTrials/);
+    await put('x.json', { ...m, qualification: { ...m.qualification, sha256: '0'.repeat(64) } });
+    await assert.rejects(closeRemediation({ manifest: 'docs/x.json', history: 'docs/h.md' }, deps), /qualification reference/);
+    await put('l.json', { ...m, knownLimitations: [] });
+    await assert.rejects(closeRemediation({ manifest: 'docs/l.json', history: 'docs/h.md' }, deps), /knownLimitations/);
+    assert.equal(writes.length, 1, 'a refused closure writes no decision');
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

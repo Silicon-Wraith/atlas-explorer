@@ -3,7 +3,7 @@
 // that turns saved records into a verdict (T10 qualify, T13 report) calls evaluateGateChecked, never evaluateGate directly. No hardware.
 import { evaluateGate, gatePlan } from './gates.js';
 import { validateRecords } from './contract.js';
-import { isVerifiedQualification, effectiveGatePlan } from './qualification.mjs';
+import { isVerifiedQualification, effectiveGatePlan, validateQualification } from './qualification.mjs';
 import { validateRecordTiming } from './timing-contract.js';
 
 // Throws `timing method: ...` for the first record whose timing method is missing, malformed, not the one its gate expects, or (for a measured
@@ -26,8 +26,12 @@ export function evaluateGateChecked(gate, records, manifest, fixtures, { raws, q
   const invalid = reasons => ({ gate, status: 'invalid/inconclusive', reasons, evidenceIds });
   try { validateEvidence(records, { raws }); }
   catch (error) { return invalid([error.message]); }
+  // E7 fix round 1 (Codex run 20261020T044717Z-36ea, finding 1): the manifest and the context are bound here, before either branch: an E7
+  // manifest without its context, a legacy manifest with one, or a removed, altered or extended reference/exclusion never evaluates.
+  if (qualification !== null && qualification !== undefined && !isVerifiedQualification(qualification)) return invalid(['a verified qualification context is required for an amended evaluation']);
+  try { validateQualification(manifest, qualification ?? null); }
+  catch (error) { return invalid([`qualification: ${error.message}`]); }
   if (qualification === null || qualification === undefined) return evaluateGate(gate, records, manifest, fixtures);
-  if (!isVerifiedQualification(qualification)) return invalid(['a verified qualification context is required for an amended evaluation']);
   if (gate !== 'G1') return evaluateGate(gate, records, manifest, fixtures);
   try { validateRecords(records, manifest, effectiveGatePlan(fixtures, qualification)); }
   catch (error) { return invalid([error.message]); }
