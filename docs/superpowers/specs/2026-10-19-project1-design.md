@@ -1,6 +1,6 @@
 # Project 1 — Foundations (1a) and Space (1b)
 
-**Status:** **approved by the user on 2026-10-20**, with answers to four §19 questions that
+**Status:** **approved by the user on 2026-10-20** (rev 3.2, including charter amendment A1, approved after review; the 1a implementation plan is `docs/superpowers/plans/2026-10-20-project1a-foundations-plan.md`), with answers to four §19 questions that
 affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera history is separate
 from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
 compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
