@@ -108,3 +108,20 @@ must not block the completion of Project 0.
 **How this sits with Project 0:** the assumption is provisional. Project 0's recorded decision,
 `webgpu-remediation`, confirms or revises it. Nothing in Project 1 may change Project 0's frozen
 inputs, gates or evidence.
+
+## E7 — Headless execution dropped from qualification (G1-D) (user, 2026-10-20)
+
+**The user's decision:** qualification requires headed execution only.
+
+**What happens to headless:**
+- On this host, Chrome 151's GPU process crashes in headless mode before any WebGPU request
+  (`docs/reports/project0/webgpu-g1c-diagnosis.md`; G1-C).
+- That crash is recorded as a known limitation of the platform on this host. It is not hidden, and
+  it is not converted into a pass.
+- Headless evidence stays recorded where it is collected.
+
+**Why:** Projects 1a and 1b never need headless WebGPU, and every interactive use is headed.
+
+**How it is implemented:** the change must not modify the 24 frozen sources, the fixtures or their
+provenance. The mechanism is agreed with Codex, then implemented, reviewed and committed before
+`webgpu-remediation` runs. This is a spec amendment, approved by the user.
