@@ -52,14 +52,14 @@ The final campaign is `webgpu-g5d` at implementation `f754534`, recorded in [web
 
 - **Recorded effective command line.** The launch file's `commandLine`, repeated in the `chrome://gpu` "Command Line" row, also contains the launcher's default switches. Those include `--enable-automation`, `--disable-background-timer-throttling`, `--disable-renderer-backgrounding` and `--enable-unsafe-swiftshader`, which appears twice.
 - **Not `--enable-unsafe-webgpu`.** `--enable-unsafe-swiftshader` is a different flag. `--enable-unsafe-webgpu` does not appear in the launch file or in the `chrome://gpu` capture. The adapter was hardware, not SwiftShader (above).
-- **No dependence on `--enable-unsafe-webgpu`.** The results JSON records `unsafeFlag: false`, so the selected evidence does not depend on that flag.
+- **No dependence on `--enable-unsafe-webgpu`.** The results JSON records `unsafeFlag: false`, so the selected evidence does not depend on that flag. `unsafeFlag: false` refers specifically to `--enable-unsafe-webgpu`, which is absent from all 68 inventory launch command lines. It does not mean the command line contains no switches named "unsafe". The effective launch includes `--enable-unsafe-swiftshader`, in all 68 launch captures, while the selected adapter is NVIDIA hardware. Dependence on that switch was not tested.
 - **Disclosed by the launch file:** developer features are on, and browser timestamp quantization is disabled.
 
 **Features: advertised, requested, granted, used.**
 - **Advertised.** The G1 adapter advertises 18 features, among them `timestamp-query` and `subgroups`.
 - **G1.** G1 requested no features and was granted none (`requestedFeatures: []`, `grantedFeatures: []`). The accepted precision record also requested none.
-- **Timing records.** The 11 timing records (G6 ×9, G7/0, G7/1) requested `timestamp-query` and were granted it at every device acquisition. Every one of them declares `timestampQueriesUsed: false`.
-- **Granted is not used.** A granted capability does not establish that timestamps were used, and no gate verdict rests on GPU timestamps.
+- **Timing records.** The 11 timing records (G6 ×9, G7/0, G7/1) requested `timestamp-query` and were granted it at every device acquisition. Their `timingMethod` descriptors declare `timestampQueriesUsed: false`; that refers to the gate metrics, which use the page clock.
+- **Diagnostic timestamps.** GPU timestamp queries were used separately for band diagnostics. The nine G6 raws and G7/0 each retain eight samples (`diagnostics.timestampQuery.samples: 8`), 80 in total. G7/1 contains no saved timestamp diagnostics. These diagnostics do not enter gate verdicts (`spikes/project0/timing-contract.js`).
 
 **Frame, refresh and integrity conditions:**
 - **Resolutions.** The frame (backing) is 1280 × 720. The integrity observer allows only that backing outside G12's deliberate resizes. Internal samples are 640 × 360 in every frame of the timing records, as specified in spec §3.
@@ -154,11 +154,13 @@ These captures are **development evidence at `9caa8c9`**. They are separate from
 
 The table counts the 640 × 360 = 230,400 stored samples:
 
-| View | Hit | Miss | Unresolved | Unavailable normal | Failure |
+| View | Hit | Miss | Unresolved | Unavailable normal, subset of hits | Failure |
 |---|---:|---:|---:|---:|---:|
-| sphere | 58,700 | 171,700 | 0 | 268 | 0 |
-| bulb-overview | 64,051 | 166,348 | 1 | 226 | 0 |
-| bulb-stress | 80,742 | 0 | **149,658** | 459 | 0 |
+| sphere | 58,700 | 171,700 | 0 | **0** | 0 |
+| bulb-overview | 64,051 | 166,348 | 1 | **10** | 0 |
+| bulb-stress | 80,742 | 0 | **149,658** | **2** | 0 |
+
+These are status-buffer counters (`out.<view>.counts`). The storage-image classifier separately counted 268, 226 and 459 mid-grey pixels (`storage.classes.unavailableNormal`). It classifies every RGB (128, 128, 128) pixel that way, so those counts include ordinary shaded pixels and cannot establish normal availability.
 
 - **The stress view is mostly unresolved.** 149,658 of 230,400 samples are unresolved: 149,657 ran out of steps and 1 hit the point budget. The magenta area in that image is unresolved rays, and the image must not be read as a fully resolved surface.
 - **Presented frame.** The 1280 × 720 presented frame shows 598,260 unresolved pixels in the stress view.
@@ -247,7 +249,8 @@ Each saved timing record carries a `timingMethod` descriptor.
 - **G7.** Page clock. Latency runs from a request's `render()` entry to its final publish event, after its counts readback. The window is anchored at the burst schedule origin.
 - **Precision (T12).** Page clock, `costProtocolMs` (5,388.8 ms in this run), with the nested `workMs` and `readMs` samples as the cost evidence.
 - **Readback.** All of these are page-clock measurements, and `readbackIncluded` is true in all of them.
-- **What is not measured.** A publication is not physical scanout. No record used GPU timestamps (`timestampQueriesUsed: false` throughout), and the timestamp capability that was granted establishes nothing about use.
+- **GPU timestamps.** Gate metrics use the page clock; their `timestampQueriesUsed: false` descriptors refer to those metrics. GPU timestamp queries were used separately for band diagnostics: the nine G6 raws and G7/0 each retain eight samples. These diagnostics do not enter gate verdicts. G7/1 contains no saved timestamp diagnostics. T12 used no GPU timestamps. Publication remains distinct from physical scanout.
+- **Queue-completion warning.** [G6/bulb-overview/0](../../../artifacts/project0/20261020T163936979Z-webgpu-g5d-timing-headed/G6-bulb-overview_0-20261020T163936979Z-webgpu-g5d-timing-headed.raw.json) also records a maximum queue-completion band duration of 149.8 ms, exceeding the 30 ms diagnostic warning. This session-level summary includes warm-up bands (5,092 samples against 4,509 measured publications) and does not locate that maximum within the measured window. It is not isolated shader time and does not change the gate classification.
 
 **T12 cost protocol** (`fixtures.json` `costProtocol: {warmups: 3, measured: 10}`):
 - **Runs.** Three unrecorded warm-ups, then ten measured runs, alternating baseline and then compensated. Batch sizes adapt per run and differ between the implementations.
