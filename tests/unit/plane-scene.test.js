@@ -98,3 +98,50 @@ test('geometry and appearance dependencies separate a palette edit from a camera
   assert.notEqual(planeDependencies(a).appearance, planeDependencies(palette).appearance);
   assert.notEqual(planeDependencies(a).geometry, planeDependencies(moved).geometry);
 });
+
+const linkFor = text => `#scene=${Buffer.from(text, 'utf8').toString('base64url')}`;
+
+test('coerced model identities are rejected through files and links', () => {
+  for (const model of [{ id: 'plane-mandelbrot', version: '1' }, { id: 'plane-mandelbrot', version: [1] }, { id: ['plane-mandelbrot'], version: 1 }]) {
+    const text = JSON.stringify(withScene(PLANE_INITIAL_SCENE, { model }));
+    assert.equal(errorCode(() => decodeSceneFile(text)), 'invalid-value', `file ${JSON.stringify(model)}`);
+    const decoded = decodeShareHash(linkFor(text));
+    assert.equal(decoded.kind, 'unsupported', `link ${JSON.stringify(model)}`);
+    assert.equal(decoded.error.code, 'invalid-value', `link ${JSON.stringify(model)}`);
+  }
+  assert.equal(decodeShareHash(linkFor(sceneCodec.serialize(PLANE_INITIAL_SCENE))).kind, 'scene');
+});
+
+// A scene whose canonical serialization is exactly `bytes` long: a coordinate with a long
+// run of leading zeros in its exponent is lexically valid and costs one byte per zero.
+function sceneOfSize(bytes) {
+  const base = createPlaneScene({ view: { re: '0e0', im: '0', zoom: 0 } });
+  const zeros = bytes - sceneCodec.serialize(base).length;
+  return { re: `0e${'0'.repeat(zeros + 1)}`, im: '0', zoom: 0 };
+}
+
+test('every admitted scene exports to a file and a link that both reopen, up to the byte budget', () => {
+  const scene = createPlaneScene({ view: sceneOfSize(MAX_SCENE_BYTES) });
+  const canonical = sceneCodec.serialize(scene);
+  assert.equal(canonical.length, MAX_SCENE_BYTES);
+  const file = encodeSceneFile(scene);
+  assert.ok(Buffer.byteLength(file, 'utf8') <= MAX_SCENE_BYTES, 'the exported file fits the import limit');
+  assert.ok(sceneCodec.equal(decodeSceneFile(file), scene));
+  const decoded = decodeShareHash(encodeShareHash(scene));
+  assert.equal(decoded.kind, 'scene');
+  assert.ok(sceneCodec.equal(decoded.scene, scene));
+  assert.match(encodeSceneFile(PLANE_INITIAL_SCENE), /^\{\n {2}"/, 'a scene that fits is still pretty-printed');
+  assert.ok(sceneCodec.equal(decodeSceneFile(encodeSceneFile(PLANE_INITIAL_SCENE)), PLANE_INITIAL_SCENE));
+});
+
+test('a scene one byte over the budget is rejected at creation, validation and import', () => {
+  const view = sceneOfSize(MAX_SCENE_BYTES + 1);
+  assert.equal(errorCode(() => createPlaneScene({ view })), 'too-large');
+  const input = withScene(PLANE_INITIAL_SCENE, { camera: { ...view } });
+  assert.equal(errorCode(() => sceneCodec.validate(input)), 'too-large');
+  // Import text within the limit whose canonical form grows past it (1e3 → 1000) is rejected too.
+  const text = sceneCodec.serialize(createPlaneScene({ view: sceneOfSize(MAX_SCENE_BYTES - 2) })).replace('"zoom":0', '"zoom":1e3');
+  assert.equal(Buffer.byteLength(text, 'utf8'), MAX_SCENE_BYTES);
+  assert.equal(errorCode(() => decodeSceneFile(text)), 'too-large');
+  assert.equal(decodeShareHash(linkFor(text)).error.code, 'too-large');
+});

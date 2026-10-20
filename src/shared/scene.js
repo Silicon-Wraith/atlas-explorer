@@ -62,7 +62,7 @@ export function requireObject(value, path, keys) {
 }
 
 export function createSceneCodec({ modelCodecs }) {
-  const registry = new Map(modelCodecs.map(codec => [`${codec.id}@${codec.version}`, codec]));
+  const registered = [...modelCodecs];
 
   function validate(input, depth = 0) {
     if (!isPlainObject(input)) throw new SceneError('invalid-value', 'a scene must be an object');
@@ -71,7 +71,9 @@ export function createSceneCodec({ modelCodecs }) {
     requireObject(input, '', ENVELOPE_KEYS);
     if (typeof input.applicationVersion !== 'string' || !input.applicationVersion || input.applicationVersion.length > 64) throw new SceneError('invalid-value', 'must be a short string', 'applicationVersion');
     const model = requireObject(input.model, 'model', ['id', 'version']);
-    const codec = registry.get(`${model.id}@${model.version}`);
+    if (typeof model.id !== 'string') throw new SceneError('invalid-value', 'must be a string', 'model.id');
+    if (!Number.isInteger(model.version)) throw new SceneError('invalid-value', 'must be an integer', 'model.version');
+    const codec = registered.find(candidate => candidate.id === model.id && candidate.version === model.version);
     if (!codec) throw new SceneError('unsupported-model', `model ${JSON.stringify(model.id)}@${JSON.stringify(model.version)} is not supported`, 'model');
     if (input.workspace !== codec.workspace) throw new SceneError('invalid-value', `must be ${codec.workspace}`, 'workspace');
     const provenanceIn = input.provenance;
@@ -90,7 +92,7 @@ export function createSceneCodec({ modelCodecs }) {
       applicationVersion: input.applicationVersion, workspace: codec.workspace,
       model: { id: codec.id, version: codec.version }, ...fields, provenance,
     };
-    canonicalJson(scene);
+    if (utf8Bytes(canonicalJson(scene)).length > MAX_SCENE_BYTES) throw new SceneError('too-large', `the scene serializes to more than ${MAX_SCENE_BYTES} bytes`);
     return deepFreeze(scene);
   }
 

@@ -173,8 +173,11 @@ export function decodeShareHash(hash) {
   }
 }
 
+// Pretty-printed when that fits the import limit; otherwise the canonical form, which admission bounds.
 export function encodeSceneFile(scene) {
-  return `${JSON.stringify(JSON.parse(sceneCodec.serialize(scene)), null, 2)}\n`;
+  const canonical = sceneCodec.serialize(scene);
+  const pretty = `${JSON.stringify(JSON.parse(canonical), null, 2)}\n`;
+  return utf8Bytes(pretty).length <= MAX_SCENE_BYTES ? pretty : canonical;
 }
 
 export function decodeSceneFile(text) {

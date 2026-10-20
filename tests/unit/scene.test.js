@@ -65,3 +65,21 @@ test('scene text is bounded before parsing and must be JSON', () => {
   assert.throws(() => codec.parse('é'.repeat(MAX_SCENE_BYTES / 2 + 1)), error => error.code === 'too-large', 'the limit counts UTF-8 bytes');
   assert.throws(() => codec.parse('{'), error => error.code === 'invalid-json');
 });
+
+test('model identity is validated by type and matched exactly, never coerced', () => {
+  const code = input => { try { codec.validate(input); return 'valid'; } catch (error) { return `${error.code}@${error.path}`; } };
+  assert.equal(code(toy({ model: { id: 'toy', version: '1' } })), 'invalid-value@model.version');
+  assert.equal(code(toy({ model: { id: 'toy', version: [1] } })), 'invalid-value@model.version');
+  assert.equal(code(toy({ model: { id: 'toy', version: 1.5 } })), 'invalid-value@model.version');
+  assert.equal(code(toy({ model: { id: ['toy'], version: 1 } })), 'invalid-value@model.id');
+  assert.equal(code(toy({ model: { id: 'toy@1', version: 1 } })), 'unsupported-model@model');
+  assert.equal(code(toy({ model: { id: 'toy', version: 1 } })), 'valid');
+});
+
+test('admission rejects a scene whose canonical serialization exceeds the byte budget', () => {
+  const size = x => codec.serialize(codec.validate(toy({ camera: { x } }))).length;
+  const pad = MAX_SCENE_BYTES - size('');
+  assert.equal(size('x'.repeat(pad)), MAX_SCENE_BYTES);
+  assert.throws(() => codec.validate(toy({ camera: { x: 'x'.repeat(pad + 1) } })), error => error.code === 'too-large');
+  assert.throws(() => codec.validate(toy({ camera: { x: 'é'.repeat(pad / 2 + 1) } })), error => error.code === 'too-large', 'the budget counts UTF-8 bytes');
+});
