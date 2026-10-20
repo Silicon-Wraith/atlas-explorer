@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { discoveryCards, writeMessage, outstandingMessage, EMPTY_MESSAGE } from '../../src/ui/discoveries.js';
+import { discoveryCards, discoveryCount, writeMessage, outstandingMessage, EMPTY_MESSAGE } from '../../src/ui/discoveries.js';
 
 const blob = new Blob(['x'], { type: 'image/jpeg' });
 const record = (id, note = '') => ({ name: `Discovery ${id}`, note, thumbnail: { blob } });
@@ -68,4 +68,18 @@ test('write messages cover every status the controller can report without claimi
   assert.equal(writeMessage({ status: 'failed', reason: '' }, 'remove'), 'The discovery could not be removed.');
   assert.equal(writeMessage({ status: 'failed' }, 'save'), 'The discovery could not be saved. Use Capture → Save location to keep this view.');
   assert.equal(writeMessage({ status: 'committed' }, 'remove'), 'Discovery removed.');
+});
+
+// Fix round 1 (Codex T11 r1, Minor 1): a count is exact only when it is known.
+test('the count is never an exact number that was not established', () => {
+  const items = n => Array.from({ length: n }, (_, i) => ({ key: `local:${i}`, id: String(i), record: record(i) }));
+  const count = local => discoveryCount(discoveryCards(snapshot(local)));
+  assert.equal(count({ status: 'idle', reason: '', items: [] }), '…', 'the first load is pending');
+  assert.equal(count({ status: 'unavailable', reason: 'did not respond in time', items: [] }), '?', 'a failed first read establishes nothing');
+  assert.equal(count({ status: 'unavailable', reason: 'did not respond in time', items: items(3) }), '3+', 'earlier items are a lower bound when the source is now unavailable');
+  assert.equal(count({ status: 'ready', reason: '', items: items(50), nextCursor: '50' }), '50+', 'an unknown total with more pages is a lower bound');
+  assert.equal(count({ status: 'ready', reason: '', items: items(4) }), '4', 'a complete listing without a total is exact');
+  assert.equal(count({ status: 'ready', reason: '', items: [], total: 0 }), '0');
+  assert.equal(count({ status: 'ready', reason: '', items: items(50), nextCursor: '50', total: 51 }), '51');
+  assert.equal(count({ status: 'unavailable', reason: 'x', items: items(2), total: 7 }), '7', 'a total the source reported stays the total');
 });

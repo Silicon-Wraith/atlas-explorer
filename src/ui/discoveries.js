@@ -26,6 +26,16 @@ export function discoveryCards(snapshot) {
   return { cards, unavailable, more, outstanding, unknown, loading, loaded: cards.length, total, totalKnown, empty: !loading && cards.length === 0 && unavailable.length === 0 };
 }
 
+// The #saved-count text for a discoveryCards model. It is an exact number only when it was
+// established: every source reported a total, or listed everything it has. A source that has
+// more pages or is unavailable without a total makes the sum a lower bound ("N+"), and a lower
+// bound of nothing is no count at all ("?"). "…" while the first load is pending.
+export function discoveryCount(model) {
+  if (model.loading && !model.loaded) return '…';
+  if (model.totalKnown || (!model.more.length && !model.unavailable.length)) return String(model.total);
+  return model.total > 0 ? `${model.total}+` : '?';
+}
+
 // Only `committed`, `aborted` and `failed` are definite outcomes (shared/discoveries.js). Every
 // other observation — `pending`, `checking`, `unknown` (including a write left unknown by
 // teardown), no observation at all, or a status this control does not know — claims nothing.
@@ -63,8 +73,7 @@ export function mountDiscoveriesControl({ grid, countElement, controller, source
   function render() {
     if (destroyed) return;
     const model = discoveryCards(controller.snapshot());
-    // An unknown total with further pages is a lower bound, never presented as the total.
-    countElement.textContent = model.loading && !model.loaded ? '…' : `${model.total}${!model.totalKnown && model.more.length ? '+' : ''}`;
+    countElement.textContent = discoveryCount(model);
     if (!isActive()) return;
     release();
     grid.classList.add('saved-places');
