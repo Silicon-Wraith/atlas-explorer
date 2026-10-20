@@ -12,3 +12,6 @@
 .destination-grid.saved-places{display:flex;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#3b505c transparent}.saved-places .saved-wrapper{flex:0 0 235px}
 .mobile-only{display:none}
 @media(max-width:760px){.mobile-only{display:inline-flex}.controls-expanded .panel{width:min(300px,calc(100vw - 32px));top:88px;bottom:auto;max-height:calc(100dvh - 320px);overflow:auto}.controls-expanded .panel-top{display:flex;padding:17px}.controls-expanded .panel-section{display:block!important;padding:17px;border-top:1px solid var(--line)}.controls-expanded .panel-footer{display:flex}.controls-expanded .palette-swatch{width:auto;height:28px}.controls-expanded .palette-caption>span:last-child{display:block}.controls-expanded .intro{opacity:0;pointer-events:none}.controls-expanded .intro button{pointer-events:none}.controls-expanded .slider-label{font-size:10px}.controls-expanded .panel .section-heading{font-size:11px}}
+/* T05: the history controls (Back, Forward, Undo, Redo) wrap onto a second row of the navigation bar on narrow layouts, so the bar keeps clear of the panel. */
+@media(max-width:760px){.navigation{flex-wrap:wrap;max-width:210px}.navigation>.nav-divider:last-of-type{display:none}.tour-status{bottom:335px}}
+@media(max-width:400px){.navigation{max-width:200px}}

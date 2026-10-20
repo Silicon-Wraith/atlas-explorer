@@ -29,7 +29,7 @@ test('worker threads remain available to unit tests', async () => {
 });
 
 test('browser suites refuse to start under a unit run', async () => {
-  for (const suite of ['../browser.mjs', '../navigation.mjs', '../graphics.mjs']) {
+  for (const suite of ['../browser.mjs', '../navigation.mjs', '../graphics.mjs', '../workflow.mjs']) {
     await assert.rejects(import(suite), error => error.name === 'UnitModeRefusal', suite);
   }
 });
@@ -84,7 +84,7 @@ test('installed Chrome gets a temporary directory whose socket path fits', () =>
 test('every Playwright input, CDP and locator evaluation in the browser suites is bounded', () => {
   const unbounded = /\.keyboard\.|\.mouse\.|newCDPSession\(|touch\.send\(|touch\.detach\(|\.locator\([^;]*\)\.evaluate\(/;
   const offenders = [];
-  for (const name of ['browser.mjs', 'navigation.mjs', 'graphics.mjs']) {
+  for (const name of ['browser.mjs', 'navigation.mjs', 'graphics.mjs', 'workflow.mjs']) {
     suiteText(name).split('\n').forEach((line, index) => {
       for (const statement of line.split(';')) if (unbounded.test(statement) && !/within\(/.test(statement)) offenders.push(`${name}:${index + 1}: ${statement.trim()}`);
     });
