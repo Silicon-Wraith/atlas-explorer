@@ -95,7 +95,7 @@ function harness({ hang = () => false, onStatus = () => {}, slowMs = 0 } = {}) {
   const deps = {
     acquire: async () => ({ device }), onLoss: h => { loss = h; return () => { loss = null; }; }, destroy: () => {},
     prepare: async () => ({ 'trace_list/bulb': { getBindGroupLayout: () => ({}) } }), compile: async () => ({}), source: async () => '',
-    createWatchdog: o => createWatchdog({ ...o, stallMs: 100, every: 10 }), supervisor,
+    createWatchdog: o => createWatchdog({ ...o, stallMs: 2000, every: 10 }), supervisor,   // fix round 2: 100 ms could expire under a loaded full-suite run
     loadCorpus: async () => { const b = await readFile(new URL('../precision-validation/corpus-v1.json', import.meta.url)); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); },
   };
   return { log, deps, supervisor, status: s => onStatus(s, () => loss?.({ epoch: 1, reason: 'unknown', message: '', injected: false })) };
@@ -200,7 +200,8 @@ test('concern 2: extraBytes stays signed, the difference of the two allocation p
   r.sets[0].baseline.allocations = [{ size: 65536, usage: 136 }]; r.sets[0].compensated.allocations = [{ size: 32, usage: 136 }];
   const row = precisionMetrics(fx, r).rows[0];
   assert.equal(row.extraBytes, -65888);
-  assert.deepEqual(row.bytes, { baselinePeak: 262544, compensatedPeak: 196656, extraBytes: -65888, baselineAllocations: [{ size: 65536, usage: 136 }], compensatedAllocations: [{ size: 32, usage: 136 }], captureBytes: corpus.capture.rays * corpus.capture.steps * 64 });
+  // fix round 2 (Codex r2, concern 2): captureBytes is replaced by the storage and staging figures, and the persistent layouts are reported
+  assert.deepEqual(row.bytes, { baselinePeak: 262544, compensatedPeak: 196656, extraBytes: -65888, baselinePersistent: [], compensatedPersistent: [], baselineAllocations: [{ size: 65536, usage: 136 }], compensatedAllocations: [{ size: 32, usage: 136 }], captureStorageBytes: corpus.capture.rays * corpus.capture.steps * 64, captureStagingBytes: corpus.capture.rays * corpus.capture.steps * 64 });
 });
 
 // ---------- F7: append-only history ----------

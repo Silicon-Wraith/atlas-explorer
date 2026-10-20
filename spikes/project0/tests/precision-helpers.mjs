@@ -21,7 +21,7 @@ export function completeRaw(fx, raw, { variant = 'correct' } = {}) {
     supplement: { corpusSha256: PRECISION_CORPUS.sha256, primitives: corpus.primitives.map(c => primitiveCase(c, variant)) },
     sets: raw.sets.map((s, i) => {
       const set = fx.precision.results[i];
-      return { ...s, complete: true, captureWords: synthesizeCaptures(set, corpus.capture, variant), captureBytes: corpus.capture.rays * corpus.capture.steps * 64,
+      return { ...s, complete: true, captureWords: synthesizeCaptures(set, corpus.capture, variant), captureStorageBytes: corpus.capture.rays * corpus.capture.steps * 64, captureStagingBytes: corpus.capture.rays * corpus.capture.steps * 64,
         baseline: { ...s.baseline, runs: policyRuns(fx, set.rows.length), allocations: [] }, compensated: { ...s.compensated, runs: policyRuns(fx, set.rows.length), allocations: [] } };
     }),
   };

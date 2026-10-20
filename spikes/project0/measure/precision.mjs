@@ -32,12 +32,32 @@ export function loadCorpus(read = () => readFileSync(new URL(`../${PRECISION_COR
 }
 
 // F5: one implementation's runs at one distance, recomputed against the policy.
-function batchEvidence(runs, total, what) {
+// Fix round 2 (Codex T12 r2 finding 1): every run and every batch row is validated first, the final run included: run i has k === i and is
+// measured exactly when i >= warmups; its rows are ordered submissions with finite nonnegative times (done at or after submit), positive
+// integer counts equal to min(batch, rays - start), and contiguous starts from 0 covering exactly the set's rays.
+const finiteTime = x => typeof x === 'number' && Number.isFinite(x) && x >= 0;
+function batchRows(r, rays, what) {
+  let next = 0, lastSubmit = -Infinity;
+  r.batches.forEach((b, j) => {
+    const at = `${what} batch ${j}`;
+    if (!Number.isInteger(b?.count) || b.count <= 0 || !Number.isInteger(b.start)) throw new Error(`batch evidence: ${at}: start and count must be integers, count positive`);
+    if (b.start !== next) throw new Error(`batch evidence: ${at}: starts at ${b.start}, not ${next} (rows must be contiguous from 0)`);
+    if (b.count !== Math.min(r.batch, rays - b.start)) throw new Error(`batch evidence: ${at}: count ${b.count} is not min(batch ${r.batch}, remaining ${rays - b.start})`);
+    if (!finiteTime(b.submitMs) || !finiteTime(b.doneMs) || b.doneMs < b.submitMs) throw new Error(`batch evidence: ${at}: submitMs and doneMs must be finite, nonnegative and ordered`);
+    if (b.submitMs < lastSubmit) throw new Error(`batch evidence: ${at}: submitted before the previous batch`);
+    lastSubmit = b.submitMs; next += b.count;
+  });
+  if (next !== rays) throw new Error(`batch evidence: ${what}: the batches cover ${next} rays, not exactly ${rays}`);
+}
+function batchEvidence(runs, total, warmups, rays, what) {
   if (!Array.isArray(runs) || runs.length !== total) throw new Error(`${what}: batch evidence for exactly ${total} runs is required`);
   runs.forEach((r, i) => {
     if (!Number.isInteger(r?.batch) || !Array.isArray(r.batches) || !r.batches.length) throw new Error(`${what} run ${i}: batch size and batch rows are required`);
+    if (r.k !== i || r.measured !== (i >= warmups)) throw new Error(`batch evidence: ${what} run ${i}: identity k=${r.k}, measured=${r.measured} (expected k=${i}, measured=${i >= warmups})`);
+    // the previous run's rows were validated in its own iteration before nextBatch reads them
     const expected = i === 0 ? BATCH_POLICY.initialBatch : nextBatch(runs[i - 1].batches, runs[i - 1].batch);
     if (r.batch !== expected) throw new Error(`${what} run ${i}: batch policy requires ${expected} rays, not ${r.batch}`);
+    batchRows(r, rays, `${what} run ${i}`);
     const outstanding = maxOutstandingOf(r.batches);
     if (r.maxOutstanding !== outstanding) throw new Error(`${what} run ${i}: the recorded maximum outstanding ${r.maxOutstanding} differs from its batch rows (${outstanding})`);
     if (outstanding > BATCH_POLICY.maxOutstanding) throw new Error(`${what} run ${i}: more than ${BATCH_POLICY.maxOutstanding} batches outstanding (${outstanding})`);
@@ -74,11 +94,14 @@ export function precisionMetrics(fx, raw) {
     const vsRequested = comparePrecision(set, baseline, 'requested'), vsBaselineInput = comparePrecision(set, baseline, 'baselineInput');
     if (firstStop === null && vsRequested.stopReasons.length) firstStop = { distance: set.distance, reasons: vsRequested.stopReasons };
     const cost = { baseline: { workMs: summary(s.baseline.workMs, n, 'baseline work'), readMs: summary(s.baseline.readMs, n, 'baseline readback') }, compensated: { workMs: summary(s.compensated.workMs, n, 'compensated work'), readMs: summary(s.compensated.readMs, n, 'compensated readback') } };
-    cost.baseline.batch = batchEvidence(s.baseline.runs, total, `distance ${set.distance} baseline`);
-    cost.compensated.batch = batchEvidence(s.compensated.runs, total, `distance ${set.distance} compensated`);
+    cost.baseline.batch = batchEvidence(s.baseline.runs, total, fx.costProtocol.warmups, set.rows.length, `distance ${set.distance} baseline`);
+    cost.compensated.batch = batchEvidence(s.compensated.runs, total, fx.costProtocol.warmups, set.rows.length, `distance ${set.distance} compensated`);
     const baselinePeak = bytesOk(s.baseline.peakBytes, 'baseline peak bytes'), compensatedPeak = bytesOk(s.compensated.peakBytes, 'compensated peak bytes');
+    // Fix round 2 (concern 2): the persistent capture storage is inside the compensated peak; its readback staging is reported beside it.
+    const captureStorageBytes = bytesOk(s.captureStorageBytes, 'capture storage bytes'), captureStagingBytes = bytesOk(s.captureStagingBytes, 'capture staging bytes');
     const row = { distance: set.distance, interpreted: firstStop === null, baseline: { vsRequested, vsBaselineInput }, cost, extraBytes: compensatedPeak - baselinePeak,
-      bytes: { baselinePeak, compensatedPeak, extraBytes: compensatedPeak - baselinePeak, baselineAllocations: s.baseline.allocations ?? [], compensatedAllocations: s.compensated.allocations ?? [], captureBytes: bytesOk(s.captureBytes, 'capture bytes') } };
+      bytes: { baselinePeak, compensatedPeak, extraBytes: compensatedPeak - baselinePeak, baselinePersistent: s.baseline.persistent ?? [], compensatedPersistent: s.compensated.persistent ?? [],
+        baselineAllocations: s.baseline.allocations ?? [], compensatedAllocations: s.compensated.allocations ?? [], captureStorageBytes, captureStagingBytes } };
     if (validated) { const comp = decodeTrace(s.compensated.words, set.rows.length, { maxSteps: steps }); row.compensated = { vsRequested: comparePrecision(set, comp, 'requested'), vsCompensatedInput: comparePrecision(set, comp, 'compensatedInput') }; }
     return row;
   });

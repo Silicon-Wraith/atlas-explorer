@@ -11,6 +11,9 @@
 //   `complete: false`, its partial evidence and the original invalidation;
 // - F5: each implementation's batch size follows BATCH_POLICY run by run; every run keeps its size, batch rows and maximum outstanding count;
 // - concern 2: each implementation's allocations in its first measured run are recorded beside its peak.
+// T12 fix round 2 (Codex T12 r2): each evaluation is recorded inside its window callback, so a refused or unanswered close cannot drop a completed
+// sample (F3); the persistent capture storage is a child of the compensated allocator, so it counts in the compensated peak, while its
+// diagnostic readback staging has its own allocator; both are reported, with each implementation's persistent layout (concern 2).
 import { acquire as acquireDevice, destroy as destroyDevice, onLoss as onDeviceLoss } from '../../gpu/device.js';
 import { prepare as prepareAll, upload, readBack, traceList, profileWords, source as fetchSource, compile as compileModule, dispatchOnce } from '../../gpu/webgpu.js';
 import { createAllocator } from '../../gpu/alloc.js';
@@ -114,9 +117,13 @@ export async function run(gate, fx, params, status, deps = {}) {
       evidence.sets.push(result);
       // Each implementation's own child allocator; the compensated one also holds the resources only it needs (the barrier). The capture
       // buffer is validation evidence, accounted in its own child allocator and reported as captureBytes.
-      const baseAlloc = shared.child(), compAlloc = shared.child(), capAlloc = shared.child();
+      // Fix round 2: the capture storage is persistent storage of the timed compensated kernel, so it is a child of compAlloc (its peak); the
+      // capture readback's staging buffer is diagnostic and is accounted in its own sibling allocator.
+      const baseAlloc = shared.child(), compAlloc = shared.child(), capStorage = compAlloc.child(), capStage = shared.child();
       const barrier = upload(device, compAlloc, new Float32Array([1, 0, 0, 0]), GPUBufferUsage.UNIFORM);
-      const capture = capAlloc.buffer(device, { size: 64 * captureRays * captureSteps, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+      const capture = capStorage.buffer(device, { size: 64 * captureRays * captureSteps, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+      result.baseline.persistent = [];
+      result.compensated.persistent = [{ role: 'barrier uniform', size: barrier.size }, { role: 'capture storage', size: capture.size }];
       const batch = { baseline: BATCH_POLICY.initialBatch, compensated: BATCH_POLICY.initialBatch };
       const record = (impl, k, measured, out) => {
         const r = result[impl], size = batch[impl];
@@ -128,14 +135,15 @@ export async function run(gate, fx, params, status, deps = {}) {
       for (let k = 0; k < fx.costProtocol.warmups + fx.costProtocol.measured; k++) {
         const measured = k >= fx.costProtocol.warmups, first = k === fx.costProtocol.warmups, sample = k - fx.costProtocol.warmups;
         const inWindow = (impl, fn) => (measured ? d.supervisor.window(precisionWindow(di, sample, impl), fn) : fn());
-        const b = await inWindow('baseline', () => traceList({ device, alloc: logging(baseAlloc, first ? result.baseline.allocations : null), watchdog, abort, pipelines, field: 'bulb', profile: fx.profiles.precision, origins: org3, directions: dir3, batch: batch.baseline, label: `precision-base:${set.distance}` }));
-        record('baseline', k, measured, b);
-        const c = await inWindow('compensated', () => ffTrace({ device, alloc: logging(compAlloc, first ? result.compensated.allocations : null), watchdog, abort, pipeline: ff, barrier, capture, profile: fx.profiles.precision, originPairs: set.originPairs, directions: dir4, n, batch: batch.compensated }));
-        record('compensated', k, measured, c);
+        // Fix round 2 (F3): the evaluation is recorded inside the window callback, after its work and readback and before the close.
+        const evaluate = (impl, fn) => inWindow(impl, async () => { const out = await fn(); record(impl, k, measured, out); return out; });
+        await evaluate('baseline', () => traceList({ device, alloc: logging(baseAlloc, first ? result.baseline.allocations : null), watchdog, abort, pipelines, field: 'bulb', profile: fx.profiles.precision, origins: org3, directions: dir3, batch: batch.baseline, label: `precision-base:${set.distance}` }));
+        await evaluate('compensated', () => ffTrace({ device, alloc: logging(compAlloc, first ? result.compensated.allocations : null), watchdog, abort, pipeline: ff, barrier, capture, profile: fx.profiles.precision, originPairs: set.originPairs, directions: dir4, n, batch: batch.compensated }));
       }
-      result.captureWords = Array.from(new Uint32Array((await readBack(device, capAlloc, capture, 64 * captureRays * captureSteps, abort, watchdog)).bytes));
-      result.baseline.peakBytes = baseAlloc.inventory().peakBytes; result.compensated.peakBytes = compAlloc.inventory().peakBytes; result.captureBytes = capAlloc.inventory().peakBytes;
-      baseAlloc.destroyAll(); compAlloc.destroyAll(); capAlloc.destroyAll();
+      result.captureWords = Array.from(new Uint32Array((await readBack(device, capStage, capture, 64 * captureRays * captureSteps, abort, watchdog)).bytes));
+      result.baseline.peakBytes = baseAlloc.inventory().peakBytes; result.compensated.peakBytes = compAlloc.inventory().peakBytes;
+      result.captureStorageBytes = capStorage.inventory().peakBytes; result.captureStagingBytes = capStage.inventory().peakBytes;
+      baseAlloc.destroyAll(); compAlloc.destroyAll(); capStage.destroyAll();
       result.complete = true;
     }
     evidence.costProtocolMs = performance.now() - costStart;
