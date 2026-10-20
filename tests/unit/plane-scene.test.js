@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { moveView, validateView, INITIAL_VIEW } from '../../src/plane/math.js';
-import { MAX_SCENE_BYTES } from '../../src/shared/scene.js';
+import { DEFAULT_MAX_SCENE_BYTES } from '../../src/shared/scene.js';
 import {
   sceneCodec, createPlaneScene, toPlaneState, planeIterations, planeDependencies, PLANE_INITIAL_SCENE,
   encodeShareHash, decodeShareHash, encodeSceneFile, decodeSceneFile, DECIMAL_BUDGET_DIGITS, admitEnteredView,
+  createPlaneSceneAdapter,
 } from '../../src/plane/scene-adapter.js';
 
 const errorCode = fn => { try { fn(); return 'valid'; } catch (error) { return error.code; } };
@@ -77,7 +78,7 @@ test('share links round-trip every digit; earlier, tampered and oversized links 
   assert.equal(decodeShareHash('#somewhere').error.code, 'unrecognized-link');
   assert.equal(decodeShareHash(`${hash.slice(0, -4)}!!!!`).error.code, 'invalid-link');
   assert.equal(decodeShareHash(`${hash.slice(0, 12)}`).kind, 'unsupported');
-  assert.equal(decodeShareHash(`#scene=${'A'.repeat(Math.ceil(MAX_SCENE_BYTES * 4 / 3) + 8)}`).error.code, 'too-large');
+  assert.equal(decodeShareHash(`#scene=${'A'.repeat(Math.ceil(DEFAULT_MAX_SCENE_BYTES * 4 / 3) + 8)}`).error.code, 'too-large');
 });
 
 test('scene files round-trip; an earlier location file is rejected as an unsupported format', () => {
@@ -120,12 +121,13 @@ function sceneOfSize(bytes) {
   return { re: `0e${'0'.repeat(zeros + 1)}`, im: '0', zoom: 0 };
 }
 
-test('every admitted scene exports to a file and a link that both reopen, up to the byte budget', () => {
-  const scene = createPlaneScene({ view: sceneOfSize(MAX_SCENE_BYTES) });
+test('every admitted scene exports to a file and a link that both reopen, up to the default byte budget', () => {
+  assert.equal(sceneCodec.maxSceneBytes, DEFAULT_MAX_SCENE_BYTES, 'the named exports use the default limit');
+  const scene = createPlaneScene({ view: sceneOfSize(DEFAULT_MAX_SCENE_BYTES) });
   const canonical = sceneCodec.serialize(scene);
-  assert.equal(canonical.length, MAX_SCENE_BYTES);
+  assert.equal(canonical.length, DEFAULT_MAX_SCENE_BYTES);
   const file = encodeSceneFile(scene);
-  assert.ok(Buffer.byteLength(file, 'utf8') <= MAX_SCENE_BYTES, 'the exported file fits the import limit');
+  assert.ok(Buffer.byteLength(file, 'utf8') <= DEFAULT_MAX_SCENE_BYTES, 'the exported file fits the import limit');
   assert.ok(sceneCodec.equal(decodeSceneFile(file), scene));
   const decoded = decodeShareHash(encodeShareHash(scene));
   assert.equal(decoded.kind, 'scene');
@@ -134,14 +136,77 @@ test('every admitted scene exports to a file and a link that both reopen, up to 
   assert.ok(sceneCodec.equal(decodeSceneFile(encodeSceneFile(PLANE_INITIAL_SCENE)), PLANE_INITIAL_SCENE));
 });
 
-test('a scene one byte over the budget is rejected at creation, validation and import', () => {
-  const view = sceneOfSize(MAX_SCENE_BYTES + 1);
-  assert.equal(errorCode(() => createPlaneScene({ view })), 'too-large');
+const LIMIT = 4096;
+const small = createPlaneSceneAdapter({ maxSceneBytes: LIMIT });
+
+test('the Plane adapter factory binds every operation to one configured codec', () => {
+  assert.ok(Object.isFrozen(small));
+  assert.deepEqual(Object.keys(small).sort(), ['createPlaneScene', 'decodeSceneFile', 'decodeShareHash', 'encodeSceneFile', 'encodeShareHash', 'sceneCodec']);
+  assert.equal(small.sceneCodec.maxSceneBytes, LIMIT);
+  assert.equal(createPlaneSceneAdapter().sceneCodec.maxSceneBytes, DEFAULT_MAX_SCENE_BYTES, 'omitting the option uses the default');
+  for (const value of [0, -1, 1.5, NaN, Infinity, 2 ** 53, '4096', null]) {
+    assert.throws(() => createPlaneSceneAdapter({ maxSceneBytes: value }), RangeError, String(value));
+  }
+  const { createPlaneScene: create, encodeShareHash: link, decodeShareHash: unlink } = small;
+  const scene = create({ view: INITIAL_VIEW });
+  assert.ok(small.sceneCodec.equal(unlink(link(scene)).scene, scene), 'the methods do not depend on this');
+  assert.equal(small.sceneCodec.fingerprint(scene).sceneHash, sceneCodec.fingerprint(PLANE_INITIAL_SCENE).sceneHash, 'the limit stays out of scene data and fingerprints');
+});
+
+test('a small configured limit: the exact limit round-trips through file and link, one byte more is rejected', () => {
+  const scene = small.createPlaneScene({ view: sceneOfSize(LIMIT) });
+  assert.equal(small.sceneCodec.serialize(scene).length, LIMIT);
+  const file = small.encodeSceneFile(scene);
+  assert.equal(file, small.sceneCodec.serialize(scene), 'pretty output over the limit falls back to the canonical form');
+  assert.ok(small.sceneCodec.equal(small.decodeSceneFile(file), scene));
+  const decoded = small.decodeShareHash(small.encodeShareHash(scene));
+  assert.equal(decoded.kind, 'scene');
+  assert.ok(small.sceneCodec.equal(decoded.scene, scene));
+  const fits = small.createPlaneScene({ view: sceneOfSize(LIMIT - 400) });
+  assert.match(small.encodeSceneFile(fits), /^\{\n {2}"[^]*\}\n$/, 'pretty output within the limit is kept');
+  const view = sceneOfSize(LIMIT + 1);
+  assert.equal(errorCode(() => small.createPlaneScene({ view })), 'too-large');
   const input = withScene(PLANE_INITIAL_SCENE, { camera: { ...view } });
-  assert.equal(errorCode(() => sceneCodec.validate(input)), 'too-large');
-  // Import text within the limit whose canonical form grows past it (1e3 → 1000) is rejected too.
-  const text = sceneCodec.serialize(createPlaneScene({ view: sceneOfSize(MAX_SCENE_BYTES - 2) })).replace('"zoom":0', '"zoom":1e3');
-  assert.equal(Buffer.byteLength(text, 'utf8'), MAX_SCENE_BYTES);
-  assert.equal(errorCode(() => decodeSceneFile(text)), 'too-large');
-  assert.equal(decodeShareHash(linkFor(text)).error.code, 'too-large');
+  assert.equal(errorCode(() => small.sceneCodec.validate(input)), 'too-large');
+  assert.equal(errorCode(() => small.decodeSceneFile(JSON.stringify(input))), 'too-large');
+  assert.equal(small.decodeShareHash(linkFor(JSON.stringify(input))).error.code, 'too-large');
+  assert.equal(small.decodeShareHash(linkFor(`${file} `)).error.code, 'too-large', 'link text one byte over the limit');
+  assert.equal(errorCode(() => small.decodeSceneFile(`${file} `)), 'too-large', 'file text one byte over the limit');
+  assert.equal(errorCode(() => small.decodeSceneFile(`"${'é'.repeat(LIMIT / 2)}"`)), 'too-large', 'the limit counts UTF-8 bytes');
+  assert.equal(small.decodeShareHash(`#scene=${'A'.repeat(Math.ceil(LIMIT * 4 / 3) + 8)}`).error.code, 'too-large', 'the link guard derives from the limit');
+  assert.notEqual(decodeShareHash(`#scene=${'A'.repeat(Math.ceil(LIMIT * 4 / 3) + 8)}`).error.code, 'too-large', 'the default adapter has its own guard');
+});
+
+test('a small configured limit rejects import text within the limit whose canonical form grows past it', () => {
+  const text = small.sceneCodec.serialize(small.createPlaneScene({ view: sceneOfSize(LIMIT - 2) })).replace('"zoom":0', '"zoom":1e3');
+  assert.equal(Buffer.byteLength(text, 'utf8'), LIMIT);
+  assert.equal(errorCode(() => small.decodeSceneFile(text)), 'too-large');
+  assert.equal(small.decodeShareHash(linkFor(text)).error.code, 'too-large');
+  assert.equal(decodeSceneFile(text).camera.zoom, 1000, 'the default adapter admits it');
+});
+
+test('two adapters with different limits are independent; the smaller refuses to export a larger scene', () => {
+  const large = createPlaneSceneAdapter({ maxSceneBytes: 2 * LIMIT });
+  const scene = large.createPlaneScene({ view: sceneOfSize(LIMIT + 1) });
+  assert.ok(large.sceneCodec.equal(large.decodeSceneFile(large.encodeSceneFile(scene)), scene));
+  assert.equal(large.decodeShareHash(large.encodeShareHash(scene)).kind, 'scene');
+  assert.equal(errorCode(() => small.encodeSceneFile(scene)), 'too-large');
+  assert.equal(errorCode(() => small.encodeShareHash(scene)), 'too-large');
+  assert.equal(errorCode(() => small.decodeSceneFile(large.encodeSceneFile(scene))), 'too-large');
+  assert.equal(small.decodeShareHash(large.encodeShareHash(scene)).error.code, 'too-large');
+  assert.equal(small.sceneCodec.maxSceneBytes, LIMIT, 'constructing another adapter does not change this one');
+  assert.equal(sceneCodec.maxSceneBytes, DEFAULT_MAX_SCENE_BYTES);
+});
+
+test('a bridged scene whose inner scene fits but whose whole form exceeds the limit is rejected', () => {
+  const inner = JSON.parse(small.sceneCodec.serialize(small.createPlaneScene({ view: sceneOfSize(LIMIT - 200) })));
+  const outer = withScene(PLANE_INITIAL_SCENE, { provenance: { createdBy: 'atlas', bridgedFrom: inner } });
+  assert.ok(sceneCodec.serialize(sceneCodec.validate(outer)).length > LIMIT);
+  assert.equal(errorCode(() => small.sceneCodec.validate(outer)), 'too-large');
+  assert.equal(errorCode(() => small.decodeSceneFile(sceneCodec.serialize(sceneCodec.validate(outer)))), 'too-large');
+  const large = createPlaneSceneAdapter({ maxSceneBytes: 2 * LIMIT });
+  const bridged = large.sceneCodec.validate(outer);
+  assert.ok(large.sceneCodec.equal(large.decodeSceneFile(large.encodeSceneFile(bridged)), bridged), 'one allowance for the whole document');
+  assert.equal(errorCode(() => small.encodeSceneFile(bridged)), 'too-large');
+  assert.equal(errorCode(() => small.encodeShareHash(bridged)), 'too-large');
 });

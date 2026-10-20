@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canonicalJson, fnv1a64, createSceneCodec, SceneError, MAX_SCENE_BYTES, requireObject } from '../../src/shared/scene.js';
+import { canonicalJson, fnv1a64, createSceneCodec, SceneError, DEFAULT_MAX_SCENE_BYTES, requireObject } from '../../src/shared/scene.js';
 
 const toyCodec = {
   workspace: 'plane', id: 'toy', version: 1,
@@ -61,8 +61,8 @@ test('unknown, missing and unsupported envelope content is reported, never guess
 });
 
 test('scene text is bounded before parsing and must be JSON', () => {
-  assert.throws(() => codec.parse('x'.repeat(MAX_SCENE_BYTES + 1)), error => error.code === 'too-large');
-  assert.throws(() => codec.parse('é'.repeat(MAX_SCENE_BYTES / 2 + 1)), error => error.code === 'too-large', 'the limit counts UTF-8 bytes');
+  assert.throws(() => codec.parse('x'.repeat(DEFAULT_MAX_SCENE_BYTES + 1)), error => error.code === 'too-large');
+  assert.throws(() => codec.parse('é'.repeat(DEFAULT_MAX_SCENE_BYTES / 2 + 1)), error => error.code === 'too-large', 'the limit counts UTF-8 bytes');
   assert.throws(() => codec.parse('{'), error => error.code === 'invalid-json');
 });
 
@@ -77,9 +77,50 @@ test('model identity is validated by type and matched exactly, never coerced', (
 });
 
 test('admission rejects a scene whose canonical serialization exceeds the byte budget', () => {
-  const size = x => codec.serialize(codec.validate(toy({ camera: { x } }))).length;
-  const pad = MAX_SCENE_BYTES - size('');
-  assert.equal(size('x'.repeat(pad)), MAX_SCENE_BYTES);
-  assert.throws(() => codec.validate(toy({ camera: { x: 'x'.repeat(pad + 1) } })), error => error.code === 'too-large');
-  assert.throws(() => codec.validate(toy({ camera: { x: 'é'.repeat(pad / 2 + 1) } })), error => error.code === 'too-large', 'the budget counts UTF-8 bytes');
+  for (const limit of [1000, DEFAULT_MAX_SCENE_BYTES]) {
+    const bounded = limit === DEFAULT_MAX_SCENE_BYTES ? codec : createSceneCodec({ modelCodecs: [toyCodec], maxSceneBytes: limit });
+    const size = x => bounded.serialize(bounded.validate(toy({ camera: { x } }))).length;
+    const pad = limit - size('');
+    assert.equal(size('x'.repeat(pad)), limit, `exactly ${limit}`);
+    assert.throws(() => bounded.validate(toy({ camera: { x: 'x'.repeat(pad + 1) } })), error => error.code === 'too-large', `${limit} + 1`);
+    assert.throws(() => bounded.validate(toy({ camera: { x: 'é'.repeat(pad / 2 + 1) } })), error => error.code === 'too-large', 'the budget counts UTF-8 bytes');
+  }
+});
+
+test('the byte limit is a codec option: a safe positive integer, defaulting to 2,000,000', () => {
+  assert.equal(DEFAULT_MAX_SCENE_BYTES, 2_000_000);
+  assert.equal(codec.maxSceneBytes, DEFAULT_MAX_SCENE_BYTES, 'omitting the option uses the default');
+  assert.equal(createSceneCodec({ modelCodecs: [toyCodec], maxSceneBytes: undefined }).maxSceneBytes, DEFAULT_MAX_SCENE_BYTES);
+  const small = createSceneCodec({ modelCodecs: [toyCodec], maxSceneBytes: 1000 });
+  assert.equal(small.maxSceneBytes, 1000);
+  assert.ok(Object.isFrozen(small));
+  assert.throws(() => { small.maxSceneBytes = 5; }, TypeError);
+  for (const value of [0, -1, 1.5, NaN, Infinity, -Infinity, 2 ** 53, '1000', null, 1000n, {}]) {
+    assert.throws(() => createSceneCodec({ modelCodecs: [toyCodec], maxSceneBytes: value }), RangeError, String(value));
+  }
+});
+
+test('a configured limit bounds scene text exactly, in UTF-8 bytes, and stays out of the fingerprint', () => {
+  const limit = 1000;
+  const small = createSceneCodec({ modelCodecs: [toyCodec], maxSceneBytes: limit });
+  const base = small.serialize(small.validate(toy({ camera: { x: '' } })));
+  const textOf = bytes => base.replace('"x":""', `"x":"${'x'.repeat(bytes - base.length)}"`);
+  assert.equal(small.parse(textOf(limit)).camera.x.length, limit - base.length, 'exactly the limit is accepted');
+  assert.throws(() => small.parse(`${textOf(limit)} `), error => error.code === 'too-large', 'one byte more is rejected');
+  assert.throws(() => small.parse('é'.repeat(limit / 2 + 1)), error => error.code === 'too-large', 'the limit counts UTF-8 bytes');
+  const scene = small.validate(toy());
+  assert.equal(small.fingerprint(scene).sceneHash, codec.fingerprint(codec.validate(toy())).sceneHash, 'the limit never enters the fingerprint');
+});
+
+test('a bridged scene shares one allowance: the inner scene fits but the whole scene does not', () => {
+  const limit = 1000;
+  const small = createSceneCodec({ modelCodecs: [toyCodec], maxSceneBytes: limit });
+  const base = small.serialize(small.validate(toy({ camera: { x: '' } }))).length;
+  const inner = toy({ camera: { x: 'x'.repeat(limit - base) } });
+  assert.equal(small.serialize(small.validate(inner)).length, limit, 'the inner scene alone fits exactly');
+  const outer = toy({ provenance: { createdBy: 'atlas', bridgedFrom: inner } });
+  assert.throws(() => small.validate(outer), error => error.code === 'too-large');
+  assert.ok(createSceneCodec({ modelCodecs: [toyCodec], maxSceneBytes: 2 * limit }).validate(outer), 'a larger limit admits it');
+  const over = toy({ provenance: { createdBy: 'atlas', bridgedFrom: toy({ camera: { x: 'x'.repeat(limit - base + 1) } }) } });
+  assert.throws(() => small.validate(over), error => error.code === 'too-large', 'an inner scene over the limit is rejected');
 });

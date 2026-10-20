@@ -2,7 +2,7 @@
 // detail/zoom iteration policy, native share links and native scene files.
 import { PALETTES } from './palettes.js';
 import { INITIAL_VIEW, validateView } from './math.js';
-import { createSceneCodec, canonicalJson, SceneError, requireObject, utf8Bytes, MAX_SCENE_BYTES, APPLICATION_VERSION } from '../shared/scene.js';
+import { createSceneCodec, canonicalJson, SceneError, requireObject, utf8Bytes, APPLICATION_VERSION } from '../shared/scene.js';
 
 export const PLANE_MODEL = Object.freeze({ id: 'plane-mandelbrot', version: 1 });
 export const PLANE_CONVENTIONS = 'atlas-plane-v1';
@@ -98,24 +98,6 @@ function validateModel(input) {
 }
 
 export const planeModelCodec = Object.freeze({ workspace: 'plane', ...PLANE_MODEL, validateModel });
-export const sceneCodec = createSceneCodec({ modelCodecs: [planeModelCodec] });
-
-// Native creation may use documented defaults; loading never does (sceneCodec.validate).
-export function createPlaneScene({ view, settings = {}, applicationVersion = APPLICATION_VERSION }) {
-  const merged = { ...PLANE_DEFAULTS, ...settings };
-  return sceneCodec.validate({
-    application: 'ATLAS', schema: 'atlas.scene', schemaVersion: 1, applicationVersion,
-    workspace: 'plane', model: { ...PLANE_MODEL }, conventions: PLANE_CONVENTIONS,
-    parameters: {}, camera: { re: view.re, im: view.im, zoom: view.zoom }, slices: [],
-    iteration: { policy: PLANE_ITERATION_POLICY, detail: merged.detail }, tracing: null,
-    appearance: { palette: merged.palette, phase: merged.phase, frequency: merged.frequency, relief: merged.relief },
-    sampling: { seed: 0, sequence: 'plane-single-v1', targetSamples: 1 },
-    provenance: { createdBy: 'atlas' },
-  });
-}
-
-export const PLANE_INITIAL_SCENE = createPlaneScene({ view: INITIAL_VIEW });
-
 // The renderer-facing state; iterations always come from the named policy.
 export function toPlaneState(scene) {
   const { camera, appearance, iteration } = scene;
@@ -146,45 +128,81 @@ function base64UrlDecode(text) {
 }
 
 export const SHARE_PREFIX = '#scene=';
-const MAX_LINK_PAYLOAD = Math.ceil(MAX_SCENE_BYTES * 4 / 3) + 4;
 
-export function encodeShareHash(scene) {
-  return SHARE_PREFIX + base64UrlEncode(utf8Bytes(sceneCodec.serialize(scene)));
-}
+// One configured codec and every operation that creates, exports or imports a Plane scene, bound
+// to it. The limit is chosen once, when the application constructs its adapter; every file and
+// link check derives from sceneCodec.maxSceneBytes. A scene admitted under a larger limit is
+// refused by a smaller-limit encoder (too-large) rather than exported unreadable.
+export function createPlaneSceneAdapter({ maxSceneBytes } = {}) {
+  const sceneCodec = createSceneCodec({ modelCodecs: [planeModelCodec], maxSceneBytes });
+  const limit = sceneCodec.maxSceneBytes;
+  const maxLinkPayload = Math.ceil(limit * 4 / 3) + 4;
 
-// → { kind: 'none' } | { kind: 'scene', scene } | { kind: 'unsupported', error: SceneError }
-export function decodeShareHash(hash) {
-  if (!hash || hash === '#') return { kind: 'none' };
-  try {
-    if (!hash.startsWith(SHARE_PREFIX)) {
-      const earlier = new URLSearchParams(hash.slice(1)).has('re');
-      throw new SceneError(earlier ? 'earlier-format' : 'unrecognized-link', earlier ? 'this link is from an earlier ATLAS format' : 'this link is not an ATLAS scene link');
+  // Native creation may use documented defaults; loading never does (sceneCodec.validate).
+  function createPlaneScene({ view, settings = {}, applicationVersion = APPLICATION_VERSION }) {
+    const merged = { ...PLANE_DEFAULTS, ...settings };
+    return sceneCodec.validate({
+      application: 'ATLAS', schema: 'atlas.scene', schemaVersion: 1, applicationVersion,
+      workspace: 'plane', model: { ...PLANE_MODEL }, conventions: PLANE_CONVENTIONS,
+      parameters: {}, camera: { re: view.re, im: view.im, zoom: view.zoom }, slices: [],
+      iteration: { policy: PLANE_ITERATION_POLICY, detail: merged.detail }, tracing: null,
+      appearance: { palette: merged.palette, phase: merged.phase, frequency: merged.frequency, relief: merged.relief },
+      sampling: { seed: 0, sequence: 'plane-single-v1', targetSamples: 1 },
+      provenance: { createdBy: 'atlas' },
+    });
+  }
+
+  function exportable(scene) {
+    const canonical = sceneCodec.serialize(scene);
+    if (utf8Bytes(canonical).length > limit) throw new SceneError('too-large', `the scene serializes to more than ${limit} bytes`);
+    return canonical;
+  }
+
+  function encodeShareHash(scene) {
+    return SHARE_PREFIX + base64UrlEncode(utf8Bytes(exportable(scene)));
+  }
+
+  // → { kind: 'none' } | { kind: 'scene', scene } | { kind: 'unsupported', error: SceneError }
+  function decodeShareHash(hash) {
+    if (!hash || hash === '#') return { kind: 'none' };
+    try {
+      if (!hash.startsWith(SHARE_PREFIX)) {
+        const earlier = new URLSearchParams(hash.slice(1)).has('re');
+        throw new SceneError(earlier ? 'earlier-format' : 'unrecognized-link', earlier ? 'this link is from an earlier ATLAS format' : 'this link is not an ATLAS scene link');
+      }
+      const payload = hash.slice(SHARE_PREFIX.length);
+      if (payload.length > maxLinkPayload) throw new SceneError('too-large', 'the link is too large');
+      const bytes = base64UrlDecode(payload);
+      if (bytes.length > limit) throw new SceneError('too-large', 'the link is too large');
+      let text;
+      try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { throw new SceneError('invalid-link', 'the link payload is not UTF-8'); }
+      return { kind: 'scene', scene: sceneCodec.parse(text) };
+    } catch (error) {
+      if (error instanceof SceneError) return { kind: 'unsupported', error };
+      return { kind: 'unsupported', error: new SceneError('invalid-link', error.message) };
     }
-    const payload = hash.slice(SHARE_PREFIX.length);
-    if (payload.length > MAX_LINK_PAYLOAD) throw new SceneError('too-large', 'the link is too large');
-    const bytes = base64UrlDecode(payload);
-    if (bytes.length > MAX_SCENE_BYTES) throw new SceneError('too-large', 'the link is too large');
-    let text;
-    try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { throw new SceneError('invalid-link', 'the link payload is not UTF-8'); }
-    return { kind: 'scene', scene: sceneCodec.parse(text) };
-  } catch (error) {
-    if (error instanceof SceneError) return { kind: 'unsupported', error };
-    return { kind: 'unsupported', error: new SceneError('invalid-link', error.message) };
   }
+
+  // Pretty-printed when that fits the import limit; otherwise the canonical form, which admission bounds.
+  function encodeSceneFile(scene) {
+    const canonical = exportable(scene);
+    const pretty = `${JSON.stringify(JSON.parse(canonical), null, 2)}\n`;
+    return utf8Bytes(pretty).length <= limit ? pretty : canonical;
+  }
+
+  function decodeSceneFile(text) {
+    if (typeof text === 'string' && utf8Bytes(text).length <= limit) {
+      let data = null;
+      try { data = JSON.parse(text); } catch { /* reported by sceneCodec.parse */ }
+      if (data && data.application === 'ATLAS' && data.version === 1 && !('schema' in data)) throw new SceneError('unsupported-format', 'this location file is from an earlier ATLAS format');
+    }
+    return sceneCodec.parse(text);
+  }
+
+  return Object.freeze({ sceneCodec, createPlaneScene, encodeShareHash, decodeShareHash, encodeSceneFile, decodeSceneFile });
 }
 
-// Pretty-printed when that fits the import limit; otherwise the canonical form, which admission bounds.
-export function encodeSceneFile(scene) {
-  const canonical = sceneCodec.serialize(scene);
-  const pretty = `${JSON.stringify(JSON.parse(canonical), null, 2)}\n`;
-  return utf8Bytes(pretty).length <= MAX_SCENE_BYTES ? pretty : canonical;
-}
-
-export function decodeSceneFile(text) {
-  if (typeof text === 'string' && utf8Bytes(text).length <= MAX_SCENE_BYTES) {
-    let data = null;
-    try { data = JSON.parse(text); } catch { /* reported by sceneCodec.parse */ }
-    if (data && data.application === 'ATLAS' && data.version === 1 && !('schema' in data)) throw new SceneError('unsupported-format', 'this location file is from an earlier ATLAS format');
-  }
-  return sceneCodec.parse(text);
-}
+// The default adapter (DEFAULT_MAX_SCENE_BYTES); the named exports are its methods.
+const defaultAdapter = createPlaneSceneAdapter();
+export const { sceneCodec, createPlaneScene, encodeShareHash, decodeShareHash, encodeSceneFile, decodeSceneFile } = defaultAdapter;
+export const PLANE_INITIAL_SCENE = createPlaneScene({ view: INITIAL_VIEW });
