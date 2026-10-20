@@ -125,3 +125,48 @@ node spikes/project0/campaign.mjs --name webgpu-remediation --args remediation -
 ```
 
 **Qualification scope: headed execution only, under E7.** The headless browser/GPU-process crash remains a known limitation on the recorded host.
+
+## Remediation outcome
+
+**The campaign**
+- **Command:** `webgpu-remediation`, run once at implementation `448d5ff`, with the remediation flags plus `--enable-webgpu-developer-features`, under `--qualification project0-e7-headed-v1`, `--reuse '[]'`, and no `--gates`.
+- **Preflight:** the campaign's fresh headed integrity preflight (`20261020T051005133Z-dev-integrity-preflight-headed`) passed 7 of 7 with those flags. The amendment, the attempt-1 baseline and the limitation evidence authenticated before it ran.
+- **Execution:** every invocation was headed, and nothing was reused.
+- **Result:** exit code 0, no verification errors.
+- **Evidence:**
+  - `docs/reports/project0/webgpu-remediation-manifest.json`
+  - `docs/reports/project0/webgpu-remediation-gates.json`
+  - `artifacts/project0/20261020T0510*-webgpu-remediation-*`
+
+**Scope.** Qualification scope: headed execution only, under E7. `G1/headless` is not required under E7 and was not scheduled in this campaign. Prior headless collection was unsuccessful, and the browser/GPU-process crash remains a known limitation on the recorded host (`webgpu-g1c-diagnosis.md`).
+
+**Verdicts**
+
+| Gate | Verdict | Detail |
+|---|---|---|
+| G1 headed | **pass** | Dawn identity **corroborated**: selected adapter nvidia / vulkan / discrete GPU / `0x26b1`, isFallbackAdapter false, identical before and after `requestDevice` and in `device.adapterInfo`; ACTIVE `VENDOR= 0x10de`, `DEVICE=0x26b1`; run, process and target binding intact; probe readback verified |
+| G3 | **pass** | |
+| G4 | **pass** | |
+| G11 | **pass** | |
+| G13 | **pass** | |
+| G5 | **invalid/inconclusive** | The **compensation is unvalidated** and matches **no model** (none of F, U, S, DB, SDB). The off-plane slot is a **numerical failure** (`numericalFailure: true`) with frozen **componentRatio 4.744852004194964**, against a limit of 1. The plane slot passes, with logRRatio **0.3065** and no eligible status or index errors. |
+| G2, G6, G7, G8, G9, G10, G12 | not run | Campaign stopped at the correctness boundary |
+
+**STOPPED:** correctness gate G5 is invalid/inconclusive. This was the phase-boundary stop; there was no live abort.
+
+**Primitive readback** (1,371 pairs; exact dyadic checks of the saved words):
+- **TwoProduct:** the rounded product and the product-plus-residual identity are exact on every pair.
+- **TwoSum rounded sum:** exact on every pair.
+- **TwoSum residuals:** **all 1,371 are 0**. Zero is correct for 573 pairs and wrong for 798. For example, `TwoSum(1, 2⁻²⁴)` lost its residual `2⁻²⁴`.
+
+This is consistent with the compiler eliminating the rounding-error recovery, i.e. simplifying `(s − a) − b`-type expressions, which WGSL's reassociation rules permit (prereg §2.4). It does not show at which compiler stage this happens, or which instructions were emitted.
+
+**Codex's correction (run 20261020T051335Z-a45a).** Frozen G5 does not require unfused-f32 parity: it compares against an independent double-precision recurrence, with a tolerance. Bit-exact Model F matching was the additional condition for validating G5-A.
+- The frozen reference orbit first escapes at **iterate 4** (norm about 3.261). The maximum ratio through that iterate is **0.047**.
+- The failures at iterates 7–8 come from **forced continuation after escape**. That limits what the result says about rendering accuracy. It does not excuse the mandatory test.
+
+**Disposition.**
+- The preregistered G5-A candidate is **closed** (prereg §2.7).
+- WebGPU's single remediation cycle (spec §6, E5) is **consumed**.
+- The outcome is **inconclusive**: WebGPU is unqualified under the current contract.
+- No further variant, retry or native work is authorised. The result is escalated to the user under E5, per Codex's recommendation (run 20261020T051335Z-a45a, §4).
