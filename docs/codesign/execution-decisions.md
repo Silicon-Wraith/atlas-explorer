@@ -146,3 +146,19 @@ remains recorded as invalid/inconclusive.
 
 **How it is implemented:** without modifying the 24 frozen sources or `fixtures.json`, with the
 amendment text peer-reviewed by both authors and preregistered before the run.
+
+## E9 — G5-D coverage: S3 (long escape) is a diagnostic band (user, 2026-10-20)
+
+**Why the band can't qualify:** Codex (run 20261020T055042Z-0097) could not construct any S3 case
+that passes the unchanged input-sensitivity screen. It tried a uniform stream of 20M draws and a
+targeted near-neutral sampler that produced 19,694 S3 orbits. An 80-digit recurrence confirms
+that this is genuine sensitivity of the mathematics at f32 input precision, independent of the
+backend.
+
+**The user's decision:**
+- **Qualifying bands:** S0, S1, S2 and SB qualify G5-D.
+- **S3:** measured and reported as a non-gating diagnostic. The decision record and T13 disclose
+  that no validated long-escape band exists at f32 input precision.
+- **Unchanged:** the tolerances, the sensitivity screen and the plane gate.
+- **Rendering depth:** Space's deep zoom is addressed by perturbation (as in ATLAS 2D), not by
+  qualification.
