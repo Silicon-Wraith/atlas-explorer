@@ -4,6 +4,8 @@
 
 > **Amendment A (2026-10-20, user directive; Codex design run 20261020T201409Z-18ac):** the scene size limit is configurable. `MAX_SCENE_BYTES` is replaced by `DEFAULT_MAX_SCENE_BYTES`; `createSceneCodec` takes `maxSceneBytes`; `src/plane/scene-adapter.js` adds `createPlaneSceneAdapter({maxSceneBytes})`, whose bound methods are also the module's named exports, including `sceneCodec`. Later tasks read the limit from `sceneCodec.maxSceneBytes`. T03's code blocks below show the pre-amendment text; the implementation on `feat/project1a` is authoritative.
 
+> **Amendment B (2026-10-20; T04 review fix round, Codex run 20261020T203951Z-76f3, Claude review r2 APPROVED):** `createHistory` isolates each listener and takes an optional `onListenerError` hook (default: rethrow after the transition is returned); it requires `codec.equal`; a no-op command keeps its revision and requests no render; `step()` validates the target before moving a stack entry. T04's code blocks below are pre-amendment; `feat/project1a` is authoritative.
+
 **Goal:** Move Plane into the workbench structure without changing its behaviour, and give it native
 versioned scenes, undo with a separate camera history, immutable render requests with truthful
 reports, an immutable image export, and a Discoveries control over durable local storage — with
