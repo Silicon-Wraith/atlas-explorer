@@ -113,3 +113,15 @@ G5-A, G1-A and any justified G1-C correction form **one combined WebGPU remediat
    Full requested coverage remains subject to existing correctness prerequisites and live stops. Do not continue performance after failed correctness or override a stop to fill the table. Preserve every attempted result and every unexecuted gate’s reason.
 
    Preserve the original `webgpu-1` manifest and artifacts. Record actual validation results, diagnosis intervals, configuration and feature disclosures, artifact hashes and stop reasons in this history. Close through `spikes/project0/close-remediation.mjs` and the frozen decision procedure. All mandatory gates must pass before WebGPU is selected. An unsuccessful remediation closes this cycle and is escalated under E5; E6 remains provisional.
+
+## E7 amendment (G1-D)
+
+After this history was written, the user approved E7 (headed-only qualification, `e3ee2c0`). The amendment and its exact effect on the preregistration are recorded in `docs/reports/project0/webgpu-remediation-e7-addendum.md`. Its machine-readable form is `spikes/project0/qualification/e7-headed-v1.json` (sha256 `99ea9a3030fd31f68a3cb39cc97b10227fd28afdfc38e55a82119618991d8c51`).
+
+The command above becomes:
+
+```bash
+node spikes/project0/campaign.mjs --name webgpu-remediation --args remediation --qualification project0-e7-headed-v1 --reuse '[]'
+```
+
+**Qualification scope: headed execution only, under E7.** The headless browser/GPU-process crash remains a known limitation on the recorded host.

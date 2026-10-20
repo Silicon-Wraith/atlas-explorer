@@ -86,13 +86,16 @@ test('the campaign refuses the remediation configuration without the attempt-1 b
   const d = { LAUNCH: { remediation: ['--enable-gpu', DEVELOPER_FLAG] },
     runSession: async o => { calls.push(`session ${o.gate}`); return { records: [], runDir: `/x/${o.gate}` }; }, runG2: async () => ({ records: [], runDir: '/x/g2' }),
     runPreflight: async () => { calls.push('preflight'); return { pass: false, record: null, runDir: '/x/pf' }; },
-    implementationIdentity: async () => ({}), fixtureIdentity: async () => ({}), readFixtures: async () => JSON.parse((await import('node:fs')).readFileSync(new URL('../fixtures.json', import.meta.url), 'utf8')), loadCampaign: async () => { throw new Error('none'); },
+    implementationIdentity: async () => ({}), fixtureIdentity: async () => ({ fixtureHash: 'ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1', fixtureCommit: '5638678f5752ce4c6a40f36b280e1ce13ed52480', specHash: '64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645' }), readFixtures: async () => JSON.parse((await import('node:fs')).readFileSync(new URL('../fixtures.json', import.meta.url), 'utf8')), loadCampaign: async () => { throw new Error('none'); },
     verifyPreflight: async () => {}, bindAuxiliary: async () => ({}), recompute: async (records, fx, o) => { options.push(o); return { records, launches: [], raws: {}, errors: {} }; },
     writeReport: async () => {}, log: () => {} };
-  await assert.rejects(runCampaign({ name: 'webgpu-remediation', args: 'remediation' }, d), /attempt-1 baseline/);
+  // E7: webgpu-remediation runs under its authenticated headed-only profile
+  const Qn = await import('../qualification.mjs');
+  Object.assign(d, { loadQualification: id => Qn.loadQualification(id), verifyKnownLimitations: ctx => Qn.verifyKnownLimitations(ctx) });
+  await assert.rejects(runCampaign({ name: 'webgpu-remediation', args: 'remediation', qualification: 'project0-e7-headed-v1' }, d), /attempt-1 baseline/);
   assert.deepEqual(calls, [], 'nothing ran');
   const baseline = { records: [], raws: {} };
-  await assert.rejects(runCampaign({ name: 'webgpu-remediation', args: 'remediation' }, { ...d, loadBaseline: async () => baseline }), /integrity preflight/);
+  await assert.rejects(runCampaign({ name: 'webgpu-remediation', args: 'remediation', qualification: 'project0-e7-headed-v1' }, { ...d, loadBaseline: async () => baseline }), /integrity preflight/);
   assert.deepEqual(calls, ['preflight'], 'the baseline is loaded before the preflight');
 });
 

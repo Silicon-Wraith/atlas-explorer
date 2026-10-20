@@ -247,7 +247,7 @@ test('fix round 1, finding 9: the preflight runs with, records and is checked ag
   assert.deepEqual(launchedWith, remediation);
   const { runCampaign } = await import('../campaign.mjs');
   const f = fakes(CORRECT, { LAUNCH: { attempt1: ARGS, remediation }, runPreflight: async o => { f.calls.push(`preflight ${o.args.join(' ')}`); return { pass: true, record: preflightRecord(implementation, { launch: { commandLine: `chrome ${o.args.join(' ')}`, profile: '/p', requestedArgs: [...o.args] } }), runDir: '/x/pf' }; } });
-  await runCampaign({ name: 'webgpu-remediation', args: 'remediation', gates: 'G1' }, f.d);
+  await runCampaign({ name: 'webgpu-rehearsal', args: 'remediation', gates: 'G1' }, f.d);
   assert.equal(f.calls[0], `preflight ${remediation.join(' ')}`);
 });
 
@@ -270,6 +270,8 @@ test('verifyPreflight (read side): the manifest names and binds a passing prefli
 });
 
 // --- 9. The campaign, with injected fakes only (never a browser) ---------------------------------------------------------------------------
+// E7 / G1-D: `webgpu-remediation` now requires the headed-only qualification profile (tests/qualification-e7.test.mjs). These legacy-schedule
+// cases (both G1 modes, the original rules) therefore run under another qualifying campaign name, `webgpu-rehearsal`; their assertions are unchanged.
 const plan = gatePlan(fx);
 // A record whose metrics sit exactly on each rule's bound (so it passes) and whose descriptor is its gate's registered one.
 const pass = (gate, slot, mode = 'headed', extra = {}) => rec(gate, slot, { identity: { ...identity, mode }, metrics: Object.fromEntries(Object.entries(plan[gate][slot]).map(([k, [, a]]) => [k, a])), timingMethod: EXPECTED_TIMING[gate][0], ...extra });
@@ -319,7 +321,7 @@ test('fix round 1, finding 3: --gates names the rerun set; it never waives the c
   const records = Object.values(CORRECT).flat(), source = { campaign: 'webgpu-1', trials: Object.fromEntries(records.map(r => [`${r.gate}/${r.slot}`, { id: r.id }])) };
   const reuse = records.map(r => ({ gate: r.gate, slot: r.slot, fromManifest: 'docs/reports/project0/webgpu-1-manifest.json', recordId: r.id, reason: 'unaffected by the change set' }));
   const reused = fakes({}, { loadCampaign: async () => ({ manifest: source, records, attempts: [] }) });
-  await runCampaign({ name: 'webgpu-remediation', gates: 'G2', reuse: JSON.stringify(reuse) }, reused.d);
+  await runCampaign({ name: 'webgpu-rehearsal', gates: 'G2', reuse: JSON.stringify(reuse) }, reused.d);
   assert.ok(reused.calls.includes('g2'));
   assert.ok(!reused.calls.some(c => c.startsWith('session G')), 'reused correctness slots are not rerun');
 });
@@ -474,12 +476,12 @@ test('fix round 1, finding 8: the timing invocation is reused or rerun whole; a 
   const timing = [...WINDOW_PLANS.timing.map(w => w.name), 'G9/warmed'].map(k => { const [gate, ...slot] = k.split('/'); return pass(gate, slot.join('/')); });
   const entry = r => ({ gate: r.gate, slot: r.slot, fromManifest: 'src.json', recordId: r.id, reason: 'unaffected by the change set' });
   const partial = fakes(CORRECT);
-  await assert.rejects(runCampaign({ name: 'webgpu-remediation', reuse: JSON.stringify([entry(timing[0])]) }, partial.d), /timing invocation/);
+  await assert.rejects(runCampaign({ name: 'webgpu-rehearsal', reuse: JSON.stringify([entry(timing[0])]) }, partial.d), /timing invocation/);
   assert.deepEqual(partial.calls, [], 'nothing runs, not even the preflight');
   assert.throws(() => Q.buildManifest({ ...base, records: [{ ...timing[0], campaign: 'webgpu-0' }], reuse: [entry(timing[0])] }), /timing invocation/, 'and on read/build');
   const source = { campaign: 'webgpu-0', trials: Object.fromEntries(timing.map(r => [`${r.gate}/${r.slot}`, { id: r.id }])) };
   const whole = fakes(CORRECT, { loadCampaign: async () => ({ manifest: source, records: timing, attempts: [] }) });
-  await runCampaign({ name: 'webgpu-remediation', reuse: JSON.stringify(timing.map(entry)) }, whole.d);
+  await runCampaign({ name: 'webgpu-rehearsal', reuse: JSON.stringify(timing.map(entry)) }, whole.d);
   assert.deepEqual([...whole.recomputed[0]].sort(), timing.map(r => r.id).sort(), 'the whole reused invocation is verified together, so G9 finds its companions');
   assert.ok(!whole.calls.includes('session timing headed'), 'and the timing invocation is not rerun');
 });
@@ -567,7 +569,7 @@ test('fix round 2, concern 3: a refusal may skip the report only before any qual
   assert.ok(!failing.calls.some(c => c.startsWith('session') || c === 'g2' || c.startsWith('report')), 'no gate and no report');
   // a reuse source that fails verification: refused before any gate, no report
   const src = fakes({}, { loadCampaign: async () => ({ manifest: { trials: {} }, records: [g4({ campaign: 'webgpu-0' })], attempts: [] }), verifyPreflight: async () => { throw new Error('source preflight missing'); } });
-  await assert.rejects(runCampaign({ name: 'webgpu-remediation', reuse: JSON.stringify([{ gate: 'G4', slot: 'bulb-samples', fromManifest: 's.json', recordId: g4().id, reason: 'r' }]) }, src.d), /source preflight missing/);
+  await assert.rejects(runCampaign({ name: 'webgpu-rehearsal', reuse: JSON.stringify([{ gate: 'G4', slot: 'bulb-samples', fromManifest: 's.json', recordId: g4().id, reason: 'r' }]) }, src.d), /source preflight missing/);
   assert.ok(!src.calls.some(c => c.startsWith('session') || c === 'g2' || c.startsWith('report')));
   // once a gate has been attempted, a runner that throws still leaves a report, failing closed
   const late = fakes(CORRECT, { runSession: async o => { late.calls.push(`session ${o.gate} ${o.mode}`); if (o.gate === 'G4') throw new Error('runner crashed'); return { records: CORRECT[`${o.gate} ${o.mode}`] ?? [], runDir: `/x/${o.gate}-${o.mode}` }; } });

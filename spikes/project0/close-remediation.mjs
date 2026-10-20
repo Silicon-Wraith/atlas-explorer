@@ -10,11 +10,17 @@ import { resolve } from 'node:path';
 import { ROOT, DEVELOPER_FLAG, launchDisclosures } from './launch.mjs';
 import { sha256 } from './evidence.mjs';
 import { loadCampaign, loadFixtures, checkCoherence, recompute, qualify, unsafeFromLaunches, verifyPreflight, loadBaseline } from './qualify.mjs';
+import { loadQualification, verifyKnownLimitations, qualificationReference, excludedTrialsOf, knownLimitationsOf, SCOPE_DISCLOSURE, HEADLESS_ROW } from './qualification.mjs';
 
 const { values } = parseArgs({ options: { manifest: { type: 'string' }, history: { type: 'string' } } });
 const history = await readFile(resolve(ROOT, values.history), 'utf8');
 if (!/^## Classification/m.test(history) || !/^## Change set/m.test(history)) throw new Error('the remediation history must contain "## Classification" and "## Change set" sections (use "none" when no remediation was needed)');
-const { manifest, records, attempts } = await loadCampaign(values.manifest);
+// E7 / G1-D: a manifest that names a qualification profile is closed only under that profile, reloaded and authenticated here (the registry's
+// pinned hash, not the manifest's), with its limitation evidence verified; loadCampaign and qualify then check the manifest against it.
+const named = JSON.parse(await readFile(resolve(ROOT, values.manifest), 'utf8'));
+const qualification = named.qualification ? await loadQualification(named.qualification.id) : null;
+if (qualification) await verifyKnownLimitations(qualification);
+const { manifest, records, attempts } = await loadCampaign(values.manifest, { qualification });
 const fixtures = await loadFixtures(manifest);
 checkCoherence(records.filter(r => !r.invalidations.length), manifest);
 await verifyPreflight(manifest, records);
@@ -22,8 +28,11 @@ await verifyPreflight(manifest, records);
 // unavailable); a difference refuses the record, and every row is written beside the decision with the flag's disclosures.
 const baseline = manifest.requestedArgs?.includes(DEVELOPER_FLAG) ? await loadBaseline() : null;
 const { launches, raws, featureComparison, g5Observations } = await recompute([...records, ...attempts], fixtures, { manifest, baseline });
-const { backend, decision } = qualify(manifest, records, fixtures, { remediationClosed: true, raws, attempts });
+const { backend, decision } = qualify(manifest, records, fixtures, { remediationClosed: true, raws, attempts, qualification });
 const unsafeFlag = unsafeFromLaunches(launches);                                          // the verified effective command lines decide
-const out = { backend: 'webgpu', manifest: values.manifest, manifestSha256: sha256(await readFile(resolve(ROOT, values.manifest))), history: values.history, historySha256: sha256(history), args: manifest.args, requestedArgs: manifest.requestedArgs, unsafeFlag, disclosures: launchDisclosures(manifest.requestedArgs ?? []), featureComparison, g5Observations, decision, gates: backend.gates };
+const out = { backend: 'webgpu', manifest: values.manifest, manifestSha256: sha256(await readFile(resolve(ROOT, values.manifest))), history: values.history, historySha256: sha256(history), args: manifest.args, requestedArgs: manifest.requestedArgs, unsafeFlag, disclosures: launchDisclosures(manifest.requestedArgs ?? []), featureComparison, g5Observations,
+  ...(qualification ? { qualification: qualificationReference(qualification), scope: SCOPE_DISCLOSURE, excludedTrials: excludedTrialsOf(qualification), knownLimitations: knownLimitationsOf(qualification), headlessRow: HEADLESS_ROW } : {}),
+  decision, gates: backend.gates };
 await writeFile(resolve(ROOT, 'docs/reports/project0/webgpu-decision.json'), JSON.stringify(out, null, 2));
+if (qualification) console.log(SCOPE_DISCLOSURE);
 console.log(`WebGPU remediation closed: ${decision.outcome}${unsafeFlag ? ' — DEPENDS ON --enable-unsafe-webgpu' : ''}`);

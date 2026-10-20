@@ -19,6 +19,7 @@ import { resolve, join } from 'node:path';
 import { canonical, GATES } from './contract.js';
 import { gatePlan } from './gates.js';
 import { evaluateGateChecked } from './gates-checked.js';
+import { validateQualification, effectiveGatePlan, headlessProblems, qualificationReference, excludedTrialsOf, knownLimitationsOf } from './qualification.mjs';
 import { decideBackends } from './decision.js';
 import { sha256, launchIdentity } from './evidence.mjs';
 import { metricsFor } from './measure/index.mjs';
@@ -102,15 +103,21 @@ export function validateAttempts(manifest, attempts = []) {
 
 // T10: `preflight` ({runDir, implementationCommit, implementationHash}) names the passing integrity preflight the campaign ran first.
 // R1: `attempts` (records) and `bindings` ({path: sha256} of the auxiliary evidence) are named too.
-export function buildManifest({ records, fixture, campaign, args, requestedArgs, runDirs = [], notRun = {}, reuse = [], preflight = null, attempts = [], bindings = {} }) {
+// E7 / G1-D: `qualification` is a verified profile context (qualification.mjs). It adds the profile's reference, excluded trials and known
+// limitations (administrative fields: never a verdict, never notRun, never a synthetic trial), and refuses excluded or headless evidence.
+export function buildManifest({ records, fixture, campaign, args, requestedArgs, runDirs = [], notRun = {}, reuse = [], preflight = null, attempts = [], bindings = {}, qualification = null }) {
   validateReuseEntries(reuse);
   const manifest = { fixture, campaign, args, requestedArgs, runDirs, trials: {}, notRun, reuse, ...(preflight ? { preflight } : {}),
-    attempts: Object.fromEntries(attempts.map(a => [a.id, { gate: a.gate, slot: a.slot, identity: a.identity }])), bindings: { ...bindings } };
+    attempts: Object.fromEntries(attempts.map(a => [a.id, { gate: a.gate, slot: a.slot, identity: a.identity }])), bindings: { ...bindings },
+    ...(qualification ? { qualification: qualificationReference(qualification), excludedTrials: excludedTrialsOf(qualification), knownLimitations: knownLimitationsOf(qualification) } : {}) };
+  const excluded = headlessProblems([...records, ...attempts], qualification);
+  if (excluded.length) throw new Error(excluded[0]);
   validateSelection(manifest, records);
   for (const r of records) manifest.trials[`${r.gate}/${r.slot}`] = { id: r.id, identity: r.identity };
   validateStops(notRun, manifest.trials);
   validateReuse(manifest);
   validateAttempts(manifest, attempts);
+  validateQualification(manifest, qualification);
   return manifest;
 }
 
@@ -177,8 +184,9 @@ export async function loadBaseline(path = BASELINE_MANIFEST, { root = ROOT, load
   if (failed.length) throw new Error(`the attempt-1 baseline ${path} failed verification: ${failed.map(([id, e]) => `${id}: ${e}`).join('; ')}`);
   return { manifest: path, records: [...records, ...attempts], raws };
 }
-export async function loadCampaign(manifestPath, { root = ROOT } = {}) {
+export async function loadCampaign(manifestPath, { root = ROOT, qualification = null } = {}) {
   const manifest = JSON.parse(await readFile(resolve(root, manifestPath), 'utf8'));
+  validateQualification(manifest, qualification);                                      // E7: a profile manifest reloads only with its verified context
   validateStops(manifest.notRun, manifest.trials);
   validateReuse(manifest);
   const records = [], attempts = [];
@@ -194,6 +202,8 @@ export async function loadCampaign(manifestPath, { root = ROOT } = {}) {
   }
   for (const key of Object.keys(manifest.trials)) if (!records.some(r => `${r.gate}/${r.slot}` === key)) throw new Error(`selected trial ${key} has no record`);
   validateSelection(manifest, records);
+  const excluded = headlessProblems([...records, ...attempts], qualification);
+  if (excluded.length) throw new Error(excluded[0]);
   validateAttempts(manifest, attempts);
   return { manifest, records, attempts };
 }
@@ -375,8 +385,8 @@ export function unsafeFromLaunches(launches) {
 
 // T10: the read-time evaluator (T6 fix rounds 4-5) with the required raw payloads. An invalid verdict keeps the gate's records' own
 // invalidations beside the wrapper's timing reason, so the original evidence of why a trial failed is never replaced.
-export function gateVerdict(gate, rows, manifest, fixtures, raws) {
-  const result = evaluateGateChecked(gate, rows, manifest, fixtures, { raws });
+export function gateVerdict(gate, rows, manifest, fixtures, raws, qualification = null) {
+  const result = evaluateGateChecked(gate, rows, manifest, fixtures, { raws, qualification });
   if (result.status !== 'invalid/inconclusive') return result;
   return { ...result, reasons: [...new Set([...result.reasons, ...rows.flatMap(r => (Array.isArray(r.invalidations) ? r.invalidations : []))])] };
 }
@@ -386,8 +396,8 @@ export function gateVerdict(gate, rows, manifest, fixtures, raws) {
 // invocation that covers the gate makes it invalid/inconclusive, with those reasons, the checked verdict's reasons, and the attempts' ids. A
 // verification problem is never a measured failure.
 // R2: `gateErrors` ({gate: [message]}) are failures of one gate's invocation (a runner that threw).
-export function verdictOf(gate, { records, attempts = [], manifest, fixtures, raws, rejected = {}, errors = [], gateErrors = {} }) {
-  const rows = records.filter(r => r.gate === gate), verdict = gateVerdict(gate, rows, manifest, fixtures, raws);
+export function verdictOf(gate, { records, attempts = [], manifest, fixtures, raws, rejected = {}, errors = [], gateErrors = {}, qualification = null }) {
+  const rows = records.filter(r => r.gate === gate), verdict = gateVerdict(gate, rows, manifest, fixtures, raws, qualification);
   const tried = attempts.filter(a => gatesOf(a.gate).includes(gate));
   const bad = [...(gateErrors[gate] ?? []).map(e => `invocation: ${e}`), ...[...rows, ...tried].filter(r => rejected[r.id]).map(r => `verification: ${r.id}: ${rejected[r.id]}`)];
   if (!bad.length && !tried.length && !errors.length) return verdict;
@@ -396,13 +406,16 @@ export function verdictOf(gate, { records, attempts = [], manifest, fixtures, ra
     evidenceIds: [...verdict.evidenceIds, ...tried.map(a => a.id)] };
 }
 
-export function qualify(manifest, records, fixtures, { remediationClosed = false, raws, attempts = [], rejected = {}, errors = [], gateErrors = {} } = {}) {
+export function qualify(manifest, records, fixtures, { remediationClosed = false, raws, attempts = [], rejected = {}, errors = [], gateErrors = {}, qualification = null } = {}) {
+  validateQualification(manifest, qualification);                                      // E7: the verified profile, or none (legacy rules)
   validateStops(manifest.notRun, manifest.trials);
-  validateSelection(manifest, records, gatePlan(fixtures));
+  validateSelection(manifest, records, effectiveGatePlan(fixtures, qualification));
+  const excluded = headlessProblems([...records, ...attempts], qualification);
+  if (excluded.length) throw new Error(excluded[0]);
   validateReuse(manifest);
   validateAttempts(manifest, attempts);
   const gates = {};
-  for (const g of GATES) if (!manifest.notRun?.[g]) gates[g] = verdictOf(g, { records, attempts, manifest, fixtures, raws, rejected, errors, gateErrors });
+  for (const g of GATES) if (!manifest.notRun?.[g]) gates[g] = verdictOf(g, { records, attempts, manifest, fixtures, raws, rejected, errors, gateErrors, qualification });
   for (const [g, entry] of Object.entries(manifest.notRun ?? {})) {
     if (entry.blockedBy && gates[entry.blockedBy]?.status !== 'fail') throw new Error(`notRun.${g}: blockedBy ${entry.blockedBy} is not a measured failure`);
     gates[g] = { gate: g, status: 'not run', reason: entry.reason, ...(entry.blockedBy ? { blockedBy: entry.blockedBy } : {}), reasons: [entry.reason], evidenceIds: [] };
