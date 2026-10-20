@@ -1,22 +1,28 @@
-import { chromium } from 'playwright';
+import './support/entry-guard.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
+import { LIMITS, within, closeWithin, installSuiteDeadline, boundContext, ev, CHROME_TMPDIR, chromeLaunchEnv } from './support/bounded.mjs';
+
+const { chromium } = await import('playwright');
+installSuiteDeadline('graphics');
 
 await mkdir('artifacts/runtime', { recursive: true });
 process.env.TMPDIR = resolve('artifacts/runtime');
+// Installed Chrome alone gets a short temporary directory: its socket path must fit (bounded.mjs).
+if (process.argv.includes('--chrome')) await mkdir(CHROME_TMPDIR, { recursive: true });
 const url = process.env.ATLAS_URL || 'http://127.0.0.1:5173';
 const report = [];
 let server;
 try {
-  try { await fetch(url); } catch {
+  try { await fetch(url, { signal: AbortSignal.timeout(LIMITS.launch) }); } catch {
     server = spawn(process.execPath, ['scripts/serve.mjs'], { stdio: 'pipe' });
     server.stderr.on('data', data => process.stderr.write(data));
-    await new Promise((resolve, reject) => {
+    await within(new Promise((resolve, reject) => {
       server.stdout.once('data', resolve); server.once('error', reject);
       server.once('exit', code => reject(new Error(`Preview server exited: ${code}`)));
-    });
+    }), LIMITS.launch, 'preview server readiness');
   }
   for (const [name, args] of [
     ['hardware-vulkan', ['--enable-gpu', '--use-angle=vulkan', ...(process.argv.includes('--compositor') ? ['--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan'] : [])]],
@@ -24,16 +30,16 @@ try {
     let browser;
     const entry = { name, browser: process.argv.includes('--chrome') ? 'installed Chrome' : 'Chromium headless shell', headed: process.argv.includes('--headed'), args, messages: [], errors: [] }; report.push(entry);
     try {
-      browser = await chromium.launch({ ...(process.argv.includes('--chrome') ? { channel: 'chrome', chromiumSandbox: true } : {}), headless: !process.argv.includes('--headed'), timeout: 15000, args: ['--disable-dev-shm-usage', ...args] });
-      const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+      browser = await chromium.launch({ ...(process.argv.includes('--chrome') ? { channel: 'chrome', chromiumSandbox: true, env: chromeLaunchEnv() } : {}), headless: !process.argv.includes('--headed'), timeout: LIMITS.launch, args: ['--disable-dev-shm-usage', ...args] });
+      const page = boundContext(await within(browser.newPage({ viewport: { width: 1280, height: 720 } }), LIMITS.launch, 'newPage'));
       page.on('console', message => {
         if (['error', 'warning', 'info'].includes(message.type())) entry.messages.push(message.text());
         if (message.type() === 'error' || message.text().includes('CONTEXT_LOST_WEBGL')) entry.errors.push(message.text());
       });
       page.on('pageerror', error => entry.errors.push(error.message));
-      await page.goto(url, { timeout: 15000 });
+      await page.goto(url, { timeout: LIMITS.launch });
       await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 30000 });
-      entry.graphics = await page.evaluate(() => {
+      entry.graphics = await within(page.evaluate(() => {
         const gl = atlas.renderer.gl;
         if (!gl) return { mode: atlas.renderer.mode, diagnostics: atlas.renderer.diagnostics };
         const info = gl.getExtension('WEBGL_debug_renderer_info');
@@ -43,10 +49,10 @@ try {
           vendor: gl.getParameter(info ? info.UNMASKED_VENDOR_WEBGL : gl.VENDOR),
           version: gl.getParameter(gl.VERSION), error: gl.getError(),
         };
-      });
+      }), LIMITS.operation, 'graphics identity');
       assert.match(entry.graphics.mode, /^GPU/);
       assert.equal(entry.graphics.error, 0);
-      entry.samples = await page.evaluate(async () => {
+      entry.samples = await within(page.evaluate(async () => {
         const { GpuRenderer } = await import('/src/renderer.js');
         const { fixed, spanFixed, precisionFor, escapeTimeExact } = await import('/src/math.js');
         const renderer = new GpuRenderer(document.createElement('canvas'));
@@ -60,9 +66,10 @@ try {
           result.push({x,y,actual:field[(y*16+x)*4],expected:escapeTimeExact(re,im,digits,1500)});
         }
         renderer.destroy(); return result;
-      });
+      }), LIMITS.deep, 'GPU samples');
+      assert.equal(entry.samples.length, 6, 'all six GPU samples must be compared');
       for (const sample of entry.samples) assert.ok(Math.abs(sample.actual - sample.expected) < .5, JSON.stringify(sample));
-      if (process.argv.includes('--benchmark')) entry.benchmarks = await page.evaluate(async () => {
+      if (process.argv.includes('--benchmark')) entry.benchmarks = await within(page.evaluate(async () => {
         const { GpuRenderer, CpuRenderer } = await import('/src/renderer.js');
         const views = [
           { re: '-0.743735546648121901421502749766284274', im: '0.13180188244022899880486875943155304', zoom: 9.178000000000004 },
@@ -84,7 +91,8 @@ try {
           } finally { renderer.destroy(); }
         }
         return results;
-      });
+      }), LIMITS.deep, 'benchmarks');
+      if (process.argv.includes('--benchmark')) assert.equal(entry.benchmarks.length, 4, 'both backends must benchmark both views');
       for (const result of entry.benchmarks || []) {
         assert.equal(result.width, 1280); assert.equal(result.height, 720);
         assert.ok(result.escaped > 0);
@@ -95,14 +103,14 @@ try {
           ['zoom-9', { re: '-0.743735546648121901421502749766284274', im: '0.13180188244022899880486875943155304', zoom: 9.178000000000004 }],
           ['zoom-11', { re: '-0.74373554655981392496378600769218837122', im: '0.13180188254868144746747814705787405605', zoom: 11.242000000000006 }],
         ]) {
-          await page.evaluate(async view => { atlas.goTo(view); await atlas.whenIdle(); }, view);
+          await within(page.evaluate(async view => { atlas.goTo(view); await atlas.whenIdle(); }, view), LIMITS.deep, `benchmark view ${name}`);
           await page.screenshot({ path: `artifacts/hardware-${name}.png` });
         }
       }
       assert.deepEqual(entry.errors, []);
       await page.screenshot({ path: `artifacts/${name}.png` });
     } catch (error) { entry.error = error.message; process.exitCode = 1; }
-    finally { await browser?.close(); }
+    finally { await closeWithin(browser, 'browser'); }
     console.log(JSON.stringify({ ...entry, error: entry.error?.split('\n').slice(0, 3).join('\n') }, null, 2));
   }
 } finally {

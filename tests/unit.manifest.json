@@ -1,0 +1,7 @@
+{
+  "files": [
+    "tests/math.test.js",
+    "tests/unit/no-launch.test.js",
+    "tests/unit/gate.test.js"
+  ]
+}
