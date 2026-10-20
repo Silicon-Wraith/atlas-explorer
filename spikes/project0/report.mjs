@@ -23,8 +23,8 @@ import { decideBackends } from './decision.js';
 import { ROOT } from './launch.mjs';
 import { sha256, launchIdentity } from './evidence.mjs';
 import { canonical } from './contract.js';
-import { loadCampaign, loadFixtures, checkCoherence, recompute, qualify, unsafeFromLaunches, verifyPreflight } from './qualify.mjs';
-import { loadQualification, validateQualification, qualificationReference, excludedTrialsOf, knownLimitationsOf } from './qualification.mjs';
+import { loadCampaign, loadFixtures, checkCoherence, recompute, qualify, unsafeFromLaunches, verifyPreflight, loadBaseline } from './qualify.mjs';
+import { loadQualification, validateQualification, qualificationReference, excludedTrialsOf, knownLimitationsOf, verifyKnownLimitations, verifyHistoricalReferences } from './qualification.mjs';
 import { closeG5d } from './close-g5d.mjs';
 import { closeRemediation } from './close-remediation.mjs';
 
@@ -40,8 +40,22 @@ export const SELECTION = Object.freeze({
   text: 'WebGPU, chosen by explicit user override (E10); timing qualification incomplete',
 });
 export const TIMING_CARRY = 'timing evidence incomplete; cause unknown; demonstrated harness scheduling vulnerability';
+// Fix round 1 (finding 5): one classification for the Markdown and the results JSON. The carry-forward applies to an invalid G6/G7/G9 only when
+// the timing invocation was ended by a schedule deviation (the demonstrated harness scheduling vulnerability).
+const TIMING = ['G6', 'G7', 'G9'];
+export const timingCarry = gates => TIMING.some(g => (gates[g]?.reasons ?? []).some(r => /schedule deviation/.test(r)));
+const carried = (gates, g) => timingCarry(gates) && TIMING.includes(g) && gates[g]?.status === 'invalid/inconclusive';
+export const resultsGates = gates => Object.fromEntries(Object.entries(gates).map(([g, r]) => [g, { status: r.status, reasons: r.reasons, evidenceIds: r.evidenceIds,
+  ...(g === 'G5' && r.amendedBy ? { amendedBy: r.amendedBy } : {}), ...(carried(gates, g) ? { carryForward: TIMING_CARRY } : {}) }]));
 const PRECISION = `${R}/precision.json`, INTERPRETATION = `${R}/precision-interpretation.md`;
-const SUPERSEDED = { summary: `${R}/precision-ff11b35-superseded.json`, note: `${R}/precision-ff11b35-superseded.md` };
+// Fix round 1 (finding 2): the preserved ff11b35 reference set is pinned here (values as committed at 4465b3c), so a record whose artefact list
+// is emptied, a missing file or a substituted record is refused; its metrics are never reinterpreted.
+const SUPERSEDED = Object.freeze({ summary: `${R}/precision-ff11b35-superseded.json`, summarySha256: 'f7465a524d33df3bbedc10f5791f941530852abc8fe0b4713d95bacb03cb927a',
+  note: `${R}/precision-ff11b35-superseded.md`, record: 'precision-precision-20261020T175447161Z-precision-precision-headed', runDir: '20261020T175447161Z-precision-precision-headed',
+  recordSha256: '49b058916333c414733c08c188a0f024c345d8f3af5978fc4636df39ea224262',
+  implementationCommit: 'ff11b35f1e2eee3c05140ca0c0ba17651348ea81', implementationHash: '1fdb34079a855350b24da8e12e77853fc565f789933d3c60cca7ee6c8696c678',
+  artifacts: Object.freeze({ '.raw.json': 'a6c02c5bead9b7e08a9e06a1663c8a2f593c9d1ab88ad8c04b3d6c76a4c36b9e', '.launch.json': '2320b55c3a6ccd72cfd8a10d9bcf8492bcdc4d885f8cb182897e3d5b3e1b9476',
+    '.chrome-gpu.txt': 'd1e2def00d50c851d12b431224ed0ce9fe191b0e2f503ff34a4efa661d615330' }) });
 const esc = s => String(s).replace(/\|/g, '\\|');
 
 // ---------- rendering (pure) ----------
@@ -50,9 +64,9 @@ export function renderReport({ decision, backend, webgl = null, selection = null
   const again = decideBackends(backend, webgl);
   if (again.outcome !== decision.outcome) throw new Error(`decision does not follow from the gate statuses (${again.outcome} vs ${decision.outcome})`);
   if (selection && (selection.basis !== 'user decision E10' || selection.text !== SELECTION.text)) throw new Error('the selection is not the recorded E10 user override');
-  const gates = backend.gates, carry = ['G6', 'G7', 'G9'].some(g => (gates[g]?.reasons ?? []).some(r => /schedule deviation/.test(r)));
+  const gates = backend.gates, carry = timingCarry(gates);
   const statusOf = (g, r) => (g === 'G5' && g5 && r.status === 'pass' ? 'pass as amended by E8 and E9' : r.status);
-  const reasonsOf = (g, r) => [...(carry && ['G6', 'G7', 'G9'].includes(g) && r.status === 'invalid/inconclusive' ? [TIMING_CARRY] : []), ...(r.reasons ?? [])].map(esc).join('; ') || '—';
+  const reasonsOf = (g, r) => [...(carried(gates, g) ? [TIMING_CARRY] : []), ...(r.reasons ?? [])].map(esc).join('; ') || '—';
   const rows = [];
   for (const [g, r] of Object.entries(gates)) {
     rows.push(`| ${g} | ${statusOf(g, r)} | ${reasonsOf(g, r)} |`);
@@ -95,9 +109,10 @@ function precisionText(p) {
   return [`Selection basis: ${p.selection?.basis ?? '—'} (mechanical outcome ${p.selection?.mechanicalOutcome ?? '—'}). Record \`${p.record}\`, implementation ${p.implementationCommit?.slice(0, 7) ?? '—'}; recomputed in full from its own evidence.`, '',
     `Primitive validation: ${p.validated ? 'passed (compensation validated under the preregistered rule)' : `**failed** — compensation not interpreted (${p.primitiveFailures.join('; ')})`}.`,
     `Observed disagreement threshold against the CPU reference: ${p.observedDisagreementThreshold ?? 'not reached within the tested distances'}${p.firstStop ? `; interpretation stopped at d=${p.firstStop.distance} (${p.firstStop.reasons.join(', ')})` : ''}.`, '',
-    '| d | eligible | baseline status / large depth (exceeded) | compensated status / large depth (exceeded) | work median ms (base / comp) | extra bytes |', '|---|---|---|---|---|---|',
+    '| d | interpreted | eligible | baseline status / large depth (exceeded) | compensated status / large depth (exceeded) | work median ms (base / comp) | extra bytes |', '|---|---|---|---|---|---|---|',
     ...p.rows.map(r => { const b = r.baseline.vsRequested, c = r.compensated?.vsRequested;
-      return `| ${r.distance} | ${b.eligible} | ${b.statusDisagreements} (${pct(b.statusDisagreements, b.eligible)}) / ${b.largeDepthErrors} (${b.thresholdExceeded}) | ${c ? `${c.statusDisagreements} (${pct(c.statusDisagreements, c.eligible)}) / ${c.largeDepthErrors} (${c.thresholdExceeded})` : '—'} | ${r.cost.baseline.workMs.median.toFixed(2)} / ${r.cost.compensated.workMs.median.toFixed(2)} | ${r.extraBytes} |`; }), '',
+      if (!r.interpreted) return `| ${r.distance} | no | not interpreted | not interpreted | ${b.eligible} | ${r.cost.baseline.workMs.median.toFixed(2)} / ${r.cost.compensated.workMs.median.toFixed(2)} | ${r.extraBytes} |`;
+      return `| ${r.distance} | yes | ${b.eligible} | ${b.statusDisagreements} (${pct(b.statusDisagreements, b.eligible)}) / ${b.largeDepthErrors} (${b.thresholdExceeded}) | ${c ? `${c.statusDisagreements} (${pct(c.statusDisagreements, c.eligible)}) / ${c.largeDepthErrors} (${c.thresholdExceeded})` : '—'} | ${r.cost.baseline.workMs.median.toFixed(2)} / ${r.cost.compensated.workMs.median.toFixed(2)} | ${r.extraBytes} |`; }), '',
     'Caveats (joint interpretation, `docs/reports/project0/precision-interpretation.md`): the limit is local to this anchor, profile, implementation and environment, not a universal f32 zoom floor; A.11 compensates coordinate construction and recurrence addition only (the nonlinear map, derivative and estimator remain f32), so field-evaluation precision is the leading remaining bottleneck without a quantified attribution; costs describe the instrumented prototype; extraBytes is a difference of allocation peaks, not a saving; T12 tests arithmetic splitting, not Plane\'s bitwise splitting.'].join('\n');
 }
 
@@ -114,7 +129,12 @@ export function historyPrefix(text, sha) {
 async function verifyClosed(path, close, root) {
   const bytes = await readFile(resolve(root, path)), recorded = JSON.parse(String(bytes));
   if (!historyPrefix(await readFile(resolve(root, recorded.history), 'utf8'), recorded.historySha256)) throw new Error(`${recorded.history} is not an append-only extension of the history ${path} recorded`);
-  const out = JSON.parse(JSON.stringify(await close({ manifest: recorded.manifest, history: recorded.history }, { root, qualificationRoot: root, historicalRoot: root, writeFile: async () => {}, log: () => {} })));
+  const out = JSON.parse(JSON.stringify(await close({ manifest: recorded.manifest, history: recorded.history }, { root, qualificationRoot: root, historicalRoot: root, writeFile: async () => {}, log: () => {},
+    // Fix round 1 (finding 1): every evidence reader is bound to the supplied root, never the module checkout's defaults.
+    loadQualification: (id, o = {}) => loadQualification(id, { ...o, root }), verifyKnownLimitations: ctx => verifyKnownLimitations(ctx, { root }),
+    verifyHistoricalReferences: ctx => verifyHistoricalReferences(ctx, { root }), loadBaseline: () => loadBaseline(undefined, { root }),
+    loadCampaign: (m, o = {}) => loadCampaign(m, { ...o, root }), loadFixtures: (m, o = {}) => loadFixtures(m, { ...o, root }), verifyPreflight: (m, r, o = {}) => verifyPreflight(m, r, { ...o, root }),
+    recompute: (r, f, o = {}) => recompute(r, f, { ...o, root }) })));
   const again = { ...out, historySha256: recorded.historySha256 };
   const differ = [...new Set([...Object.keys(again), ...Object.keys(recorded)])].filter(k => canonical(again[k] ?? null) !== canonical(recorded[k] ?? null));
   if (differ.length) throw new Error(`${path} does not reproduce from its evidence (${differ.join(', ')})`);
@@ -152,7 +172,7 @@ async function verifyRecordFile(root, runDir, id) {
   return record;
 }
 
-async function verifyPrecision({ root, saved, final, finalBytes, manifest, fixtures, records }) {
+export async function verifyPrecision({ root, saved, final, finalBytes, manifest, fixtures, records }) {
   if (saved.manifest !== final.manifest || saved.manifestSha256 !== final.manifestSha256) throw new Error('precision evidence was produced against a different selection');
   const s = saved.selection ?? {};
   if (s.basis !== 'user decision E10' || s.backend !== 'webgpu' || s.decisionFile !== CHAIN.final.decision || s.decisionSha256 !== sha256(finalBytes) || s.mechanicalOutcome !== final.decision.outcome)
@@ -171,7 +191,30 @@ async function verifyPrecision({ root, saved, final, finalBytes, manifest, fixtu
   const again = assessPrecision({ fx: fixtures, record, raw: JSON.parse(await readFile(join(root, 'artifacts/project0', raws[0].path), 'utf8')), selected: records });
   const META = new Set(['manifest', 'manifestSha256', 'selection', 'record', 'runDir', 'args', 'requestedArgs']);
   for (const k of new Set([...Object.keys(again), ...Object.keys(saved).filter(k => !META.has(k))])) if (canonical(again[k] ?? null) !== canonical(saved[k] ?? null)) throw new Error(`precision ${k} does not recompute from its evidence`);
-  return { ...again, selection: s, record: record.id, runDir: saved.runDir, identity: record.identity, implementationCommit: record.identity.implementationCommit };
+  return { ...again, selection: s, record: record.id, runDir: saved.runDir, identity: record.identity, implementationCommit: record.identity.implementationCommit, recordDoc: record };
+}
+
+// Fix round 1 (finding 2): the superseded summary and its record must be exactly the pinned reference set, with the expected artefact types,
+// a WebGPU precision identity at ff11b35 and the selected fixture; the summary must be bound to the same selection as the accepted one.
+async function verifySuperseded({ root, final, finalBytes, manifest, precision }) {
+  const P = SUPERSEDED, bytes = await readFile(resolve(root, P.summary));
+  if (sha256(bytes) !== P.summarySha256) throw new Error(`the superseded summary ${P.summary} is not the preserved one`);
+  const s = JSON.parse(String(bytes));
+  if (s.record !== P.record || s.runDir !== P.runDir) throw new Error('the superseded summary names a record other than the preserved superseded one');
+  if (s.manifestSha256 !== final.manifestSha256 || s.selection?.decisionSha256 !== sha256(finalBytes)) throw new Error('the superseded summary is not bound to the verified selection');
+  if (!/^\*\*Status:\*\* superseded/m.test(await readFile(resolve(root, P.note), 'utf8'))) throw new Error(`${P.note} does not mark the ff11b35 summary superseded`);
+  const recordBytes = await readFile(join(root, 'artifacts/project0', P.runDir, `${P.record}.json`));
+  if (sha256(recordBytes) !== P.recordSha256) throw new Error('the superseded record is not the preserved one (its artefact references or identity changed)');
+  const r = await verifyRecordFile(root, P.runDir, P.record);
+  const kinds = Object.keys(P.artifacts);
+  if (r.artifacts.length !== kinds.length || !kinds.every(k => r.artifacts.filter(a => a.path.endsWith(k) && a.path.startsWith(`${P.runDir}/`) && a.sha256 === P.artifacts[k]).length === 1))
+    throw new Error('the superseded record does not reference exactly its preserved raw, launch and chrome-gpu artefacts');
+  const id = r.identity;
+  if (r.gate !== 'precision' || r.slot !== 'precision' || id.backend !== 'webgpu' || id.mode !== 'headed' || id.implementationCommit !== P.implementationCommit || id.implementationHash !== P.implementationHash
+    || ['fixtureHash', 'fixtureCommit', 'specHash'].some(k => id[k] !== manifest.fixture[k])) throw new Error('the superseded record is not the ff11b35 WebGPU precision experiment on the selected fixture');
+  if (precision && r.id === precision.record) throw new Error('the superseded summary names the accepted precision record');
+  return { summary: P.summary, summarySha256: P.summarySha256, note: P.note, status: 'superseded; user-directed run while review was pending; not the accepted T12 result',
+    record: r.id, runDir: P.runDir, implementationCommit: id.implementationCommit, implementationHash: id.implementationHash, artifacts: r.artifacts.length, recordDoc: r };
 }
 
 export async function buildReport({ root, decisionPath, date, git = gitAt(root) }) {
@@ -209,15 +252,7 @@ export async function buildReport({ root, decisionPath, date, git = gitAt(root) 
   // 5. Precision (T12) and the superseded ff11b35 summary.
   const precisionSaved = existsSync(resolve(root, PRECISION)) ? JSON.parse(await readFile(resolve(root, PRECISION), 'utf8')) : null;
   const precision = precisionSaved ? await verifyPrecision({ root, saved: precisionSaved, final, finalBytes, manifest, fixtures, records }) : null;
-  const superseded = [];
-  if (existsSync(resolve(root, SUPERSEDED.summary))) {
-    const s = JSON.parse(await readFile(resolve(root, SUPERSEDED.summary), 'utf8'));
-    if (!/\*\*Status:\*\* superseded/.test(await readFile(resolve(root, SUPERSEDED.note), 'utf8'))) throw new Error(`${SUPERSEDED.note} does not mark the ff11b35 summary superseded`);
-    const r = await verifyRecordFile(root, s.runDir, s.record);
-    if (precision && r.id === precision.record) throw new Error('the superseded summary names the accepted precision record');
-    superseded.push({ summary: SUPERSEDED.summary, summarySha256: sha256(await readFile(resolve(root, SUPERSEDED.summary))), note: SUPERSEDED.note, status: 'superseded; user-directed run while review was pending; not the accepted T12 result',
-      record: r.id, runDir: s.runDir, implementationCommit: r.identity.implementationCommit, implementationHash: r.identity.implementationHash, artifacts: r.artifacts.length });
-  }
+  const superseded = existsSync(resolve(root, SUPERSEDED.summary)) ? [await verifySuperseded({ root, final, finalBytes, manifest, precision })] : [];
   // 6. Every implementation identity, authenticated from its own commit, with each declared shader resolved there.
   const rem = await loadCampaign(remediation.manifest, { root, qualification: await loadQualification(JSON.parse(await readFile(resolve(root, remediation.manifest), 'utf8')).qualification.id, { root }) });
   const byImpl = new Map();
@@ -231,6 +266,13 @@ export async function buildReport({ root, decisionPath, date, git = gitAt(root) 
     for (const r of [...c.records, ...c.attempts]) await add(r.identity, label, r);
     if (c.manifest.preflight) await add(c.manifest.preflight, `${label} preflight`);
   }
+  // Fix round 1 (finding 3): the compact verified per-trial inventory (the brief's `records`), by campaign and role.
+  const compact = (campaign, role, r) => ({ campaign, role, id: r.id, gate: r.gate, slot: r.slot, mode: r.mode, invalidations: r.invalidations, metrics: r.metrics, identity: r.identity, artifacts: r.artifacts });
+  const inventory = [];
+  for (const [label, c] of [['webgpu-1', c1], ['webgpu-remediation', rem], ['webgpu-g5d', { manifest, records, attempts }]])
+    inventory.push(...c.records.map(r => compact(label, 'selected', r)), ...c.attempts.map(r => compact(label, 'attempt', r)));
+  if (precision) inventory.push(compact('precision', 'precision', precision.recordDoc));
+  for (const s of superseded) inventory.push(compact('precision', 'superseded', s.recordDoc));
   if (precision) await add(precision.identity, 'precision (T12)');
   for (const s of superseded) await add(s, 'precision ff11b35 (superseded)');
   const implementations = [];
@@ -244,18 +286,15 @@ export async function buildReport({ root, decisionPath, date, git = gitAt(root) 
     { campaign: 'webgpu-remediation', verifiedAgainst: CHAIN.remediation.decision, outcome: remediation.decision.outcome },
     { campaign: 'webgpu-g5d', verifiedAgainst: CHAIN.final.decision, outcome: final.decision.outcome },
   ];
-  const inputs = {
-    knownLimitations: final.knownLimitations, launch: { args: final.args, requestedArgs: final.requestedArgs, disclosures: final.disclosures },
-  };
+  const launchConfig = { args: final.args, requestedArgs: final.requestedArgs, disclosures: final.disclosures };
   const markdown = renderReport({ decision: final.decision, backend, selection, scope: final.scope, headlessRow: final.headlessRow, knownLimitations: final.knownLimitations, g5, chain, implementations,
-    precision, superseded, unsafeFlag: final.unsafeFlag, launch: inputs.launch });
-  const assessment = precision ? Object.fromEntries(Object.entries(precision).filter(([k]) => !['identity'].includes(k))) : null;
+    precision, superseded, unsafeFlag: final.unsafeFlag, launch: launchConfig });
+  const assessment = precision ? Object.fromEntries(Object.entries(precision).filter(([k]) => !['identity', 'recordDoc'].includes(k))) : null;
   const results = {
-    date, mechanicalDecision: final.decision, selection, scope: final.scope, unsafeFlag: final.unsafeFlag, ...inputs.launch,
+    date, mechanicalDecision: final.decision, selection, scope: final.scope, unsafeFlag: final.unsafeFlag, ...launchConfig,
     qualification: final.qualification, excludedTrials: final.excludedTrials, headlessRow: final.headlessRow, knownLimitations: final.knownLimitations,
-    gates: Object.fromEntries(Object.entries(final.gates).map(([g, r]) => [g, { status: r.status, reasons: r.reasons, evidenceIds: r.evidenceIds,
-      ...(g === 'G5' ? { amendedBy: ['E8', 'E9'] } : {}), ...(['G6', 'G7', 'G9'].includes(g) && r.status === 'invalid/inconclusive' ? { carryForward: TIMING_CARRY } : {}) }])),
-    g5, chain, implementations, precision: assessment, superseded,
+    gates: resultsGates(Object.fromEntries(Object.entries(final.gates).map(([g, r]) => [g, g === 'G5' ? { ...r, amendedBy: ['E8', 'E9'] } : r]))),
+    g5, chain, implementations, precision: assessment, superseded: superseded.map(({ recordDoc, ...x }) => x), records: inventory,
     files: Object.fromEntries(await Promise.all([CHAIN.final.decision, CHAIN.remediation.decision, final.manifest, remediation.manifest, o.manifest, o.gates, SELECTION.decisions, SELECTION.platform,
       ...(precision ? [PRECISION] : []), ...(existsSync(resolve(root, INTERPRETATION)) ? [INTERPRETATION] : [])].map(async p => [p, sha256(await readFile(resolve(root, p)))]))),
   };

@@ -13,9 +13,9 @@ import { resolve, join, basename } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { ROOT } from '../launch.mjs';
-import { renderReport, authenticateImplementation, TIMING_CARRY } from '../report.mjs';
-import { sha256 } from '../evidence.mjs';
-import { GATES } from '../contract.js';
+import { renderReport, authenticateImplementation, TIMING_CARRY, timingCarry, resultsGates, verifyPrecision, CHAIN } from '../report.mjs';
+import { sha256, launchIdentity } from '../evidence.mjs';
+import { GATES, canonical } from '../contract.js';
 
 const run = promisify(execFile);
 const pass = Object.fromEntries(GATES.map(g => [g, { status: 'pass', reasons: [] }]));
@@ -70,6 +70,71 @@ test('implementation identities authenticate against their own commit; a forged 
   await assert.rejects(authenticateImplementation({ implementationCommit: 'c', implementationHash: hash }, [{ id: 'r', shader: sha256('XX') }], { git }), /shader/);
 });
 
+// Fix round 1 (Codex T13 r1 finding 5): one timing classification, used by the Markdown and the JSON alike.
+test('the timing carry-forward is one classification shared by the Markdown and the results JSON', () => {
+  const noDeviation = { ...pass, G9: { status: 'invalid/inconclusive', reasons: ['missing required trials'] } };
+  assert.equal(timingCarry(noDeviation), false); assert.equal(timingCarry(timingInvalid), true);
+  assert.equal(resultsGates(noDeviation).G9.carryForward, undefined);
+  assert.doesNotMatch(renderReport({ decision: { outcome: 'inconclusive' }, backend: { gates: noDeviation, remediationClosed: true } }), new RegExp(TIMING_CARRY));
+  for (const g of ['G6', 'G7', 'G9']) assert.equal(resultsGates(timingInvalid)[g].carryForward, TIMING_CARRY);
+  assert.equal(resultsGates(timingInvalid).G8.carryForward, undefined);
+});
+
+// Finding 4: every precision row states whether it was interpreted; an uninterpreted row shows no threshold result.
+test('precision rows carry their interpretation status', () => {
+  const side = (n, x) => ({ vsRequested: { eligible: 100, statusDisagreements: n, largeDepthErrors: n, thresholdExceeded: x } });
+  const cost = { baseline: { workMs: { median: 1 } }, compensated: { workMs: { median: 2 } } };
+  const md = renderReport({ decision: { outcome: 'inconclusive' }, backend: { gates: timingInvalid, remediationClosed: true },
+    precision: { interpretable: true, validated: true, primitiveFailures: [], observedDisagreementThreshold: null, firstStop: { distance: 0.01, reasons: ['anchor'] },
+      rows: [{ distance: 0.1, interpreted: true, baseline: side(1, false), compensated: side(0, false), cost, extraBytes: 0 }, { distance: 0.01, interpreted: false, baseline: side(9, true), compensated: side(9, true), cost, extraBytes: 0 }] } });
+  const row = d => md.split('\n').find(l => l.startsWith(`| ${d} |`));
+  assert.match(row(0.1), /^\| 0\.1 \| yes \|/); assert.match(row(0.01), /^\| 0\.01 \| no \| not interpreted \| not interpreted \|/);
+});
+
+// Finding 7 (adaptation 9): the brief's precision round trips, portable (synthetic evidence through the exported verifier seam, no raw evidence).
+async function precisionTree({ slot, invalidations, raw, summary }) {
+  const base = resolve(ROOT, 'artifacts/runtime'); await mkdir(base, { recursive: true });
+  const root = await mkdtemp(join(base, 'p0-report-prec-'));
+  const fixture = { fixtureHash: 'a'.repeat(64), fixtureCommit: 'b'.repeat(40), specHash: 'c'.repeat(64) };
+  const launch = { args: 'remediation', requestedArgs: ['--enable-gpu'], commandLine: 'chrome --enable-gpu --user-data-dir=/p', profile: '/p', mode: 'headed' };
+  const identity = { backend: 'webgpu', ...fixture, implementationCommit: 'd'.repeat(40), implementationHash: 'e'.repeat(64), ...launchIdentity(launch), browserVersion: 'v', browserExecutable: 'x', driver: 'd', session: 's' };
+  const rawText = JSON.stringify(raw), launchText = JSON.stringify(launch);
+  await mkdir(join(root, 'artifacts/project0/prec'), { recursive: true });
+  await writeFile(join(root, 'artifacts/project0/prec/P.raw.json'), rawText); await writeFile(join(root, 'artifacts/project0/prec/P.launch.json'), launchText);
+  const record = { schema: 1, id: 'P', gate: 'precision', slot, campaign: 'precision', mode: 'headed', experiment: true, identity, invalidations, metrics: {},
+    artifacts: [{ path: 'prec/P.raw.json', sha256: sha256(rawText) }, { path: 'prec/P.launch.json', sha256: sha256(launchText) }] };
+  await writeFile(join(root, 'artifacts/project0/prec/P.json'), canonical(record));
+  const finalBytes = Buffer.from('{"decision":"synthetic"}'), manifest = { fixture, args: 'remediation', requestedArgs: ['--enable-gpu'] };
+  const final = { manifest: 'm.json', manifestSha256: 'f'.repeat(64), decision: { outcome: 'inconclusive' } };
+  const records = [{ identity }], fixtures = {};
+  const { assessPrecision } = await import('../measure/precision.mjs');
+  const selection = { basis: 'user decision E10', backend: 'webgpu', mechanicalOutcome: 'inconclusive', decisionFile: CHAIN.final.decision, decisionSha256: sha256(finalBytes) };
+  const saved = { manifest: final.manifest, manifestSha256: final.manifestSha256, selection, record: 'P', runDir: 'prec', args: 'remediation', requestedArgs: ['--enable-gpu'],
+    ...assessPrecision({ fx: fixtures, record, raw, selected: records }), ...(summary ?? {}) };
+  return { root, args: { root, saved, final, finalBytes, manifest, fixtures, records } };
+}
+const render = precision => renderReport({ decision: { outcome: 'inconclusive' }, backend: { gates: timingInvalid, remediationClosed: true }, precision });
+
+test('an honest aborted precision run is reported as not interpretable and does not block the report', async () => {
+  const t = await precisionTree({ slot: 'incomplete', invalidations: ['no observable progress for 5 s: [band:3]'], raw: { error: 'aborted' } });
+  try { assert.match(render(await verifyPrecision(t.args)), /Not interpretable: no observable progress/); } finally { await rm(t.root, { recursive: true, force: true }); }
+});
+
+test('a summary claiming interpretability for a record with execution invalidations is rejected', async () => {
+  const t = await precisionTree({ slot: 'precision', invalidations: ['device lost: unknown'], raw: {}, summary: { interpretable: true } });
+  try { await assert.rejects(verifyPrecision(t.args), /precision interpretable does not recompute/); } finally { await rm(t.root, { recursive: true, force: true }); }
+});
+
+test('an honest assessment error is recomputed, kept separate from execution invalidations, and reported', async () => {
+  const t = await precisionTree({ slot: 'precision', invalidations: [], raw: { primitives: [], sets: [] } });
+  try {
+    assert.ok(t.args.saved.interpretationError || t.args.saved.timingError); assert.deepEqual(t.args.saved.executionInvalidations, []);
+    assert.match(render(await verifyPrecision(t.args)), /Not interpretable:/);
+    t.args.saved.interpretationError = t.args.saved.timingError = null;
+    await assert.rejects(verifyPrecision(t.args), /does not recompute/);
+  } finally { await rm(t.root, { recursive: true, force: true }); }
+});
+
 // ---- CLI against a scratch copy of the committed evidence ----
 const EVIDENCE = resolve(ROOT, 'artifacts/project0');
 const haveEvidence = existsSync(join(EVIDENCE, '20261020T163917297Z-webgpu-g5d-g5-headed')) && existsSync(join(EVIDENCE, '20261020T181850179Z-precision-precision-headed'));
@@ -111,12 +176,21 @@ test('the CLI verifies the committed evidence and writes both outputs with the h
     assert.equal(results.precision.observedDisagreementThreshold, 1e-5);
     assert.ok(results.implementations.every(i => i.authenticated));
     assert.equal(results.superseded[0].implementationCommit.slice(0, 7), 'ff11b35');
+    // Finding 3: the compact verified per-trial inventory, by campaign and role, with identities and artefact hashes.
+    for (const c of ['webgpu-1', 'webgpu-remediation', 'webgpu-g5d']) assert.ok(results.records.some(r => r.campaign === c && r.role === 'selected'), c);
+    const g1 = results.records.find(r => r.campaign === 'webgpu-g5d' && r.gate === 'G1');
+    assert.equal(g1.slot, 'headed'); assert.equal(g1.identity.fixtureCommit.length, 40); assert.ok(g1.identity.implementationCommit.startsWith('f754534')); assert.ok(g1.metrics);
+    for (const r of results.records) for (const a of r.artifacts) assert.equal(sha256(await readFile(join(root, 'artifacts/project0', a.path))), a.sha256, a.path);
+    assert.ok(results.records.some(r => r.role === 'precision' && r.id === 'precision-precision-20261020T181850179Z-precision-precision-headed'));
+    assert.ok(results.records.some(r => r.role === 'superseded' && r.identity.implementationCommit.startsWith('ff11b35')));
+    assert.equal(new Set(results.records.map(r => `${r.campaign}/${r.id}`)).size, results.records.length);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 const G5D_RAW = 'artifacts/project0/20261020T163917297Z-webgpu-g5d-g5-headed/G5-qjulia-operational-20261020T163917297Z-webgpu-g5d-g5-headed.raw.json';
 const G5D_RECORD = 'artifacts/project0/20261020T163917297Z-webgpu-g5d-g5-headed/G5-qjulia-operational-20261020T163917297Z-webgpu-g5d-g5-headed.json';
 const REM_RAW = 'artifacts/project0/20261020T051013812Z-webgpu-remediation-g5-headed/G5-qjulia-offplane-20261020T051013812Z-webgpu-remediation-g5-headed.raw.json';
+const SUPERSEDED_RECORD = 'artifacts/project0/20261020T175447161Z-precision-precision-headed/precision-precision-20261020T175447161Z-precision-precision-headed.json';
 const SUPERSEDED_RAW = 'artifacts/project0/20261020T175447161Z-precision-precision-headed/precision-precision-20261020T175447161Z-precision-precision-headed.raw.json';
 const DAMAGES = {   // each damage, and the refusal it must produce
   'an altered raw artefact': [async r => { const p = join(r, G5D_RAW); const t = await readFile(p, 'utf8'); await writeFile(p, t.replace('"continuation"', '"continuation" ')); }, /hash|sha256|does not match/i],
@@ -129,6 +203,9 @@ const DAMAGES = {   // each damage, and the refusal it must produce
   'a precision summary that does not recompute': [async r => edit(r, 'docs/reports/project0/precision.json', d => { d.observedDisagreementThreshold = 1e-6; }), /precision observedDisagreementThreshold does not recompute/],
   'a precision summary bound to another decision': [async r => edit(r, 'docs/reports/project0/precision.json', d => { d.selection.decisionSha256 = 'a'.repeat(64); }), /not bound to the verified E10 selection/],
   'a historical gate verdict that does not recompute': [async r => edit(r, 'docs/reports/project0/webgpu-1-gates.json', d => { d.backend.gates.G5.status = 'pass'; }), /webgpu-1-gates.json does not reproduce/],
+  'superseded record with its references removed': [async r => edit(r, SUPERSEDED_RECORD, d => { d.artifacts = []; }), /superseded/],
+  'a missing superseded artefact': [async r => unlink(join(r, SUPERSEDED_RAW.replace('.raw.json', '.launch.json'))), /ENOENT|superseded/],
+  'a substituted superseded record': [async r => edit(r, 'docs/reports/project0/precision-ff11b35-superseded.json', d => { d.record = 'precision-precision-20261020T181850179Z-precision-precision-headed'; d.runDir = '20261020T181850179Z-precision-precision-headed'; }), /superseded/],
   'altered superseded evidence': [async r => { const p = join(r, SUPERSEDED_RAW); await writeFile(p, (await readFile(p, 'utf8')) + ' '); }, /artefact hash mismatch: 20261020T175447161Z/],
   'changed fixtures': [async r => { const p = join(r, 'spikes/project0/fixtures.json'); await writeFile(p, (await readFile(p, 'utf8')) + '\n'); }, /fixture/i],
 };
@@ -157,4 +234,15 @@ test('without precision evidence the report runs from a harness copy that has no
     const md = await readFile(join(root, OUT, '2026-10-18-project0-qualification.md'), 'utf8');
     assert.match(md, /Mechanical outcome: \*\*inconclusive\*\*/); assert.match(md, /Precision experiment[^]*Not run/);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+// Finding 1: P0_ROOT isolates verification. The module checkout (a harness-only copy) has no evidence at all; the supplied root has all of it.
+test('every evidence reader is bound to the supplied root, not the module checkout', { skip, timeout: 300000 }, async () => {
+  const root = await tree(), mod = await mkdtemp(join(resolve(ROOT, 'artifacts/runtime'), 'p0-report-module-'));
+  try {
+    await cp(resolve(ROOT, 'spikes/project0'), join(mod, 'spikes/project0'), { recursive: true, filter: s => !s.endsWith('/tests') });
+    assert.equal(existsSync(join(mod, 'docs')) || existsSync(join(mod, 'artifacts')), false);
+    await cli(root, join(mod, 'spikes/project0/report.mjs'));
+    assert.match(await readFile(join(root, OUT, '2026-10-18-project0-qualification.md'), 'utf8'), /Mechanical outcome: \*\*inconclusive\*\*/);
+  } finally { await rm(root, { recursive: true, force: true }); await rm(mod, { recursive: true, force: true }); }
 });

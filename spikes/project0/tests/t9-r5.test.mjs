@@ -60,8 +60,11 @@ test('G2 records the fixed-position #status as visible while preparing, and a hi
   for (const hidden of [fixed({ cs: { display: 'none' } }), fixed({ cs: { visibility: 'hidden' } }), fixed({ rect: { left: 8, top: 8, right: 8, bottom: 8, width: 0, height: 0 } })])
     assert.equal((await g2Status(hidden))[0].visible, false, JSON.stringify(hidden.cs));
   // The frozen evaluator's input is unchanged: a visible preparation entry before the first publication still gives preparationVisible 1.
-  const frame = { requestId: 1, view: 'bulb-overview', W: fixtures.profiles.draft.W, H: fixtures.profiles.draft.H, t: 900, counts: { total: fixtures.profiles.draft.W * fixtures.profiles.draft.H, hit: 64000, miss: fixtures.profiles.draft.W * fixtures.profiles.draft.H - 64000, point: 0, steps: 0, failure: 0 } };
-  const m = await metricsFor('G2', 'warm', { navigationMs: 900, statusLog: shown, frame, outstandingMax: 2, integrity: { violations: [] } }, fixtures);
+  // T13 fix round 1 (Codex T13 r1 finding 6): the status log carries the live performance.now(), so the publication is placed 900 ms after the
+  // captured preparation entry rather than at a fixed 900 ms, which a process clock already past 900 ms made fail (preparationVisible 0).
+  const published = shown[0].t + 900;
+  const frame = { requestId: 1, view: 'bulb-overview', W: fixtures.profiles.draft.W, H: fixtures.profiles.draft.H, t: published, counts: { total: fixtures.profiles.draft.W * fixtures.profiles.draft.H, hit: 64000, miss: fixtures.profiles.draft.W * fixtures.profiles.draft.H - 64000, point: 0, steps: 0, failure: 0 } };
+  const m = await metricsFor('G2', 'warm', { navigationMs: published, statusLog: shown, frame, outstandingMax: 2, integrity: { violations: [] } }, fixtures);
   assert.equal(m.preparationVisible, 1);
 });
 
