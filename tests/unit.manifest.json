@@ -9,6 +9,7 @@
     "tests/unit/render-adapter.test.js",
     "tests/unit/renderer-guards.test.js",
     "tests/unit/discoveries.test.js",
-    "tests/unit/discoveries-control.test.js"
+    "tests/unit/discoveries-control.test.js",
+    "tests/unit/export.test.js"
   ]
 }
