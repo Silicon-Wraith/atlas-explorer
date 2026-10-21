@@ -234,11 +234,11 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       emit('watchdog');
     }, Math.max(0, Math.ceil(deadline - now())));
   }
-  function releaseLease(admission, record) {
+  function releaseLease(admission, record, progress = true) {
     leases.delete(admission); record.outstanding--; record.group.outstanding--;
     const state = epochs.get(record.group.epoch); state.outstanding--;
     if (!state.outstanding) { state.progressAt = null; state.stalled = false; }
-    armWatchdog(state, true); syncClock(record);
+    armWatchdog(state, progress); syncClock(record);
   }
   function changeView(viewId, change) {
     const view = viewFor(viewId); change(view);
@@ -386,7 +386,8 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       const { record } = item;
       // The caller proves pre-queue rejection or failure after the queue fence.
       // Reuse lease accounting without advancing the owner or closing its group.
-      releaseLease(admission, record);
+      // A discard is not completion evidence, so the watchdog deadline stands.
+      releaseLease(admission, record, false);
       if (record.group.cancellation) cancellationResult(record.group);
       else settle(record, 'failed', reason);
       cleanup(record); emit('discarded', record); return true;
