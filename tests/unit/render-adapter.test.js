@@ -4,6 +4,9 @@ import { createPlaneRenderAdapter, createPlaneRequest, appearanceKeyOf, LeaseErr
 import { createRenderRequest, isPublishable, RUNTIME_ID } from '../../src/shared/render-request.js';
 import { createPlaneScene, sceneCodec, toPlaneState } from '../../src/plane/scene-adapter.js';
 import { createFakeRenderer, flush } from '../support/fake-renderer.mjs';
+import { createReportBuilder } from '../../src/shared/render-report.js';
+import { createFakeClock } from '../support/fake-clock.mjs';
+import { spaceWorkspaceFields } from '../../src/space/render-adapter.js';
 
 const A = createPlaneScene({ view: { re: '-0.5', im: '0', zoom: 0 } });
 const B = createPlaneScene({ view: { re: '-0.5', im: '0', zoom: 1 } });
@@ -15,6 +18,29 @@ const clock = () => (clockValue += 5);
 const generation = (geometryRevision, { deviceEpoch = 0, viewRevision = geometryRevision, appearanceRevision = 0 } = {}) => ({ deviceEpoch, viewRevision, geometryRevision, appearanceRevision });
 const request = (scene, revision, purpose = 'interactive') => createPlaneRequest({ scene, purpose, width: 320, height: 180, generation: generation(revision) });
 const hashOf = scene => sceneCodec.fingerprint(scene).sceneHash;
+
+test('the preparing and prepared events are optional and Plane reports omit them', async () => {
+  const fake = createFakeRenderer(), adapter = createPlaneRenderAdapter({ renderer: fake, clock });
+  const pending = adapter.render(request(A, 1), { currentGeneration: () => generation(1), liveScene: () => A });
+  fake.finishNext(); const report = await pending;
+  assert.equal(Object.hasOwn(report.timings, 'preparing'), false);
+  assert.equal(Object.hasOwn(report.timings, 'prepared'), false);
+  const time = createFakeClock(), builder = createReportBuilder(request(A, 1), { clock: time.now });
+  time.advance(5); assert.doesNotThrow(() => builder.mark('preparing'));
+  time.advance(7); builder.mark('prepared'); const measured = builder.finish('completed');
+  assert.equal(measured.timings.prepared, 12); assert.equal(measured.timings.prepared - measured.timings.preparing, 7);
+});
+
+test('every shared timing mark survives a workspace-field extension', () => {
+  const time = createFakeClock(), fields = spaceWorkspaceFields({});
+  assert.equal(Object.hasOwn(fields, 'timings'), false);
+  const builder = createReportBuilder(request(A, 1), { clock: time.now, workspaceFields: fields });
+  const names = ['preparing', 'prepared', 'admitted', 'submitted', 'completed', 'published', 'readback'];
+  names.forEach(name => { time.advance(1); builder.mark(name); });
+  const report = builder.finish('completed');
+  names.forEach((name, index) => assert.equal(report.timings[name], index + 1));
+  assert.equal(report.timings.clock, 'page-performance-now'); assert.equal(report.timings.gpu, 'unavailable');
+});
 
 test('render requests are frozen, validated and publishable only while every revision matches', () => {
   const r = request(A, 1);
