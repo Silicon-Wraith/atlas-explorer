@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { validateDiscovery, createDiscoveryRecord, createLocalDiscoverySource, createDiscoveriesController } from '../../src/shared/discoveries.js';
 import { sceneCodec, createPlaneScene } from '../../src/plane/scene-adapter.js';
 import { createFakePersistence } from '../support/fake-persistence.mjs';
+import { encodePageCursor } from '../../src/shared/persistence.js';
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 const thumbnail = () => ({ sourceReportId: 'report-1', mediaType: 'image/jpeg', blob: new Blob(['jpeg-bytes'], { type: 'image/jpeg' }) });
@@ -226,7 +227,7 @@ test('paging loads the next page and a refresh invalidates paging', async () => 
   for (let i = 0; i < 55; i++) await local.save(createDiscoveryRecord({ scene: createPlaneScene({ view: { re: '-0.5', im: '0', zoom: i / 10 } }), name: `D${i}`, thumbnail: thumbnail(), id: `d${i}`, createdAt: new Date(Date.UTC(2026, 9, 20, 0, 0, i)).toISOString(), sceneCodec }), { writeId: `w${i}` });
   await controller.setWorkspace('plane');
   let view = controller.snapshot().sources.local;
-  assert.deepEqual([view.items.length, view.total, view.nextCursor], [50, 55, '50']);
+  assert.deepEqual([view.items.length, view.total, view.nextCursor], [50, 55, encodePageCursor('plane', view.items.at(-1).record)], 'the cursor is anchored on the last item shown');
   await controller.nextPage('local');
   view = controller.snapshot().sources.local;
   assert.deepEqual([view.items.length, view.nextCursor, view.items.at(-1).id], [55, null, 'd0']);
@@ -610,4 +611,37 @@ test('non-Error write rejections also settle and release their cancellation cont
     assert.equal(signal.aborted, false);
     controller.destroy();
   }
+});
+
+// T10 fix round 1 (Codex r1 finding 1, reproduced through this controller): a deletion through
+// another source on the same store notifies only that source, so this controller is not refreshed;
+// "Show more" must still reach every surviving discovery.
+test('a deletion by another source never hides a surviving discovery from the next page', async () => {
+  const { store, local, controller } = setup({ readTimeoutMs: 1000 });
+  for (let i = 0; i < 51; i++) await local.save(createDiscoveryRecord({ scene: createPlaneScene({ view: { re: '-0.5', im: '0', zoom: i / 10 } }), name: `D${i}`, thumbnail: thumbnail(), id: `d${String(i).padStart(2, '0')}`, createdAt: new Date(Date.UTC(2026, 9, 20, 0, 0, i)).toISOString(), sceneCodec }), { writeId: `w${i}` });
+  await controller.setWorkspace('plane');
+  assert.equal(controller.snapshot().sources.local.items.length, 50);
+  const other = createLocalDiscoverySource({ store, sceneCodec });
+  assert.equal((await other.remove('d30', { writeId: 'w-other' })).status, 'committed');
+  await controller.nextPage('local');
+  const view = controller.snapshot().sources.local;
+  assert.deepEqual([view.items.length, view.items.at(-1).id, view.nextCursor], [51, 'd00', null], 'the oldest discovery is reachable');
+});
+
+// T10 fix round 2 (Codex r2 finding 4, reproduced through this controller): an unsupported row that
+// ends a page (here a numeric id, valid for IndexedDB) is listed as unsupported, and the next page
+// continues after it.
+test('an unsupported record at a page boundary is listed as unsupported and the next page continues', async () => {
+  const { store, local, controller } = setup({ readTimeoutMs: 1000 });
+  for (let i = 0; i < 51; i++) {
+    const createdAt = new Date(Date.UTC(2026, 9, 20, 0, 0, 50 - i)).toISOString();
+    if (i === 49) store.stores.discoveries.set(7, { id: 7, workspace: 'plane', createdAt, schema: 'atlas.discovery', schemaVersion: 1 });
+    else await local.save(createDiscoveryRecord({ scene: createPlaneScene({ view: { re: '-0.5', im: '0', zoom: i / 10 } }), name: `D${i}`, thumbnail: thumbnail(), id: `d${String(i).padStart(2, '0')}`, createdAt, sceneCodec }), { writeId: `w${i}` });
+  }
+  await controller.setWorkspace('plane');
+  let view = controller.snapshot().sources.local;
+  assert.deepEqual([view.status, view.items.length, view.items.filter(item => item.unsupported).length, view.items.at(-1)?.unsupported !== undefined], ['ready', 50, 1, true]);
+  await controller.nextPage('local');
+  view = controller.snapshot().sources.local;
+  assert.deepEqual([view.status, view.items.length, view.items.at(-1)?.id, view.nextCursor], ['ready', 51, 'd50', null], 'the valid record after the unsupported one is reachable');
 });
