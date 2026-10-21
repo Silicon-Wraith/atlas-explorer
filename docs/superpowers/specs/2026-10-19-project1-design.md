@@ -760,9 +760,12 @@ specification and validation.
 ### 11.4 Tracing profile `surface-v1` and statuses
 - Hit tolerance τ(t) = max(10⁻⁶, 0.5·α·t), α = 2·tan(fov_y/2)/H_internal. A sampling rule, not an
   error certificate. A separately versioned inspection profile may tighten it for convergence
-  studies. `analytic-inspection-v1` (τ = 0.1·τ(t), unchanged multiplier and caps) is such a profile. Analytic-oracle
-  depth accuracy (relative 10⁻³) is claimed under it. Ordinary `surface-v1` analytic depth is qualified against a
-  sampling-aware envelope that budgets the hit rule's stopping displacement of up to τ/|n·d| along the ray (plan B04 P1; user-approved
+  studies. `analytic-inspection-v1` (τ = 0.1·τ(t), unchanged multiplier and caps) is such a profile. On the unchanged eligible
+  analytic rays, qualification requires |t_GPU−t*| ≤ max(10⁻⁶,10⁻³|t*|), exact statuses and unchanged
+  numerical-failure rules. This profile scales the entire surface-v1 tolerance, including its floor, by 0.1; all
+  other tracing settings remain unchanged. CPU preflight does not establish GPU qualification or accuracy outside
+  the frozen sampling domain. Ordinary `surface-v1` analytic depth is qualified against a
+  sampling-aware envelope that budgets the hit rule's stopping displacement along the ray (approaching τ/|n·d| for a planar face; curved surfaces and competing features require the independent expanded-object envelope) (plan B04 P1; user-approved
   amendment 2026-10-21, rev 4.8).
 - **Starting conditions.** Rays use model-native world coordinates and unit-length directions, so
   t measures world-space distance. The forward ray is intersected with the model's declared
@@ -1084,7 +1087,7 @@ save with B or the bookmark button, a thumbnail list, open, delete, and the empt
 All seven bulb powers; origin and polar-axis cases; full off-plane quaternion parameters; nonzero κ;
 supported-domain boundaries; iteration budgets 64, 128, 256 and 512; detail approaches with
 independently prepared anchors and reference-convergence checks (after Project 0 A.10). Samples,
-exclusions and quantity-specific tolerances are frozen before GPU comparison. The four iteration budgets apply to point arithmetic strata; overview tracing uses budget 128 and the plan's frozen integer-pixel sampling and status-stability screen. Fractal overview depth acceptance is profile-scaled and is distinct from analytic-oracle depth accuracy. The plan preregisters which views require positive-hit coverage; a zero hit floor does not establish an empty slice. A CPU-infeasible sampling definition or coverage floor may change only through a recorded amendment before GPU comparison, followed by fresh preflight and re-freezing of the artifacts. (User-approved amendment, 2026-10-21, rev 4.6.) Nothing is validated
+exclusions and quantity-specific tolerances are initially frozen before GPU comparison. The user-approved rev 4.8 analytic-depth amendment is explicitly post-discovery; revised artifacts are re-frozen before renewed qualification, preserving the original failed evidence. The four iteration budgets apply to point arithmetic strata; overview tracing uses budget 128 and the plan's frozen integer-pixel sampling and status-stability screen. Fractal overview depth acceptance is profile-scaled and is distinct from analytic-oracle depth accuracy. The plan preregisters which views require positive-hit coverage; a zero hit floor does not establish an empty slice. A CPU-infeasible sampling definition or coverage floor may change only through a recorded amendment before GPU comparison, followed by fresh preflight and re-freezing of the artifacts. (User-approved amendment, 2026-10-21, rev 4.6.) Nothing is validated
 merely because Project 0 tested power 8 and one quaternion parameter.
 
 ### 16.3 Plane gate (every 1a commit)
