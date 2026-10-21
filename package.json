@@ -9,11 +9,15 @@
     "dev:gpu": "node scripts/gpu-preview.mjs",
     "start": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
-    "test": "node tests/math.test.js",
-    "test:browser": "node tests/browser.mjs",
-    "test:navigation": "node tests/navigation.mjs",
-    "test:graphics": "node tests/graphics.mjs --chrome --headed --compositor --benchmark",
-    "thumbnails": "node scripts/thumbnails.mjs"
+    "test": "node scripts/run-unit.mjs",
+    "test:browser": "node scripts/run-unit.mjs && node tests/browser.mjs",
+    "test:navigation": "node scripts/run-unit.mjs && node tests/navigation.mjs",
+    "test:graphics": "node scripts/run-unit.mjs && node tests/graphics.mjs --chrome --headed --compositor --benchmark",
+    "thumbnails": "node scripts/thumbnails.mjs",
+    "gate": "node scripts/plane-gate.mjs",
+    "test:workflow": "node scripts/run-unit.mjs && node tests/workflow.mjs"
   },
-  "devDependencies": { "playwright": "1.59.1" }
+  "devDependencies": {
+    "playwright": "1.59.1"
+  }
 }

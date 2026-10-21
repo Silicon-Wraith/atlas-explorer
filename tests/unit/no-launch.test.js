@@ -1,0 +1,170 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as childProcess from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
+import { Worker } from 'node:worker_threads';
+import { DENIED_METHODS, LaunchDeniedError, unitGuardActive } from '../support/no-launch.mjs';
+import { readFileSync } from 'node:fs';
+import { within, BoundedWaitTimeout, closeWithin, installSuiteDeadline, cleanupState, CHROME_TMPDIR, chromeSocketPathFits, chromeLaunchEnv } from '../support/bounded.mjs';
+import { cleanupWorkflow } from '../support/workflow-cleanup.mjs';
+
+test('the launch guard is active inside unit-test processes', () => {
+  assert.equal(unitGuardActive, true, 'run unit tests through scripts/run-unit.mjs');
+  assert.equal(process.env.ATLAS_UNIT_MODE, '1');
+});
+
+test('every child_process launcher throws before any side effect', () => {
+  for (const method of DENIED_METHODS) {
+    assert.throws(() => childProcess[method]('node', ['-e', '']), error => error instanceof LaunchDeniedError && error.method === method, method);
+  }
+  assert.throws(() => spawn('node'), LaunchDeniedError, 'named ESM binding');
+  assert.throws(() => execFileSync('node'), LaunchDeniedError, 'named ESM binding');
+});
+
+test('worker threads remain available to unit tests', async () => {
+  const worker = new Worker('require("node:worker_threads").parentPort.postMessage(21 * 2)', { eval: true });
+  try {
+    const value = await within(new Promise((resolve, reject) => { worker.once('message', resolve); worker.once('error', reject); }), 5000, 'worker');
+    assert.equal(value, 42);
+  } finally { await worker.terminate(); }
+});
+
+test('browser suites refuse to start under a unit run', async () => {
+  for (const suite of ['../browser.mjs', '../navigation.mjs', '../graphics.mjs', '../workflow.mjs']) {
+    await assert.rejects(import(suite), error => error.name === 'UnitModeRefusal', suite);
+  }
+});
+
+test('bounded waits resolve in time and time out with a classified error', async () => {
+  assert.equal(await within(Promise.resolve(7), 50, 'fast'), 7);
+  await assert.rejects(within(new Promise(() => {}), 20, 'stuck'), error => error instanceof BoundedWaitTimeout && error.code === 'ATLAS_WAIT_TIMEOUT' && error.label === 'stuck');
+  assert.throws(() => within(Promise.resolve(), Infinity, 'unbounded'), RangeError);
+});
+
+test('an unconfirmed browser close is terminal and survives a later deadline', async () => {
+  class Stopped extends Error {}
+  const exits = [];
+  const exit = code => { exits.push(code); throw new Stopped(); };
+  let launchedNext = false;
+  // The simulated failure's protocol lines are captured, never written into the enclosing unit run
+  // (the gate reads CLEANUP-UNCONFIRMED from real suite output).
+  const captured = [], originalError = console.error;
+  console.error = (...args) => { captured.push(args.join(' ')); };
+  try {
+    const suite = async () => {
+      await closeWithin({ close: () => new Promise(() => {}) }, 'browser', { ms: 10, exit });
+      launchedNext = true;
+    };
+    await assert.rejects(suite(), Stopped);
+    assert.equal(launchedNext, false, 'no further launch after the failed close');
+    assert.deepEqual(exits, [125]);
+    assert.equal(cleanupState.unconfirmed, true);
+    assert.ok(captured.some(line => line.startsWith('CLEANUP-UNCONFIRMED browser')), 'the marker is emitted');
+    const deadlineExits = [];
+    const timer = installSuiteDeadline('test', 5, { exit: code => deadlineExits.push(code) });
+    await new Promise(resolve => setTimeout(resolve, 30));
+    clearTimeout(timer);
+    assert.deepEqual(deadlineExits, [125], 'a deadline cannot downgrade 125 to 124');
+  } finally {
+    console.error = originalError;
+    cleanupState.unconfirmed = false;
+  }
+});
+
+// Fix round 1 (Codex run 20261020T184044Z-f4e5; controller ruling on the Chrome socket path).
+const suiteText = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+
+test('installed Chrome gets a temporary directory whose socket path fits', () => {
+  assert.equal(chromeSocketPathFits(CHROME_TMPDIR), true, CHROME_TMPDIR);
+  assert.equal(chromeSocketPathFits('/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1a/artifacts/runtime'), false, 'the first GPU gate failed on this path');
+  assert.equal(chromeLaunchEnv({ TMPDIR: '/elsewhere', KEEP: '1' }).TMPDIR, CHROME_TMPDIR);
+  assert.equal(chromeLaunchEnv({ KEEP: '1' }).KEEP, '1', 'the rest of the environment is kept');
+  assert.match(suiteText('graphics.mjs'), /env: chromeLaunchEnv\(\)/, 'the installed-Chrome launch uses it');
+});
+
+test('every Playwright input, CDP and locator evaluation in the browser suites is bounded', () => {
+  const unbounded = /\.keyboard\.|\.mouse\.|newCDPSession\(|touch\.send\(|touch\.detach\(|\.locator\([^;]*\)\.evaluate\(/;
+  const offenders = [];
+  for (const name of ['browser.mjs', 'navigation.mjs', 'graphics.mjs', 'workflow.mjs']) {
+    suiteText(name).split('\n').forEach((line, index) => {
+      for (const statement of line.split(';')) if (unbounded.test(statement) && !/within\(/.test(statement)) offenders.push(`${name}:${index + 1}: ${statement.trim()}`);
+    });
+  }
+  assert.deepEqual(offenders, []);
+});
+
+// T05 fix round 1 (Codex finding 3): the workflow suite's GPU drain runs in its cleanup, after the
+// report was written; a drain that fails while the bounded closes succeed must still fail the suite.
+function fakeCleanup({ drainFails = [] } = {}) {
+  const calls = [], written = [];
+  const options = {
+    pages: ['first', 'second'],
+    drain: page => { calls.push(`drain ${page}`); return drainFails.includes(page) ? Promise.reject(new BoundedWaitTimeout('drain GPU work', 5)) : Promise.resolve(); },
+    report: [{ name: 'Fresh start opens Plane at the default view' }, { name: 'No browser runtime errors' }],
+    writeReport: entries => { calls.push('write'); written.push(JSON.parse(JSON.stringify(entries))); return Promise.resolve(); },
+    closeAll: () => { calls.push('close'); return Promise.resolve(); },
+    log: () => {},
+  };
+  return { calls, written, options };
+}
+
+test('a drain failure fails the workflow suite even when its closes succeed', async () => {
+  const { calls, written, options } = fakeCleanup({ drainFails: ['second'] });
+  const failed = await cleanupWorkflow(options);
+  assert.equal(failed, true, 'the suite result is a failure');
+  const failures = options.report.filter(entry => entry.name === 'FAIL');
+  assert.equal(failures.length, 1);
+  assert.match(failures[0].error, /drain GPU work/);
+  assert.deepEqual(calls, ['drain first', 'drain second', 'write', 'close'], 'every page is drained, the report is written with the failure, then the closes run');
+  assert.ok(written.at(-1).some(entry => entry.name === 'FAIL'), 'the persisted report carries the failure');
+});
+
+test('a clean drain keeps the workflow suite successful and still closes everything', async () => {
+  const { calls, written, options } = fakeCleanup();
+  assert.equal(await cleanupWorkflow(options), false);
+  assert.equal(options.report.some(entry => entry.name === 'FAIL'), false);
+  assert.deepEqual(calls, ['drain first', 'drain second', 'write', 'close']);
+  assert.equal(written.length, 1);
+});
+
+test('a report that cannot be written is a failure, and the closes still run', async () => {
+  const { calls, options } = fakeCleanup();
+  options.writeReport = () => { calls.push('write'); return Promise.reject(new Error('disk full')); };
+  assert.equal(await cleanupWorkflow(options), true);
+  assert.deepEqual(calls, ['drain first', 'drain second', 'write', 'close']);
+});
+
+// T12 fix round 1 (Codex r1 finding 1): every browser context the workflow suite creates must be
+// registered in `contexts` right after it is created, so that a failure before its early close still
+// drains its pages in the finalizer (plan amendments G and H). Like T00's bounded-call checker, this
+// pins the suite's source shape; the finalizer execution below shows that registration is what
+// delivers the failure-path drain.
+test('every workflow browser context is registered for failure-path draining as soon as it exists', () => {
+  const source = readFileSync(new URL('../workflow.mjs', import.meta.url), 'utf8');
+  const unregistered = [];
+  for (const site of source.matchAll(/(?:(?:const\s+)?(\w+)\s*=\s*)?boundContext\(await within\(browser\.newContext\(/g)) {
+    const name = site[1];
+    const following = source.slice(site.index + site[0].length).split('\n').slice(1, 3).join('\n');
+    if (!name || !new RegExp(`^\\s*contexts\\.push\\(${name}\\);`, 'm').test(following)) unregistered.push(`${name ?? '(anonymous)'} at offset ${site.index}`);
+  }
+  assert.ok(source.match(/browser\.newContext\(/g).length >= 8, 'the suite creates several contexts');
+  assert.deepEqual(unregistered, [], 'a context used before it is registered escapes the failure-path drain');
+});
+
+test('the workflow finalizer drains every registered context on a failure path, including after a successful early close', async () => {
+  const { runInNewContext } = await import('node:vm');
+  const source = readFileSync(new URL('../workflow.mjs', import.meta.url), 'utf8');
+  const body = source.slice(source.lastIndexOf('} finally {') + '} finally {'.length, source.lastIndexOf('}'));
+  const calls = [], written = [], report = [{ name: 'FAIL', error: 'assertion before the early close' }], processState = { exitCode: 0 };
+  const page = {}, open = { pages: () => [page] }, closedEarlier = { pages: () => [] };
+  await runInNewContext(`(async () => { ${body} })()`, {
+    contexts: [closedEarlier, open], browser: {}, server: { kill: () => calls.push('kill') }, report, reportPath: 'unused', process: processState,
+    JSON, writeFile: async (path, data) => { calls.push('write'); written.push(JSON.parse(data)); },
+    drainExpecting: async target => { assert.equal(target, page); calls.push('drain'); throw new Error('injected drain failure'); },
+    cleanupWorkflow: options => cleanupWorkflow({ ...options, log: () => {} }),
+    closeWithin: async (target, label) => { calls.push(`close ${label}`); },
+  });
+  assert.equal(processState.exitCode, 1);
+  assert.deepEqual(calls, ['drain', 'write', 'close context', 'close context', 'close browser', 'kill'], 'the open context is drained before every bounded close');
+  assert.match(written.at(-1).at(-1).error, /injected drain failure/);
+});

@@ -12,6 +12,8 @@ const paths = {
   crosshair: '<circle cx="12" cy="12" r="7"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5"/>',
   bookmark: '<path d="M6 3h12v18l-6-4-6 4Z"/>',
   chevron: '<path d="m6 9 6 6 6-6"/>', close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  back: '<path d="M19 12H5m6-6-6 6 6 6"/>', forward: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+  undo: '<path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-3"/>', redo: '<path d="m15 7 5 5-5 5m5-5H9a5 5 0 0 0 0 10h3"/>',
 };
 export const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.spark}</svg>`;
 export function installIcons(root = document) {

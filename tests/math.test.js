@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fixed, decimal, spanFixed, precisionFor, moveView, zoomView, viewTransform, floatExp, referenceOrbit, escapeTime, escapeTimeExact, validateView } from '../src/math.js';
-import { perturbEscape, perturbEscapeExtended, addExtended, multiplyExtended } from '../src/perturbation.js';
-import { paletteBytes, PALETTES } from '../src/palettes.js';
-import { classifyRenderer } from '../src/graphics.js';
+import { fixed, decimal, spanFixed, precisionFor, moveView, zoomView, viewTransform, floatExp, referenceOrbit, escapeTime, escapeTimeExact, validateView } from '../src/plane/math.js';
+import { perturbEscape, perturbEscapeExtended, addExtended, multiplyExtended } from '../src/plane/perturbation.js';
+import { paletteBytes, PALETTES } from '../src/plane/palettes.js';
+import { classifyRenderer } from '../src/plane/graphics.js';
 
 const near = (actual, expected, tolerance = 1e-10) => assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} differs from ${expected} by ${Math.abs(actual - expected)}`);
 

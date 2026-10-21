@@ -6,18 +6,21 @@ ATLAS is a working 2D deep-zoom Mandelbrot explorer (see `README.md` for tooling
 
 ## Project Structure & Module Organization
 
-When adding the first implementation, organize files around clear responsibilities. A suggested starting layout is:
+The layout follows the Project 1 spec (`docs/superpowers/specs/2026-10-19-project1-design.md` §4.1):
 
-- `src/`: application source, separating fractal calculations, rendering, and interaction.
-- `tests/`: automated tests and small fixtures.
-- `assets/`: palettes, images, and other static resources, when needed.
+- `src/app.js`: the small composition root.
+- `src/plane/`: the 2D Plane workspace (coordinates, perturbation, renderers, shaders, places, palettes).
+- `src/shared/`: workspace-independent contracts (scenes, commands and histories, render requests and reports, discoveries, persistence). It never holds BigInt coordinates, perturbation or GPU handles.
+- `src/ui/`: the shell (dialogs, notifications, icons, styles, the Discoveries control).
+- `tests/`: unit tests (`tests/unit/`, listed in `tests/unit.manifest.json`), browser suites (`tests/*.mjs`, listed in `tests/suites.manifest.json`) and test support (`tests/support/`).
+- `assets/`: images and other static resources.
 - `README.md`: setup instructions, controls, and supported workflows.
 
 Keep Mandelbrot calculations independent of the interface so numerical behavior can be tested without rendering a screen. Avoid creating empty directories before they are needed.
 
 ## Build, Test, and Development Commands
 
-No build, test, or development commands exist yet. When selecting the toolchain, document exact installation, local-run, build, and test commands in `README.md` and update this section. Prefer a small, reproducible workflow over custom automation.
+`README.md` and `package.json` hold the exact commands. In short: `npm run dev` serves the app; `npm test` runs the Node unit tests through `scripts/run-unit.mjs` (never a browser or GPU); `npm run build` copies the static app into `dist/`; `npm run gate` runs the Plane behaviour gate on a clean commit. The gate needs exactly one of `ATLAS_GPU_HANDOFF="<who, when>"` or `ATLAS_GPU_DEFERRED="<reason>"`, and exits 0 (passed), 2 (pending: GPU suites deferred) or 1 (failed); an owned process tree that cannot be confirmed stopped fails the run and stops further browser or GPU work. Scratch files go to `/mnt/ml_storage/scratch`, never `/tmp`.
 
 ## Coding Style & Naming Conventions
 
@@ -25,7 +28,7 @@ Follow the chosen language's standard conventions and configure its formatter be
 
 ## Testing Guidelines
 
-No testing framework or coverage target is configured. Add focused tests alongside numerical and interaction logic. Cover known interior and escaping points, iteration limits, coordinate mapping, and zoom behavior. Name tests after the behavior they verify. For visual changes, record manual checks and include representative screenshots when useful.
+Unit tests use the Node built-in runner through `scripts/run-unit.mjs`; add every new unit test file to `tests/unit.manifest.json`. A RED run uses `--expect-fail "<test name>"` against an importable interface skeleton and passes only if that test fails on an assertion; it never launches a browser or GPU (`--expect-missing` is only the T00 bootstrap). Every wait in a browser suite is bounded (`tests/support/bounded.mjs`). Add focused tests alongside numerical and interaction logic. Cover known interior and escaping points, iteration limits, coordinate mapping, and zoom behavior. Name tests after the behavior they verify. For visual changes, record manual checks and include representative screenshots when useful.
 
 ## Commit & Pull Request Guidelines
 

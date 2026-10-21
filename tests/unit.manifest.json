@@ -1,0 +1,21 @@
+{
+  "files": [
+    "tests/math.test.js",
+    "tests/unit/no-launch.test.js",
+    "tests/unit/gate.test.js",
+    "tests/unit/scene.test.js",
+    "tests/unit/plane-scene.test.js",
+    "tests/unit/history.test.js",
+    "tests/unit/render-adapter.test.js",
+    "tests/unit/renderer-guards.test.js",
+    "tests/unit/discoveries.test.js",
+    "tests/unit/discoveries-control.test.js",
+    "tests/unit/export.test.js",
+    "tests/unit/gestures.test.js",
+    "tests/unit/gpu-drain.test.js",
+    "tests/unit/completion.test.js",
+    "tests/unit/persistence.test.js",
+    "tests/unit/navigation.test.js",
+    "tests/unit/ledger.test.js"
+  ]
+}

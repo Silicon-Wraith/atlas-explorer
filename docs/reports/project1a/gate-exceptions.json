@@ -1,0 +1,13 @@
+{
+  "schema": "atlas.gate-exceptions",
+  "schemaVersion": 1,
+  "exceptions": [
+    {
+      "commit": "c6706b33394ec9b8b8edababdcde762354ef948d",
+      "supersededBy": "c8994168827e4435b740bfc2c1cc828adad33d05",
+      "reason": "The workflow race \"a confirmed completion ends the recovery episode\" reported recovery attempts 1, expected 0, in artifacts/gates/2026-10-21T06-09-00-031Z-c6706b33394e.json; fixed in c899416.",
+      "approvedBy": "user",
+      "date": "2026-10-21"
+    }
+  ]
+}

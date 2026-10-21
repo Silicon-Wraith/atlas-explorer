@@ -1,6 +1,6 @@
 # ATLAS Workbench — Architectural Charter
 
-**Status:** approved by the user 2026-10-18 · **Date:** 2026-10-18
+**Status:** approved by the user 2026-10-18; amended 2026-10-20 (A1, A2, §7) · **Date:** 2026-10-18
 **Authors:** Claude and Codex, co-designed as peers
 **Governs:** every ATLAS Workbench project spec. A project spec may narrow this charter but not
 contradict it; changing the charter takes a revision approved by the user.
@@ -320,3 +320,45 @@ renderer; native (non-browser) applications.
 9. Project 1 splits into 1a (Foundations) and 1b (Space), with one shared acceptance demonstration.
 10. Git is now in use. This supersedes the `HANDOFF.md` instruction not to initialise it, and
     `AGENTS.md` and `HANDOFF.md` are updated when Project 1a starts.
+
+## 7. Amendments
+
+### A1 — Greenfield: no backwards compatibility with earlier artefacts (user, 2026-10-20)
+The user decided: "No this is green field development. No need to keep backwards compatability."
+This amends the charter as follows; the text above is left as approved on 2026-10-18 and is read
+subject to this amendment.
+- **§3.9:** the list of existing artefacts and the five adapter rules no longer apply. ATLAS does not
+  restore or migrate the earlier share-link and location-file formats. Incoming links and files may
+  be recognized only to report unsupported input. ATLAS neither reads nor modifies
+  `localStorage['atlas.discoveries']`. §3.9's final paragraph is unchanged: when a
+  Plane parameter carries more digits than Space can evaluate, the requested value is preserved and
+  the effective Space precision is shown, never silently rounded.
+- **§4, the 1a row:** "Versioned scene envelope and legacy adapters" reads "Versioned scene
+  envelope"; Plane's existing workflows are preserved in native formats.
+- **§6, decision 8** is withdrawn.
+
+The Project 1 design (`2026-10-19-project1-design.md`, §12) records what this removes and
+what remains. Project 0's frozen inputs, gates and evidence are unaffected.
+
+### A2 — Space deep zoom placed in Project 1c (user, 2026-10-20)
+
+The user decided: "Yes, add deep zoom as 1c in Project 1." The text above remains the historical
+approved charter and is read subject to this amendment.
+
+- **§3.5, representation:** Space uses the anchored camera representation specified in the
+  Project 1 design §5.2. Ordinary field evaluation remains binary32. Project 1c may use qualified
+  high-precision references, compensated arithmetic, perturbation and extended-exponent
+  representations. This supersedes the requirement that all Space camera and scene coordinates be
+  CPU doubles.
+- **§3.5, deeper precision:** deeper Space precision is Project 1c's work. It begins with a bounded,
+  preregistered spike. Each family and numerical profile must demonstrate useful improvement against
+  independent higher-precision references on the compiled backend before becoming a product
+  promise. Space continues to promise validated detail ranges, never infinite zoom.
+- **§4, roadmap:** add Project 1c after 1b: "Space deep zoom — bounded precision spike followed by
+  qualified family-specific product integration." Remove the blanket placement of deep 3D precision
+  research in Project 5; that project retains its other candidate extensions.
+- **§4, acceptance:** the existing seven-step investigation remains 1b.3's exit criterion. Project 1c
+  has the separate deep investigation specified in Project 1 design §21.6.
+
+Project 0's frozen inputs, gates and evidence, and the approved Project 1a implementation plan, are
+unaffected.

@@ -3,3 +3,5 @@ dist/
 # Generated test reports, screenshots and the Chrome GPU profile (artifacts/runtime/)
 artifacts/
 .serena/
+# The user's worktree convention
+.worktrees/

@@ -1,8 +1,8 @@
 import { writeFile } from 'node:fs/promises';
-import { referenceOrbit } from '../src/math.js';
-import { perturbEscape } from '../src/perturbation.js';
-import { PALETTES, paletteBytes, colorPixel } from '../src/palettes.js';
-import { PLACES } from '../src/places.js';
+import { referenceOrbit } from '../src/plane/math.js';
+import { perturbEscape } from '../src/plane/perturbation.js';
+import { PALETTES, paletteBytes, colorPixel } from '../src/plane/palettes.js';
+import { PLACES } from '../src/plane/places.js';
 import { encodePng } from './png.mjs';
 const width = 480, height = 270;
 for (const place of PLACES.filter(p => !process.argv[2] || p.id === process.argv[2])) {
