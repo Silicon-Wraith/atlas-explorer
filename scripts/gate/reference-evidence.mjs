@@ -1,13 +1,14 @@
 // CPU reference-suite evidence contract; no file access or process launches.
 export const REFERENCE_SUITE_MS = 600_000;
 export const REFERENCE_WORK_MS = 570_000;
-// Approved B04 freeze. A re-freeze requires a reviewed edit of these pins.
+// Approved B04 freeze, re-frozen for the user-approved rev 4.8 analytic-depth amendment (B10 fix round 2).
+// A re-freeze requires a reviewed edit of these pins.
 export const APPROVED_REFERENCE_IDENTITIES = Object.freeze({
-  matrixSha256: 'd17a04fc8b6c83a56c99a418947c4081bdc197fc2c75d49868e3534af58919b4',
-  indexSha256: 'faa95f4fbfb667ce05932c09601f278cacc7969494b92f306ae3e20beefd74a0',
-  generatorSha256: '05d171561dc77762e24a448b931c668ca321027132f56e6a3810dbe03817e05d',
-  predictionSha256: '0f2639a3a4ecac28ab780e4f91600cf48b35113507fad5c0947070514eaaa9e7',
-  workloadSha256: 'c10b4da400ebf6427bb0cd891d3340690b6571e2934aec956b5cc96f71cedb1f',
+  matrixSha256: 'b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c',
+  indexSha256: '3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828',
+  generatorSha256: '138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd',
+  predictionSha256: '4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9',
+  workloadSha256: '47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d',
 });
 export const REFERENCE_CHECKS = Object.freeze({
   'P1 complete matrix regeneration': { strata: 1123, mandatory: 979, anchors: 18, shards: 18 },

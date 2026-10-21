@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { APPROVED_REFERENCE_IDENTITIES } from '../../scripts/gate/reference-evidence.mjs';
 import { createValidationRegistry, PRECISION_CARRY_FORWARD_LIMITATIONS } from '../../src/space/numerics/validation-records.js';
-import { MATRIX_PINS, POINT_STRATUM_KINDS, ARITHMETIC_RECORD_IDS, buildArithmeticRecords, requiredStrata } from '../../src/space/numerics/validation-records.js';
+import { MATRIX_PINS, POINT_STRATUM_KINDS, ARITHMETIC_RECORD_IDS, QUATERNION_RECORD_ID, buildArithmeticRecords, requiredStrata, PRIOR_MATRIX_PINS, PRIOR_RECORD_IDS, MATRIX_FREEZE, TRACING_RECORD_IDS } from '../../src/space/numerics/validation-records.js';
 import { comparePointStratum, loadPinnedPointStrata, verifyMatrixPins } from '../support/space-numerics.mjs';
 
 const index = readFileSync(new URL('../reference/space-matrix.json', import.meta.url));
@@ -21,6 +21,17 @@ test('the matrix pins equal the approved gate identities and the committed index
   assert.doesNotThrow(() => verifyMatrixPins(index));
   const tampered = Buffer.from(index.toString().replace('"seed":1', '"seed":2'));
   assert.throws(() => verifyMatrixPins(tampered), /index SHA-256/);
+});
+
+test('the rev 4.8 re-freeze gives every repinned record a new ID and keeps the prior identities', () => {
+  assert.equal(MATRIX_FREEZE, 'matrix-rev4.8');
+  assert.equal(PRIOR_MATRIX_PINS.matrixSha256, 'd17a04fc8b6c83a56c99a418947c4081bdc197fc2c75d49868e3534af58919b4');
+  assert.equal(PRIOR_MATRIX_PINS.indexSha256, 'faa95f4fbfb667ce05932c09601f278cacc7969494b92f306ae3e20beefd74a0');
+  assert.notEqual(MATRIX_PINS.matrixSha256, PRIOR_MATRIX_PINS.matrixSha256);
+  assert.deepEqual(PRIOR_RECORD_IDS.arithmetic, ['2', '3', '4', '5', '6', '7', '8'].map(p => `mandelbulb@1/arithmetic/p${p}`).concat('quaternion-julia@1/arithmetic'));
+  assert.equal(PRIOR_RECORD_IDS.tracing.length, 11); assert.equal(PRIOR_RECORD_IDS.geometric.length, 18); assert.ok(PRIOR_RECORD_IDS.tracing.includes('sphere@1/tracing'));
+  const prior = new Set([...PRIOR_RECORD_IDS.arithmetic, ...PRIOR_RECORD_IDS.tracing]);
+  for (const id of [...ARITHMETIC_RECORD_IDS, ...TRACING_RECORD_IDS]) { assert.ok(id.endsWith(`/${MATRIX_FREEZE}`), id); assert.ok(!prior.has(id), id); }
 });
 
 test('point strata load through the pinned index as a partial view, never as whole-matrix qualification', () => {
@@ -102,7 +113,7 @@ const summary = (id, kind, passed, extra = {}) => ({ id, kind, role: 'mandatory'
 const allPassed = () => {
   const rows = [];
   for (let p = 2; p <= 8; p++) for (const n of [64, 128, 256, 512]) for (const kind of ['origin', 'polar', 'generic']) rows.push(summary(`bulb/p${p}/n${n}/${kind}`, `bulb-${kind}`, true, { model: 'mandelbulb', power: p, cap: n }));
-  for (const id of requiredStrata('quaternion-julia@1/arithmetic').filter(id => id !== 'adversarial/points')) {
+  for (const id of requiredStrata(QUATERNION_RECORD_ID).filter(id => id !== 'adversarial/points')) {
     const [, c, k, n] = /^\w+\/c(\d+)\/k(-?[\d.]+)\/n(\d+)$/.exec(id);
     rows.push(summary(id, id.startsWith('boundary') ? 'quaternion-boundary' : 'quaternion-generic', true, { model: 'quaternion-julia', C: [Number(c), 0, 0, 0], kappa: Number(k), cap: Number(n) }));
   }
@@ -123,21 +134,21 @@ test('Validation records are registered only for passed mandatory strata', () =>
     registry.register(record);
   }
   const query = power => ({ modelId: 'mandelbulb', evidenceClass: 'arithmetic', implementationHashes: hashes, profile: 'surface-v1', effective: { power }, sampling: { maxIterations: 128 }, domain: records[0].testedDomain });
-  assert.equal(registry.lookup(query(8))?.recordId, 'mandelbulb@1/arithmetic/p8');
+  assert.equal(registry.lookup(query(8))?.recordId, 'mandelbulb@1/arithmetic/p8/matrix-rev4.8');
   assert.equal(registry.lookup({ ...query(8), evidenceClass: 'tracing' }), null, 'arithmetic evidence never matches tracing');
   assert.equal(registry.lookup({ ...query(8), sampling: { maxIterations: 100 } }), null, 'untested budgets do not match');
 
   const failed = allPassed(); failed[failed.findIndex(r => r.id === 'bulb/p7/n512/generic')] = summary('bulb/p7/n512/generic', 'bulb-generic', false, { model: 'mandelbulb', power: 7, cap: 512 });
   const partial = buildArithmeticRecords({ results: failed, implementationHashes: hashes });
-  assert.ok(!partial.records.some(r => r.recordId === 'mandelbulb@1/arithmetic/p7'));
-  assert.deepEqual(partial.withheld.map(w => [w.recordId, w.failing]), [['mandelbulb@1/arithmetic/p7', ['bulb/p7/n512/generic']]]);
+  assert.ok(!partial.records.some(r => r.recordId === 'mandelbulb@1/arithmetic/p7/matrix-rev4.8'));
+  assert.deepEqual(partial.withheld.map(w => [w.recordId, w.failing]), [['mandelbulb@1/arithmetic/p7/matrix-rev4.8', ['bulb/p7/n512/generic']]]);
   const inconclusive = allPassed(); inconclusive.find(r => r.kind === 'quaternion-boundary').state = 'inconclusive';
   assert.ok(!buildArithmeticRecords({ results: inconclusive, implementationHashes: hashes }).records.some(r => r.modelId === 'quaternion-julia'));
   const adversarial = allPassed(); adversarial.at(-1).cases[1].passed = false; adversarial.at(-1).passed = false; adversarial.at(-1).state = 'failed';
   const blocked = buildArithmeticRecords({ results: adversarial, implementationHashes: hashes });
   assert.deepEqual(blocked.records, [], 'a failed mandatory adversarial stratum withholds every record');
   const missing = allPassed().filter(r => r.id !== 'bulb/p3/n64/polar');
-  assert.ok(!buildArithmeticRecords({ results: missing, implementationHashes: hashes }).records.some(r => r.recordId === 'mandelbulb@1/arithmetic/p3'), 'a missing stratum is never treated as passed');
+  assert.ok(!buildArithmeticRecords({ results: missing, implementationHashes: hashes }).records.some(r => r.recordId === 'mandelbulb@1/arithmetic/p3/matrix-rev4.8'), 'a missing stratum is never treated as passed');
   assert.throws(() => buildArithmeticRecords({ results: [{ ...allPassed()[0], role: 'diagnostic' }], implementationHashes: hashes }), /mandatory/);
 });
 

@@ -1,4 +1,4 @@
-import { boxInterval } from './analytic.js';
+import { boxInterval, inflatedSlabEntry } from './analytic.js';
 const cache = new Map();
 export function mengerBoxes(depth) {
   if (![1, 2].includes(depth)) throw new RangeError('finite Menger depth must be 1 or 2');
@@ -49,4 +49,14 @@ export function mengerIntervals(ray, depth) {
     else merged.push({ ...interval, box });
   }
   return merged;
+}
+// Rev 4.8 surface-v1 analytic envelope: the nearest forward entry over the union of the leaves,
+// each inflated by rho (a conservative superset of the Euclidean rho-offset of the union).
+export function expandedMengerEntry(ray, depth, rho) {
+  let best = null;
+  for (const box of mengerBoxes(depth)) {
+    const entry = inflatedSlabEntry(ray.origin, ray.direction, box.center, box.half, rho);
+    if (entry !== null && (best === null || entry < best)) best = entry;
+  }
+  return best;
 }
