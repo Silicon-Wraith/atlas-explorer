@@ -28,7 +28,7 @@ All of these are disclosed in the report, the narrative or the platform decision
   - All 124 saved launch command lines carry the launcher's default `--enable-unsafe-swiftshader`. Dependence on it was not tested.
   - Neither flag is claimed as a product runtime requirement; operation without them was not established by these campaigns. Project 1 must not inherit either one silently. `--enable-unsafe-webgpu` was never used.
 - **Provenance is bound to commit ids.** The tools resolve `bd978e6`, `448d5ff`, `f754534`, `4465b3c`, `ff11b35`, `31fde5f` and `5638678` in Git. Merge with a merge commit (or fast-forward); never squash or rebase this history.
-- **Regeneration needs the local evidence.** The git-ignored `artifacts/project0/` (about 12 MB, local to this host) plus the Git history are both required: the repository holds hashes, not bytes. Without that evidence, 19 tests skip with a stated reason (497 of 516 run); partially present evidence is an error (`spikes/project0/tests/evidence-guard.mjs`), not a skip.
+- **Regeneration needs the local evidence.** The git-ignored `artifacts/project0/` (about 12 MB, local to this host) plus the Git history are both required: the repository holds hashes, not bytes. Without that evidence, 19 tests skip with a stated reason (497 of 516 run); the shared guard (`spikes/project0/tests/evidence-guard.mjs`) rejects a partially present set of webgpu-1/webgpu-remediation run directories, and `report.test.mjs` and `precision-t12.test.mjs` use their own guards on the accepted precision run.
 
 ## 2. Deferred minor defects (not fixed in code)
 
