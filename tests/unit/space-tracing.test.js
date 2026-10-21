@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  loadPinnedRayStrata, compareAnalyticStratum, compareAdversarialRays, compareOverviewStratum, compareLadderStratum, compareUsability, terminationCounts, sphereSilhouette,
+  loadPinnedRayStrata, analyticReportRow, compareAnalyticStratum, compareAdversarialRays, compareOverviewStratum, compareLadderStratum, compareUsability, terminationCounts, sphereSilhouette,
 } from '../support/space-tracing.mjs';
 import {
   buildTracingRecords, buildGeometricRecords, createValidationRegistry, requiredTracingStrata, TRACING_RECORD_IDS, USABILITY_STRATUM, ADVERSARIAL_RAY_STRATUM, MATRIX_PINS,
@@ -117,4 +117,15 @@ test('tracing records register only when every covered mandatory stratum passed;
   assert.equal(registry.lookup({ ...query, domain: { anchorId: 'bulb-8/anchor-0', anchor: [0.1, 0.2, 0.3], pixels: geometric.records[0].testedDomain.pixels, distance: 0.1 } })?.recordId, 'mandelbulb@1/geometric/bulb-8/anchor-0');
   assert.equal(registry.lookup({ ...query, domain: { anchorId: 'bulb-8/anchor-0', anchor: [0.1, 0.2, 0.3], pixels: geometric.records[0].testedDomain.pixels, distance: 0.01 } }), null, 'no claim at an exceeded distance');
   assert.equal(buildGeometricRecords({ ladders: rows.map(r => ({ ...r, outcome: 'exceedance' })), anchors, implementationHashes: hashes }).records.length, 0);
+});
+
+test('B10-F5: the analytic report row keeps the comparator\'s complete status-failure count', () => {
+  const row = byId('analytic/sphere'), results = echo(row);
+  const hits = row.cases.map((c, i) => [c, i]).filter(([c]) => c.referenceEligible && c.expected.status === 'approximate hit').slice(0, 25);
+  for (const [c, i] of hits) results[i] = { ...results[i], t: c.expected.t * 1.01 };
+  const last = row.cases.length - 1;
+  results[last] = { ...results[last], status: results[last].status === 'miss' ? 'unresolved' : 'miss' };
+  const comparison = compareAnalyticStratum(row, results, view.tolerances);
+  assert.equal(comparison.statusFailures, 1); assert.ok(comparison.depthFailures >= 25);
+  assert.equal(analyticReportRow(comparison).statusFailures, 1, 'the late status failure survives the 20-failure sample');
 });

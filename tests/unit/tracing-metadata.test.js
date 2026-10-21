@@ -20,6 +20,7 @@ import {
   TRACING_VERSION, TRACING_HASHES, TRACING_BINDINGS, TRACE_FIELD_IDS, VALIDATION_FIELD_IDS, TRACE_UNIFORM_LAYOUT,
   tracePipelineDescriptors, tracePipelineSet, validationPipelineDescriptors, traceLayout, traceUniforms, normalsUniforms,
   traceRaysUniforms, encodeRays, decodeRayResults, decodeNormals, resolvePick, TRACE_RAY_BYTES, TRACE_RESULT_BYTES,
+  decodeStatusWords, ESTIMATE_DETAIL,
 } from '../../src/space/render/webgpu/passes.js';
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -182,4 +183,68 @@ test('every dangerous tracing WGSL operation carries a guard annotation (source 
       assert.match(lines[index - 1] ?? '', /\/\/ guard:/, `${id}.wgsl:${index + 1} lacks a preceding // guard: annotation: ${line.trim()}`);
     });
   }
+});
+
+// ---- fix round 1 (Codex run 20261021T203032Z-7350) ----
+import { enclosingSphere, enclosingBox, advance, f32Context } from '../support/trace-f32.mjs';
+const F1_RAY = { high: [50361504, 29461416, -83167144], low: [0, 0, 0], d: [-0.49572083353996277, -0.28999605774879456, 0.8186349272727966] };
+
+test('B10-F1: a far origin whose binary32 field inputs reach the volume is never an empty interval', () => {
+  const c = f32Context();
+  assert.equal(c.dot(F1_RAY.d, F1_RAY.d), 1, 'binary32 dot(d, d) = 1 (Codex counterexample)');
+  assert.deepEqual(c.position(F1_RAY.high, F1_RAY.low, F1_RAY.d, 101592472), [0, 0, 0], 'the unfused field input at t = 101592472 is the origin');
+  const interval = enclosingSphere(F1_RAY.high, F1_RAY.low, F1_RAY.d, 2);
+  assert.equal(interval.overflow, false);
+  assert.equal(interval.kind, 0, 'an intersecting ray is not classed as a miss');
+  assert.ok(interval.enter <= 101592472 && interval.exit >= 101592472, `[${interval.enter}, ${interval.exit}] contains the field input inside the volume`);
+});
+
+test('B10-F2: the step-advance guard and the slab quotients never overflow binary32', () => {
+  const step = advance(2, 1, Math.fround(0.9));
+  assert.equal(step.overflow, false, 'ordinary t = 2 must not overflow inside its own guard');
+  assert.equal(step.failure, false); assert.equal(step.candidate, Math.fround(2 + Math.fround(0.9)));
+  const huge = advance(Math.fround(2 ** 100), Math.fround(2 ** 126), Math.fround(0.9));
+  assert.equal(huge.overflow, false); assert.equal(huge.failure, true, 'an unreachable advance is a numerical failure');
+  const slab = enclosingBox([8, -4, 0], [0, 0, 0], [2 ** -126, 1, 0]);
+  assert.equal(slab.overflow, false, 'a normal but tiny direction component must not overflow the slab quotients');
+  assert.ok(slab.kind === 1 || slab.enter >= 2 ** 74, 'x = 8 never reaches the box within reachable parameters');
+});
+
+test('B10-F3: the interior detail rides a reason-dependent subreason code in the B00 status word', () => {
+  const word = packStatus({ status: RAY_STATUS.unresolved, reason: UNRESOLVED_REASON.estimateUnavailable, subreason: 1, steps: 1 });
+  assert.deepEqual(decodeStatusWords(new Uint8Array(Uint32Array.of(word).buffer))[0], { status: 'unresolved', reason: 'estimate-unavailable', subreason: null, detail: 'interior', steps: 1 });
+  const stagnation = packStatus({ status: RAY_STATUS.unresolved, reason: UNRESOLVED_REASON.stagnation, subreason: 1, steps: 3 });
+  assert.deepEqual(decodeStatusWords(new Uint8Array(Uint32Array.of(stagnation).buffer))[0], { status: 'unresolved', reason: 'stagnation', subreason: 'ray-parameter', detail: null, steps: 3 });
+  assert.equal(ESTIMATE_DETAIL.interior, 1);
+});
+
+test('B10-F1: a seeded sweep of far origins never excludes a binary32 field input inside the volume', () => {
+  let seed = 12345; const rand = () => (seed = (Math.imul(seed, 1103515245) + 12345) >>> 0) / 2 ** 32;
+  let checked = 0, inside = 0;
+  for (let n = 0; n < 4000; n++) {
+    const scale = 2 ** (4 + 36 * rand()), dir = [rand() - 0.5, rand() - 0.5, rand() - 0.5], len = Math.hypot(...dir);
+    const high = dir.map(v => Math.fround(-scale * v / len)), aim = [rand() - 0.5, rand() - 0.5, rand() - 0.5].map(v => v * 3);
+    const raw = aim.map((a, i) => a - high[i]), rl = Math.hypot(...raw), d = raw.map(v => Math.fround(v / rl));
+    const radius = 2, interval = enclosingSphere(high, [0, 0, 0], d, radius), c = f32Context();
+    assert.equal(interval.overflow, false);
+    for (let k = -64; k <= 64; k++) {
+      const t = Math.fround(rl + k * (scale * 2 ** -20 + 0.05)), p = c.position(high, [0, 0, 0], d, t);
+      if (Math.hypot(...p) > radius) continue;
+      inside++;
+      assert.ok(interval.kind === 0 && interval.enter <= t && t <= interval.exit, `ray ${n} (scale 2^${Math.log2(scale).toFixed(1)}): field input at t=${t} lies inside but [${interval.enter}, ${interval.exit}] kind ${interval.kind}`);
+    }
+    checked++;
+  }
+  assert.ok(checked === 4000 && inside > 1000, `${inside} inside field inputs checked`);
+});
+
+test('B10-F1/F2: the binary32 mirror follows trace.wgsl\'s expressions', () => {
+  const source = readFileSync(shaderPath('trace'), 'utf8');
+  for (const line of ['const ROUNDING_MARGIN: f32 = 0.00000762939453125;', 'const T_REACH: f32 = 1267650600228229401496703205376.0;',
+    'let margin = VOLUME_INFLATION * radius + (abs(low.x) + abs(low.y) + abs(low.z)) + ROUNDING_MARGIN * (extent + radius);',
+    'let disc = dd * (r * r) - dot(perpendicular, perpendicular);', 'let half_chord = sqrt(disc) / dd;', 'let mid = -dot(high, d) / dd;',
+    'if (abs(n) >= abs(d) * T_REACH) { return select(-T_REACH, T_REACH, (n > 0.0) == (d > 0.0)); }',
+    'let advance = u.step_multiplier * distance;', 'if (!(advance <= F32_MAX - t)) { return ray_failure(steps, t); }', 'if (candidate > T_REACH) { return ray_failure(steps, t); }',
+    `const ESTIMATE_DETAIL_INTERIOR: u32 = ${ESTIMATE_DETAIL.interior}u;`]) assert.ok(source.includes(line), `trace.wgsl contains: ${line}`);
+  assert.ok(!/REORIGIN|t0 \* d/.test(source), 'no rebased origin');
 });

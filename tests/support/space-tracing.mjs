@@ -180,3 +180,8 @@ export function angleBetween(a, b) {
   const cross = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   return Math.atan2(Math.hypot(...cross), dot);
 }
+
+// The report row for one analytic comparison: the comparator's complete counts plus a short failure sample.
+export function analyticReportRow({ failures, ...row }) {
+  return { ...row, firstFailures: failures.slice(0, 5) };
+}

@@ -1587,8 +1587,7 @@ async function runRendering({ page }) {
     return tracing.compareAnalyticStratum(row, passes.decodeRayResults(bytes(analyticRuns[i].base64), row.cases.length), tol);
   });
   results.push(...analyticRows);
-  report.push({ name: 'Analytic ray strata (recorded, per stratum)', rows: analyticRows.map(({ failures, ...row }) => ({ ...row,
-    statusFailures: failures.filter(f => f.quantity === 'status').length, firstFailures: failures.slice(0, 5) })) });
+  report.push({ name: 'Analytic ray strata (recorded, per stratum)', rows: analyticRows.map(tracing.analyticReportRow) });
   check(RENDERING_PASSES[0], () => {
     assert.equal(analyticRows.length, 4);
     for (const row of analyticRows) assert.equal(row.passed, true, `${row.id} ${row.state}: ${JSON.stringify({ belowFloor: row.belowFloor, countMismatch: row.countMismatch, nf: row.numericalFailures, failures: row.failures.slice(0, 6) })}`);
@@ -1631,6 +1630,34 @@ async function runRendering({ page }) {
     assert.equal(adversarial.cases.length, 12);
     assert.equal(advRow.passed, true, `${advRow.state}: ${JSON.stringify(advRow.failures)}`);
     return { rows: advRow.rows };
+  });
+
+  // Fix round 1 probes (Codex run 20261021T203032Z-7350; recorded, not manifest passes): an interior
+  // camera through the product trace_band keeps `detail: interior` in the status word (B10-F3); Codex's far-origin
+  // ray (B10-F1), the tiny slab direction and an ordinary t = 2 advance (B10-F2) through trace_rays.
+  const interiorCamera = camera.lookAt({ ...SPACE_DEFAULTS.camera, positionLocal: [0.1, 0.2, 0.05], focusLocal: [1, 0, 0] }, [1, 0, 0]);
+  const interiorRows = {};
+  for (const modelId of ['sphere', 'box']) {
+    const run = await frame({ label: `interior-${modelId}`, modelId, camera: interiorCamera, effective: {}, internalSize: { width: 16, height: 9 }, region: { x: 0, y: 0, width: 16, height: 9 },
+      sampling: { seed: 0, sampleIndex: 0 }, profile: SURFACE_V1 });
+    interiorRows[modelId] = decodeFrame(run, 16 * 9);
+  }
+  const probeProfile = { ...SURFACE_V1, alpha: alpha720 };
+  const f1 = { origin: [50361504, 29461416, -83167144], direction: [-0.49572083353996277, -0.28999605774879456, 0.8186349272727966] };
+  const probeRuns = await ev(page, traceRaysInPage, { label: 'fix1-probes', batches: [
+    { modelId: 'sphere', rays: [f1], uniforms: passes.traceRaysUniforms({ modelId: 'sphere', effective: {}, count: 1, pitch: 1, profile: probeProfile }) },
+    { modelId: 'menger', depth: 1, rays: [{ origin: [8, -4, 0], direction: [2 ** -126, 1, 0] }], uniforms: passes.traceRaysUniforms({ modelId: 'menger', effective: { depth: 1 }, count: 1, pitch: 1, profile: probeProfile }) },
+    { modelId: 'constant', rays: [{ origin: [-3, 0, 0], direction: [1, 0, 0], interval: { enter: 2, exit: 10 } }], uniforms: passes.traceRaysUniforms({ modelId: 'constant', effective: { distance: 1 }, count: 1, pitch: 1, profile: probeProfile }) },
+  ] }, 'fix round 1 probes', LIMITS.deep);
+  const probes = probeRuns.map(run => { assert.equal(run.outcome, 'completed', run.reason); return passes.decodeRayResults(bytes(run.base64), 1)[0]; });
+  check('Fix round 1 probes: interior cameras keep their detail; far-origin, tiny-slab and t = 2 rays (recorded, not manifest passes)', () => {
+    for (const [modelId, rows] of Object.entries(interiorRows)) for (const r of rows) assert.deepEqual([r.status, r.reason, r.subreason, r.detail, r.t], ['unresolved', 'estimate-unavailable', null, 'interior', 0], `${modelId} interior camera`);
+    const [far, slab, ordinary] = probes;
+    assert.ok(!(far.status === 'miss' && far.steps === 0), `the far-origin ray is not an empty-interval miss: ${JSON.stringify(far)}`);
+    assert.notEqual(far.status, 'numerical failure');
+    assert.deepEqual([slab.status, slab.steps], ['miss', 0], `the tiny slab direction misses the box without failure: ${JSON.stringify(slab)}`);
+    assert.deepEqual([ordinary.status, ordinary.reason], ['miss', null], `the t = 2 advance runs to the explicit exit: ${JSON.stringify(ordinary)}`);
+    return { interior: Object.fromEntries(Object.entries(interiorRows).map(([k, rows]) => [k, rows[0]])), far, slab, ordinary };
   });
 
   // 4. Overview strata (trace_band with each stratum's frozen camera over the sample pixels' bounding region).

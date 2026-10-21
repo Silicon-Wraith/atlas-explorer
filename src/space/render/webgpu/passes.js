@@ -20,6 +20,9 @@ export const TRACE_FIELD_IDS = FIELD_IDS; // the product families, FIELD 0–4
 export const VALIDATION_FIELD_IDS = Object.freeze([...FIELD_IDS, 'constant']);
 export const TRACE_RAY_BYTES = 64;    // vec4 high (w: explicit-interval flag), vec4 low, vec4 direction, vec4 interval
 export const TRACE_RESULT_BYTES = 16; // packed status, depth bits, detail (1 = interior), steps
+// B10-F3 (fix round 1): under the estimate-unavailable reason, the B00 subreason nibble carries the
+// applicability detail (0 none, 1 interior); under stagnation it keeps the STAGNATION code. Layout unchanged.
+export const ESTIMATE_DETAIL = Object.freeze({ none: 0, interior: 1 });
 export const NORMAL_FIELD_SAMPLES = 6; // central differences: two samples per axis
 const MAX_RAY_STEPS = 1024, MAX_ITERATIONS = 512;
 const refuse = message => { throw new RangeError(message); };
@@ -151,8 +154,9 @@ export function encodeRays(rays) {
 }
 const label = (table, code) => (code ? STATUS_LABELS[table][code] : null);
 const decodeWord = word => {
-  const s = unpackStatus(word);
-  return { status: STATUS_LABELS.ray[s.status] ?? 'invalid', reason: label('reason', s.reason), subreason: label('subreason', s.subreason), steps: s.steps };
+  const s = unpackStatus(word), reason = label('reason', s.reason), estimate = reason === 'estimate-unavailable';
+  return { status: STATUS_LABELS.ray[s.status] ?? 'invalid', reason, subreason: estimate ? null : label('subreason', s.subreason),
+    detail: estimate && s.subreason === ESTIMATE_DETAIL.interior ? 'interior' : null, steps: s.steps };
 };
 export function decodeRayResults(bytes, count) {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength < count * TRACE_RESULT_BYTES) refuse('result bytes are shorter than the ray count');
@@ -160,7 +164,9 @@ export function decodeRayResults(bytes, count) {
   for (let i = 0; i < count; i++) {
     const word = view.getUint32(16 * i, true);
     if (word === 0xffffffff) { out.push({ status: 'missing' }); continue; }
-    out.push({ ...decodeWord(word), t: view.getFloat32(16 * i + 4, true), detail: view.getUint32(16 * i + 8, true) === 1 ? 'interior' : null });
+    const decoded = decodeWord(word), detail = view.getUint32(16 * i + 8, true) === 1 ? 'interior' : null;
+    // The word's code and the ray list's detail word must agree; a disagreement decodes as invalid.
+    out.push({ ...decoded, t: view.getFloat32(16 * i + 4, true), detail, ...(decoded.detail === detail ? {} : { status: 'invalid' }) });
   }
   return out;
 }

@@ -23,9 +23,16 @@ const LOG2_DE_LIMIT: f32 = 127.0; // 2^127 is the largest power of two below F32
 const LOG2_SAMPLE_FLOOR: f32 = -126.0; // below the smallest normal binary32, which WGSL may flush to zero
 // Outward safety of the enclosing intervals (spec §11.4 "outward-safe bounds"); see enclosing_sphere.
 const VOLUME_INFLATION: f32 = 0.00390625; // 2^-8
-const REORIGIN_RADII: f32 = 128.0;
+const ROUNDING_MARGIN: f32 = 0.00000762939453125; // 2^-17 = 128·2^-24 (see enclosing_sphere)
+// No admitted ray parameter exceeds 2^100: every interval end is finite and below it (the sphere's by
+// |high| <= 2^62, the slab's by saturation), so a field input (high + t·d) + low stays finite.
+const T_REACH: f32 = 1267650600228229401496703205376.0; // 2^100
 const DETAIL_NONE: u32 = 0u;
 const DETAIL_INTERIOR: u32 = 1u;
+// The B00 status word keeps its layout: under UNRESOLVED_REASON_ESTIMATE_UNAVAILABLE the subreason nibble
+// carries the applicability detail (passes.js ESTIMATE_DETAIL: 0 none, 1 interior); under
+// UNRESOLVED_REASON_STAGNATION it carries the STAGNATION_* code, as before.
+const ESTIMATE_DETAIL_INTERIOR: u32 = 1u;
 
 // Field-position resolution of one evaluation (spec §11.4 "Each step", items 1–4).
 const SAMPLE_FAILURE: u32 = 0u;      // recurrence or field-domain failure
@@ -130,51 +137,63 @@ fn field_sample(p: vec3<f32>) -> FieldSample {
 
 // The declared enclosing volumes (spec §11.4): the bulb's radius-2 sphere, the quaternion's outward
 // R(C) sphere, the Project 0 A.2 radius-2 sphere for the sphere and box, the box [-1, 1]^3 for Menger.
-// Outward safety in binary32. The ray from the represented origin o = high + low (|low_i| <= ulp(high_i)/2)
-// meets the R-sphere about 0 inside the parameter interval on which the ray from `high` meets the sphere
-// of radius R + |low|_1, so the volume is inflated by |low|_1 and further by 2^-8·R. The discriminant
-// is R'² − |q × d|² with the cross product (no b² − c cancellation); its rounding error is about
-// 2·R'·2^-23·|q|, while the inflation widens the true chord by at least (R'² − R²)/(2R') ≈ 2^-8·R, so for
-// |q| <= 128·R the computed interval contains the true one with margin (and roots are padded by the
-// rounding of −q·d). A farther origin is first advanced exactly as the marcher would advance it, to
-// t0 = q·(−d) − 2R' (a parameter before the volume), and the interval is computed from that point.
+// Outward safety (fix round 1, B10-F1). What must never be excluded is any parameter t at which either the
+// represented ray o + t·d (o = high + low exactly, d the represented direction, |d|² = dd) or the
+// kernel's binary32 field input (high + t·d) + low, fused or unfused, lies in the volume. Both stay within
+// E = |low|_1 + e(t) of the line high + t·d, where the field input's rounding is e(t) <= 3·2^-24·(|high|_1 + t·|d|_1)
+// per evaluation. Over the parameters that can reach the volume, t·|d| <= |high| + R', so
+// E <= |low|_1 + 2^-20·(|high|_1 + R) (with room for |d| up to 2 and the admitted dd). The cross product
+// |high × d| that measures the line's distance has rounding at most 2^-21·|high|_1·|d|. The volume is
+// therefore inflated by m = 2^-8·R + |low|_1 + 2^-17·(|high|_1 + R), which exceeds both terms with margin.
+// No rebasing: the line is the original expression's, and dd is used as represented (never assumed 1).
+// The test discriminant dd·R'² − |high × d|² has relative rounding a few ulp of R'²·dd, i.e. an equivalent
+// radius error of a few ulp of R', far below m; near tangency its square root can be off by
+// √(6·2^-24)·R' ≈ 6e-4·R', which the inflation's chord widening (>= m/4 >= 2^-10·R + 6e-4·m) covers.
+// The roots are padded by m (in t, |d| ≈ 1) for the rounding of −high·d / dd and of the division.
+// Ranges: |high_i| <= 2^62 and |d_i| <= 2, so each cross component is below 2^64 and dot(·, ·) below 3·2^126;
+// R' <= 16 + 2^-17·(3·2^62 + 16) < 2^46, so dd·R'² < 2^93.
 fn enclosing_sphere(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, radius: f32) -> Interval {
   if (!finite_f32(radius) || !(radius > 0.0) || radius > 16.0) { return Interval(2u, 0.0, 0.0); }
-  let r = radius * (1.0 + VOLUME_INFLATION) + (abs(low.x) + abs(low.y) + abs(low.z));
-  var t0 = 0.0;
-  var q = high;
-  let reach = length(high);
-  if (reach > REORIGIN_RADII * r) {
-    let along = -dot(high, d);
-    if (along <= 0.0) { return Interval(1u, 0.0, 0.0); } // the volume lies behind a distant origin
-    t0 = max(0.0, along - 2.0 * r);
-    q = high + t0 * d;
-  }
-  let perpendicular = cross(q, d);
-  let disc = r * r - dot(perpendicular, perpendicular);
+  let extent = abs(high.x) + abs(high.y) + abs(high.z);
+  let margin = VOLUME_INFLATION * radius + (abs(low.x) + abs(low.y) + abs(low.z)) + ROUNDING_MARGIN * (extent + radius);
+  let r = radius + margin;
+  let dd = dot(d, d); // admitted in [1 − 4e-6, 1 + 4e-6] by march()
+  let perpendicular = cross(high, d);
+  let disc = dd * (r * r) - dot(perpendicular, perpendicular);
   if (disc < 0.0) { return Interval(1u, 0.0, 0.0); }
-  // guard: disc >= 0 (checked above) and finite for an admitted origin
-  let half_chord = sqrt(disc);
-  let mid = -dot(q, d);
-  let pad = 0.0000002384185791015625 * (abs(mid) + r + t0) * 4.0; // 4·2^-22·(|mid| + R' + t0)
-  return Interval(0u, t0 + mid - half_chord - pad, t0 + mid + half_chord + pad);
+  // guard: disc >= 0 (checked above) and below 2^93
+  let half_chord = sqrt(disc) / dd;
+  // guard: dd >= 1 − 4e-6 (admitted)
+  let mid = -dot(high, d) / dd;
+  return Interval(0u, mid - half_chord - margin, mid + half_chord + margin);
 }
-// Slab method for the box [-1, 1]^3, inflated by 2^-8 and |low_i| per axis and padded relatively.
+// The slab quotient n / d for the Menger box, saturated at ±2^100 (fix round 1, B10-F2). Saturation never
+// changes emptiness: a unit direction has a component |d_k| >= 0.577, whose slab ends are below
+// (2^62 + 2)/0.577 < 2^64, so a saturated entry (>= 2^100) always exceeds that exit and a saturated exit
+// (<= −2^100) always precedes that entry, exactly as the unsaturated quotients would.
+fn slab_quotient(n: f32, d: f32) -> f32 {
+  // guard: |d| <= 2, so |d|·2^100 is finite; the quotient is formed only when it is below 2^100 in magnitude
+  if (abs(n) >= abs(d) * T_REACH) { return select(-T_REACH, T_REACH, (n > 0.0) == (d > 0.0)); }
+  // guard: |n / d| < 2^100 (checked above) and d != 0 (the caller handles d == 0)
+  return n / d;
+}
+// Slab method for the box [-1, 1]^3, inflated per axis by 2^-8, |low_i| and the field-input rounding margin
+// of enclosing_sphere, and padded relatively. Every operand is bounded: |o| <= 2^62, so the numerators are
+// finite, the quotients are saturated and the padding is below 2^82.
 fn enclosing_box(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>) -> Interval {
   var enter = -F32_MAX;
   var exit = F32_MAX;
+  let extent = abs(high.x) + abs(high.y) + abs(high.z);
   for (var axis = 0u; axis < 3u; axis++) {
-    let half = 1.0 + VOLUME_INFLATION + abs(low[axis]);
+    let half = 1.0 + VOLUME_INFLATION + abs(low[axis]) + ROUNDING_MARGIN * (extent + 2.0);
     let o = high[axis];
     if (d[axis] == 0.0) {
       if (abs(o) > half) { return Interval(1u, 0.0, 0.0); }
       continue;
     }
-    // guard: d[axis] != 0 and |o| is admitted finite, so both quotients are finite for |o| <= 2^62
-    let a = (-half - o) / d[axis];
-    // guard: as above
-    let b = (half - o) / d[axis];
-    let pad = 0.00000095367431640625 * (abs(a) + abs(b)); // 2^-20 relative padding
+    let a = slab_quotient(-half - o, d[axis]);
+    let b = slab_quotient(half - o, d[axis]);
+    let pad = ROUNDING_MARGIN * (abs(a) + abs(b));
     enter = max(enter, min(a, b) - pad);
     exit = min(exit, max(a, b) + pad);
   }
@@ -206,6 +225,8 @@ fn march(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, use_given: bool, given: 
   if (interval.kind == 1u) { return ray_miss(0u, 0.0); }
   var t = max(0.0, interval.enter);
   if (interval.exit < t) { return ray_miss(0u, t); }
+  // An explicit (validation) interval may start beyond every reachable parameter.
+  if (t > T_REACH) { return ray_failure(0u, t); }
   var p = field_position(high, low, d, t);
   for (var steps = 1u; steps <= u.max_steps; steps++) {
     if (!admissible3(p)) { return ray_failure(steps, t); }
@@ -213,7 +234,7 @@ fn march(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, use_given: bool, given: 
     if (s.kind == SAMPLE_FAILURE) { return ray_failure(steps, t); }
     if (s.kind == SAMPLE_NOT_ESCAPED) { return ray_unresolved(UNRESOLVED_REASON_POINT_BUDGET, STAGNATION_NONE, steps, t, DETAIL_NONE); }
     // This exterior profile never accepts an interior value as a hit (spec §11.4 "Analytic applicability").
-    if (s.kind == SAMPLE_INTERIOR) { return ray_unresolved(UNRESOLVED_REASON_ESTIMATE_UNAVAILABLE, STAGNATION_NONE, steps, t, DETAIL_INTERIOR); }
+    if (s.kind == SAMPLE_INTERIOR) { return ray_unresolved(UNRESOLVED_REASON_ESTIMATE_UNAVAILABLE, ESTIMATE_DETAIL_INTERIOR, steps, t, DETAIL_INTERIOR); }
     if (s.kind == SAMPLE_UNAVAILABLE) { return ray_unresolved(UNRESOLVED_REASON_ESTIMATE_UNAVAILABLE, STAGNATION_NONE, steps, t, DETAIL_NONE); }
     // τ(t) = max(floor, factor·α·t): surface-v1 floor 1e-6, factor 0.5; ladder-v1 floor 0, factor 0.005.
     let tolerance = max(u.tolerance_floor, u.tolerance_factor * u.alpha * t);
@@ -231,10 +252,13 @@ fn march(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, use_given: bool, given: 
       // guard: s.value < 127 so 2^value is finite
       distance = exp2(s.value);
     }
-    // guard: the candidate advance t + m·DE must stay finite
-    if (!(distance <= (F32_MAX - t) / u.step_multiplier)) { return ray_failure(steps, t); }
-    let candidate = t + u.step_multiplier * distance;
+    // The bounded step first (fix round 1, B10-F2): m <= 1 and DE < 2^127 (fractal) or <= F32_MAX (analytic), so
+    // m·DE is finite; F32_MAX − t is finite for 0 <= t <= 2^100; then the sum cannot exceed F32_MAX.
+    let advance = u.step_multiplier * distance;
+    if (!(advance <= F32_MAX - t)) { return ray_failure(steps, t); }
+    let candidate = t + advance;
     if (candidate > interval.exit) { return ray_miss(steps, t); }
+    if (candidate > T_REACH) { return ray_failure(steps, t); }
     if (!(candidate > t)) { return ray_unresolved(UNRESOLVED_REASON_STAGNATION, STAGNATION_RAY_PARAMETER, steps, t, DETAIL_NONE); }
     let next = field_position(high, low, d, candidate);
     if (all(next == p)) { return ray_unresolved(UNRESOLVED_REASON_STAGNATION, STAGNATION_FIELD_COORDINATE, steps, t, DETAIL_NONE); }
