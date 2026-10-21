@@ -1,6 +1,7 @@
 // Project 1a workflows in a real browser (SwiftShader WebGL, headless): native scenes,
 // undo and camera history, startup and invalid links, the immutable export and a context loss
-// during one (T08). GREEN only: never part of a RED run.
+// during one (T08), and the Discoveries control over real IndexedDB (T12). GREEN only: never part
+// of a RED run.
 import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -32,6 +33,20 @@ async function open(context, hash = '', backend = 'webgl') {
   return page;
 }
 const state = page => ev(page, () => ({ scene: atlas.scene, history: atlas.history, rendered: atlas.rendered }));
+// An early close of a registered context: every page is drained through the expected-backend wrapper
+// first; a failed drain is persisted in the report and fails the suite (T00b, plan amendment H). The
+// context leaves `contexts` once closed; until then a failure anywhere drains it in the finalizer.
+async function closeDrained(resource, label, pages) {
+  const failed = await cleanupWorkflow({ pages, drain: page => drainExpecting(page), report, writeReport: entries => writeFile(reportPath, JSON.stringify(entries, null, 2)),
+    closeAll: () => closeWithin(resource, label) });
+  const index = contexts.indexOf(resource); if (index >= 0) contexts.splice(index, 1);
+  if (failed) throw new Error(`${label}: GPU drain or report failed`);
+}
+// The Discoveries count once its first load has settled ('…' while loading; T12).
+const settledCount = async target => {
+  await target.waitForFunction(() => document.querySelector('#saved-count').textContent !== '…', null, { timeout: LIMITS.operation });
+  return target.locator('#saved-count').textContent();
+};
 // Every keyboard and mouse call is bounded (T00 fix round 1; the no-launch suite checks this statically).
 const press = (page, key) => within(page.keyboard.press(key), LIMITS.operation, `keyboard.press ${key}`);
 const VIEW_B = { re: '-0.743643887037151', im: '0.13182590420533', zoom: 4.2 };
@@ -134,6 +149,11 @@ function checkIndexedDb(page) {
     results.cancelledRead = await reopened.getDiscovery('a', { signal: cancelled.signal }).then(() => 'resolved', error => error.name);
     results.deletion = (await reopened.commit({ puts: [{ store: 'writes', value: { writeId: 'w3', op: 'remove', id: 'a' } }], deletes: [{ store: 'discoveries', key: 'a' }, { store: 'writes', key: 'w1' }] })).status;
     results.afterDeletion = { record: await reopened.getDiscovery('a'), deletedMarker: await reopened.getWriteMarker('w1'), removeMarker: (await reopened.getWriteMarker('w3'))?.op ?? null, count: await reopened.countDiscoveries({ workspace: 'plane' }) };
+    // T12 (plan amendment E(2) carry-forward): a seeded marker deleted on its own, through the exact
+    // batch the local source's prune() commits, yields `committed` and then reads as absent.
+    results.seededMarker = (await reopened.commit({ puts: [{ store: 'writes', value: { writeId: 'w4', op: 'save', id: 'z' } }] })).status === 'committed' ? (await reopened.getWriteMarker('w4'))?.writeId ?? null : 'not committed';
+    results.prunedMarker = (await reopened.commit({ puts: [], deletes: [{ store: 'writes', key: 'w4' }] })).status;
+    results.prunedMarkerAfter = await reopened.getWriteMarker('w4');
     reopened.close();
     const raw = await rawOpen(name);
     results.reports = await new Promise((resolve, reject) => { const request = raw.transaction('reports').objectStore('reports').getAllKeys(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
@@ -313,33 +333,65 @@ async function checkWhenDrawn(page, backend) {
 }
 
 // Saving a discovery while an export holds the renderer is refused: the canvas shows the export,
-// and a deferred appearance edit would pair the live settings with the export's pixels.
+// and a deferred appearance edit would pair the live settings with the export's pixels. The refusal
+// is synchronous (before the thumbnail is encoded); an accepted save commits to IndexedDB and the
+// Discoveries count follows (T12: the control replaces the localStorage bookmarks).
 async function checkSaveDuringExport(page) {
   await goToIdle(page, VIEW_B);
+  const countBefore = Number(await settledCount(page));
   await armExport(page, { holds: ['encoding'] });
   await ev(page, () => document.querySelector('#download-image').click());
   await waitStage(page, 'encoding', LIMITS.deep);
   const refused = await ev(page, () => {
-    const count = () => JSON.parse(localStorage.getItem('atlas.discoveries') || '[]').length;
-    const before = count();
     document.querySelector('[data-palette="aurora"]').click();
     document.querySelector('#bookmark-button').click();
-    return { before, after: count(), toast: document.querySelector('#toast').textContent, palette: atlas.scene.appearance.palette };
+    return { toast: document.querySelector('#toast').textContent, palette: atlas.scene.appearance.palette };
   });
-  assert.equal(refused.after, refused.before, 'no discovery was saved during the lease');
   assert.match(refused.toast, /finish/);
   assert.equal(refused.palette, 'aurora', 'the live scene kept the edit');
   await ev(page, () => window.__releaseExport('encoding'));
   await waitStage(page, 'finished', LIMITS.deep);
   await ev(page, () => atlas.setExportHooks(null));
   await idleWithin(page, LIMITS.deep);
-  const accepted = await ev(page, () => {
-    const count = () => JSON.parse(localStorage.getItem('atlas.discoveries') || '[]').length;
-    const before = count();
-    document.querySelector('#bookmark-button').click();
-    return { before, after: count(), toast: document.querySelector('#toast').textContent };
-  });
-  assert.equal(accepted.after, accepted.before + 1, `once the live scene is rendered a save is accepted: ${accepted.toast}`);
+  await page.waitForTimeout(300);
+  assert.equal(await settledCount(page), String(countBefore), 'no discovery was saved during the lease');
+  await ev(page, () => document.querySelector('#bookmark-button').click());
+  await page.waitForFunction(() => /Discovery saved|could not be saved|not saved|checked|confirm/.test(document.querySelector('#toast').textContent), null, { timeout: LIMITS.operation });
+  const accepted = await ev(page, () => document.querySelector('#toast').textContent);
+  assert.match(accepted, /Discovery saved/, `once the live scene is rendered a save is accepted: ${accepted}`);
+  await page.waitForFunction(expected => document.querySelector('#saved-count').textContent === expected, String(countBefore + 1), { timeout: LIMITS.operation });
+}
+
+// A save pressed while a gesture is open — a held drag, a running tour — must not settle that gesture:
+// a refused save leaves the open gesture, the undo depth and the camera history exactly as they were
+// (spec §4.3, §6; fix round 1, Codex r1 finding 2). The render is held on its reference-orbit worker
+// message so the refusal (the view is still rendering) is deterministic.
+async function checkRefusedSaveKeepsGesture(page) {
+  await goToIdle(page, VIEW_B);
+  const histories = () => ev(page, () => { const { camera, ...rest } = atlas.history; return { ...rest, cameraLength: camera.length, cameraIndex: camera.index, tour: !document.querySelector('#tour-status').hidden }; });
+  await ev(page, () => { window.__holdWorkers = true; });
+  await within(page.mouse.move(700, 500), LIMITS.operation, 'mouse.move'); await within(page.mouse.down(), LIMITS.operation, 'mouse.down');
+  await within(page.mouse.move(740, 520, { steps: 4 }), LIMITS.operation, 'mouse.move');
+  await page.waitForFunction(() => window.__heldWorkerMessages.length > 0, null, { timeout: LIMITS.operation });
+  const dragging = await histories();
+  assert.equal(dragging.gesture, 'navigation-drag', 'the drag is an open gesture');
+  await press(page, 'b');
+  assert.match(await page.locator('#toast').textContent(), /finish/, 'the save is refused while the view renders');
+  assert.deepEqual(await histories(), dragging, 'a refused save during a drag settles nothing');
+  await within(page.mouse.up(), LIMITS.operation, 'mouse.up');
+  await ev(page, () => window.__releaseWorkers());
+  await idleWithin(page, LIMITS.deep);
+  await ev(page, () => { window.__holdWorkers = true; document.querySelector('#tour-button').click(); });
+  await page.waitForFunction(() => window.__heldWorkerMessages.length > 0 && atlas.history.gesture === 'tour', null, { timeout: LIMITS.operation });
+  const touring = await histories();
+  assert.equal(touring.tour, true);
+  await press(page, 'b');
+  assert.match(await page.locator('#toast').textContent(), /finish/);
+  assert.deepEqual(await histories(), touring, 'a refused save during a tour settles nothing: the tour gesture stays open and no entry is added');
+  await press(page, 'Escape');
+  await ev(page, () => window.__releaseWorkers());
+  await idleWithin(page, LIMITS.deep);
+  assert.equal((await histories()).tour, false);
 }
 
 // A context loss while encoding is held, in both orders of restoration and lease release. The
@@ -655,6 +707,7 @@ try {
     commit: 'committed', rollback: 'failed', afterRollback: 'old', aborted: 'aborted', abortedAbsent: true,
     reopened: 'old', blobSize: 1, list: ['a'], blocked: 'blocked', rolledBackMarker: null, count: 1, marker: 'a', cancelledRead: 'AbortError',
     deletion: 'committed', afterDeletion: { record: null, deletedMarker: null, removeMarker: 'remove', count: 0 },
+    seededMarker: 'w4', prunedMarker: 'committed', prunedMarkerAfter: null,
     wholeOldRecord: true, reports: ['r1'], versionAfterUnblock: 1, storesAfterUnblock: ['discoveries', 'reports', 'writes'], deleted: 'deleted',
     paging: { first: ['e', 'd', 'c'], second: ['ba', 'b', 'a'], secondNext: null, single: ['e', 'c', 'ba', 'b', 'a'] },
     badCursor: 'RangeError', foreignCursor: 'RangeError', pagingDeleted: 'deleted',
@@ -669,6 +722,8 @@ try {
   await checkWhenDrawn(page, 'webgl');
   await checkSaveDuringExport(page);
   pass('Saving a discovery during an export is refused');
+  await checkRefusedSaveKeepsGesture(page);
+  pass('A refused save leaves the open gesture and both histories unchanged');
   await checkContextLossDuringExport(page, true);
   await checkContextLossDuringExport(page, false);
   pass('A context loss during an export interrupts it and live rendering resumes');
@@ -693,6 +748,124 @@ try {
   pass('An edit during a CPU export does not change the exported image');
   await checkWhenDrawn(cpu, 'cpu');
   pass('A drawn publication is confirmed by its fence on WebGL and by its paint on the CPU');
+
+  // T12: the Discoveries control over real IndexedDB (spec §12, §13.10, §14). Each check has a
+  // fresh browser context, so its database starts empty.
+  const discoveryContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(discoveryContext);
+  const library = await open(discoveryContext);
+  assert.equal(await settledCount(library), '0');
+  // A scene that is not the fresh-start one (camera and appearance), so that opening it after the
+  // reload is observable (fix round 1, Codex r1 finding 4).
+  await library.getByRole('button', { name: 'Aurora palette', exact: true }).click();
+  await goToIdle(library, VIEW_B);
+  await press(library, 'b');
+  await library.waitForFunction(() => document.querySelector('#saved-count').textContent === '1', null, { timeout: LIMITS.operation });
+  assert.match(await library.locator('#toast').textContent(), /Discovery saved/);
+  const savedScene = await ev(library, () => atlas.scene);
+  assert.deepEqual([savedScene.camera, savedScene.appearance.palette], [VIEW_B, 'aurora']);
+  await goToIdle(library, VIEW_C);
+  await drainExpecting(library); // Reload discards the old document's accessible GL context too.
+  await library.reload({ timeout: LIMITS.launch });
+  await library.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
+  assert.equal(await settledCount(library), '1', 'the discovery survives a reload');
+  assert.notDeepEqual(await ev(library, () => atlas.scene), savedScene, 'the reload opened fresh-start Plane, not the saved scene');
+  await library.getByRole('button', { name: /Your discoveries/ }).click();
+  await library.locator('.saved-wrapper .destination-card').first().click();
+  await library.waitForFunction(scene => JSON.stringify(atlas.scene.camera) === JSON.stringify(scene.camera), savedScene, { timeout: LIMITS.operation });
+  assert.deepEqual(await ev(library, () => atlas.scene), savedScene, 'opening restores the whole scene');
+  await library.locator('.saved-wrapper .delete-save').first().click();
+  await library.waitForFunction(() => document.querySelector('#saved-count').textContent === '0', null, { timeout: LIMITS.operation });
+  assert.match(await library.locator('#toast').textContent(), /Discovery removed/);
+  await idleWithin(library);
+  await drainExpecting(library);
+  await library.reload({ timeout: LIMITS.launch });
+  await library.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
+  assert.equal(await settledCount(library), '0', 'the deletion is durable');
+  await closeDrained(discoveryContext, 'discoveryContext', discoveryContext.pages());
+  pass('Discoveries save, survive reload, open and delete');
+
+  const pagingContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(pagingContext);
+  const paging = await open(pagingContext);
+  await within(paging.evaluate(async () => {
+    const { openPersistence } = await import('/src/shared/persistence.js');
+    const { createLocalDiscoverySource, createDiscoveryRecord } = await import('/src/shared/discoveries.js');
+    const { sceneCodec, createPlaneScene } = await import('/src/plane/scene-adapter.js');
+    const store = await openPersistence();
+    const source = createLocalDiscoverySource({ store, sceneCodec });
+    const canvas = new OffscreenCanvas(8, 4); canvas.getContext('2d').fillRect(0, 0, 8, 4);
+    const blob = await canvas.convertToBlob({ type: 'image/png' });
+    for (let i = 0; i < 51; i++) {
+      const scene = createPlaneScene({ view: { re: '-0.5', im: '0', zoom: i / 10 } });
+      const record = createDiscoveryRecord({ scene, name: `Seeded ${String(i).padStart(2, '0')}`, thumbnail: { sourceReportId: `seed-${i}`, mediaType: 'image/png', blob }, id: `seed-${i}`, createdAt: new Date(Date.UTC(2026, 9, 20, 0, 0, i)).toISOString(), sceneCodec });
+      const result = await source.save(record, { writeId: `seed-write-${i}` });
+      if (result.status !== 'committed') throw new Error(`seeding failed: ${result.reason}`);
+    }
+    store.close();
+  }), LIMITS.deep, 'seed 51 discoveries');
+  await drainExpecting(paging);
+  await paging.reload({ timeout: LIMITS.launch });
+  await paging.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
+  assert.equal(await settledCount(paging), '51', 'the count is the total, not the first page');
+  await paging.getByRole('button', { name: /Your discoveries/ }).click();
+  assert.equal(await paging.locator('.saved-wrapper .destination-card:not(.discovery-more)').count(), 50);
+  await paging.locator('.discovery-more').click();
+  await paging.waitForFunction(() => document.querySelectorAll('.saved-wrapper .destination-card:not(.discovery-more)').length === 51, null, { timeout: LIMITS.operation });
+  assert.equal(await paging.locator('.discovery-more').count(), 0, 'no further page is offered');
+  await paging.locator('[data-discovery="local:seed-0"]').click();
+  await paging.waitForFunction(() => atlas.scene.camera.zoom === 0, null, { timeout: LIMITS.operation });
+  await paging.locator('.saved-wrapper').filter({ has: paging.locator('[data-discovery="local:seed-0"]') }).locator('.delete-save').click();
+  await paging.waitForFunction(() => document.querySelector('#saved-count').textContent === '50', null, { timeout: LIMITS.operation });
+  await idleWithin(paging, LIMITS.deep);
+  await closeDrained(pagingContext, 'pagingContext', pagingContext.pages());
+  pass('More than one page of discoveries stays reachable');
+
+  // Back during a captured drag releases the drag (bindPlaneNavigation.reset, plan amendment G(1)).
+  const dragContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(dragContext);
+  const drag = await open(dragContext);
+  await drag.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await idleWithin(drag);
+  await within(drag.mouse.move(720, 420), LIMITS.operation, 'mouse.move'); await within(drag.mouse.down(), LIMITS.operation, 'mouse.down');
+  await within(drag.mouse.move(760, 440, { steps: 3 }), LIMITS.operation, 'mouse.move');
+  await press(drag, 'Alt+ArrowLeft');
+  await idleWithin(drag);
+  const afterBack = await ev(drag, () => atlas.scene.camera);
+  await within(drag.mouse.move(820, 470, { steps: 3 }), LIMITS.operation, 'mouse.move');
+  await within(drag.mouse.up(), LIMITS.operation, 'mouse.up');
+  await idleWithin(drag);
+  assert.deepEqual(await ev(drag, () => atlas.scene.camera), afterBack, 'a still-pressed pointer does not resume navigation after Back');
+  await closeDrained(dragContext, 'dragContext', dragContext.pages());
+  pass('Back during a captured drag releases the drag');
+
+  const legacy = JSON.stringify([{ id: 'old-1', name: 'Old bookmark', view: { re: '-0.5', im: '0', zoom: 0 }, settings: {} }]);
+  const legacyContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(legacyContext);
+  await legacyContext.addInitScript(value => { if (!localStorage.getItem('atlas.discoveries')) localStorage.setItem('atlas.discoveries', value); }, legacy);
+  const legacyPage = await open(legacyContext);
+  assert.equal(await settledCount(legacyPage), '0', 'earlier bookmarks are not read');
+  await press(legacyPage, 'b');
+  await legacyPage.waitForFunction(() => document.querySelector('#saved-count').textContent === '1', null, { timeout: LIMITS.operation });
+  assert.equal(await ev(legacyPage, () => localStorage.getItem('atlas.discoveries')), legacy, 'earlier bookmarks are not modified');
+  await closeDrained(legacyContext, 'legacyContext', legacyContext.pages());
+  pass('The earlier discoveries key is neither read nor modified');
+
+  const offlineContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(offlineContext);
+  await offlineContext.addInitScript(() => { Object.defineProperty(window, 'indexedDB', { configurable: true, get: () => undefined }); });
+  const offline = await open(offlineContext);
+  await press(offline, 'b');
+  await offline.waitForFunction(() => /could not be saved/.test(document.querySelector('#toast').textContent), null, { timeout: LIMITS.operation });
+  assert.doesNotMatch(await offline.locator('#toast').textContent(), /Discovery saved/);
+  await offline.getByRole('button', { name: /Your discoveries/ }).click();
+  assert.match(await offline.locator('#destination-grid').textContent(), /unavailable/);
+  const zoomBefore = await ev(offline, () => atlas.view.zoom);
+  await offline.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await idleWithin(offline);
+  assert.ok(await ev(offline, () => atlas.view.zoom) > zoomBefore, 'exploration continues without storage');
+  await closeDrained(offlineContext, 'offlineContext', offlineContext.pages());
+  pass('Unavailable storage leaves exploration usable and never claims a save');
 
   const earlier = await open(context, '#re=-2&im=0&z=40&palette=rose');
   assert.deepEqual((await state(earlier)).scene.camera, INITIAL);

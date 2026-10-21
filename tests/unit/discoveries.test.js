@@ -1023,3 +1023,47 @@ test('T09b teardown during a pruning notification starts no further cleanup', as
   assert.equal(markers.has(last.writeId), true, 'a reentrant teardown stops the scheduled cleanup');
   assert.equal(pruned.length, 100);
 });
+
+// T12 (plan amendment E(2) carry-forward): marker cleanup failures were silent. They are now reported
+// to a failure-isolated diagnostic hook — a throw, a rejection, a timeout and a non-committed reply —
+// without changing the write result, authorising a retry or a sweep, or treating an absent optional
+// cleanup operation as a failure. A hook that throws is isolated too.
+test('T12 cleanup failures reach the diagnostic hook without changing the write result or retrying', async () => {
+  const cases = [
+    ['throws', () => { throw new Error('cleanup threw'); }, /cleanup threw/],
+    ['rejects', async () => { throw new Error('cleanup rejected'); }, /cleanup rejected/],
+    ['times out', () => new Promise(() => {}), /timed out/],
+    ['replies failed', async () => ({ status: 'failed', reason: 'QuotaExceededError' }), /QuotaExceededError/],
+    ['replies without a status', async () => ({}), /status/],
+    // Fix round 1 (Codex r1 finding 3): a cleanup that ran and returned nothing is a cleanup that
+    // ran and did not commit — distinct from one skipped after teardown, which stays silent.
+    ['returns undefined synchronously', () => undefined, /status/],
+    ['returns undefined asynchronously', async () => undefined, /status/],
+  ];
+  for (const [label, prune, expected] of cases) {
+    const failures = [], attempts = [];
+    const { controller, markers } = pruningSetup({ prune: ids => { attempts.push(ids); return prune(ids); } }, { readTimeoutMs: 10, onCleanupError: (error, write) => { failures.push({ message: error.message, writeId: write.writeId, kind: write.kind }); throw new Error('the hook itself broke'); } });
+    const result = await controller.save('test', { id: 'a' });
+    assert.equal(result.status, 'committed', label);
+    await pruningTurn(); await wait(15); await flush();
+    assert.equal(failures.length, 1, `${label}: one diagnostic for one cleanup`);
+    assert.match(failures[0].message, expected, label);
+    assert.deepEqual([failures[0].writeId, failures[0].kind], [result.writeId, 'save'], label);
+    assert.deepEqual(attempts, [[result.writeId]], `${label}: cleanup is attempted once and never retried`);
+    assert.equal(markers.has(result.writeId), true, `${label}: the evidence is kept`);
+    assert.equal(controller.snapshot().writes[0].status, 'committed', `${label}: the write result is unchanged`);
+    assert.equal((await controller.reconcile(result.writeId)).status, 'committed', `${label}: a later read still sees the outcome`);
+    await pruningTurn(); await wait(15); await flush();
+    assert.equal(failures.length, 1, `${label}: reconciliation does not retry cleanup`);
+    controller.destroy();
+  }
+  // No cleanup operation at all is not a failure, and a successful cleanup reports nothing.
+  for (const prune of [undefined, async () => ({ status: 'committed' })]) {
+    const failures = [];
+    const { controller } = pruningSetup({ prune }, { onCleanupError: error => failures.push(error) });
+    await controller.save('test', { id: 'a' });
+    await pruningTurn();
+    assert.deepEqual(failures, []);
+    controller.destroy();
+  }
+});

@@ -137,3 +137,33 @@ test('a cursor whose date anchor is not an exact time value is refused', () => {
     for (const encoded of [cursor(['d', body]), cursor(['a', [['s', 'x'], ['d', body]]]), cursor(['s', 'x'], ['a', [['a', [['d', body]]]]])])
       assert.throws(() => decodePageCursor(encoded, 'plane'), RangeError, encoded);
 });
+
+// T12 (plan amendment J carry-forward): a connection closed behind the application — another ATLAS
+// tab upgrading the database (`versionchange`), or the browser revoking storage (`close`) — used to
+// fail silently with the browser's own exception text. The close is reported once through `onClosed`,
+// and every later call reports `closed` with a reason the explorer can act on (reload), instead of
+// hanging or claiming anything about storage.
+test('a connection closed by a version change or the browser is reported, and later calls say so', async () => {
+  for (const event of ['onversionchange', 'onclose']) {
+    const calls = [], closures = [];
+    const db = {
+      close: () => calls.push('close'),
+      transaction: () => { throw Object.assign(new Error('The database connection is closing.'), { name: 'InvalidStateError' }); },
+    };
+    const store = await openPersistence({ indexedDB: scriptedIndexedDB(request => { request.result = db; request.onsuccess(); }), timeoutMs: 200, onClosed: reason => closures.push(reason) });
+    assert.deepEqual(closures, [], 'nothing is reported while the connection is open');
+    db[event]();
+    assert.deepEqual(closures, [event === 'onversionchange' ? 'versionchange' : 'closed'], 'the close is reported once, with its cause');
+    assert.deepEqual(calls, event === 'onversionchange' ? ['close'] : [], 'a version change releases the connection so the other tab can proceed');
+    await assert.rejects(store.getDiscovery('a'), error => error instanceof PersistenceError && error.code === 'closed' && /reload/i.test(error.message));
+    await assert.rejects(store.listDiscoveries({ workspace: 'plane' }), error => error.code === 'closed');
+    await assert.rejects(store.countDiscoveries({ workspace: 'plane' }), error => error.code === 'closed');
+    await assert.rejects(store.getWriteMarker('w'), error => error.code === 'closed');
+    const commit = await store.commit({ puts: [{ store: 'writes', value: { writeId: 'w' } }] });
+    assert.equal(commit.status, 'failed');
+    assert.match(commit.reason, /reload/i, 'a write after the close fails with the same actionable reason');
+    db[event]();
+    assert.equal(closures.length, 1, 'a repeated close event is reported once');
+    store.close();
+  }
+});
