@@ -847,6 +847,17 @@ test('discard: settles one auxiliary without failing or closing its owner', asyn
   assert.equal(advances, 2); assert.equal(scheduler.snapshot().outstanding, 0); assert.deepEqual(scheduler.snapshot().jobs, []);
 });
 
+test('discard: a discarded auxiliary is not watchdog progress', async () => {
+  const { scheduler, clock } = setup();
+  const owner = enqueue(scheduler, 'owner', { kind: 'settled' });
+  const pick = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request, 'pick') });
+  const [, entry] = scheduler.admit(); clock.advance(4000);
+  assert.equal(scheduler.discardAuxiliary(entry.admission, { reason: 'rejected' }), true);
+  assert.equal((await settled(pick.done)).outcome, 'failed');
+  clock.advance(999); await pending(owner.job.done);
+  clock.advance(1); assert.equal((await owner.job.done).reason, 'watchdog');
+});
+
 test('discard: preserves a completed owner and leaves sibling auxiliaries usable', async () => {
   for (const requestedAfterCompletion of [false, true]) {
     const { scheduler } = setup(); const owner = enqueue(scheduler, 'owner', { kind: 'settled' });
