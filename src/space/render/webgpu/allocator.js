@@ -70,7 +70,7 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
       return record(parsed.description, create(parsed));
     },
     // Several resources as one reservation: the sum is checked first; any creation failure destroys
-    // what was created and leaves accounting (tracked and peak) exactly as it was.
+    // what was created and restores current tracking, while peak keeps the temporary pressure.
     transaction(descs) {
       if (!Array.isArray(descs) || !descs.length) invalid('a transaction needs at least one description');
       const parsed = descs.map(describe);

@@ -185,3 +185,19 @@ test('a readback needing horizontal subdivision is refused before its lease is c
   assert.throws(() => backend.readback({ identity: identity(backend), source: set.handles.status, region: { x: 0, y: 0, width: 1024, height: 2 }, fields: ['f'] }, options), code('allocation-failed'));
   assert.equal(options.admission.consume(), true, 'the lease was not consumed; the caller subdivides with one lease per region');
 });
+
+test('a pipeline rejection while a loss is pending waits for the loss and reports device-lost', async () => {
+  const { gpu, backend } = setup();
+  await backend.acquire();
+  gpu.control.rejectPipelines = true; gpu.control.losses.held = true;
+  const preparing = backend.prepare({ epoch: backend.currentEpoch(), pipelineSet: SELF_CHECK_PIPELINE_SET });
+  const outcome = [];
+  preparing.then(() => outcome.push('resolved'), error => outcome.push(error.code));
+  const destroyed = backend.testAdapter.destroyDevice();
+  await flush(); await flush();
+  assert.deepEqual(outcome, [], 'the rejection is held until the loss is observed, not reported preparation-failed');
+  gpu.control.losses.release();
+  await destroyed; await flush();
+  assert.deepEqual(outcome, ['device-lost']);
+  assert.equal(backend.diagnostics().state, 'unavailable'); assert.equal(backend.currentEpoch(), 0);
+});

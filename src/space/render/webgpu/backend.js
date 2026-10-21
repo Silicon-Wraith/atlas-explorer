@@ -298,7 +298,14 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       const current = attempt, abort = deferred();
       preparations.add(abort);
       try {
-        const result = await Promise.race([preparePipelines({ device: current.device, pipelineSet, onProgress, boundMs: preparationBoundMs, loadSource, format: current.presenter.format, limits: current.limits }), abort.promise]);
+        let result;
+        try { result = await Promise.race([preparePipelines({ device: current.device, pipelineSet, onProgress, boundMs: preparationBoundMs, loadSource, format: current.presenter.format, limits: current.limits }), abort.promise]); }
+        catch (error) {
+          // Loss takes precedence over a preparation failure: wait for the loss path, which rejects device-lost.
+          if (current.lossPending) await abort.promise;
+          if (current !== attempt) throw new BackendError('device-lost', 'the device was lost during preparation');
+          throw error;
+        }
         if (current.lossPending) await abort.promise; // rejected by the loss path
         if (current !== attempt) throw new BackendError('device-lost', 'the device was lost during preparation');
         for (const [id, prepared] of result.pipelines) pipelines.set(id, prepared);

@@ -28,7 +28,7 @@ export function createGpuDouble({ limits = {} } = {}) {
     natives: [], submissions: [], scopeDepthAtCreate: [],
     // One-shot injections: {op, filter, message} queued errors raised in the innermost matching scope.
     errors: [], failInitialMapping: false, failGetMappedRange: false, failMapAsync: false,
-    loseDuringAcquire: false, devices: [],
+    loseDuringAcquire: false, rejectPipelines: false, devices: [],
   };
   let attempts = 0;
   function makeDevice() {
@@ -73,7 +73,7 @@ export function createGpuDouble({ limits = {} } = {}) {
       },
       createTexture(descriptor) { const texture = native('texture', descriptor, { createView: () => ({ texture }) }); raise('createTexture'); return texture; },
       createShaderModule(descriptor) { return { descriptor, getCompilationInfo: async () => ({ messages: [] }) }; },
-      createComputePipelineAsync: async descriptor => ({ descriptor, getBindGroupLayout: () => ({}) }),
+      createComputePipelineAsync: async descriptor => { if (control.rejectPipelines) throw Object.assign(new Error('injected pipeline rejection'), { name: 'GPUPipelineError', reason: 'internal' }); return { descriptor, getBindGroupLayout: () => ({}) }; },
       createRenderPipelineAsync: async descriptor => ({ descriptor, getBindGroupLayout: () => ({}) }),
       createBindGroup(descriptor) { raise('createBindGroup'); return { descriptor }; },
       createCommandEncoder() {
