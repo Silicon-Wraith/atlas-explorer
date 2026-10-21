@@ -6,6 +6,8 @@ import { icon, installIcons } from './ui/icons.js';
 import { createHistory } from './shared/history.js';
 import { sceneCodec, createPlaneScene, toPlaneState, PLANE_INITIAL_SCENE, encodeShareHash, decodeShareHash, encodeSceneFile, decodeSceneFile, admitEnteredView } from './plane/scene-adapter.js';
 import { createGestureArbiter } from './plane/gestures.js';
+import { createPlaneRenderAdapter, createPlaneRequest } from './plane/render-adapter.js';
+import { startExport } from './plane/export.js';
 
 const $ = selector => document.querySelector(selector);
 installIcons();
@@ -18,7 +20,11 @@ let sceneHistory, gestures, view, settings;
 let stopPointers = () => {};
 let activePlace = 'seahorse';
 let busy = false, dirty = false, toastTimer, displayedView;
-let rendered = 0, requestVersion = 0, cycle = false, tour = null, captureBusy = false;
+let rendered = 0, requestVersion = 0, cycle = false, tour = null;
+// The render adapter is the only caller of the renderer's render() and color() (spec §7.4, §14).
+// `lastReport` describes the image on the canvas; `lastExport` the last export job.
+let adapter, lastReport = null, lastExport = null, exportHooks = {}, pendingReplacement = false;
+let geometryRevision = 0, appearanceRevision = 0;
 let saved = [], savedTab = false;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -58,10 +64,19 @@ function adopt(transition, interactive = false) {
   adoptScene(transition.after);
   if (!transition.render) return;
   const geometry = transition.changed.some(domain => domain !== 'appearance');
+  if (geometry) geometryRevision++;
+  if (transition.changed.includes('appearance')) appearanceRevision++;
   if (transition.changed.some(domain => domain !== 'camera')) syncControls();
   if (geometry) requestRender(interactive);
-  else { updateReadouts(); renderer.color(settings); }
+  else {
+    updateReadouts();
+    // A recolor of published geometry is itself a publication with its own report. During an
+    // export lease or a lost context the edit is only recorded; the live scene is rendered after.
+    const recolored = adapter.recolor(transition.after, generation());
+    if (recolored.report) lastReport = recolored.report;
+  }
 }
+const generation = () => ({ deviceEpoch: adapter.epoch, viewRevision: sceneHistory.snapshot().revision, geometryRevision, appearanceRevision });
 
 gestures = createGestureArbiter({ history: sceneHistory, onTransition: (transition, interactive) => adopt(transition, interactive), stopAutomated: () => stopTour() });
 const preview = (kind, command, interactive) => gestures.preview(kind, command, interactive);
@@ -97,6 +112,7 @@ function makeRenderer() {
   }
 }
 renderer = makeRenderer();
+adapter = createPlaneRenderAdapter({ renderer, clock: () => performance.now() });
 
 function updateGraphicsDetails() {
   const info = renderer.diagnostics;
@@ -129,7 +145,7 @@ function dimensions() {
 }
 function requestRender(interactive = false) {
   dirty = true; requestVersion++;
-  if (busy && renderer instanceof CpuRenderer) renderer.cancel();
+  if (busy && renderer instanceof CpuRenderer) adapter.cancelInteractive();
   if (interactive && displayedView) {
     const { scale, x, y } = viewTransform(displayedView, view, innerWidth);
     if ([scale, x, y].every(Number.isFinite)) canvas.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
@@ -137,17 +153,25 @@ function requestRender(interactive = false) {
   updateReadouts();
   requestAnimationFrame(flushRender);
 }
+// The one call site of adapter.render: `busy` serializes interactive renders (the adapter's
+// precondition); an export lease, a retired renderer or a lost context defers the flush until the
+// export finishes or the renderer is replaced (both request a render).
 async function flushRender() {
-  if (busy || !dirty || captureBusy) return;
+  if (busy || !dirty || adapter.reserved || adapter.retired || adapter.unavailable) return;
   busy = true; dirty = false;
   const version = requestVersion;
-  const snapshot = { ...view }, config = renderSettings();
+  const snapshot = { ...view };
   const [width, height] = dimensions();
+  const request = createPlaneRequest({ scene: sceneHistory.snapshot().scene, purpose: 'interactive', width, height, generation: generation() });
   $('#render-status').textContent = 'Resolving the landscape…';
   document.body.dataset.rendering = 'true';
   try {
-    await renderer.render(snapshot, config, width, height, false, () => version === requestVersion);
-    renderer.color(settings);
+    const report = await adapter.render(request, { isCurrent: () => version === requestVersion, currentGeneration: generation, liveScene: () => sceneHistory.snapshot().scene });
+    // Superseded: a newer request follows (the finally block schedules it). Interrupted: the
+    // context was lost or the renderer replaced; the replacement requests the next render.
+    if (report.outcome === 'superseded' || report.outcome === 'interrupted') return;
+    if (report.outcome !== 'completed') throw new Error(report.reason);
+    lastReport = report;
     displayedView = snapshot;
     canvas.style.transform = '';
     rendered++;
@@ -240,8 +264,8 @@ $('#cycle-button').onclick = () => {
 let lastAnimation = 0;
 function animate(time) {
   const dt = Math.min(.08, (time - (lastAnimation || time)) / 1000); lastAnimation = time;
-  if (cycle && !captureBusy) { gestures.animate({ type: 'setAppearance', patch: { phase: (settings.phase + dt * .025) % 1 } }); $('#phase').value = Math.round(settings.phase * 1000); styleRange($('#phase')); }
-  if (tour && !captureBusy) {
+  if (cycle && !adapter.reserved) { gestures.animate({ type: 'setAppearance', patch: { phase: (settings.phase + dt * .025) % 1 } }); $('#phase').value = Math.round(settings.phase * 1000); styleRange($('#phase')); }
+  if (tour && !adapter.reserved) {
     const elapsed = time - tour.started;
     if (elapsed > 18000) {
       tour.index = (tour.index + 1) % PLACES.length; tour.started = time; tour.lastFrame = 0;
@@ -317,10 +341,15 @@ function bindCanvas() {
     pointers.delete(e.pointerId);
     if (!pointers.size) { canvas.classList.remove('dragging'); commitGesture('navigation-drag'); }
   });
+  // A lost context invalidates every earlier render and any export holding the renderer; nothing
+  // renders, recolors or exports until the replacement, which waits for an export lease to end.
   canvas.addEventListener('webglcontextlost', event => {
-    event.preventDefault(); $('#render-status').textContent = 'Graphics paused'; toast('The graphics device paused. Restoring the view…');
+    event.preventDefault(); adapter.invalidate(); $('#render-status').textContent = 'Graphics paused'; toast('The graphics device paused. Restoring the view…');
   });
-  canvas.addEventListener('webglcontextrestored', () => { renderer.destroy(); renderer = makeRenderer(); requestRender(); });
+  canvas.addEventListener('webglcontextrestored', () => {
+    if (adapter.reserved) { pendingReplacement = true; return; }
+    replaceRenderer(); requestRender();
+  });
 }
 bindCanvas();
 $('#zoom-in').onclick = () => navigate(zoomView(view, view.zoom + Math.log10(2)), true, 'jump');
@@ -455,24 +484,39 @@ $('#import-location').onchange = async event => {
   } catch (error) { $('#capture-status').textContent = error.message || 'Could not open this location.'; }
   event.target.value = '';
 };
-$('#download-image').onclick = async () => {
-  if (captureBusy) return;
-  const button = $('#download-image'); button.disabled = true;
-  $('#capture-status').textContent = 'Rendering your image…';
-  stopTour();
-  while (busy) await new Promise(resolve => setTimeout(resolve, 40));
-  captureBusy = true;
-  const snapshot = { ...view }, config = renderSettings();
+// Only while no export holds the renderer: the adapter accepts the new renderer before the old
+// one is destroyed, so the workspace and the adapter always refer to the same renderer.
+function replaceRenderer() {
+  if (adapter.reserved) { pendingReplacement = true; return; }
+  pendingReplacement = false;
+  const previous = renderer, next = makeRenderer();
+  adapter.replaceRenderer(next);
+  renderer = next;
+  previous.destroy();
+  updateGraphicsDetails();
+}
+// The complete export request is captured and the renderer reserved synchronously in this
+// handler, before any asynchronous wait (spec §14). Later edits change only the live scene; the
+// lease ends with a render of the live scene, which also applies any deferred appearance edit.
+$('#download-image').onclick = () => {
+  if (adapter.reserved || adapter.retired || adapter.unavailable) { $('#capture-status').textContent = 'The graphics device is not available yet. Try again in a moment.'; return; }
+  stopTour(); commitGesture();
+  const scene = sceneHistory.snapshot().scene;
   const width = $('#export-size').value === 'current' ? canvas.width : Number($('#export-size').value);
   const height = Math.max(1, Math.round(width * innerHeight / innerWidth));
-  try {
-    await renderer.render(snapshot, config, width, height, true);
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    if (!blob) throw new Error('Image export is unavailable.');
-    download(blob, `atlas-${Math.floor(snapshot.zoom)}-decades.png`);
-    $('#capture-status').textContent = `Saved ${canvas.width.toLocaleString()} × ${canvas.height.toLocaleString()} pixels. Save the location below to return here.`;
-  } catch (error) { $('#capture-status').textContent = error.message; }
-  finally { captureBusy = false; button.disabled = false; requestRender(); }
+  const request = createPlaneRequest({ scene, purpose: 'export', width, height, generation: generation() });
+  const { done } = startExport({ adapter, request, hooks: exportHooks, encode: target => new Promise(resolve => target.toBlob(resolve, 'image/png')) });
+  const button = $('#download-image'); button.disabled = true;
+  $('#capture-status').textContent = 'Rendering your image…';
+  done.then(result => {
+    lastExport = result;
+    if (result.outcome === 'completed') {
+      download(result.blob, `atlas-${Math.floor(scene.camera.zoom)}-decades.png`);
+      $('#capture-status').textContent = `Saved ${result.report.completed.width.toLocaleString()} × ${result.report.completed.height.toLocaleString()} pixels. Save the location below to return here.`;
+    } else $('#capture-status').textContent = result.reason || 'Image export is unavailable.';
+    // A renderer retired by a timeout, or a context restored during the lease, is replaced now.
+    if (adapter.retired || pendingReplacement) replaceRenderer();
+  }).finally(() => { button.disabled = false; requestRender(); });
 };
 
 addEventListener('keydown', event => {
@@ -493,8 +537,9 @@ addEventListener('keydown', event => {
   };
   if (actions[key]) { event.preventDefault(); actions[key](); }
 });
-addEventListener('resize', () => requestRender(true));
-addEventListener('pagehide', () => renderer.destroy());
+// A new size is a new geometry dependency: earlier renders are no longer publishable.
+addEventListener('resize', () => { geometryRevision++; requestRender(true); });
+addEventListener('pagehide', () => adapter.renderer.destroy());
 
 // Small inspection API for numerical and browser regression tests.
 class IdleTimeoutError extends Error {
@@ -502,15 +547,30 @@ class IdleTimeoutError extends Error {
 }
 window.atlas = {
   get graphics() { return { ...renderer.diagnostics }; },
-  get view() { return { ...view }; }, get settings() { return renderSettings(); }, get renderer() { return renderer; },
+  get view() { return { ...view }; }, get settings() { return renderSettings(); }, get renderer() { return adapter.renderer; },
+  get lastReport() { return lastReport; },
+  get lastExport() { return lastExport && { outcome: lastExport.outcome, reason: lastExport.reason, sceneHash: lastExport.request.sceneHash, scene: lastExport.request.sceneSnapshot, report: lastExport.report, renderReport: lastExport.renderReport ?? null }; },
+  // Test seams for the export race checks: the decoded image of the last export, stage hooks
+  // (next exports only), and whether the workspace and the adapter share one renderer.
+  async lastExportImageData() {
+    if (!lastExport?.blob) return null;
+    const bitmap = await createImageBitmap(lastExport.blob);
+    const target = new OffscreenCanvas(bitmap.width, bitmap.height), context = target.getContext('2d');
+    context.drawImage(bitmap, 0, 0);
+    return context.getImageData(0, 0, bitmap.width, bitmap.height);
+  },
+  get rendererConsistent() { return renderer === adapter.renderer; },
+  setExportHooks(hooks) { exportHooks = hooks || {}; },
+  // `rendered`, `lastReport` and `whenIdle` are application-side facts (a render was adopted and
+  // its report published); they do not claim that the GPU has finished drawing (plan amendment G).
   get rendered() { return rendered; }, goTo,
   get scene() { return sceneHistory.snapshot().scene; },
   get history() { const { scene, ...rest } = sceneHistory.snapshot(); return rest; },
   undo: () => historyStep('undo'), redo: () => historyStep('redo'), back: () => historyStep('back'), forward: () => historyStep('forward'),
   async whenIdle({ timeoutMs = 60000 } = {}) {
     const deadline = performance.now() + timeoutMs;
-    while (busy || dirty || captureBusy) {
-      if (performance.now() > deadline) throw new IdleTimeoutError(timeoutMs, { busy, dirty, captureBusy });
+    while (busy || dirty || adapter.reserved || adapter.unavailable) {
+      if (performance.now() > deadline) throw new IdleTimeoutError(timeoutMs, { busy, dirty, exporting: adapter.reserved, unavailable: adapter.unavailable });
       await new Promise(resolve => setTimeout(resolve, 30));
     }
   },
