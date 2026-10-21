@@ -20,6 +20,7 @@
     "tests/unit/space-device.test.js",
     "tests/unit/space-suite-support.test.js",
     "tests/unit/space-derivative.test.js",
-    "tests/unit/space-models.test.js"
+    "tests/unit/space-models.test.js",
+    "tests/unit/scheduler.test.js"
   ]
 }
