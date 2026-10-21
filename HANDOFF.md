@@ -6,6 +6,8 @@
 - `npm test` runs the Node unit suite through `scripts/run-unit.mjs`. `npm run gate` runs the Plane behaviour gate (spec §16.3) and records each run in `artifacts/gates/`.
 - Per charter amendment A1, earlier share links, `localStorage['atlas.discoveries']` bookmarks and version-1 location files are not carried forward; Project 1a replaces them with native scene formats.
 - The plan is `docs/superpowers/plans/2026-10-20-project1a-foundations-plan.md`; the sections below describe the 2D explorer as of 2026-10-15.
+- Project 1a is accepted when `node scripts/audit-gates.mjs <base> <implementationHead>` reports ACCEPTED: every implementation commit either has its own valid, passing gate record (`accepted`) or is listed in `docs/reports/project1a/gate-exceptions.json` as a user-approved exception (`accepted-by-exception`), whose failed record is kept and which is superseded by a later descendant that passed its own gate. Project 1a has one exception: `c6706b3` failed its workflow suite (a recovery race) and is superseded by its fix `c899416`; history was not rewritten. The summary is `docs/reports/project1a/gate-ledger.json`; the records themselves stay in `artifacts/gates/`.
+- Plane now keeps one authoritative scene in a history: undo covers appearance and detail; Back/Forward (Alt+←/→) covers camera moves. Discoveries live in IndexedDB (`atlas-workbench`), shown by the Discoveries control in Your discoveries.
 
 ## User requirements and boundaries
 

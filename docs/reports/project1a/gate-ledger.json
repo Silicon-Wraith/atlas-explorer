@@ -1,0 +1,334 @@
+{
+  "base": "9667c6d7a40791d3b78bd13122fa59e5d189e65e",
+  "implementationHead": "947d41f9e5a5d390e6524e03dafb04d242eef049",
+  "audit": {
+    "accepted": true,
+    "corruptLedgerLines": 0,
+    "counts": {
+      "total": 41,
+      "accepted": 40,
+      "accepted-by-exception": 1,
+      "pending": 0,
+      "failed": 0,
+      "invalid-evidence": 0,
+      "ungated": 0
+    },
+    "rows": [
+      {
+        "commit": "84700fb4b6f71acb437a43c7bb96d353bc13336d",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T18-49-41-441Z-84700fb4b6f7.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "d70140707d34c0688c452ed7bc7686ec40044962",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T18-56-06-256Z-d70140707d34.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "3d425b7eeff0cad3985b749d3e97663f6f6cfefa",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-27-18-384Z-3d425b7eeff0.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "77d38d28b32e7817f4aa67f09c8df4a165b6bc75",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-28-09-138Z-77d38d28b32e.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "1dd339304b6902668984de41eb674bc75fdd0982",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-29-00-609Z-1dd339304b69.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "720fe3dbcc75641d92f9d09d479c078676fb85dc",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-29-52-131Z-720fe3dbcc75.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "e8c7d192094be79ff41c0739dceff5fbafd099eb",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-30-43-495Z-e8c7d192094b.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "a7fb86a940afbbe6b32eb82c92d884bb4c89553f",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-31-35-062Z-a7fb86a940af.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "342fa19513dd9247db7833611ee1e4292624d92e",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-24-45-012Z-342fa19513dd.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "16488c4c4571e8e6677386a3837aa82a7ef8f5c3",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-49-46-755Z-16488c4c4571.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "0d8dc8fb864e4d5cd657aa6967fab325b410afc7",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-50-38-978Z-0d8dc8fb864e.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "4607ca3a6ac4e55966d3905c36428bfbf93ca658",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-52-58-321Z-4607ca3a6ac4.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "549ba32ae917757571795aa66a83913c48afa5ec",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-53-50-007Z-549ba32ae917.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "c216a890847d7ea76d417253de42224cce2b098d",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-58-46-272Z-c216a890847d.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "8eeed519fa29362ca9116e1891bcba41e65f5e36",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T20-59-39-900Z-8eeed519fa29.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "5333aee0af286bc9656f61cb09c9982c484038d1",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T21-20-00-239Z-5333aee0af28.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "cee4d8eb47bc322a93de7d477ae4d389e26b6e79",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T21-20-51-696Z-cee4d8eb47bc.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "43c5e60b7711cd789361d040a17672a03c3ce7b3",
+        "state": "accepted",
+        "runs": 3,
+        "record": "artifacts/gates/2026-10-20T21-26-26-456Z-43c5e60b7711.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "4b1b821375ce8e482545d3bd768a25df2e772aca",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T21-23-26-391Z-4b1b821375ce.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "74c439c37f269f24753b671af2dc74cc3db3e500",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T21-24-55-644Z-74c439c37f26.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "483ef418bba70791a48d02e6370bdbee206d6076",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T21-28-46-193Z-483ef418bba7.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "bd12c78d4c3e1f24ad4fcc1b7be043222e0bd6af",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T21-44-58-957Z-bd12c78d4c3e.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "0f6ecc4d6f4c86a3854c082407545f34438a07c0",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-20T21-50-08-697Z-0f6ecc4d6f4c.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "eb28ccd40f96d21553cad3e731a05c6f4a31e99a",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T01-20-11-416Z-eb28ccd40f96.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "93528225b4e72d4fdc5f3d288c9a3c1a0a506397",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T01-17-31-833Z-93528225b4e7.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "948ae675a1ff3e2dbe280625e7b3a98cfd7427d8",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T01-18-47-422Z-948ae675a1ff.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "eba9aeb2c34bd27717e8211bff894fdda5f46960",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T04-01-03-027Z-eba9aeb2c34b.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "7fc8ea4fb464d38c836117b9bdae9e03c77b5bc0",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T04-02-38-324Z-7fc8ea4fb464.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "c6706b33394ec9b8b8edababdcde762354ef948d",
+        "state": "accepted-by-exception",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T06-09-00-031Z-c6706b33394e.json",
+        "reason": "recorded exception approved by user on 2026-10-21: The workflow race \"a confirmed completion ends the recovery episode\" reported recovery attempts 1, expected 0, in artifacts/gates/2026-10-21T06-09-00-031Z-c6706b33394e.json; fixed in c899416.",
+        "failureReason": "a required suite did not pass",
+        "supersededBy": "c8994168827e4435b740bfc2c1cc828adad33d05",
+        "supersedingRecord": "artifacts/gates/2026-10-21T06-41-21-323Z-c8994168827e.json"
+      },
+      {
+        "commit": "c8994168827e4435b740bfc2c1cc828adad33d05",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T06-41-21-323Z-c8994168827e.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "020a94d6a5c746bc1ce631a82521c35ad8c7e2d9",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T06-47-59-181Z-020a94d6a5c7.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "62a82cdc2c3a3ad09b2fc3646088dddc3650eb0d",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T07-01-52-684Z-62a82cdc2c3a.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "ef123a6793e106aec832b2f9983d478590b7b759",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T07-23-02-033Z-ef123a6793e1.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "a7017b6187983131477ec7d54123fbaafc41edf4",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T07-37-39-661Z-a7017b618798.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "25bfa3dad8224eae02bd621e7bd2b75cc93a1a2f",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T07-48-41-488Z-25bfa3dad822.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "a840b91ce454919d1a82c5326c5aae234a1c68be",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T07-52-10-355Z-a840b91ce454.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "ebb0f67bce0de89489e6fecc4511fedc03b62446",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T11-17-22-171Z-ebb0f67bce0d.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "8cb63939aaaa0362b467ed96f8da069943626eb8",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T11-21-48-935Z-8cb63939aaaa.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "1f9d31222ab612d9378acdb27e8bef49e6dd5958",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T12-35-28-149Z-1f9d31222ab6.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "2dd0bc7d583a4edb79ad8b69b62ebb6215d0ce75",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T12-56-26-288Z-2dd0bc7d583a.json",
+        "reason": "every required suite passed"
+      },
+      {
+        "commit": "947d41f9e5a5d390e6524e03dafb04d242eef049",
+        "state": "accepted",
+        "runs": 1,
+        "record": "artifacts/gates/2026-10-21T13-01-33-450Z-947d41f9e5a5.json",
+        "reason": "every required suite passed"
+      }
+    ]
+  },
+  "exceptions": {
+    "file": "docs/reports/project1a/gate-exceptions.json",
+    "state": "valid",
+    "reason": "exception file schema and entries are valid",
+    "entries": [
+      {
+        "entry": {
+          "commit": "c6706b33394ec9b8b8edababdcde762354ef948d",
+          "supersededBy": "c8994168827e4435b740bfc2c1cc828adad33d05",
+          "reason": "The workflow race \"a confirmed completion ends the recovery episode\" reported recovery attempts 1, expected 0, in artifacts/gates/2026-10-21T06-09-00-031Z-c6706b33394e.json; fixed in c899416.",
+          "approvedBy": "user",
+          "date": "2026-10-21"
+        },
+        "verdict": "applied",
+        "reason": "a user-approved exception links recorded failure to a plainly accepted descendant within the audited range",
+        "record": "artifacts/gates/2026-10-21T06-09-00-031Z-c6706b33394e.json",
+        "supersedingRecord": "artifacts/gates/2026-10-21T06-41-21-323Z-c8994168827e.json"
+      }
+    ],
+    "counts": {
+      "listed": 1,
+      "applied": 1,
+      "refused": 0
+    }
+  }
+}

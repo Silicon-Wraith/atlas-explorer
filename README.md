@@ -117,10 +117,21 @@ Regenerate the actual fractal thumbnails with `npm run thumbnails`. This CPU ope
 | `src/plane/shaders.js` | Direct, perturbation, extended-range, and color shaders |
 | `src/plane/renderer.js` | GPU resources, render targets, CPU fallback |
 | `src/plane/graphics.js` | Renderer classification and graphics diagnostics |
-| `src/app.js` | Navigation, controls, bookmarks, import/export, sharing |
-| `src/ui/style.css`, `src/ui/icons.js` | Responsive observatory interface |
+| `src/app.js` | Composition root: shell, storage, discoveries, the Plane workspace |
+| `src/plane/workspace.js` | Plane lifecycle, controls, undo and camera history, sharing, import/export |
+| `src/plane/navigation.js` | Pointer, wheel, touch and key navigation |
+| `src/plane/scene-adapter.js` | Plane scenes, the detail/zoom iteration policy, share links and scene files |
+| `src/plane/render-adapter.js`, `src/plane/export.js` | Render requests, outcomes and reports; the exclusive, immutable image export |
+| `src/shared/scene.js`, `src/shared/commands.js`, `src/shared/history.js` | Scene envelope and fingerprints, domain-owning commands, undo and camera history |
+| `src/shared/render-request.js`, `src/shared/render-report.js` | Immutable render requests and truthful reports |
+| `src/shared/discoveries.js`, `src/shared/persistence.js` | Discovery records, sources and controller; IndexedDB storage |
+| `src/ui/` | Shell, dialogs, notifications, the Discoveries control, icons and styles |
 | `src/plane/places.js`, `src/plane/palettes.js` | Curated locations and RGB palettes |
 | `tests/` | Unit tests (`tests/unit/`, `tests/math.test.js`), browser suites (`tests/*.mjs`) and support |
 | `scripts/` | Local server, build, PNG encoding, thumbnail generation |
 
-No Git repository has been initialized. The existing `AGENTS.md` has been left unchanged.
+Git is in use; Project 1a was developed on `feat/project1a`. Read `AGENTS.md` for the repository workflow.
+
+The Project 1a gate audit distinguishes commits with their own passing gate (`accepted`) from explicit user-approved exceptions (`accepted-by-exception`). Exceptions are recorded in `docs/reports/project1a/gate-exceptions.json`; the audit summary lists each decision and both gate records in `docs/reports/project1a/gate-ledger.json`.
+
+Licensed under MIT; see [LICENSE](LICENSE).

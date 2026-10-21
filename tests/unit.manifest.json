@@ -15,6 +15,7 @@
     "tests/unit/gpu-drain.test.js",
     "tests/unit/completion.test.js",
     "tests/unit/persistence.test.js",
-    "tests/unit/navigation.test.js"
+    "tests/unit/navigation.test.js",
+    "tests/unit/ledger.test.js"
   ]
 }
