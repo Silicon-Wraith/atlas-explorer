@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { LIMITS, within, idleWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { expectBackend, drainExpecting } from './support/expected-backend.mjs';
 import { cleanupWorkflow } from './support/workflow-cleanup.mjs';
 
 const { chromium } = await import('playwright');
@@ -22,8 +23,7 @@ let server, browser, context;
 const contexts = [];
 
 async function open(context, hash = '', backend = 'webgl') {
-  const page = boundContext(await within(context.newPage(), LIMITS.launch, 'newPage'));
-  backends.set(page, backend);
+  const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), backend);
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   await page.goto(`${url}/${hash}`, { timeout: LIMITS.launch });
@@ -50,6 +50,14 @@ const holdWorkersScript = () => {
   window.__releaseWorkers = () => { window.__holdWorkers = false; const held = window.__heldWorkerMessages.splice(0); held.forEach(send => send()); return held.length; };
 };
 const goToIdle = (page, view) => within(page.evaluate(async target => { atlas.goTo(target); await atlas.whenIdle(); }, view), LIMITS.deep, 'go to view');
+// A device-loss check starts from a confirmed state: the view rendered, its publication's GPU
+// completion confirmed, and any earlier recovery episode closed by that confirmation (otherwise the
+// next loss would rightly pause automatic recovery).
+async function settledAt(page, view) {
+  await goToIdle(page, view);
+  await ev(page, () => atlas.whenDrawn({ timeoutMs: 60000 }), undefined, 'confirm the publication', LIMITS.deep);
+  await page.waitForFunction(() => atlas.recovery.attempts === 0 && !atlas.recovery.paused, null, { timeout: LIMITS.deep });
+}
 const waitStage = (page, name, ms = LIMITS.operation) => page.waitForFunction(stage => window.__exportStages.includes(stage), name, { timeout: ms });
 // Export observers for the next export: stages are recorded; `holds` names stages released by
 // `__releaseExport(name)`; `throwAt` makes the observer throw at that stage; `limits` shortens the
@@ -183,6 +191,18 @@ async function checkWhenDrawn(page, backend) {
   else assert.equal(superseded.outcome.resolved, superseded.reportId, 'a synchronous paint completed before the edit');
   const recolored = await ev(page, async () => ({ evidence: await atlas.whenDrawn({ timeoutMs: 60000 }), reportId: atlas.lastReport.reportId }), undefined, 'whenDrawn after recolor', LIMITS.deep);
   assert.equal(recolored.evidence.reportId, recolored.reportId, `${backend}: a recolor is a publication with its own completion`);
+  // One deadline for submission and completion: an exhausted bound rejects (it never grants fresh
+  // time to the fence or the paint), and the bound itself must be positive and finite.
+  const deadlines = await ev(page, async other => {
+    const outcome = promise => promise.then(() => 'resolved', error => error.code ?? error.name);
+    const invalid = await outcome(atlas.whenDrawn({ timeoutMs: 0 }));
+    atlas.goTo(other);
+    const exhausted = await outcome(atlas.whenDrawn({ timeoutMs: 5 }));
+    await atlas.whenIdle();
+    return { invalid, exhausted };
+  }, VIEW_C, 'whenDrawn deadlines', LIMITS.deep);
+  assert.equal(deadlines.invalid, 'RangeError');
+  assert.ok(['ATLAS_IDLE_TIMEOUT', 'timeout'].includes(deadlines.exhausted), `${backend}: a bound exhausted by submission rejects (${deadlines.exhausted})`);
 }
 
 // Saving a discovery while an export holds the renderer is refused: the canvas shows the export,
@@ -222,7 +242,7 @@ async function checkSaveDuringExport(page) {
 // for the lease; and live rendering resumes on one WebGL renderer shared by the workspace and the
 // adapter (never a silent CPU fallback), rendering the edited scene.
 async function checkContextLossDuringExport(page, restoreFirst) {
-  await goToIdle(page, VIEW_B);
+  await settledAt(page, VIEW_B);
   await watchContext(page);
   await armExport(page, { holds: ['encoding'] });
   await ev(page, () => { atlas.renderer.__witness = 'before-loss'; document.querySelector('#download-image').click(); });
@@ -259,7 +279,7 @@ async function checkContextLossDuringExport(page, restoreFirst) {
 // A lease timeout while the context is still lost retires the renderer but must not replace it
 // until restoration: a replacement on a lost context would silently fall back to the CPU.
 async function checkLeaseTimeoutWhileLost(page) {
-  await goToIdle(page, VIEW_B);
+  await settledAt(page, VIEW_B);
   await watchContext(page);
   await armExport(page, { holds: ['encoding'], limits: { encodeMs: 400 } });
   await ev(page, () => { atlas.renderer.__witness = 'before-loss'; document.querySelector('#download-image').click(); });
@@ -284,7 +304,7 @@ async function checkLeaseTimeoutWhileLost(page) {
 // Loss, restoration while the lease is held, a second loss, then release: the restoration seen
 // earlier does not license a replacement on the context lost since.
 async function checkSecondLossBeforeRelease(page) {
-  await goToIdle(page, VIEW_B);
+  await settledAt(page, VIEW_B);
   await watchContext(page);
   await armExport(page, { holds: ['encoding'] });
   await ev(page, () => { atlas.renderer.__witness = 'before-loss'; document.querySelector('#download-image').click(); });
@@ -331,50 +351,93 @@ async function checkExportRestart(page) {
   assert.equal(result.offered, false, 'a completed restart withdraws the offer');
 }
 
-// After a loss the view is recovered automatically once; a loss before that recovery render
-// completes stops automatic retries until the explorer resumes (spec §14, charter §3.10).
+// After a loss the view is recovered automatically once; the recovery counts as successful only when
+// its publication's GPU completion (or CPU paint) is confirmed, never on the application-side return.
+// A loss before that confirmation stops automatic retries: the renderer is replaced but nothing
+// renders — queued desired state, tour frames and other automatic requests included — until the
+// explorer resumes explicitly (spec §14, charter §3.10). `rendered` and `whenIdle` stay app-side.
+const pausedState = page => ev(page, () => ({ rendered: atlas.rendered, recovery: atlas.recovery, state: atlas.device.state, webgl: !!atlas.renderer.gl, consistent: atlas.rendererConsistent, resumeOffered: !document.querySelector('#resume-rendering').hidden, status: document.querySelector('#render-status').textContent, tourActive: !document.querySelector('#tour-status').hidden }));
+async function resumeAndConfirm(page, renderedBefore) {
+  await ev(page, () => document.querySelector('#resume-rendering').click());
+  await page.waitForFunction(count => atlas.rendered > count, renderedBefore, { timeout: LIMITS.deep });
+  await idleWithin(page, LIMITS.deep);
+  const confirmed = await ev(page, async () => { const evidence = await atlas.whenDrawn({ timeoutMs: 60000 }); return { evidence: evidence.source, recovery: atlas.recovery, resumeOffered: !document.querySelector('#resume-rendering').hidden }; }, undefined, 'confirm recovery', LIMITS.deep);
+  assert.deepEqual(confirmed, { evidence: 'queue-completion', recovery: { attempts: 0, paused: false }, resumeOffered: false }, 'a confirmed completion ends the recovery episode');
+}
 async function checkRepeatedLossPausesRecovery(page) {
-  await goToIdle(page, VIEW_B);
+  await settledAt(page, VIEW_B);
   await watchContext(page);
   const before = await ev(page, () => ({ rendered: atlas.rendered, recovery: atlas.recovery }));
   assert.deepEqual(before.recovery, { attempts: 0, paused: false });
+
+  // Phase 1: the application-side return of the recovery render does not end the episode. The second
+  // loss is raised in the same task that observed the return, before any completion poll could run.
+  await loseContext(page);
+  await waitEvents(page, ['lost']);
+  await restoreContext(page);
+  await waitEvents(page, ['lost', 'restored']);
+  const submitted = await ev(page, async count => {
+    while (atlas.rendered <= count) await new Promise(resolve => setTimeout(resolve, 5));
+    const recovery = atlas.recovery;
+    window.__loseContext = atlas.renderer.gl.getExtension('WEBGL_lose_context'); window.__loseContext.loseContext();
+    return { rendered: atlas.rendered, recovery };
+  }, before.rendered, 'recovery submitted', LIMITS.deep);
+  assert.deepEqual(submitted.recovery, { attempts: 1, paused: false }, 'the application-side return leaves the recovery unconfirmed');
+  await waitEvents(page, ['lost', 'restored', 'lost']);
+  await restoreContext(page);
+  await waitEvents(page, ['lost', 'restored', 'lost', 'restored']);
+  await page.waitForTimeout(500);
+  let paused = await pausedState(page);
+  assert.deepEqual({ ...paused, status: undefined }, { rendered: submitted.rendered, recovery: { attempts: 1, paused: true }, state: 'ready', webgl: true, consistent: true, resumeOffered: true, status: undefined, tourActive: false }, 'a loss before the recovery is confirmed pauses automatic rendering');
+  assert.match(paused.status, /paused/i);
+  await resumeAndConfirm(page, submitted.rendered);
+
+  // Phase 2: desired state queued during the recovery (a user navigation while the recovery render is
+  // pending on its held reference orbit) stays queued through the pause; nothing renders until resume.
+  await watchContext(page);
+  const beforeQueue = await ev(page, () => ({ rendered: atlas.rendered }));
   await ev(page, () => { window.__holdWorkers = true; });
   await loseContext(page);
   await waitEvents(page, ['lost']);
   await restoreContext(page);
   await waitEvents(page, ['lost', 'restored']);
   await page.waitForFunction(() => window.__heldWorkerMessages.length > 0, null, { timeout: LIMITS.operation });
-  const recovering = await ev(page, () => ({ rendered: atlas.rendered, recovery: atlas.recovery, state: atlas.device.state }));
-  assert.deepEqual(recovering, { rendered: before.rendered, recovery: { attempts: 1, paused: false }, state: 'ready' }, 'the first recovery render is pending');
+  const recovering = await ev(page, other => { atlas.goTo(other); return { rendered: atlas.rendered, recovery: atlas.recovery, state: atlas.device.state }; }, VIEW_C);
+  assert.deepEqual(recovering, { rendered: beforeQueue.rendered, recovery: { attempts: 1, paused: false }, state: 'ready' }, 'the recovery render is pending and newer work is queued');
   await loseContext(page);
   await waitEvents(page, ['lost', 'restored', 'lost']);
   await restoreContext(page);
   await waitEvents(page, ['lost', 'restored', 'lost', 'restored']);
   await page.waitForTimeout(500);
-  const paused = await ev(page, () => ({ rendered: atlas.rendered, recovery: atlas.recovery, state: atlas.device.state, webgl: !!atlas.renderer.gl, consistent: atlas.rendererConsistent, resumeOffered: !document.querySelector('#resume-rendering').hidden, status: document.querySelector('#render-status').textContent, released: window.__releaseWorkers() }));
-  const { released, status, ...rest } = paused;
-  assert.deepEqual(rest, { rendered: before.rendered, recovery: { attempts: 1, paused: true }, state: 'ready', webgl: true, consistent: true, resumeOffered: true }, 'a repeated loss replaces the renderer but renders nothing automatically');
-  assert.match(status, /paused/i);
+  paused = await pausedState(page);
+  const released = await ev(page, () => window.__releaseWorkers());
+  assert.deepEqual({ ...paused, status: undefined }, { rendered: beforeQueue.rendered, recovery: { attempts: 1, paused: true }, state: 'ready', webgl: true, consistent: true, resumeOffered: true, status: undefined, tourActive: false }, 'queued work does not render while paused');
   assert.ok(released >= 1, 'the stale recovery request was held');
-  await ev(page, () => document.querySelector('#resume-rendering').click());
-  await page.waitForFunction(count => atlas.rendered > count, before.rendered, { timeout: LIMITS.deep });
-  await idleWithin(page, LIMITS.deep);
-  assert.deepEqual(await ev(page, () => ({ recovery: atlas.recovery, resumeOffered: !document.querySelector('#resume-rendering').hidden })), { recovery: { attempts: 0, paused: false }, resumeOffered: false });
-}
+  await resumeAndConfirm(page, beforeQueue.rendered);
+  assert.deepEqual((await state(page)).scene.camera, VIEW_C, 'the queued navigation rendered on resume');
 
-// Teardown drain with expected-backend bookkeeping (plan amendment H carry-forward): a page opened
-// on WebGL must drain to `complete` on a WebGL device whose epoch the drain leaves unchanged; the
-// CPU page must drain to `no-webgl`. A GPU page that silently became CPU-backed fails here.
-const backends = new Map();
-async function drainExpecting(page) {
-  const expected = backends.get(page) ?? 'webgl';
-  const before = await ev(page, () => atlas.device, undefined, 'device before drain');
-  const result = await drainGpuWithin(page);
-  const after = await ev(page, () => atlas.device, undefined, 'device after drain');
-  if (before.backend !== expected || after.backend !== expected) throw new Error(`page expected a ${expected} backend; the device reports ${before.backend} then ${after.backend}`);
-  if (result.status !== (expected === 'webgl' ? 'complete' : 'no-webgl')) throw new Error(`a ${expected} page drained to ${result.status}`);
-  if (before.deviceEpoch !== after.deviceEpoch || after.state !== 'ready') throw new Error(`the device changed during the drain: ${JSON.stringify({ before, after })}`);
-  return result;
+  // Phase 3: a running tour keeps requesting frames while paused; those automatic requests never
+  // clear the pause. Only the explicit resume does.
+  await watchContext(page);
+  const beforeTour = await ev(page, () => ({ rendered: atlas.rendered }));
+  await ev(page, () => { window.__holdWorkers = true; document.querySelector('#tour-button').click(); });
+  await page.waitForFunction(() => window.__heldWorkerMessages.length > 0, null, { timeout: LIMITS.operation });
+  await loseContext(page);
+  await waitEvents(page, ['lost']);
+  await restoreContext(page);
+  await waitEvents(page, ['lost', 'restored']);
+  await page.waitForTimeout(300);
+  await loseContext(page);
+  await waitEvents(page, ['lost', 'restored', 'lost']);
+  await restoreContext(page);
+  await waitEvents(page, ['lost', 'restored', 'lost', 'restored']);
+  await page.waitForTimeout(600);
+  paused = await pausedState(page);
+  assert.deepEqual({ ...paused, status: undefined }, { rendered: beforeTour.rendered, recovery: { attempts: 1, paused: true }, state: 'ready', webgl: true, consistent: true, resumeOffered: true, status: undefined, tourActive: true }, 'tour frames do not clear the pause');
+  await ev(page, () => { document.querySelector('#stop-tour').click(); window.__releaseWorkers(); });
+  await page.waitForTimeout(200);
+  assert.equal((await pausedState(page)).recovery.paused, true, 'stopping the tour is not a resume either');
+  await resumeAndConfirm(page, beforeTour.rendered);
 }
 
 try {
@@ -569,7 +632,7 @@ try {
   // tests in tests/unit/no-launch.test.js).
   const failed = await cleanupWorkflow({
     pages: contexts.flatMap(open => open.pages()),
-    drain: drainExpecting,
+    drain: page => drainExpecting(page),
     report, writeReport: entries => writeFile(reportPath, JSON.stringify(entries, null, 2)),
     closeAll: async () => { for (const open of contexts) await closeWithin(open, 'context'); await closeWithin(browser, 'browser'); server?.kill('SIGTERM'); },
   });

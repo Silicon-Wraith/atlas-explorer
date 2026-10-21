@@ -7,7 +7,7 @@ import { createFakeRenderer, flush } from '../support/fake-renderer.mjs';
 
 // A WebGL 2 fence as the completion primitive sees it (plan amendment G(3)): a fence cannot signal
 // until control returns to the event loop, so every poll must follow a task yield.
-function fenceGl({ statuses = ['TIMEOUT_EXPIRED', 'CONDITION_SATISFIED'], nullFence = false } = {}) {
+function fenceGl({ statuses = ['TIMEOUT_EXPIRED', 'CONDITION_SATISFIED'], nullFence = false, pollMs = 0, onSignal = null } = {}) {
   const calls = [];
   const gl = { SYNC_GPU_COMMANDS_COMPLETE: 1, ALREADY_SIGNALED: 2, CONDITION_SATISFIED: 3, TIMEOUT_EXPIRED: 4, WAIT_FAILED: 5 };
   let fences = 0, poll = 0, lost = false, yielded = false, clock = 0;
@@ -19,7 +19,10 @@ function fenceGl({ statuses = ['TIMEOUT_EXPIRED', 'CONDITION_SATISFIED'], nullFe
       assert.equal(flags, 0); assert.equal(timeout, 0);
       assert.ok(yielded, 'every poll, the first included, follows a task yield'); yielded = false;
       calls.push(`poll ${sync.id}`);
-      return gl[statuses[Math.min(poll++, statuses.length - 1)]];
+      clock += pollMs;
+      const status = gl[statuses[Math.min(poll++, statuses.length - 1)]];
+      if (onSignal && (status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED)) onSignal();
+      return status;
     },
     deleteSync: sync => calls.push(`delete ${sync.id}`),
   });
@@ -147,6 +150,59 @@ test('a lost context drops its fence untouched and completion reports the interr
   lease.retire(); lease.release();
   assert.ok(nextFence.calls.includes('delete 1'), 'a retirement on a healthy context deletes the dropped fence');
   await rejectsWith(adapter.completion(after, { timeoutMs: 100, ...nextFence.options }), 'interrupted');
+});
+
+// T08 fix round 2 (Codex r2 findings 4 and 5): captured identity before publication identity, the
+// final asynchronous boundary, evidence from the captured epoch, and one deadline through success.
+test('a replaced device followed by a new publication reports interruption for the old publication, not supersession', async () => {
+  const renderer = createFakeRenderer();
+  const fence = fenceGl({ statuses: ['TIMEOUT_EXPIRED'] });
+  renderer.gl = fence.gl;
+  const adapter = createPlaneRenderAdapter({ renderer, clock });
+  const report = await published(adapter, renderer);
+  // The poll resumes only once the device was lost, replaced and a new publication B is up.
+  let resume; const gate = new Promise(resolve => { resume = resolve; });
+  const pending = adapter.completion(report, { timeoutMs: 100, ...fence.options, yieldTask: async () => { await gate; await fence.options.yieldTask(); } });
+  adapter.invalidate();
+  const next = createFakeRenderer();
+  next.gl = fenceGl().gl;
+  adapter.replaceRenderer(next);
+  await published(adapter, next, 1);
+  resume();
+  await rejectsWith(pending, 'interrupted');
+});
+
+test('a loss at the final continuation after the fence signaled is an interruption, never evidence with a later epoch', async () => {
+  const renderer = createFakeRenderer();
+  let adapter;
+  const fence = fenceGl({ statuses: ['CONDITION_SATISFIED'], onSignal: () => adapter.invalidate() });
+  renderer.gl = fence.gl;
+  adapter = createPlaneRenderAdapter({ renderer, clock });
+  const report = await published(adapter, renderer);
+  await rejectsWith(adapter.completion(report, { timeoutMs: 100, ...fence.options }), 'interrupted');
+  const healthy = createFakeRenderer();
+  const healthyFence = fenceGl();
+  healthy.gl = healthyFence.gl;
+  const second = createPlaneRenderAdapter({ renderer: healthy, clock });
+  const evidence = await second.completion(await published(second, healthy), { timeoutMs: 100, ...healthyFence.options });
+  assert.equal(evidence.deviceEpoch, 0, 'evidence carries the epoch captured at publication');
+});
+
+test('a successful poll that overran the deadline is a timeout, and an exhausted bound rejects before any poll or paint', async () => {
+  const slow = fenceGl({ statuses: ['CONDITION_SATISFIED'], pollMs: 5 });
+  await rejectsWith(awaitFence({ gl: slow.gl, sync: createFence(slow.gl), ms: 8, ...slow.options }), 'timeout');
+  assert.equal(slow.calls.filter(call => call.startsWith('poll')).length, 1, 'the poll ran, then its overrun was noticed');
+  const renderer = createFakeRenderer();
+  const fence = fenceGl();
+  renderer.gl = fence.gl;
+  const adapter = createPlaneRenderAdapter({ renderer, clock });
+  const report = await published(adapter, renderer);
+  await rejectsWith(adapter.completion(report, { timeoutMs: 0, ...fence.options }), 'timeout');
+  assert.ok(!fence.calls.some(call => call.startsWith('poll')), 'an exhausted bound never polls');
+  await assert.rejects(adapter.completion(report, { timeoutMs: Infinity }), RangeError);
+  const cpu = createFakeRenderer({ gl: false });
+  const cpuAdapter = createPlaneRenderAdapter({ renderer: cpu, clock });
+  await rejectsWith(cpuAdapter.completion(await published(cpuAdapter, cpu), { timeoutMs: 0 }), 'timeout');
 });
 
 test('the CPU fallback completes synchronously after its paint', async () => {

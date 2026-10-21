@@ -28,9 +28,14 @@ let adapter, lastExport = null, exportHooks = {}, pendingReplacement = false;
 let geometryRevision = 0, appearanceRevision = 0;
 // Device lifecycle (spec §14, charter §3.10): `contextLost` spans the lost → restored events of the
 // canvas; a loss stays `lossPending` until the replacement that follows it; after a loss the view is
-// rendered again automatically at most once, and a repeated loss before that render completes pauses
-// automatic rendering until the explorer resumes.
-let contextLost = false, lossPending = false, recoveryAttempts = 0, renderingPaused = false;
+// rendered again automatically at most once, and the recovery counts as successful only when the
+// completion signal confirms its publication (GPU queue completion or CPU paint, confirmRecovery),
+// never on the application-side return. A repeated loss before that pauses rendering: queued desired
+// state is kept but nothing is submitted, and only an explicit action of the explorer (Resume
+// rendering, or their own navigation or edit) clears the pause — automatic requests (tour frames,
+// resize, the render after an export, recovery itself) run under `automatedRequests` and never do.
+let contextLost = false, lossPending = false, recoveryAttempts = 0, renderingPaused = false, automatedRequests = 0;
+function automated(action) { automatedRequests++; try { return action(); } finally { automatedRequests--; } }
 let saved = [], savedTab = false;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -80,7 +85,19 @@ function adopt(transition, interactive = false) {
     // publication). During an export lease or a lost context the edit is only recorded; the live
     // scene is rendered after.
     adapter.recolor(transition.after, generation());
+    if (adapter.publication) confirmRecovery(adapter.publication.report);
   }
+}
+// A recovery episode ends only on completion evidence for a publication of the recovered device: the
+// GPU may still be executing the recovery draw when adapter.render() returns, and a loss caused by
+// that draw must count against the episode. A publication superseded before its fence signals hands
+// over to the next one: every later publication — an interactive render, a recolor, an export render
+// — asks again while an episode is open.
+function confirmRecovery(report) {
+  if (!recoveryAttempts) return;
+  const episodeEpoch = adapter.epoch;
+  adapter.completion(report, { timeoutMs: 120000, now: () => performance.now() })
+    .then(evidence => { if (recoveryAttempts && evidence.deviceEpoch === episodeEpoch && adapter.epoch === episodeEpoch) recoveryAttempts = 0; }, () => { /* superseded, interrupted or late: the episode stays open */ });
 }
 const generation = () => ({ deviceEpoch: adapter.epoch, viewRevision: sceneHistory.snapshot().revision, geometryRevision, appearanceRevision });
 
@@ -151,7 +168,7 @@ function dimensions() {
 }
 function requestRender(interactive = false) {
   dirty = true; requestVersion++;
-  if (renderingPaused) { renderingPaused = false; $('#resume-rendering').hidden = true; }
+  if (renderingPaused && !automatedRequests) { renderingPaused = false; $('#resume-rendering').hidden = true; }
   if (busy && renderer instanceof CpuRenderer) adapter.cancelInteractive();
   if (interactive && displayedView) {
     const { scale, x, y } = viewTransform(displayedView, view, innerWidth);
@@ -164,7 +181,7 @@ function requestRender(interactive = false) {
 // precondition); an export lease, a retired renderer or a lost context defers the flush until the
 // export finishes or the renderer is replaced (both request a render).
 async function flushRender() {
-  if (busy || !dirty || adapter.reserved || adapter.retired || adapter.unavailable) return;
+  if (busy || !dirty || renderingPaused || adapter.reserved || adapter.retired || adapter.unavailable) return;
   busy = true; dirty = false;
   const version = requestVersion;
   const snapshot = { ...view };
@@ -178,7 +195,7 @@ async function flushRender() {
     // context was lost or the renderer replaced; the replacement requests the next render.
     if (report.outcome === 'superseded' || report.outcome === 'interrupted') return;
     if (report.outcome !== 'completed') throw new Error(report.reason);
-    recoveryAttempts = 0; // the view is recovered; a later loss gets its own automatic attempt
+    confirmRecovery(report);
     displayedView = snapshot;
     canvas.style.transform = '';
     rendered++;
@@ -276,12 +293,12 @@ function animate(time) {
     const elapsed = time - tour.started;
     if (elapsed > 18000) {
       tour.index = (tour.index + 1) % PLACES.length; tour.started = time; tour.lastFrame = 0;
-      const place = PLACES[tour.index]; goTo(place, place.palette, place.id, { tourGesture: true });
+      const place = PLACES[tour.index]; automated(() => goTo(place, place.palette, place.id, { tourGesture: true }));
       $('#tour-location').textContent = place.name;
     } else if (!busy && elapsed - tour.lastFrame > 90) {
       const step = (elapsed - tour.lastFrame) / 1000;
       tour.lastFrame = elapsed;
-      gestures.automate('tour', { type: 'setCamera', camera: zoomView(view, view.zoom + Math.min(.2, step) * .07) }, true);
+      automated(() => gestures.automate('tour', { type: 'setCamera', camera: zoomView(view, view.zoom + Math.min(.2, step) * .07) }, true));
     }
   }
   if (cycle || tour) requestAnimationFrame(animate); else lastAnimation = 0;
@@ -518,7 +535,7 @@ function recover() {
     if (recoveryAttempts >= 1) { pauseRendering(); return; }
     recoveryAttempts++;
   }
-  requestRender();
+  if (!renderingPaused) automated(() => requestRender());
 }
 function pauseRendering() {
   renderingPaused = true;
@@ -526,7 +543,8 @@ function pauseRendering() {
   $('#resume-rendering').hidden = false;
   toast('The graphics device was lost again. Press Resume rendering to continue.');
 }
-$('#resume-rendering').onclick = () => { recoveryAttempts = 0; requestRender(); };
+// The explicit resume: one fresh automatic attempt, confirmed like the first.
+$('#resume-rendering').onclick = () => { recoveryAttempts = 1; requestRender(); };
 
 // One export job: the renderer is reserved synchronously (startExport), before any asynchronous
 // wait (spec §14). Later edits change only the live scene; the lease ends with a render of the live
@@ -549,7 +567,8 @@ function runExport(request, { restartOf = null } = {}) {
     // A renderer retired by a timeout, a context lost during the lease, or a restoration deferred by
     // it: recover now, or as soon as the context is restored.
     if (adapter.retired || adapter.unavailable || pendingReplacement) recover();
-  }).finally(() => { button.disabled = false; if (!renderingPaused) requestRender(); });
+    else if (adapter.publication) confirmRecovery(adapter.publication.report); // the export image is a publication too
+  }).finally(() => { button.disabled = false; automated(() => requestRender()); });
 }
 const exportUnavailable = () => {
   if (!(adapter.reserved || adapter.retired || adapter.unavailable)) return false;
@@ -592,17 +611,18 @@ addEventListener('keydown', event => {
   if (actions[key]) { event.preventDefault(); actions[key](); }
 });
 // A new size is a new geometry dependency: earlier renders are no longer publishable.
-addEventListener('resize', () => { geometryRevision++; requestRender(true); });
+addEventListener('resize', () => { geometryRevision++; automated(() => requestRender(true)); });
 addEventListener('pagehide', () => adapter.renderer.destroy());
 
 // Small inspection API for numerical and browser regression tests.
 class IdleTimeoutError extends Error {
   constructor(ms, state) { super(`ATLAS did not become idle within ${ms} ms (${JSON.stringify(state)}).`); this.name = 'IdleTimeoutError'; this.code = 'ATLAS_IDLE_TIMEOUT'; }
 }
-// Application-side idleness: no render pending or in flight, no export lease, a usable renderer.
+// Application-side idleness: no render in flight, no export lease, a usable renderer, and no
+// queued work — unless rendering is paused, when queued work waits for the explorer by design.
 async function whenIdle({ timeoutMs = 60000 } = {}) {
   const deadline = performance.now() + timeoutMs;
-  while (busy || dirty || adapter.reserved || adapter.unavailable) {
+  while (busy || (dirty && !renderingPaused) || adapter.reserved || adapter.unavailable) {
     if (performance.now() > deadline) throw new IdleTimeoutError(timeoutMs, { busy, dirty, exporting: adapter.reserved, unavailable: adapter.unavailable });
     await new Promise(resolve => setTimeout(resolve, 30));
   }
@@ -641,6 +661,7 @@ window.atlas = {
   // that publication alone is awaited. Rejects with a CompletionError ('superseded', 'interrupted',
   // 'timeout', …) rather than switching to a newer publication.
   async whenDrawn({ timeoutMs = 60000, report = null } = {}) {
+    if (!(Number.isFinite(timeoutMs) && timeoutMs > 0)) throw new RangeError('whenDrawn needs a positive finite bound');
     const deadline = performance.now() + timeoutMs;
     let target = report;
     if (!target) {
@@ -648,7 +669,8 @@ window.atlas = {
       target = adapter.publication?.report;
       if (!target) throw Object.assign(new Error('nothing has been published'), { name: 'CompletionError', code: 'none' });
     }
-    return adapter.completion(target, { timeoutMs: Math.max(1, deadline - performance.now()), now: () => performance.now() });
+    // The remaining budget, never fresh time: an exhausted bound rejects before the fence or paint.
+    return adapter.completion(target, { timeoutMs: deadline - performance.now(), now: () => performance.now() });
   },
 };
 syncControls(); renderPlaces(); updateHistoryControls(); requestRender();

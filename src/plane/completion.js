@@ -21,22 +21,29 @@ export function createFence(gl) {
 
 // Zero-timeout polls, each after a task yield (WebGL forbids a fence from signaling until control
 // returns to the event loop — even before the first poll). `stillValid()` throws when the awaited
-// publication no longer stands. → { polls, waitMs }; rejects with a CompletionError.
+// publication no longer stands; it and the context are checked before and after every poll, and the
+// one deadline holds through success: a signaled poll that overran it is still a timeout.
+// → { polls, waitMs }; rejects with a CompletionError.
 export async function awaitFence({ gl, sync, ms, stillValid = () => {}, now = () => performance.now(), yieldTask = () => new Promise(resolve => setTimeout(resolve, 0)) }) {
-  if (!(Number.isFinite(ms) && ms > 0)) throw new RangeError('awaitFence needs a positive finite bound');
+  if (!Number.isFinite(ms)) throw new RangeError('awaitFence needs a finite bound');
   if (sync === undefined) throw new CompletionError('this renderer has no GPU fences', 'unavailable');
   if (sync === null) throw new CompletionError('fenceSync returned null', 'fence-failed');
   const started = now();
-  let polls = 0;
-  while (true) {
-    await yieldTask();
+  const check = () => {
     stillValid();
     if (gl.isContextLost()) throw new CompletionError('the graphics context was lost', 'interrupted');
     if (now() - started >= ms) throw new CompletionError(`GPU completion did not arrive within ${ms} ms`, 'timeout');
+  };
+  if (ms <= 0) throw new CompletionError('no time remains for GPU completion', 'timeout');
+  let polls = 0;
+  while (true) {
+    await yieldTask();
+    check();
     const status = gl.clientWaitSync(sync, 0, 0);
     polls++;
-    if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) return { polls, waitMs: now() - started };
     if (status === gl.WAIT_FAILED) throw new CompletionError('clientWaitSync returned WAIT_FAILED', 'fence-failed');
-    if (status !== gl.TIMEOUT_EXPIRED) throw new CompletionError(`unexpected fence status ${status}`, 'fence-failed');
+    if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED && status !== gl.TIMEOUT_EXPIRED) throw new CompletionError(`unexpected fence status ${status}`, 'fence-failed');
+    check();
+    if (status !== gl.TIMEOUT_EXPIRED) return { polls, waitMs: now() - started };
   }
 }

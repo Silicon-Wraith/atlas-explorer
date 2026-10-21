@@ -320,9 +320,16 @@ test('a recolor during pending navigation publishes the retained geometry with t
   assert.deepEqual(adapter.publication.request.sceneSnapshot.camera, A.camera);
   assert.equal(adapter.publication.request.sceneSnapshot.appearance.palette, 'aurora');
   assert.equal(renderer.colors().at(-1).palette, 'aurora');
+  // B is superseded before it draws: the retained image and its truthful publication stand.
+  revision = 3;
+  renderer.finishNext();
+  assert.equal((await second).outcome, 'superseded');
+  assert.equal(adapter.publication?.report, recolored.report, 'a render superseded before it drew leaves the truthful publication in place');
+  // A failure, by contrast, may have resized the canvas before it was raised (fix round 2, finding 1).
+  const third = adapter.render(request(B, 3), options());
   renderer.failNext('shader failure');
-  assert.equal((await second).outcome, 'failed');
-  assert.equal(adapter.publication?.report, recolored.report, 'a failed render leaves the truthful publication in place');
+  assert.equal((await third).outcome, 'failed');
+  assert.equal(adapter.publication, null, 'a failed render leaves nothing describable');
 });
 
 test('the publication describes the export image, and a loss, a retirement or a replacement clears it', async () => {
@@ -350,4 +357,36 @@ test('the publication describes the export image, and a loss, a retirement or a 
   assert.equal(adapter.publication, null, 'a lost context has no describable image');
   adapter.replaceRenderer(createFakeRenderer());
   assert.equal(adapter.publication, null, 'a replacement starts without a publication');
+});
+
+// T08 fix round 2 (Codex r2 finding 1): a failed render may have resized the canvas or reallocated
+// the field before failing (GpuRenderer.resize), so the retained image's validity is no longer
+// established: the publication is cleared rather than left describing an image that may be gone.
+test('a failed render that may have changed the canvas clears the publication, interactive and export', async () => {
+  const renderer = createFakeRenderer();
+  const adapter = createPlaneRenderAdapter({ renderer, clock });
+  const interactive = { currentGeneration: () => generation(1), liveScene: () => A };
+  const first = adapter.render(request(A, 1), interactive);
+  renderer.finishNext();
+  assert.equal((await first).outcome, 'completed');
+  assert.notEqual(adapter.publication, null);
+  const second = adapter.render(createPlaneRequest({ scene: A, purpose: 'interactive', width: 640, height: 360, generation: generation(2) }), { currentGeneration: () => generation(2), liveScene: () => A });
+  renderer.canvas.width = 640; renderer.canvas.height = 360; // the allocation resized the canvas, then failed
+  renderer.failNext('Cannot allocate rendering surface.');
+  assert.equal((await second).outcome, 'failed');
+  assert.equal(adapter.publication, null, 'a destructive failure leaves nothing describable');
+  assert.equal(adapter.published, null);
+  const again = adapter.render(request(A, 3), { currentGeneration: () => generation(3), liveScene: () => A });
+  renderer.finishNext();
+  assert.equal((await again).outcome, 'completed');
+  const lease = adapter.reserveExclusive(createPlaneRequest({ scene: A, purpose: 'export', width: 1920, height: 1080, generation: generation(3) }));
+  const rendering = lease.render({ timeoutMs: 1000 }); await flush();
+  renderer.canvas.width = 1920; renderer.canvas.height = 1080;
+  renderer.failNext('Cannot allocate rendering surface.');
+  assert.equal((await rendering).outcome, 'failed');
+  lease.release();
+  assert.equal(adapter.publication, null, 'a failed export render leaves nothing describable either');
+  const superseded = adapter.render(request(B, 4), { currentGeneration: () => generation(5), liveScene: () => B });
+  renderer.finishNext();
+  assert.equal((await superseded).outcome, 'superseded');
 });
