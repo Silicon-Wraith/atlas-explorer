@@ -9,7 +9,8 @@
 // launch arguments, the chrome://gpu identity, the GPU handoff and the source, and is bounded by
 // installSuiteDeadline. B01 registers `coexistence` (gated) and `developer-flag-experiment` (a
 // separately reported portability experiment, never gated); B06 registers `recovery`; B08 registers
-// `numerics` (the field kernels against B04's frozen matrix); later tasks add rendering and shell. The spike document is written only after the run passed, its report was
+// `numerics` (the field kernels against B04's frozen matrix); B10 registers `rendering` (tracing, normals and
+// picking against B04's ray strata and anchors); later tasks add shell. The spike document is written only after the run passed, its report was
 // persisted and every page, context and browser was drained and closed.
 import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
@@ -22,7 +23,7 @@ import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
@@ -1318,6 +1319,515 @@ async function runNumericsDivergence({ page }) {
   pass('Bulb orbit divergence probe recorded (diagnostic)');
 }
 
+// ---- the rendering group (plan B10: tracing, normals and picking against B04's ray strata, P2) -------
+// Ray strata and anchors only (B08 owns the point strata). The ray shards load through the pinned index
+// (index, logical matrix, generator and reference hashes pinned; each loaded shard's byte length, SHA-256
+// and declared IDs verified by assembleMatrix) — a partial view, never whole-matrix qualification. Every
+// batch runs through the production backend (B00 contract, B06 ABI): one admission lease per submission
+// and readback. Camera strata (overview, ladders, usability, silhouette, normals) run the product
+// trace_band/normals_band pipelines with each stratum's own anchored camera; B04's ray-list strata
+// (analytic, adversarial) run the validation trace_rays entry, which shares the §11.4 loop. The pick runs
+// through the B09 renderer's pick API and pass sequence. Comparisons are Node-side
+// (tests/support/space-tracing.mjs) with the frozen tolerances, floors and eligibility rules.
+export const RENDERING_PASSES = Object.freeze([
+  'Analytic rays trace to the oracle depth with exact statuses',
+  'The detail ladders record agreement or exceedance per distance under ladder-v1 as diagnostic evidence',
+  'The 12 adversarial ray cases terminate with their expected status and subreason',
+  'Every mandatory overview stratum passes under surface-v1',
+  'Normals require distinct resolved samples and a finite nonzero gradient, and unavailable normals keep their depth',
+  'The sphere silhouette equals the analytic disc except within one pixel of the edge',
+  "The quaternion default view's termination distribution matches the independently predicted one within 5 points",
+  "A pick returns the pinned sample's depth and reconstructs an anchored hit, and a stale pick is rejected",
+]);
+// Test-only stand-ins for B11's shade/accumulate/display passes, so the B09 pass sequence can publish a
+// frame for the pick check. They are injected through the backend's loadSource and never ship.
+const RENDERING_FIXTURES = {
+  'fixture-shade': `struct U { origin: vec2<u32>, size: vec2<u32> };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var status_in: texture_2d<u32>;
+@group(0) @binding(2) var normal_in: texture_2d<f32>;
+@group(0) @binding(3) var color_out: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(4) var lighting_out: texture_storage_2d<r32uint, write>;
+@compute @workgroup_size(8, 8, 1)
+fn shade_band(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = vec2<i32>(u.origin + gid.xy);
+  let hit = (textureLoad(status_in, p, 0).x & 15u) == 0u;
+  let n = textureLoad(normal_in, p, 0);
+  textureStore(color_out, p, select(vec4<f32>(0.0, 0.0, 0.0, 1.0), vec4<f32>(n.xyz * 0.5 + 0.5, 1.0), hit));
+  textureStore(lighting_out, p, vec4<u32>(0u, 0u, 0u, 1u));
+}`,
+  'fixture-accumulate': `struct U { origin: vec2<u32>, size: vec2<u32> };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var color_in: texture_2d<f32>;
+@group(0) @binding(2) var next_out: texture_storage_2d<rgba32float, write>;
+@compute @workgroup_size(8, 8, 1)
+fn accumulate_band(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = vec2<i32>(u.origin + gid.xy);
+  textureStore(next_out, p, textureLoad(color_in, p, 0));
+}`,
+  'fixture-display': `struct U { origin: vec2<u32>, size: vec2<u32> };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var accumulation_in: texture_2d<f32>;
+@group(0) @binding(2) var display_out: texture_storage_2d<rgba8unorm, write>;
+@compute @workgroup_size(8, 8, 1)
+fn display_band(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = vec2<i32>(u.origin + gid.xy);
+  textureStore(display_out, p, vec4<f32>(textureLoad(accumulation_in, p, 0).xyz, 1.0));
+}`,
+};
+const SURFACE_V1 = Object.freeze({ maxIterations: 128, maxSteps: 512, stepMultiplier: 0.9, toleranceFloor: 1e-6, toleranceFactor: 0.5 });
+const LADDER_V1 = Object.freeze({ maxIterations: 128, maxSteps: 512, stepMultiplier: 0.9, toleranceFloor: 0, toleranceFactor: 0.005 });
+
+async function renderingSetupInPage({ fixtures }) {
+  const { createWebGPUBackend } = await import('/src/space/render/webgpu/backend.js');
+  const { loadShaderSource } = await import('/src/space/render/webgpu/shaders.js');
+  const passes = await import('/src/space/render/webgpu/passes.js');
+  const kernels = await import('/src/space/render/webgpu/kernels.js');
+  const contract = await import('/src/space/render/backend.js');
+  const canvas = document.createElement('canvas');
+  canvas.id = 'space-b10-canvas';
+  canvas.style.cssText = 'position:fixed;right:0;bottom:0;width:16px;height:9px;z-index:2147483647;pointer-events:none';
+  document.body.append(canvas);
+  const loadSource = id => (Object.hasOwn(fixtures, id) ? Promise.resolve(fixtures[id]) : loadShaderSource(id));
+  const backend = createWebGPUBackend({ canvas, clock: performance, loadSource });
+  const acquired = await backend.acquire();
+  const events = [], started = performance.now();
+  const product = await backend.prepare({ epoch: acquired.epoch, pipelineSet: passes.tracePipelineSet(), onProgress: event => events.push(event) });
+  const preparationMs = performance.now() - started;
+  const validation = await backend.prepare({ epoch: acquired.epoch, pipelineSet: passes.validationPipelineSet() });
+  const boxes = {};
+  for (const depth of [1, 2]) { const data = kernels.mengerBoxData(depth); boxes[depth] = backend.allocate({ name: `menger-boxes-${depth}`, bytes: data.byteLength, usage: 'storage', data }); }
+  const targets = new Map();
+  const s = { backend, passes, contract, canvas, boxes, targets,
+    identity: jobId => ({ requestId: `request-${jobId}`, jobId, viewId: 'space-rendering', generation: { deviceEpoch: backend.currentEpoch(), viewRevision: 1, geometryRevision: 1, appearanceRevision: 1 } }),
+    lease: jobId => ({ admission: contract.createAdmission({ epoch: backend.currentEpoch(), jobId }) }),
+    async targetsFor(size) {
+      const key = `${size.width}x${size.height}`;
+      if (!targets.has(key)) targets.set(key, await backend.configureTargets({ epoch: backend.currentEpoch(), layoutId: contract.TARGET_LAYOUT_ID, internalSize: size, outputSize: size }));
+      return targets.get(key);
+    },
+    base64(bytes) { let binary = ''; for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(binary); },
+    // One bounded readback per ≤ 256 rows, one lease each; row padding is stripped by the backend.
+    async read(handle, region, field, jobId) {
+      const parts = [];
+      for (let y = region.y; y < region.y + region.height; y += 256) {
+        const chunk = { x: region.x, y, width: region.width, height: Math.min(256, region.y + region.height - y) };
+        const ticket = backend.readback({ identity: s.identity(jobId), source: handle, region: chunk, fields: [field] }, s.lease(jobId));
+        const done = await ticket.done;
+        if (done.outcome !== 'completed') throw new Error(`readback ${field}: ${done.outcome} ${done.reason}`);
+        parts.push((await ticket.result).data);
+      }
+      const out = new Uint8Array(parts.reduce((n, part) => n + part.length, 0));
+      let offset = 0; for (const part of parts) { out.set(part, offset); offset += part.length; }
+      return out;
+    },
+  };
+  globalThis.__b10 = s;
+  return { acquired: { epoch: acquired.epoch, requestedLimits: acquired.requestedLimits, limits: acquired.limits, canvasFormat: acquired.canvasFormat },
+    product, validation, preparationMs, events, implementationHashes: passes.tracingImplementationHashes(), tracingVersion: passes.TRACING_VERSION, bindings: passes.TRACING_BINDINGS };
+}
+
+// trace_band over `region` in bands of ≤ 32768 pixels (one lease each), then optionally normals_band
+// with its own profile; reads depth and status before and after normals, and the normals.
+async function traceFrameInPage(spec) {
+  const s = globalThis.__b10, { backend, passes } = s, jobId = `rendering-${spec.label}`;
+  const targets = await s.targetsFor(spec.internalSize), handles = targets.handles, region = spec.region;
+  const menger = spec.modelId === 'menger' ? { menger_boxes: s.boxes[spec.effective.depth] } : {};
+  const rows = Math.max(1, Math.floor(32768 / region.width)), bands = [];
+  for (let y = region.y; y < region.y + region.height; y += rows) bands.push({ x: region.x, y, width: region.width, height: Math.min(rows, region.y + region.height - y) });
+  const submit = (pass, pipelineId, profile, inputs, outputs) => Promise.all(bands.map(band => backend.submitBatch({ identity: s.identity(jobId), pipelineId, pass, region: band,
+    sample: { sequence: 'atlas-aa-v1', seed: spec.sampling.seed, index: spec.sampling.sampleIndex }, bounds: passes.traceBounds(band, profile, pass), inputs, outputs,
+    uniforms: passes.traceUniforms({ modelId: spec.modelId, camera: spec.camera, effective: spec.effective, region: band, internalSize: spec.internalSize, sampling: spec.sampling, profile }) }, s.lease(jobId)).done));
+  const tally = list => list.reduce((acc, done) => ({ ...acc, [done.outcome]: (acc[done.outcome] ?? 0) + 1 }), {});
+  const started = performance.now();
+  const traced = await submit('trace', spec.traceId ?? `trace_band:${spec.modelId}`, spec.profile, { ...menger }, { depth: handles.depth, status: handles.status });
+  const out = { bands: bands.length, trace: tally(traced), traceFailures: traced.filter(d => d.outcome !== 'completed').slice(0, 3).map(d => d.reason) };
+  out.depth = s.base64(await s.read(handles.depth, region, 'depth', jobId));
+  out.status = s.base64(await s.read(handles.status, region, 'status', jobId));
+  if (spec.normals) {
+    const normalsDone = await submit('normals', spec.normalsId ?? `normals_band:${spec.modelId}`, spec.normalsProfile ?? spec.profile,
+      { depth: handles.depth, status: handles.status, ...menger }, { normal: handles.normal });
+    out.normals = tally(normalsDone);
+    out.normal = s.base64(await s.read(handles.normal, region, 'normal', jobId));
+    out.depthAfter = s.base64(await s.read(handles.depth, region, 'depth', jobId));
+    out.statusAfter = s.base64(await s.read(handles.status, region, 'status', jobId));
+  }
+  out.wallMs = performance.now() - started;
+  return out;
+}
+
+// Validation ray lists: one rays buffer and one sentinel-filled results buffer per batch (one lease per
+// submission and readback), the validation trace_rays pipeline of the batch's field.
+async function traceRaysInPage({ label, batches }) {
+  const s = globalThis.__b10, { backend, passes } = s, jobId = `rendering-rays-${label}`, out = [];
+  for (const batch of batches) {
+    const data = passes.encodeRays(batch.rays), count = batch.rays.length;
+    const rays = backend.allocate({ name: `rays:${label}`, bytes: data.byteLength, usage: 'storage', data });
+    const results = backend.allocate({ name: `ray-results:${label}`, bytes: count * passes.TRACE_RESULT_BYTES, usage: 'storage', data: new Uint8Array(count * passes.TRACE_RESULT_BYTES).fill(0xff) });
+    const region = { x: 0, y: 0, width: batch.uniforms.size[0], height: batch.uniforms.size[1] };
+    const inputs = { rays, results, ...(batch.modelId === 'menger' ? { menger_boxes: s.boxes[batch.depth] } : {}) };
+    const done = await backend.submitBatch({ identity: s.identity(jobId), pipelineId: `trace-rays:${batch.modelId}`, pass: 'probe', region,
+      sample: { sequence: 'atlas-aa-v1', seed: 0, index: 0 }, bounds: passes.traceBounds(region, batch.uniforms), inputs, outputs: { results }, uniforms: batch.uniforms }, s.lease(jobId)).done;
+    let bytes = null;
+    if (done.outcome === 'completed') bytes = await s.read(results, { x: 0, y: 0, width: count * passes.TRACE_RESULT_BYTES, height: 1 }, 'results', jobId);
+    backend.release(rays); backend.release(results);
+    out.push({ outcome: done.outcome, reason: done.reason, base64: bytes ? s.base64(bytes) : null });
+  }
+  return out;
+}
+
+// The B09 renderer on the same backend: probe/present (B06), the product trace and normals pipelines,
+// and the shade/accumulate/display stand-ins. Sphere scene, draft profile; picks through renderer.pick.
+async function pickInPage() {
+  const s = globalThis.__b10, { backend, passes } = s;
+  const { createSpaceRenderer } = await import('/src/space/render/renderer.js');
+  const { createSpaceScene } = await import('/src/space/scene-adapter.js');
+  const { createSpaceRequest } = await import('/src/space/render-adapter.js');
+  const { createPipelineSet } = await import('/src/space/render/backend.js');
+  const { SELF_CHECK_PIPELINE_SET } = await import('/src/space/render/webgpu/pipelines.js');
+  const { KERNEL_VERSION } = await import('/src/space/render/webgpu/kernels.js');
+  const layout = { byteLength: 16, fields: [{ name: 'origin', type: 'vec2<u32>', offset: 0 }, { name: 'size', type: 'vec2<u32>', offset: 8 }] };
+  const read = slot => ({ slot, type: 'texture', access: 'read' }), write = slot => ({ slot, type: 'storage-texture', access: 'write' });
+  const fixture = (id, entryPoint, bindings) => ({ pipelineId: id, kind: 'compute', sourceIds: [id], entryPoint, constants: {}, bindings: [{ slot: 'u', type: 'uniform-buffer', access: 'read' }, ...bindings], uniformLayout: layout });
+  const pipelineSet = createPipelineSet({ id: 'b10-pick', descriptors: [...SELF_CHECK_PIPELINE_SET.descriptors.filter(d => ['probe', 'present'].includes(d.pipelineId)),
+    ...passes.tracePipelineDescriptors().filter(d => !d.pipelineId.endsWith(':menger')),
+    fixture('fixture-shade', 'shade_band', [read('status'), read('normal'), write('sampleColor'), write('lightingStatus')]),
+    fixture('fixture-accumulate', 'accumulate_band', [read('sampleColor'), write('next')]), fixture('fixture-display', 'display_band', [read('accumulation'), write('display')])] });
+  const versions = { kernelVersion: KERNEL_VERSION, tracingVersion: passes.TRACING_VERSION }, viewId = 'space-b10-pick';
+  const renderer = createSpaceRenderer({ backend, clock: () => performance.now(), viewId, versions, pipelineSet });
+  const publications = [], reports = [];
+  renderer.onPublish(p => publications.push({ requestId: p.requestId, kind: p.kind, rayTermination: p.rayTermination }));
+  renderer.onReport(r => reports.push({ requestId: r.requestId, outcome: r.outcome, reason: r.reason }));
+  await renderer.prepare();
+  const scene = createSpaceScene({ model: 'sphere' });
+  const make = n => createSpaceRequest({ scene, purpose: 'interactive', width: 128, height: 72, profile: 'draft',
+    generation: { deviceEpoch: backend.currentEpoch(), viewRevision: n, geometryRevision: n, appearanceRevision: n }, viewId, versions });
+  const idOf = r => ({ requestId: r.requestId, jobId: r.jobId, viewId: r.viewId, generation: { ...r.generation } });
+  const first = make(1), firstDone = await renderer.render(first).done, size = { ...first.quality.internalSize };
+  const pick = (request, patch = {}) => renderer.pick({ identity: idOf(request), pixel: [32, 18], dimensions: { ...size }, geometryRevision: request.generation.geometryRevision, sampleIndex: 0, ...patch });
+  const fresh = await pick(first), corner = await pick(first, { pixel: [0, 0] });
+  const stale = {
+    request: await pick(first, { identity: { ...idOf(first), requestId: 'request-not-published' } }),
+    epoch: await pick(first, { identity: { ...idOf(first), generation: { ...first.generation, deviceEpoch: first.generation.deviceEpoch + 1 } } }),
+    geometryRevision: await pick(first, { identity: { ...idOf(first), generation: { ...first.generation, geometryRevision: 2 } }, geometryRevision: 2 }),
+    dimensions: await pick(first, { dimensions: { width: size.width + 1, height: size.height } }),
+    sample: await pick(first, { sampleIndex: 1 }),
+  };
+  const second = make(2), secondDone = await renderer.render(second).done;
+  stale.superseded = await pick(first);
+  const current = await pick(second);
+  renderer.destroy();
+  const strip = done => ({ outcome: done.outcome, reason: done.reason ?? null });
+  return { first: strip(firstDone), second: strip(secondDone), size, camera: scene.camera, fresh, corner, stale, current, publications, reports };
+}
+
+async function renderingFinishInPage() {
+  const s = globalThis.__b10, { backend } = s;
+  for (const set of s.targets.values()) for (const handle of Object.values(set.handles).flat()) backend.release(handle);
+  for (const handle of Object.values(s.boxes)) backend.release(handle);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const uncaptured = backend.testAdapter?.uncapturedErrors?.() ?? [];
+  backend.destroy();
+  const final = backend.diagnostics();
+  s.canvas.remove();
+  return { uncaptured, final: { state: final.state, epoch: final.epoch, tracked: final.tracked } };
+}
+
+async function runRendering({ page }) {
+  const tracing = await import('./support/space-tracing.mjs');
+  const passes = await import('../src/space/render/webgpu/passes.js');
+  const records = await import('../src/space/numerics/validation-records.js');
+  const camera = await import('../src/space/camera.js');
+  const { sampleJitter } = await import('../src/space/render/backend.js');
+  const { SPACE_DEFAULTS } = await import('../src/space/scene-adapter.js');
+  const view = tracing.loadPinnedRayStrata();
+  const tol = view.tolerances, strata = view.strata;
+  const usability = JSON.parse(await readFile('tests/reference/quaternion-usability.json', 'utf8'));
+  report.push({ name: 'Matrix pins and loaded ray shards (partial view; not whole-matrix qualification)', complete: view.complete, pins: records.MATRIX_PINS, shards: view.shards, strata: strata.length, anchors: view.anchors.length });
+
+  await page.goto(url, { timeout: LIMITS.launch });
+  await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
+  await idleWithin(page);
+  const setup = await ev(page, renderingSetupInPage, { fixtures: RENDERING_FIXTURES }, 'rendering setup', LIMITS.deep);
+  assert.deepEqual(setup.acquired.requestedLimits, {}, 'no blanket requiredLimits');
+  assert.deepEqual(setup.product.preparedPipelineIds, passes.tracePipelineDescriptors().map(d => d.pipelineId));
+  assert.deepEqual(setup.validation.preparedPipelineIds, passes.validationPipelineDescriptors().map(d => d.pipelineId));
+  assert.deepEqual(setup.implementationHashes, passes.tracingImplementationHashes(), 'the served tracing metadata is the checkout\'s');
+  report.push({ name: 'Tracing pipelines prepared (recorded)', ...setup });
+
+  const failedChecks = [], results = [];
+  const check = (name, fn) => { try { const details = fn(); pass(name, details); } catch (error) { failedChecks.push(name); report.push({ name: `FAILED ${name}`, error: String(error?.message ?? error).slice(0, 4000) }); console.log(`FAILED ${name}: ${String(error?.message).slice(0, 600)}`); } };
+  const bytes = b64 => new Uint8Array(Buffer.from(b64, 'base64'));
+  const decodeFrame = (run, count) => {
+    const statuses = passes.decodeStatusWords(bytes(run.status)), depths = passes.decodeDepths(bytes(run.depth));
+    assert.equal(statuses.length, count); return statuses.map((s, i) => ({ ...s, t: depths[i] }));
+  };
+  const frame = async spec => {
+    const run = await ev(page, traceFrameInPage, spec, `trace ${spec.label}`, LIMITS.deep);
+    assert.deepEqual(run.trace, { completed: run.bands }, `${spec.label}: every trace batch completes ${JSON.stringify(run.traceFailures)}`);
+    if (spec.normals) assert.deepEqual(run.normals, { completed: run.bands }, `${spec.label}: every normals batch completes`);
+    return run;
+  };
+  const alpha720 = 2 * Math.tan(Math.PI / 6) / 720;
+  const strataOf = kind => strata.filter(row => row.kind === kind);
+
+  // 1. Analytic rays (trace_rays, one batch per stratum and profile). Rev 4.8: both mandatory checks — the
+  // surface-v1 expanded-object envelope and analytic-inspection-v1 relative 1e-3 — with exact statuses under
+  // both. The inspection profile's floor and factor come from the pinned matrix metadata, never from here.
+  const analytic = strataOf('analytic-ray'), inspectionMeta = view.profiles['analytic-inspection-v1'];
+  assert.equal(inspectionMeta.toleranceScale, 0.1);
+  const INSPECTION = Object.freeze({ ...SURFACE_V1, toleranceFloor: inspectionMeta.toleranceFloor, toleranceFactor: inspectionMeta.toleranceFactor, stepMultiplier: inspectionMeta.stepMultiplier });
+  const analyticProfiles = [['surface', SURFACE_V1], ['inspection', INSPECTION]];
+  const analyticRuns = await ev(page, traceRaysInPage, { label: 'analytic', batches: analyticProfiles.flatMap(([, profile]) => analytic.map(row => {
+    const first = row.cases[0].inputs, pitch = 64;
+    return { modelId: first.model, depth: first.effective.depth, rays: row.cases.map(c => c.inputs.ray),
+      uniforms: passes.traceRaysUniforms({ modelId: first.model, effective: first.effective, count: row.cases.length, pitch, profile: { ...profile, alpha: alpha720 } }) };
+  })) }, 'analytic rays', LIMITS.deep);
+  const analyticRows = analytic.map((row, i) => {
+    assert.ok(row.cases.every(c => c.inputs.model === row.cases[0].inputs.model && JSON.stringify(c.inputs.effective) === JSON.stringify(row.cases[0].inputs.effective)), `${row.id}: one model per stratum`);
+    const decoded = Object.fromEntries(analyticProfiles.map(([name], p) => {
+      const run = analyticRuns[p * analytic.length + i];
+      assert.equal(run.outcome, 'completed', `${row.id} ${name}: ${run.reason}`);
+      return [name, passes.decodeRayResults(bytes(run.base64), row.cases.length)];
+    }));
+    return tracing.compareAnalyticStratum(row, decoded, tol);
+  });
+  results.push(...analyticRows);
+  report.push({ name: 'Analytic ray strata (recorded, per stratum; surface-v1 envelope and analytic-inspection-v1)', inspectionProfile: INSPECTION, rows: analyticRows.map(tracing.analyticReportRow) });
+  check(RENDERING_PASSES[0], () => {
+    assert.equal(analyticRows.length, 4);
+    for (const row of analyticRows) assert.equal(row.passed, true, `${row.id} ${row.state}: ${JSON.stringify({ belowFloor: row.belowFloor, countMismatch: row.countMismatch, nf: row.numericalFailures, checks: row.checks, failures: row.failures.slice(0, 6) })}`);
+    return { rows: analyticRows.map(({ failures, ...row }) => row) };
+  });
+
+  // 2. Detail ladders (trace_band with each stratum's camera, ladder-v1, central 32 × 32).
+  const ladderRows = [];
+  for (const row of strataOf('detail-ladder')) {
+    const run = await frame({ label: `ladder-${row.id}`, modelId: row.inputs.model, camera: row.camera, effective: row.inputs.effective, internalSize: { width: 1280, height: 720 },
+      region: { x: 624, y: 344, width: 32, height: 32 }, sampling: { seed: 0, sampleIndex: 0 }, profile: LADDER_V1 });
+    const decoded = decodeFrame(run, 1024);
+    ladderRows.push(tracing.compareLadderStratum(row, row.cases.map(c => decoded[(c.pixel[1] - 344) * 32 + (c.pixel[0] - 624)])));
+  }
+  check(RENDERING_PASSES[1], () => {
+    assert.equal(ladderRows.length, 144);
+    const invalid = ladderRows.filter(row => row.outcome === 'invalid');
+    assert.deepEqual(invalid.map(row => row.id), [], 'every ladder row decodes');
+    for (const anchor of view.anchors) assert.equal(ladderRows.filter(row => row.anchorId === anchor.id).length, 8, `${anchor.id}: one row per distance`);
+    const table = view.anchors.map(anchor => ({ anchorId: anchor.id, outcomes: Object.fromEntries(ladderRows.filter(row => row.anchorId === anchor.id).map(row => [row.distance, row.outcome])) }));
+    return { byOutcome: ladderRows.reduce((acc, row) => ({ ...acc, [row.outcome]: (acc[row.outcome] ?? 0) + 1 }), {}), table,
+      numericalFailures: ladderRows.reduce((n, row) => n + row.numericalFailures, 0), rows: ladderRows };
+  });
+
+  // 3. Adversarial rays (trace_rays, one batch per case: each case carries its own model and profile).
+  const adversarial = strataOf('adversarial-ray')[0];
+  const advBatches = adversarial.cases.map(c => {
+    const i = c.inputs, profile = { ...SURFACE_V1, alpha: alpha720, ...(i.profile.maxSteps ? { maxSteps: i.profile.maxSteps } : {}) };
+    if (i.profile.tolerance === 0) Object.assign(profile, { toleranceFloor: 0, toleranceFactor: 0, alpha: 0 });
+    const modelId = i.model ?? 'constant';
+    const effective = modelId === 'constant' ? { distance: Math.fround(i.constantExteriorDistance) } : modelId === 'quaternion-julia' ? { C: i.effective.C.map(Math.fround), kappa: Math.fround(i.effective.kappa) } : i.effective;
+    return { modelId, depth: effective.depth, rays: [{ ...i.ray, ...(i.interval ? { interval: i.interval } : {}) }],
+      uniforms: passes.traceRaysUniforms({ modelId, effective, count: 1, pitch: 1, profile }) };
+  });
+  const advRuns = await ev(page, traceRaysInPage, { label: 'adversarial', batches: advBatches }, 'adversarial rays', LIMITS.deep);
+  advRuns.forEach((run, i) => assert.equal(run.outcome, 'completed', `${adversarial.cases[i].id}: ${run.reason}`));
+  const advRow = tracing.compareAdversarialRays(adversarial, advRuns.map(run => passes.decodeRayResults(bytes(run.base64), 1)[0]));
+  results.push(advRow);
+  check(RENDERING_PASSES[2], () => {
+    assert.equal(adversarial.cases.length, 12);
+    assert.equal(advRow.passed, true, `${advRow.state}: ${JSON.stringify(advRow.failures)}`);
+    return { rows: advRow.rows };
+  });
+
+  // Fix round 1 probes (Codex run 20261021T203032Z-7350; recorded, not manifest passes): an interior
+  // camera through the product trace_band keeps `detail: interior` in the status word (B10-F3); Codex's far-origin
+  // ray (B10-F1), the tiny slab direction and an ordinary t = 2 advance (B10-F2) through trace_rays.
+  const interiorCamera = camera.lookAt({ ...SPACE_DEFAULTS.camera, positionLocal: [0.1, 0.2, 0.05], focusLocal: [1, 0, 0] }, [1, 0, 0]);
+  const interiorRows = {};
+  for (const modelId of ['sphere', 'box']) {
+    const run = await frame({ label: `interior-${modelId}`, modelId, camera: interiorCamera, effective: {}, internalSize: { width: 16, height: 9 }, region: { x: 0, y: 0, width: 16, height: 9 },
+      sampling: { seed: 0, sampleIndex: 0 }, profile: SURFACE_V1 });
+    interiorRows[modelId] = decodeFrame(run, 16 * 9);
+  }
+  const probeProfile = { ...SURFACE_V1, alpha: alpha720 };
+  const f1 = { origin: [50361504, 29461416, -83167144], direction: [-0.49572083353996277, -0.28999605774879456, 0.8186349272727966] };
+  const probeRuns = await ev(page, traceRaysInPage, { label: 'fix1-probes', batches: [
+    { modelId: 'sphere', rays: [f1], uniforms: passes.traceRaysUniforms({ modelId: 'sphere', effective: {}, count: 1, pitch: 1, profile: probeProfile }) },
+    { modelId: 'menger', depth: 1, rays: [{ origin: [8, -4, 0], direction: [2 ** -126, 1, 0] }], uniforms: passes.traceRaysUniforms({ modelId: 'menger', effective: { depth: 1 }, count: 1, pitch: 1, profile: probeProfile }) },
+    { modelId: 'constant', rays: [{ origin: [-3, 0, 0], direction: [1, 0, 0], interval: { enter: 2, exit: 10 } }], uniforms: passes.traceRaysUniforms({ modelId: 'constant', effective: { distance: 1 }, count: 1, pitch: 1, profile: probeProfile }) },
+  ] }, 'fix round 1 probes', LIMITS.deep);
+  const probes = probeRuns.map(run => { assert.equal(run.outcome, 'completed', run.reason); return passes.decodeRayResults(bytes(run.base64), 1)[0]; });
+  check('Fix round 1 probes: interior cameras keep their detail; far-origin, tiny-slab and t = 2 rays (recorded, not manifest passes)', () => {
+    for (const [modelId, rows] of Object.entries(interiorRows)) for (const r of rows) assert.deepEqual([r.status, r.reason, r.subreason, r.detail, r.t], ['unresolved', 'estimate-unavailable', null, 'interior', 0], `${modelId} interior camera`);
+    const [far, slab, ordinary] = probes;
+    assert.ok(!(far.status === 'miss' && far.steps === 0), `the far-origin ray is not an empty-interval miss: ${JSON.stringify(far)}`);
+    assert.notEqual(far.status, 'numerical failure');
+    assert.deepEqual([slab.status, slab.steps], ['miss', 0], `the tiny slab direction misses the box without failure: ${JSON.stringify(slab)}`);
+    assert.deepEqual([ordinary.status, ordinary.reason], ['miss', null], `the t = 2 advance runs to the explicit exit: ${JSON.stringify(ordinary)}`);
+    return { interior: Object.fromEntries(Object.entries(interiorRows).map(([k, rows]) => [k, rows[0]])), far, slab, ordinary };
+  });
+
+  // 4. Overview strata (trace_band with each stratum's frozen camera over the sample pixels' bounding region).
+  const overviewRows = [], overviewRegion = { x: 376, y: 96, width: 528, height: 528 };
+  for (const row of strataOf('fractal-overview')) {
+    const run = await frame({ label: row.id, modelId: row.inputs.model, camera: row.camera, effective: row.inputs.effective, internalSize: { width: 1280, height: 720 },
+      region: overviewRegion, sampling: { seed: 0, sampleIndex: 0 }, profile: SURFACE_V1 });
+    const decoded = decodeFrame(run, 528 * 528);
+    const caseResults = row.cases.map(c => decoded[(c.pixel[1] - 96) * 528 + (c.pixel[0] - 376)]);
+    overviewRows.push({ ...tracing.compareOverviewStratum(row, caseResults), wallMs: run.wallMs, terminations: tracing.terminationCounts(caseResults) });
+  }
+  results.push(...overviewRows);
+  check(RENDERING_PASSES[3], () => {
+    assert.equal(overviewRows.length, 7 + 42);
+    const failing = overviewRows.filter(row => !row.passed).map(({ disagreementsSample, depthMissesSample, ...row }) => ({ ...row, disagreementsSample, depthMissesSample }));
+    assert.deepEqual(failing, [], 'every overview stratum passes');
+    return { rows: overviewRows.map(({ disagreementsSample, depthMissesSample, ...row }) => row) };
+  });
+
+  // 5–6. Sphere frame (the default camera, 320 × 180): silhouette, then normals; a jittered sample too.
+  const sphereCamera = SPACE_DEFAULTS.camera, sphereSize = { width: 320, height: 180 }, full = { x: 0, y: 0, ...sphereSize };
+  const origin = camera.encodeOrdinaryOrigin(sphereCamera), worldOrigin = sphereCamera.positionLocal;
+  assert.ok(!origin.unavailable && origin.errorBoundLog2 <= -40, `the default camera origin transports as high + low (bound 2^${origin.errorBoundLog2})`);
+  const sphereRun = await frame({ label: 'sphere', modelId: 'sphere', camera: sphereCamera, effective: {}, internalSize: sphereSize, region: full, sampling: { seed: 1, sampleIndex: 0 }, profile: SURFACE_V1, normals: true });
+  const jitterRun = await frame({ label: 'sphere-jittered', modelId: 'sphere', camera: sphereCamera, effective: {}, internalSize: sphereSize, region: full, sampling: { seed: 1, sampleIndex: 5 }, profile: SURFACE_V1 });
+  const silhouette = (run, sampleIndex) => {
+    const decoded = decodeFrame(run, sphereSize.width * sphereSize.height);
+    const jitter = (i, j) => sampleJitter({ seed: 1, sampleIndex, pixel: [i, j] });
+    const mask = tracing.sphereSilhouette({ origin: worldOrigin, width: sphereSize.width, height: sphereSize.height,
+      rayDirection: (i, j) => camera.rayDirection(sphereCamera, i, j, sphereSize.width, sphereSize.height, jitter(i, j)),
+      centreDirection: (i, j) => camera.rayDirection(sphereCamera, i, j, sphereSize.width, sphereSize.height) });
+    let edge = 0, hits = 0, misses = 0;
+    const mismatches = [], nonMiss = [];
+    decoded.forEach((r, k) => {
+      const m = mask[k];
+      if (m.edge) { edge++; return; }
+      const hit = r.status === 'approximate hit';
+      if (hit !== m.hit) mismatches.push({ pixel: [k % sphereSize.width, Math.floor(k / sphereSize.width)], gpu: r.status, analytic: m.hit, marginPixels: (m.theta - m.beta) });
+      if (m.hit) hits++; else { misses++; if (r.status !== 'miss') nonMiss.push({ k, status: r.status }); }
+    });
+    return { decoded, edge, hits, misses, mismatches, nonMiss };
+  };
+  const centre = silhouette(sphereRun, 0), jittered = silhouette(jitterRun, 5);
+  check(RENDERING_PASSES[5], () => {
+    for (const [name, s] of Object.entries({ centre, jittered })) {
+      assert.deepEqual(s.mismatches.slice(0, 8), [], `${name}: ${s.mismatches.length} hit-mask mismatches away from the edge`);
+      assert.deepEqual(s.nonMiss.slice(0, 8), [], `${name}: pixels off the disc are misses`);
+      assert.ok(s.hits > 10000, `${name}: the disc covers ${s.hits} pixels`);
+    }
+    return Object.fromEntries(Object.entries({ centre, jittered }).map(([name, s]) => [name, { hits: s.hits, misses: s.misses, edgeExcluded: s.edge, mismatches: s.mismatches.length }]));
+  });
+
+  // Normals: the sphere's exact gradient; ε collapsed below the position resolution; a zero gradient
+  // (the constant zero field); unresolved samples (quaternion C = 0, the unit ball); depth preserved.
+  const collapsed = await frame({ label: 'sphere-collapsed-epsilon', modelId: 'sphere', camera: sphereCamera, effective: {}, internalSize: sphereSize, region: full, sampling: { seed: 1, sampleIndex: 0 },
+    profile: SURFACE_V1, normals: true, normalsProfile: { ...SURFACE_V1, toleranceFloor: 0, toleranceFactor: 2 ** -40 } });
+  const zero = await frame({ label: 'constant-zero', modelId: 'constant', camera: sphereCamera, effective: { distance: 0 }, internalSize: { width: 32, height: 18 }, region: { x: 0, y: 0, width: 32, height: 18 },
+    sampling: { seed: 1, sampleIndex: 0 }, profile: SURFACE_V1, normals: true, traceId: 'trace_band:constant', normalsId: 'normals_band:constant' });
+  // Under surface-v1 a C = 0 hit lies about 2τ outside the unit ball, so ε = 0.5τ samples stay outside
+  // (every normal must be available); a test-only normals profile with 8× the hit factor (ε = 4τ) puts
+  // samples inside (unavailable). Both are predicted per pixel.
+  const BALL_PROFILES = { surface: SURFACE_V1, wide: { ...SURFACE_V1, toleranceFactor: 4 } }, balls = {};
+  for (const [name, normalsProfile] of Object.entries(BALL_PROFILES)) balls[name] = await frame({ label: `quaternion-unit-ball-${name}`, modelId: 'quaternion-julia', camera: sphereCamera,
+    effective: { C: [0, 0, 0, 0], kappa: 0 }, internalSize: sphereSize, region: full, sampling: { seed: 1, sampleIndex: 0 }, profile: SURFACE_V1, normals: true, normalsProfile });
+  check(RENDERING_PASSES[4], () => {
+    const preserved = run => { assert.equal(run.depthAfter, run.depth, 'the normals pass leaves depth unchanged'); assert.equal(run.statusAfter, run.status, 'and status unchanged'); };
+    [sphereRun, collapsed, zero, ...Object.values(balls)].forEach(preserved);
+    const normalsOf = (run, count) => passes.decodeNormals(bytes(run.normal), count);
+    // (a) Sphere: within 1e-3 rad of the exact gradient p/|p| on >= 99 % of hits; non-hits unavailable.
+    const n = normalsOf(sphereRun, centre.decoded.length);
+    let hits = 0, good = 0, worst = 0, unavailableHits = 0;
+    centre.decoded.forEach((r, k) => {
+      if (r.status !== 'approximate hit') { assert.equal(n[k].available, false, `non-hit pixel ${k} has no normal`); return; }
+      hits++;
+      if (!n[k].available) { unavailableHits++; return; }
+      const d = camera.rayDirection(sphereCamera, k % sphereSize.width, Math.floor(k / sphereSize.width), sphereSize.width, sphereSize.height);
+      const p = worldOrigin.map((o, axis) => o + r.t * d[axis]), angle = tracing.angleBetween(n[k].normal, p);
+      worst = Math.max(worst, angle); good += Number(angle <= 1e-3);
+    });
+    assert.ok(100 * good >= 99 * hits, `sphere normals: ${good} of ${hits} hits within 1e-3 rad`);
+    // (b) ε below the effective position resolution: every hit keeps its depth and status, no normal.
+    const c = normalsOf(collapsed, centre.decoded.length), collapsedFrame = decodeFrame(collapsed, centre.decoded.length);
+    const collapsedHits = collapsedFrame.filter(r => r.status === 'approximate hit').length;
+    assert.ok(collapsedHits > 10000 && c.every(x => !x.available), 'indistinguishable sample positions make every normal unavailable');
+    // (c) A zero gradient: the constant zero field hits at entry, all samples resolve, the gradient is zero.
+    const zeroFrame = decodeFrame(zero, 32 * 18), zn = normalsOf(zero, 32 * 18);
+    const zeroHits = zeroFrame.filter(r => r.status === 'approximate hit').length;
+    assert.ok(zeroHits > 0 && zn.every(x => !x.available), 'a zero gradient makes the normal unavailable');
+    // (d) Unresolved samples: for C = 0 the slice κ = 0 is the unit ball and a sample is not escaped iff
+    // |q| <= 1. Predicted from the GPU depth in binary64 with a 1e-5 margin; ambiguous pixels are skipped.
+    const alpha = 2 * Math.tan(Math.PI / 6) / sphereSize.height, prediction = { unavailable: 0, available: 0, ambiguous: 0, disagreements: [] }, byProfile = {};
+    for (const [name, profile] of Object.entries(BALL_PROFILES)) {
+      const ballFrame = decodeFrame(balls[name], centre.decoded.length), bn = normalsOf(balls[name], centre.decoded.length), before = { ...prediction };
+      ballFrame.forEach((r, k) => {
+        if (r.status !== 'approximate hit') return;
+        const d = camera.rayDirection(sphereCamera, k % sphereSize.width, Math.floor(k / sphereSize.width), sphereSize.width, sphereSize.height);
+        const p = worldOrigin.map((o, axis) => o + r.t * d[axis]), eps = 0.5 * Math.max(profile.toleranceFloor, profile.toleranceFactor * alpha * r.t);
+        const radii = [0, 1, 2].flatMap(axis => [1, -1].map(sign => Math.hypot(...p.map((v, i) => v + (i === axis ? sign * eps : 0)))));
+        const expected = radii.some(radius => radius < 1 - 1e-5) ? false : radii.every(radius => radius > 1 + 1e-5) ? true : null;
+        if (expected === null) { prediction.ambiguous++; return; }
+        prediction[expected ? 'available' : 'unavailable']++;
+        if (bn[k].available !== expected) prediction.disagreements.push({ profile: name, k, expected, actual: bn[k].available, radii });
+      });
+      byProfile[name] = { available: prediction.available - before.available, unavailable: prediction.unavailable - before.unavailable, ambiguous: prediction.ambiguous - before.ambiguous };
+    }
+    assert.deepEqual(prediction.disagreements.slice(0, 5), [], `${prediction.disagreements.length} unit-ball normals disagree with the sample-resolution prediction`);
+    assert.ok(prediction.unavailable > 100 && prediction.available > 100, `both outcomes exercised: ${JSON.stringify(byProfile)}`);
+    return { sphere: { hits, good, unavailableHits, worstRad: worst }, collapsed: { hits: collapsedHits }, zeroGradient: { hits: zeroHits }, unitBall: { byProfile, disagreements: prediction.disagreements.length } };
+  });
+
+  // 7. Usability: the quaternion default view at 160 × 90 against B04's binary64 prediction.
+  const settings = usability.settings;
+  const usabilityRun = await frame({ label: 'usability', modelId: settings.model, camera: settings.camera, effective: settings.effective, internalSize: { width: settings.width, height: settings.height },
+    region: { x: 0, y: 0, width: settings.width, height: settings.height }, sampling: { seed: 0, sampleIndex: 0 }, profile: { ...SURFACE_V1, maxIterations: settings.maxIterations, maxSteps: settings.maxSteps } });
+  const usabilityResult = tracing.compareUsability(usability, decodeFrame(usabilityRun, settings.width * settings.height));
+  results.push({ id: records.USABILITY_STRATUM, kind: 'usability', role: 'mandatory', state: usabilityResult.passed ? 'passed' : 'failed', passed: usabilityResult.passed, ...usabilityResult });
+  check(RENDERING_PASSES[6], () => {
+    assert.equal(usabilityResult.passed, true, JSON.stringify(usabilityResult.rows));
+    return usabilityResult;
+  });
+
+  // 8. Pick through the B09 renderer.
+  const picked = await ev(page, pickInPage, undefined, 'renderer pick', LIMITS.deep);
+  check(RENDERING_PASSES[7], () => {
+    assert.equal(picked.first.outcome, 'completed', JSON.stringify(picked.first)); assert.equal(picked.second.outcome, 'completed');
+    assert.equal(picked.fresh.status, 'approximate hit', JSON.stringify(picked.fresh));
+    const resolved = passes.resolvePick(picked.fresh);
+    assert.equal(resolved.status, 'resolved', JSON.stringify(resolved));
+    assert.deepEqual(resolved.point.anchor, picked.camera.anchor);
+    // The pinned sample's depth against the analytic sphere along the same ray, and the reconstructed hit's distance.
+    const { pixel, jitter, dimensions } = picked.fresh.sample;
+    const d = camera.rayDirection(picked.camera, pixel[0], pixel[1], dimensions.width, dimensions.height, jitter), o = picked.camera.positionLocal;
+    const b = o.reduce((sum, v, i) => sum + v * d[i], 0), c = o.reduce((sum, v) => sum + v * v, 0) - 1, exact = -b - Math.sqrt(b * b - c);
+    const tau = Math.max(1e-6, 0.5 * (2 * Math.tan(Math.PI / 6) / dimensions.height) * picked.fresh.depth);
+    assert.ok(exact - picked.fresh.depth >= -1e-5 && exact - picked.fresh.depth <= tau + 1e-5, `pick depth ${picked.fresh.depth} vs analytic ${exact} (τ ${tau})`);
+    const radius = Math.hypot(...resolved.point.positionLocal);
+    assert.ok(radius - 1 >= -1e-5 && radius - 1 <= tau + 1e-5, `reconstructed hit at radius ${radius}`);
+    assert.deepEqual(passes.resolvePick(picked.corner), { status: 'unresolved', reason: 'no-hit', rayStatus: 'miss' });
+    for (const [why, value] of Object.entries(picked.stale)) assert.deepEqual(value, { stale: true }, `a pick with a mismatched ${why} is rejected`);
+    assert.equal(picked.current.status, 'approximate hit', 'the current request picks');
+    assert.equal(picked.current.depth, picked.fresh.depth, 'the same geometry gives the same pinned depth');
+    return { size: picked.size, fresh: { depth: picked.fresh.depth, exact, tau, radius, pixel, jitter }, stale: Object.keys(picked.stale), publications: picked.publications, reports: picked.reports };
+  });
+
+  // Validation records: tracing per family (only when every covered mandatory stratum passed) and
+  // geometric per anchor (the agreeing ladder distances only).
+  const tracingRecords = records.buildTracingRecords({ results, implementationHashes: setup.implementationHashes });
+  const geometric = records.buildGeometricRecords({ ladders: ladderRows, anchors: view.anchors, implementationHashes: setup.implementationHashes });
+  const registry = records.createValidationRegistry();
+  for (const record of [...tracingRecords.records, ...geometric.records]) registry.register(record);
+  const passedIds = new Set(results.filter(row => row.passed).map(row => row.id));
+  for (const recordId of records.TRACING_RECORD_IDS) assert.equal(tracingRecords.records.some(r => r.recordId === recordId), records.requiredTracingStrata(recordId).every(id => passedIds.has(id)), `${recordId} is registered iff its strata passed`);
+  report.push({ name: 'Tracing and geometric validation records (recorded; registered iff their strata passed)', registered: registry.list().map(r => r.recordId),
+    withheld: [...tracingRecords.withheld, ...geometric.withheld], records: registry.list() });
+
+  const finish = await ev(page, renderingFinishInPage, undefined, 'rendering teardown');
+  report.push({ name: 'Rendering teardown (recorded)', ...finish });
+  assert.deepEqual(finish.uncaptured, [], `no uncaptured WebGPU errors: ${JSON.stringify(finish.uncaptured)}`);
+  assert.deepEqual(failedChecks, [], `rendering checks failed: ${failedChecks.join('; ')}`);
+}
+
 // ---- harness ---------------------------------------------------------------------------------------
 
 async function readEffectiveEnvironment(context) {
@@ -1381,7 +1891,7 @@ async function ensureServer() {
 
 let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
-const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence };
+const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence, rendering: runRendering };
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
 let source = null, serverOwnership = null;
 
@@ -1418,7 +1928,7 @@ try {
   ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
   console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
   assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
-  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence'].includes(options.group)) {
+  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering'].includes(options.group)) {
     // One launch under the complete profile; the application page is a WebGL (Plane) page, so its close
     // in the finally goes through the local expected-backend drain wrapper (drainExpecting).
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });

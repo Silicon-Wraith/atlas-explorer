@@ -6,7 +6,9 @@ inputs; requested-input rendering is a separately labelled experiment. This is a
 conditional engineering error budget, not a proof of fractal geometry or a global
 binary32 error bound. CPU screening is empirical. A failed mandatory floor blocks
 qualification; floors change only through a recorded, user-approved amendment. The 2026-10-21
-amendment below was approved before any GPU comparison.
+amendment below was approved before any GPU comparison. The rev 4.8 analytic-depth
+amendment (#depth, user-approved 2026-10-21) is post-discovery; the original failed
+evidence keeps its original matrix identity.
 
 <a id="arithmetic"></a>
 ## Arithmetic, fusion and conditioning
@@ -99,14 +101,63 @@ recorded amendment, never tuning against measured GPU output.
 <a id="depth"></a>
 ## Depth and convergence
 
-Analytic depth acceptance is max(10^-6, 10^-3*|t|). Sphere answers come from the
-quadratic, rotated boxes from local slabs, Menger from merged leaf-box slabs;
-none uses the marcher as its own geometric oracle. Project 0 A.4 tangent and
-face-edge exclusions are retained. An r32float depth output contributes at
-most u32*|t| for normal values, much less than 10^-3*|t|. Camera origin,
-direction and field errors are additional terms: depth quantization alone
-cannot bound the reconstructed world position. Grazing incidence amplifies
-all of them, motivating the preregistered geometric exclusions.
+Analytic oracle depths t* come from the sphere quadratic, rotated-box local
+slabs and merged Menger leaf-box slabs; none uses the marcher as its own
+geometric oracle. Project 0 A.4 tangent (0.02) and face-edge (0.001)
+exclusions, the eligible rays, floors, exact statuses and numerical-failure
+rules are unchanged. Two mandatory checks apply to every analytic stratum
+(user-approved amendment 2026-10-21, rev 4.8, post-discovery).
+
+**Stopping displacement is not numerical error.** surface-v1 accepts the
+first sample whose exterior distance falls below rho = tau(t) =
+max(10^-6, 0.5*alpha*t), alpha = 2*tan(30 deg)/720, so tau/t =
+0.0008018753738744802 when the floor is inactive. For a planar face the
+exterior distance is the remaining ray distance times |n.d|, so the hit rule
+alone permits a ray-depth shortfall approaching tau/|n.d|. It exceeds
+10^-3*t above about 36.69 degrees of incidence. The original analysis
+budgeted only quantization and conditioning; B04's binary64 tracer then
+failed the relative 10^-3 criterion on 92/27/81/95 of 293/207/590/584
+eligible hits (sphere/3/9: t* = 3.68377223398316, stopped at
+3.674657889705732, error 0.0091143 against 0.0036838). Curved surfaces and
+competing Menger features make a local tau/cos(theta) unsound, so the
+displacement is budgeted geometrically.
+
+**Check 1, surface-v1 envelope.** For each eligible positive hit, rho =
+tau(t*) and delta = max(10^-6, 10^-3*|t*|). Let t- be the first forward
+intersection with the object expanded outward by rho: a sphere of radius
+1 + rho (an independent quadratic; the exact Euclidean rho-offset), the
+rotated box with every local half-extent increased by rho (local slabs; it
+contains the Euclidean rho-offset, whose corners are rounded), and the union
+of Menger leaves each so inflated (it contains the offset of the union).
+Every point with exterior distance below rho lies in the expansion, and the
+marcher's tau(t) <= tau(t*) for t <= t*, so a conforming hit stops no earlier
+than t- and, since no step crosses the surface, no later than t*. The
+requirement is max(0, t-) - delta <= t <= t* + delta: the displacement
+budget is t* - t-, and delta is the unchanged numerical allowance on each
+side. t-, rho and delta are frozen per case as case.envelope. Neither bound is
+fitted to a measured error. Preflight: the displacement reaches 2.503,
+1.604, 4.262 and 4.262 delta (sphere, box, Menger 1, Menger 2); the binary64
+tracer meets the envelope on every eligible hit, with exact statuses.
+
+**Check 2, analytic-inspection-v1.** The inspection profile scales the whole
+surface-v1 tolerance, floor included, by 0.1: tau_i(t) = 0.1*max(10^-6,
+0.5*alpha*t) = max(10^-7, 0.05*alpha*t). Multiplier 0.9, the 512-step cap,
+720-pixel height and 60-degree field are unchanged; the GPU receives
+toleranceFloor 1e-7 and toleranceFactor 0.05 (binary32-rounded, a relative
+change near 2^-24). On the unchanged eligible rays it requires
+|t - t*| <= delta. Its stopping displacement, bounded by the same expansion at
+0.1*rho, is at most 0.253, 0.160, 0.426 and 0.426 delta, which leaves at least
+0.574 delta for numerical error. Binary64 tracing gives zero depth and zero
+status failures; worst |t - t*| / delta is 0.233, 0.153, 0.426 and 0.426.
+
+**Numerical allowance (both checks).** An r32float depth output contributes
+at most u32*|t| = 2^-24*|t| for normal values. Binary32 field inputs
+(high + t*d) + low, direction rounding and the analytic distance contribute
+errors of order 10 u32 * (|o| + t) <= 10^-5 * t for |o| <= 4.5 and t >= 1,
+two orders below delta. The surface-v1 floor is inactive on these rays
+(eligible t* >= 3). Grazing incidence amplifies every term; the preregistered
+exclusions remain the only screen. CPU preflight does not establish GPU
+qualification or accuracy outside the frozen sampling domain.
 
 <a id="overview"></a>
 ## Approved overview protocol (2026-10-21)
@@ -230,6 +281,11 @@ avoids repeating identical camera origins and parameters in 197,632 cases.
 Expected comparison records omit null reasons and un-compared step counts;
 missing reason/subreason means null. Adversarial ray records retain all fields.
 Point rows keep their requested coordinates, effective inputs and bit patterns.
+Analytic rows carry `checks` (`surface-envelope`, `inspection-relative`) and a
+binary64 `cpuPreflight`; each eligible positive hit carries `envelope: {rho, delta,
+tMinus}`. The header's `profiles` freezes surface-v1 and `analytic-inspection-v1`
+(scale 0.1, floor 1e-7, factor 0.05, multiplier and caps unchanged, sampling 720
+pixels and 60 degrees); `rules.analytic` freezes both criteria, both mandatory.
 
 `eligible` and `floor` are dictionaries of counts. `denominators` on generic
 rows distinguish available continuous quantities from all candidate statuses.

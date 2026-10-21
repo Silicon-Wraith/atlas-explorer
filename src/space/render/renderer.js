@@ -5,7 +5,7 @@ import { createScheduler } from '../../shared/scheduler.js';
 import { createRenderRequest, isPublishable, RENDER_OUTCOMES, RUNTIME_ID } from '../../shared/render-request.js';
 import { createReportBuilder, observed, UNAVAILABLE } from '../../shared/render-report.js';
 import { createSpaceRequest, spaceWorkspaceFields } from '../render-adapter.js';
-import { effectiveParameters } from '../numerics/parameters.js';
+import { effectiveParameters, escapeRadius } from '../numerics/parameters.js';
 import { getModel } from '../models/registry.js';
 import { basis, encodeOrdinaryOrigin } from '../camera.js';
 import { appearanceKey, accumulationKey, sampleKey } from './keys.js';
@@ -198,6 +198,8 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       sampleIndex: sample, seed: sampling.seed, lightingStage: quality.lighting.stage === 'full' ? 1 : quality.lighting.stage === 'diagnostic' ? 2 : 0,
       jitter: [jitter.dx, jitter.dy], maxIterations: quality.iteration.maxIterations, maxSteps: quality.tracing.maxSteps,
       stepMultiplier: quality.tracing.stepMultiplier, toleranceFloor: quality.tracing.toleranceFloor,
+      // B10: τ(t) = max(toleranceFloor, toleranceFactor·α·t), and the quaternion's outward-rounded B02 R(C).
+      toleranceFactor: quality.tracing.toleranceFactor, bound: effective.C ? escapeRadius(effective.C).bound : undefined,
       power: effective.power, C: effective.C, kappa: effective.kappa, depth: effective.depth, ...extra.uniforms };
     // Camera transport is evaluated only when a descriptor asks for it. No world
     // position is collapsed into a Number; B05 supplies high/low binary32 parts.
