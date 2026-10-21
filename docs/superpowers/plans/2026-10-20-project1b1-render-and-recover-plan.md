@@ -35,9 +35,10 @@ presentation) for Space, WebGL 2 for Plane (unchanged), the Node 20 built-in tes
 Playwright 1.59.1 with installed Chrome headed on the physical NVIDIA GPU. No new dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-10-19-project1-design.md`. The governing baseline is the
-approved rev 3.2. This plan additionally proposes, for the user's approval, rev 4 §5.2/§10.1's
-anchored camera representation for ordinary Space, the §9 backend annex (below), and the listed
-release-placement clarifications; other §21 work is outside 1b.1. Governed by
+approved rev 3.2 as amended by rev 4.2's user decisions of 2026-10-21: rev 4 §5.2/§10.1's anchored
+camera representation is approved for ordinary Space, the §9.1 WebGPU backend annex (below) is
+adopted as normative spec text, the §19.2 Q2/Q5/Q6 defaults are confirmed with gamepad exploration
+added (§13.3; task B12b), and the §13.2 erratum is applied; other §21 work is outside 1b.1. Governed by
 `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md` (amendments A1, A2). Project 0's
 recorded decision and limitations are binding inputs: `docs/reports/project0/platform-decision.md`
 (E7 headed-only; E10 WebGPU selected by the user with the mechanical outcome inconclusive; G5 as
@@ -50,12 +51,18 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4.1 — **Codex READY** (run 20261021T012346Z-8408, verified at commit 5914fc9) after
+**Revision:** 4.2 — applies the user's decisions of 2026-10-21 (the §9.1 annex adopted, the anchored
+camera approved for ordinary Space, §19.2 Q2/Q5/Q6 confirmed, the §13.2 erratum) and adds controller
+(gamepad) exploration of Space at the user's request ("We should support joystick for exploration as
+well."): new task B12b and B14 wiring, co-designed with Codex — **Codex READY** for the
+standard-layout scope (runs 20261021T033701Z-268a and 20261021T034408Z-2f95, resuming the plan
+session 20261021T012346Z-8408; an earlier attempt 20261021T033535Z-8c31 failed on service capacity
+with no reply). Spec §19.2 Q11 (supported controller models) is open. **Rev 4.1** — **Codex READY** (run 20261021T012346Z-8408, verified at commit 5914fc9) after
 five rounds: joint decomposition 20261020T211454Z-d306 and reconciliation 20261020T212435Z-94a5,
 then the co-author reviews 20261020T214114Z-aba8 (fifteen findings), 20261021T010758Z-8a0a (nine)
 and 20261021T011813Z-1807 (three blocking, one editorial), all applied. Claude drafted; both peers
-agreed the structure and reviewed the whole. Awaiting the user's approval and the four items under
-*Items for the user*. **Authors:** Claude and Codex as peers
+agreed the structure and reviewed the whole. The four items under *Items for the user* were decided
+on 2026-10-21; the plan awaits the user's approval and the answer to spec §19.2 Q11. **Authors:** Claude and Codex as peers
 (AGENTS.md/CLAUDE.md protocol). The verbatim record is
 `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md` ("PLAN 1b.1" entries), archived to
 `docs/codesign/project1-log.md` at the milestone.
@@ -68,9 +75,10 @@ agreed the structure and reviewed the whole. Awaiting the user's approval and th
   control, basic flight; view modes shaded, normals, depth, step count, termination reason (orbit
   colour is 1b.2); the estimator-category indicator and pending mark; Space scene JSON files.
   **Not in 1b.1:** the Plane → Space bridge, instruments, inspector and precision badge (1b.2;
-  §13.2's indicator list is read with §3's placement — proposed erratum); presets, compositions,
+  §13.2's indicator list carries "(1b.2)", erratum applied in spec rev 4.2); presets, compositions,
   discovery cards, Space export, and the fog, pause and update *controls* (1b.3, §13.9); deep zoom
-  (1c); Space share links and touch Space navigation (§19.2 Q5/Q6, provisional defaults below).
+  (1c); Space share links and touch Space navigation (spec §19.1 Q5/Q6, user decisions 2026-10-21).
+  **Gamepad exploration is in 1b.1** (spec §13.3; user decision 2026-10-21): see B12b.
   **Implemented without a control in 1b.1:** the scheduler's pause condition and one-snapshot
   Update semantics (used by hidden views and workspace deactivation; Node-tested in B07). **Fog:**
   `appearance.fog` validates only as `{ enabled: false }`; an enabled fog is rejected as invalid,
@@ -147,10 +155,12 @@ agreed the structure and reviewed the whole. Awaiting the user's approval and th
   the recentre bound 2⁻⁴⁰ × scale (`RECENTRE_BOUND_LOG2 = −40`); `MAX_PARAMETER_DIGITS = 64`;
   camera limits in B02; the neutral
   inspection light ℓ = normalize(1, 0.6, 1.5) with 0.15 + 0.85·max(0, n·ℓ) (Project 0 A.5).
-- **Provisional product defaults (spec §19.2, for the user's confirmation):** Q2 — Space opens
-  with the neutral inspection lighting (presets arrive in 1b.3); Q5 — desktop-first; Space has no
-  touch gestures in 1b.1 and Plane's mobile behaviour is preserved; Q6 — scene files in 1b.1,
-  discovery cards in 1b.3, Space share URLs deferred pending the user's decision.
+- **Product decisions (spec §19.1; confirmed by the user, 2026-10-21):** Q2 — Space opens with the
+  neutral inspection lighting (presets arrive in 1b.3); Q5 — desktop/laptop first (mouse, trackpad,
+  keyboard); Space has no touch gestures in Project 1 and Plane's mobile behaviour is preserved; the
+  user added "We should support joystick for exploration as well." — browser Gamepad API
+  exploration of Space (B12b); Q6 — scene files in 1b.1, discovery cards in 1b.3, Space share URLs
+  deferred beyond Project 1.
 - **Peer handoff, logging, storage, whole files, module paths:** as in the 1a plan (Codex never
   commits; `codex_bridge.py run --mode new-worktree`; every task reviewed by the other peer before
   it is complete; exchanges logged verbatim; scratch on `/mnt/ml_storage/scratch`, never `/tmp`;
@@ -185,7 +195,9 @@ itself. Each is pinned by named tests in its owning task.
    evidence`.
 4. **Input that outlives its owner** — flight that keeps moving after blur or a workspace switch,
    a captured drag that survives deactivation, a stale focus pick that moves the camera, or a
-   hidden workspace that keeps rendering. *B12:* `a flight run commits on escape, blur and
+   hidden workspace that keeps rendering, or a held controller that resumes motion. *B12b:* `held
+   controls across blur, workspace switching or controller replacement cause no resumed movement`;
+   `disconnect mid-run commits the last preview and zeroes velocity`. *B12:* `a flight run commits on escape, blur and
    visibility loss with one entry and zero velocity afterwards`; `a focus whose pick is stale or
    unresolved starts no gesture and leaves the camera where it was`. *B14:* `deactivation commits
    the last preview exactly once and a later capture-loss callback cannot cancel it`; `a late
@@ -218,8 +230,9 @@ itself. Each is pinned by named tests in its owning task.
 | B10 | Primary tracing, normals and pick data; geometric validation (analytic rays, adversarial rays, convergence) before decorative shading | Claude | B04, B05, B08, B09 | 4 |
 | B11 | Lighting, bounded shadows and AO, diagnostic display, seeded jitter, linear accumulation, display mapping; shared palettes | Claude | B09, B10 | 5 |
 | B12 | Orbit, pan, dolly, orientation control, flight, Space-owned gestures, stale-safe focus, camera-exterior status | Codex | B03, B05, B09, 1a T04 | 4 |
+| B12b | Controller (gamepad) exploration: snapshot decoding, dead zones and response, input state machine, one-entry runs, selection, arming and suspension (standard layout) | Codex | B12 | 5 |
 | B13 | Recovery orchestration: cancellation, failed allocation, stalled work, loss and repeated loss, preserving the investigation | Codex | B06 (contract), B07, B09 | 4 |
-| B14 | **Checkpoint:** the Space workspace, the workspace switcher, the activation contract, panel, indicators, diagnostics, scene files | Claude | B10–B13; **1a T12 merged** | 6 |
+| B14 | **Checkpoint:** the Space workspace, the workspace switcher, the activation contract, panel, indicators, diagnostics, scene files, controller polling and status | Claude | B10–B13, B12b; **1a T12 merged** | 6 |
 | B15 | Headed interaction and recovery acceptance, frozen performance acceptance, the recorded investigation, the commit audit, handoff | Codex | B14; **1a T13** | 7 |
 
 Each task has one implementer and the other peer's read-only review; shared ownership is not used.
@@ -244,11 +257,13 @@ The `8eeed51` planning snapshot; reconciled against the accepted 1a commit befor
 | **T12** | not started | **(1a, unlanded)** `createShell(root) → {$, toast, showDialog}`, `createPlaneWorkspace({shell, discoveries, sourceId?}) → {inspection, destroy()}`, `bindPlaneNavigation(...) → {reset()}`, `createNotifier`, `installDialogs`, `src/app.js` as composition root — **hard dependency for B14**; `activate()`/`deactivate()` are **new B14 methods**, not promised T12 exports |
 | **T13** | not started | **(1a, unlanded)** `scripts/audit-gates.mjs`, `scripts/gate/ledger.mjs` (`auditLedger`, `judgeRecord`, `requiredIdsFromManifest`) — B15 |
 
-## WebGPU backend annex (spec §9; proposed spec amendment §9.1, for the user's approval)
+## WebGPU backend annex (spec §9.1; adopted as normative spec text by the user, 2026-10-21)
 
 Spec §9 defers the WebGPU specifics to an annex written after Project 0 records its configuration;
 that record exists (E10, `webgpu-g5d-decision.json`, `launch-remediation.json`). This annex binds
-B00, B06, B08, B10 and B11, and is proposed for adoption into the spec by reference.
+B00, B06, B08, B10 and B11. The user adopted it on 2026-10-21; spec rev 4.2 §9.1 carries it as
+normative text, identical in substance (the spec's Launch bullet spells out the profile this plan
+cites from Global Constraints); any later amendment changes both together.
 
 - **Adapter and device.** `navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })`
   once per acquisition attempt; `adapter.info` is read on the retained adapter before
@@ -1525,6 +1540,119 @@ action away). Excludes DOM layout (B14).
 
 ---
 
+### Task B12b: Controller (gamepad) exploration — decoding, input state machine, history (spec §13.3, §6, §15; user decision 2026-10-21)
+
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B12. **Scope:** standard-layout controllers
+(`mapping === 'standard'`); spec §19.2 Q11 is open — if the user requires non-standard joysticks or
+flight sticks, a recorded plan amendment adds an explicit mapping profile here and a configure/select
+control to B14 **before this task starts**. Co-designed with Codex (runs 20261021T033701Z-268a,
+20261021T034408Z-2f95; READY for this scope).
+
+**Files:**
+- Create: `src/space/gamepad.js`
+- Modify (additive, B12's files): `src/space/gestures.js` (`'gamepad'` in `SPACE_KINDS`),
+  `src/space/flight.js` (`setAnalogInput`; stop reasons `disconnect`, `input-suspended`)
+- Test: `tests/unit/space-gamepad.test.js`; additions to `tests/unit/space-gestures.test.js`
+
+**Interfaces:**
+- Consumes: `createSpaceGestures` and `createFlight` (B12); camera functions `orbit`, `pan`,
+  `dolly`, `overview`, `resetOrientation` (B05); the speed range validated by B12's speed control.
+- Produces (`gestures.js`, additive): `SPACE_KINDS` gains `'gamepad'`; a `gamepad` run uses the
+  drag-style path `drag('gamepad', camera)` / `dragCommit('gamepad')` / `dragCancel('gamepad')`,
+  never the wheel-burst timer.
+- Produces (`flight.js`, additive): `setAnalogInput({forward, strafe, rise, yaw, pitch})`
+  (normalized demands in [−1, 1]; non-finite → 0); `tick(now)` stays the sole continuous flight
+  camera writer and combines keyboard and analog demands; `stop(reason)` clears analog demands as
+  well as keyboard state; `stop` reasons gain `'disconnect' | 'input-suspended'`.
+- Produces (`gamepad.js`):
+  - `GAMEPAD_DEFAULTS = {stickDeadZone: 0.15, triggerDeadZone: 0.05, lookRadPerSec: Math.PI / 2,
+    panFocusHeightsPerSec: 0.5, dollyDoublingsPerSec: 1, neutralCommitMs: 200, maxElapsedMs: 100}`
+    (plan defaults, not spec constants).
+  - `STANDARD_MAPPING` (frozen; standard-layout indices, Xbox-style labels, axis signs): axes 0/1
+    left stick X/Y, 2/3 right stick X/Y (up = negative Y, frozen as "push up = pitch up / forward");
+    buttons 0 A, 1 B, 3 Y, 4 LB, 5 RB, 6 LT (analog), 7 RT (analog), 8 Back/View, 9 Start/Menu,
+    12–15 D-pad up/down/left/right.
+  - `shapeStick(x, y, deadZone) → [x, y]`: `r = hypot(x, y)`; `r ≤ d → [0, 0]`; otherwise
+    `(v / r) · ((min(r, 1) − d) / (1 − d))²` (direction preserved). `shapeTrigger(v, deadZone)` is
+    the scalar analogue. Missing or non-finite components → 0.
+  - `decodeSnapshot(gamepad) → {status: 'ok' | 'unsupported-layout' | 'disconnected', motion:
+    {orbitYaw, orbitPitch, dolly, panX, panY, forward, strafe, rise, yaw, pitch}, buttons: {...}}`
+    (pure; reads only `mapping`, `connected`, `axes`, `buttons[i].pressed/value`; never `timestamp`).
+  - `createGamepadInput({getGamepads, gestures, flight, getCamera, cameraOps, clock, defaults,
+    onStatus}) → {poll(now), setEligible(eligible, reason), status(), destroy()}`:
+    - **Status:** `'unavailable'` (no API, or `getGamepads()` throws, e.g. `SecurityError`) |
+      `'waiting'` ("Press a controller button to connect"; an empty list is not proof of absence) |
+      `'connected'` | `'unsupported-layout'`; `onStatus({state, id, index})` on change. The
+      discovery interaction performs no navigation.
+    - **Selection:** lowest eligible index first, kept until it disconnects; a newly connected pad
+      never steals control; a replacement starts disarmed; disconnection of an unselected pad
+      changes status only.
+    - **Arming:** after connection, resumption (`setEligible(true)`), replacement, mode change or
+      ownership loss, motion controls must be observed neutral and action buttons released before
+      input is accepted.
+    - **Per poll (called once per workspace animation frame, before `flight.tick`):** elapsed time
+      from the previous poll clamped to `maxElapsedMs`; the baseline resets on suspension. Buttons
+      act on rising edges: Start toggles flight; B stops flight (`stop('stop-key')`); Back
+      overview; Y orientation reset; LB/RB halve/double speed within the speed range (once per
+      press). A jump (overview, reset) first calls `stopNavigation`/commits the open run, then
+      applies one camera-only jump, and suppresses continuous motion for that poll. **Orbit mode:**
+      left stick orbit yaw/pitch at `lookRadPerSec`, right stick Y dolly (×2 per second at full
+      deflection, exponential), right stick X and D-pad pan (½ visible focus-plane height per
+      second); all active demands are composed into one pose and submitted as **one**
+      `drag('gamepad', pose)` preview. **Flight mode:** left stick forward/strafe, right stick
+      yaw/pitch (upright, no roll) at `lookRadPerSec` (flight speed never scales angular rate),
+      RT/LT rise/descend along world Z; translation = flight speed with the combined vector's
+      magnitude capped at 1; delivered only through `flight.setAnalogInput` (no direct camera
+      write).
+    - **History:** an orbit run begins at the first accepted non-neutral motion and commits
+      (`dragCommit('gamepad')`) after motion controls (sticks, D-pad, triggers) have been observed
+      neutral for `neutralCommitMs`, measured from an observed neutral sample, never from the last
+      preview, so a delayed frame cannot split a held stick. Within flight, the `flight` gesture is
+      the single entry; source ownership (desktop vs controller) is separate from history ownership,
+      so an open flight gesture does not reject controller samples.
+    - **Ownership:** while a pointer drag, wheel burst or key-repeat run is open, controller orbit
+      motion is ignored and vice versa (first owner wins); after losing ownership the pad re-arms.
+      Escape, stop, suspension and selected-controller disconnection always stop movement.
+    - **Suspension:** `setEligible(false, reason)` (inactive activation token, preparation not
+      verified, hidden document, unfocused window, parameter editing, modal dialog) and
+      selected-controller disconnection commit an open run exactly once, call
+      `flight.stop('input-suspended' | 'disconnect')`, zero demands and disarm.
+  - Controller selection, button state and mapping are runtime state, never written to the scene.
+
+**Design assertions:** §13.3 (controller orbit, pan, dolly and basic flight for supported layouts;
+one poll per frame with no second loop; at most one camera preview per poll through ordinary
+scheduler admission; neutral re-arming; stable selection; eligibility; unavailable API leaves other
+navigation intact); §6 (one continuous controller run is one gesture and one camera-history entry;
+camera-only jumps add one entry; undo never moves the camera); §15 (disconnect or suspension stops
+movement and commits once). Excludes DOM, polling scheduling and status layout (B14). Nothing
+imports `src/plane/`. Physical devices are unqualified until exercised.
+
+- [ ] **Step 1: Write the failing tests** (fake `Gamepad` snapshots with `mapping`, `connected`,
+  `axes`, `buttons[{pressed, value}]`, `timestamp`; fake clock; fake gestures/flight recording
+  calls): `inputs inside the dead zone produce no motion`; `the radial curve squares the magnitude
+  and preserves direction`; `non-finite or missing axes produce zero demand`; `a non-standard
+  mapping is reported as an unsupported layout and drives nothing`; `a stick run is one
+  camera-history entry`; `held deflection across a delayed frame remains one history entry`;
+  `equal-duration constant input at different frame rates produces equivalent movement`; `one poll
+  produces at most one preview and flight receives one update per frame`; `disconnect mid-run
+  commits the last preview and zeroes velocity`; `held controls across blur, workspace switching or
+  controller replacement cause no resumed movement`; `polling while ineligible does nothing`;
+  `overview and reset stop flight and commit the run before the jump`; `buttons act on rising edges
+  and a held bumper changes speed once`; `a newly connected controller does not steal control and an
+  unselected disconnect changes status only`; `a pointer drag owns the camera and controller orbit
+  input is ignored until re-armed`; `a missing API or a throwing getGamepads reports unavailable and
+  keyboard navigation still works`; `Gamepad.timestamp is never used to suppress held motion`.
+- [ ] **Step 2: Skeleton and RED** — `--expect-fail "a stick run is one camera-history entry"`.
+- [ ] **Step 3: Implement** `gamepad.js` and the additive B12 hooks against the fakes (the
+  integration this task closes: controller snapshots → demands → gestures/flight → history).
+- [ ] **Step 4: GREEN**, `npm test`.
+- [ ] **Step 5: Commit** — `"Add Space controller (gamepad) exploration (1b.1 B12b)"`, then the gate.
+
+**Expected outputs:** controller exploration that is Node-testable without a DOM, a GPU or a
+physical controller; seventeen named tests passing.
+
+---
+
 ### Task B13: Recovery orchestration (spec §7.3, §14, §15)
 
 **Owner:** Codex. **Reviewer:** Claude. **Depends on:** B06 (contract), B07, B09.
@@ -1575,7 +1703,7 @@ pause); recovery never touches the scene, undo history or camera history.
 
 ### Task B14: Checkpoint — the Space workspace, the switcher and the activation contract (spec §13.1–13.3, §14, §15, §4.1)
 
-**Owner:** Claude. **Reviewer:** Codex. **Depends on:** B10–B13; **1a T12 merged** (and
+**Owner:** Claude. **Reviewer:** Codex. **Depends on:** B10–B13, B12b; **1a T12 merged** (and
 transitively T05, T07, T08, T09b, T10, T11); the dependency table reconciled against the accepted
 1a commit.
 
@@ -1615,10 +1743,19 @@ transitively T05, T07, T08, T09b, T10, T11); the dependency table reconciled aga
   the orientation control, Back/Forward, undo/redo, "Save scene" (downloads `atlas.scene` JSON via
   `encodeSceneFile`) and "Open scene" (file input → `decodeSceneFile` → `restoreScene`: one undo
   entry and one camera entry; invalid files reported without changing the scene); graphics
-  diagnostics extended with the backend identity and tracked inventory.
+  diagnostics extended with the backend identity and tracked inventory. **Controller wiring
+  (B12b):** the workspace's animation-frame callback calls `gamepadInput.poll(now)` once, before
+  `flight.tick(now)`, with no second loop or timer, and keeps running while controller input is
+  eligible even when rendering is idle; `getGamepads` is `navigator.getGamepads?.bind(navigator)`
+  (absent → unavailable); `gamepadconnected`/`gamepaddisconnected` refresh status only;
+  `setEligible` follows the activation token, verified prewarm, `visibilitychange`, window
+  `focus`/`blur`, parameter-input focus and modal dialogs; `#space-controller-status` shows
+  "Press a controller button to connect", the connected controller id, "layout not supported in
+  this release", or "controllers unavailable"; the panel documents the standard mapping.
 - **Activation contract (both workspaces; both methods idempotent):** `deactivate()` first closes
   admission and invalidates pending picks and pending activation, then settles navigation
-  (preserves the last previewed pose, commits an open gesture exactly once, stops flight), stops
+  (preserves the last previewed pose, commits an open gesture exactly once, stops flight and
+  calls the controller's `setEligible(false, 'deactivate')`), stops
   automation (tours, palette animation), releases pointer capture and keyboard focus, and detaches
   its global listeners; capture-loss callbacks arriving afterwards cannot cancel that commit; all
   prior history entries, the scene, undo history and camera history are preserved; Space marks its
@@ -1645,7 +1782,8 @@ and history); §4.3 (every existing Plane assertion survives).
   does not restart a stopped tour`; `opening an invalid scene file reports and changes nothing`;
   `opening a valid file is one undo entry and one camera entry`; `a backend acquisition failure
   restores Plane only when that activation is still current`; `Plane deactivate stops a tour and
-  detaches its keyboard listener`.
+  detaches its keyboard listener`; `the frame callback polls the controller once before the flight
+  tick and stops polling when ineligible`.
 - [ ] **Step 2: Browser checks.** `tests/space-shell.mjs` (headless, evidence `browser`): `Space
   reports unavailable without WebGPU and Plane keeps working`; `Switching to Space and back
   preserves the Plane scene and both histories` (the Space backend replaced by the fake through the
@@ -1657,7 +1795,10 @@ and history); §4.3 (every existing Plane assertion survives).
   once and a repeated loss stops automatic retry with the scene intact`; `An allocation failure
   offers a lower-cost choice and never changes the request`; `A camera inside the set shows the
   unresolved exterior status with overview and reset available`; `Switching during a Plane export
-  does not interrupt the export`; `Keyboard focus, capture and flight end on blur and on switching`.
+  does not interrupt the export`; `Keyboard focus, capture and flight end on blur and on switching`; `A scripted gamepad orbits and
+  flies, each run is one camera-history entry, and a disconnect stops flight` (`page.addInitScript`
+  replaces `navigator.getGamepads` with a scripted fake and dispatches `gamepadconnected`; no
+  physical controller is a gate dependency).
 - [ ] **Step 3: Implement** the workspace, the switcher, the panel and the Plane activation
   methods (the integration this task closes: the composition root owns two workspaces and one
   active view).
@@ -1665,7 +1806,7 @@ and history); §4.3 (every existing Plane assertion survives).
   `navigation`, `graphics`), `space-shell`, then `flock … npm run test:space -- --group shell`.
 - [ ] **Step 5: Commit** — `"Add the Space workspace, the workspace switcher and the activation contract (1b.1 B14)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
-**Expected outputs:** two headless passes; ten headed passes; every Plane suite green with
+**Expected outputs:** two headless passes; eleven headed passes; every Plane suite green with
 unchanged assertions.
 
 ---
@@ -1757,12 +1898,12 @@ serialized (port 5190, one GPU).
 | W2 | B05 ‖ B06 ‖ B07 | B06 needs the GPU; B05 and B07 Node-only |
 | W3 | B08 ‖ B09 | B08 needs the GPU and the frozen matrix; B09 Node-only |
 | W4 | B10 ‖ B12 ‖ B13 | B10 needs the GPU; B12 and B13 Node-only |
-| W5 | B11 | GPU; mechanical palette change touches `src/plane/palettes.js` |
+| W5 | B11 ‖ B12b | B11 GPU, mechanical palette change touches `src/plane/palettes.js`; B12b Node-only (additive to B12's `gestures.js` and `flight.js`) |
 | W6 | B14 | after 1a T12 is merged and the dependency table is reconciled; alone (touches `src/app.js`, `index.html`) |
 | W7 | B15 | after 1a T13; alone |
 
 Critical path: B00 → B01 → B06 → B08 → B10 → B11 → B14 → B15 (8 deep). The Node-only chain
-B02 → B05/B09 → B12/B13 runs beside it.
+B02 → B05/B09 → B12/B13 → B12b runs beside it.
 
 **Hot files (serialized or merged by the merger):**
 
@@ -1770,6 +1911,7 @@ B02 → B05/B09 → B12/B13 runs beside it.
 |---|---|---|
 | `src/app.js`, `index.html`, `src/ui/style.css` | 1a T08, T12; B14 | B14 only, after T12 lands; whole-file re-issue from the merged T12 version |
 | `src/plane/workspace.js` | 1a T12; B14 | additive `activate`/`deactivate` after T12 |
+| `src/space/gestures.js`, `src/space/flight.js` | B12; B12b | B12b additive after B12 is accepted |
 | `src/plane/palettes.js` | B11 | mechanical re-export; byte-identical outputs tested |
 | `src/shared/render-report.js` | B09 | additive events; Plane regression test |
 | `tests/suites.manifest.json` | B01, B06, B08, B10, B11, B14, B15 | append-only; the merger appends |
@@ -1782,7 +1924,12 @@ All other files are single-owner.
 
 ## Items for the user
 
-Collected from the plan; none blocks drafting, each is a proposal until approved:
+**Decided by the user on 2026-10-21** (applied in spec rev 4.2 and this revision): (a) ADOPT;
+(b) APPROVE; (c) confirmed, with Q5 extended by "We should support joystick for exploration as
+well." (B12b, B14); (d) applied. **Open:** spec §19.2 Q11 — which controller model(s) the user
+intends to use, and whether standard-gamepad support suffices for 1b.1 or a non-standard
+joystick/flight stick must work (if so, a recorded amendment extends B12b/B14 before B12b starts).
+The original items, for the record:
 - (a) adopt the §9.1 WebGPU backend annex (above) into the spec by reference;
 - (b) approve rev 4 §5.2/§10.1's `anchored-perspective-v1` camera representation for ordinary
   Space (this plan implements it; a "no" revises B02's camera codec, B05 and the serialization

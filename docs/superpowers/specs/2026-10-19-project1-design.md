@@ -5,10 +5,14 @@ affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera 
 from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
 compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
 (4) one Discoveries control, filtered per workspace and fed by discovery sources, with only the
-local source built in Project 1 (§13.10). · **Date:** 2026-10-20 · **Revision:** 4 (rev 2 was
+local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.2 (rev 2 was
 Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply Codex's co-author reviews;
 rev 4 adds Project 1c, Space deep zoom, by the user's decision "Yes, add deep zoom as 1c in Project 1."
-(2026-10-20) — §21; rev 4 is a draft amendment awaiting the user's review)
+(2026-10-20) — §21; rev 4.2 applies the user's decisions of 2026-10-21: the §9.1 WebGPU backend annex
+adopted as normative, the anchored camera (§5.2/§10.1) approved for ordinary Space, §19.2 Q2, Q5
+and Q6 answered (§19.1) with gamepad exploration added to Space navigation (§13.3; supported controller models open as
+§19.2 Q11), and the §13.2
+precision-badge erratum. **§21 (1c) remains a draft amendment awaiting the user's review.**)
 **Authors:** Claude and Codex, co-designed as peers. The verbatim exchange is archived in
 `docs/codesign/project1-log.md`, a project-specific log kept beside the protocol's
 `docs/codesign/conversation-log.md` (which holds the charter and Project 0 co-design).
@@ -83,7 +87,7 @@ Each release is usable on its own.
 | Release | Usable outcome |
 |---|---|
 | **1a — Foundations** | Every existing Plane workflow preserved (in the new native formats); scenes round-trip; parameter edits undo and camera moves have back/forward history; exports capture immutable state; Plane discoveries are kept in the durable local store and shown by the Discoveries control. |
-| **1b.1 — Render and recover** | Explore the calibration objects, Mandelbulb and quaternion Julia; orbit and basic flight; recover from bad camera positions, cancellation, allocation failure and device loss; save and reopen scene JSON. Estimator category, pending marks and distinct statuses are present from this release. |
+| **1b.1 — Render and recover** | Explore the calibration objects, Mandelbulb and quaternion Julia; orbit and basic flight with mouse, trackpad, keyboard or a standard-layout gamepad (§13.3); recover from bad camera positions, cancellation, allocation failure and device loss; save and reopen scene JSON. Estimator category, pending marks and distinct statuses are present from this release. |
 | **1b.2 — Connect and inspect** | Pick a parameter in Plane and open its quaternion Julia set; compare the invariant section with the independent complex-Julia instrument; inspect an orbit; read the precision indicator. |
 | **1b.3 — Complete the workflow** | Scoped presets, saved compositions, discovery cards, viewport and 4K PNG export with companion scene and report. |
 | **1c.0 — Precision spike** (feasibility milestone, not a product release) | A preregistered, bounded feasibility study per family and numerical profile, with a go / partial / no-go decision report for the user (§21.2). |
@@ -124,6 +128,7 @@ src/
     places.js
   space/
     workspace.js  camera.js  navigation.js
+    gamepad.js              controller snapshot decoding and input state machine (§13.3)
     models/                 registry.js analytic.js menger.js mandelbulb.js quaternion-julia.js
     numerics/               parameters.js validation-domains.js
     render/                 renderer.js (pass graph) profiles.js backend.js webgpu/ (selected backend only)
@@ -248,6 +253,8 @@ A scene describes an experiment. Runtime state describes its execution and is no
   defined before 1b implementation, so introducing 1c does not require a camera-format migration. World Z defines up. Orbit and basic flight use upright navigation without a
   dedicated roll control. The orientation control may set a full camera orientation; axis
   constraints and orientation reset remain available. Serialization preserves the orientation.
+  **User decision (2026-10-21):** this representation is approved for ordinary Space as well as
+  for 1c ("APPROVE").
 - **Space parameters:** requested values remain decimal strings (for example
   `C: ["-0.2", "0.8", "0", "0"]`, `kappa: "0"`, `power: "8"`). Ordinary-profile preparation derives
   effective binary32 values and bit patterns. Deep-profile preparation derives the effective
@@ -263,7 +270,7 @@ A scene describes an experiment. Runtime state describes its execution and is no
   derived from before/after scenes, so a caller cannot mislabel a mathematical change as
   appearance-only.
 - **Gestures:** `begin → update* → commit | cancel`. Updates render as previews. One slider drag,
-  one camera drag or one wheel burst is one gesture. Cancel restores the pre-gesture scene. Commit
+  one camera drag, one wheel burst or one continuous controller run (§13.3) is one gesture. Cancel restores the pre-gesture scene. Commit
   does not trigger another render when the final preview already shows that state. Tours and
   palette animation never create one entry per frame.
 - **Exact restoration:** undo restores stored values, never an inverse floating-point delta. Undo
@@ -479,13 +486,93 @@ destroy()
 - **Fake backend:** a deterministic Node implementation of this interface, with controllable
   completion ordering, failures and loss notifications, drives scheduler, lifecycle and recovery
   tests (headless WebGPU is unreliable here).
-- **Backend annex.** The WebGPU specifics (pipeline set, G-buffer formats, timestamp-query use,
-  loss mapping) are finalized as an annex to this spec after Project 0 records its configuration.
+- **Backend annex.** The WebGPU specifics are §9.1 (adopted by the user, 2026-10-21).
+
+### 9.1 WebGPU backend annex (normative; user decision, 2026-10-21: "ADOPT")
+Project 0 recorded its configuration (E10, `webgpu-g5d-decision.json`, `launch-remediation.json`).
+This annex, proposed in the 1b.1 plan (rev 4.1) and adopted by the user on 2026-10-21, is normative
+for the WebGPU backend. Task identifiers (B00–B14) name the 1b.1 plan tasks that implement each part.
+
+- **Adapter and device.** `navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })`
+  once per acquisition attempt; `adapter.info` is read on the retained adapter before
+  `requestDevice`. Each identity field (`vendor`, `architecture`, `device`, `description`) is
+  recorded as observed (`{value, source: 'adapter.info'}`) or `unavailable`; nothing asserts that
+  Chrome always returns empty strings. `isFallbackAdapter` is recorded; a fallback adapter is a
+  software device and never satisfies a physical-GPU requirement; physical-GPU acceptance needs
+  corroborating evidence (`chrome://gpu`, the gate's hardware suite) when identity fields are
+  unavailable. Required features: none. Optional: `timestamp-query`. Limits recorded and checked:
+  `maxBufferSize`, `maxStorageBufferBindingSize`, `maxTextureDimension2D`,
+  `maxComputeWorkgroupsPerDimension`, `maxComputeInvocationsPerWorkgroup`, `maxBindGroups`,
+  `maxStorageBuffersPerShaderStage`.
+- **Epochs and loss.** Every acquisition attempt receives a fresh identity; the epoch is an
+  integer advanced on each successful acquisition, supplied to requests as
+  `generation.deviceEpoch` (no second editable epoch field). A `device.lost.then(...)` observer is
+  attached immediately after acquisition and never awaited before returning. Observed loss
+  immediately makes the backend unavailable and invalidates its epoch before clients are notified
+  (`onLoss({epoch, reason: 'destroyed' | 'unknown' | <reason>, message})`); late callbacks from
+  retired attempts cannot replace current state; outstanding tickets settle `interrupted`; a
+  resolved queue fence after loss does not establish successful work. `Backend.destroy()` is
+  terminal teardown and suppresses recovery; the test adapter destroys the underlying device
+  without terminal teardown to exercise real loss recovery, and injected notifications exercise
+  the same invalidation path.
+- **Admission.** Every operation that submits queue work — batches, probes, readback copies,
+  presentation — consumes one single-use scheduler admission lease for the current epoch; there
+  are no hidden submissions inside `prepare()` (the preparation probe runs through ordinary
+  admission).
+- **Pipelines.** Compute pipelines for field evaluation, tracing, normals, shading, accumulation
+  and display, prepared with `createComputePipelineAsync`, every required family variant for
+  trace, normals and secondary field evaluation enumerated and prewarmed during preparation
+  (`FIELD` is a pipeline-overridable constant; power and parameters are uniforms; no
+  interaction-time compilation). One separately prepared fullscreen render pipeline presents the
+  completed display texture to the canvas in its preferred unorm format with explicit scaling (a
+  draft is upscaled at presentation) and **no further transfer function**: accumulation stays
+  linear, `display_band` performs the sole sRGB encoding into `display`, and diagnostic legend
+  colours are defined in display space and written exactly. The display texture is never copied
+  directly to the canvas (`rgba8unorm` and `bgra8unorm` are not copy-compatible).
+- **Targets** (per internal resolution, through the tracked allocator): `depth` r32float (4),
+  `status` r32uint (4; bits 0–3 status, 4–7 reason, 8–11 subreason, 12–31 steps), `normal`
+  rgba16float (8; w = availability), `sampleColor` rgba16float (8), `lightingStatus` r32uint (4;
+  independent shadow and AO failure flags with reasons, simultaneous failures preserved),
+  `accumulationFlags` r32uint (4; diagnostic propagation across samples),
+  two ping-pong `accumulation` rgba32float (16 each; sum and count, read previous, write next),
+  `display` rgba8unorm (4), `retained` rgba8unorm (4; the previous complete image, shown with the
+  pending mark): 72 bytes per pixel, 597,196,800 B at 3840 × 2160 before staging, uniforms, model
+  buffers and overlapping generations. Each resource is counted at its actual dimensions. (Project
+  0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.)
+- **Pipeline descriptors.** B00 freezes the pipeline descriptor schema, ids, binding slots and
+  uniform layouts; B06 validates preparation with executable self-check pipelines; B08, B10 and
+  B11 add their descriptors and preparation assertions as their shaders come into existence; B11
+  verifies complete product prewarming before B14 enables interaction.
+- **Batches.** The descriptor and ticket of B00 (`identity`, `pipelineId`, `pass`, `region`,
+  `sample`, `bounds`, named `inputs`/`outputs` slots, `uniforms`); one command buffer per batch;
+  uniform data snapshotted before submission; storage owned by an outstanding ticket is never
+  overwritten; horizontal subdivision allowed; completion is `device.queue.onSubmittedWorkDone()`
+  labelled `queue-completion` (a fence includes preceding queued work and is not isolated shader
+  time); GPU timestamps are a separate measurement recorded only when granted, never a substitute
+  for completion. A watchdog timeout stops admission but neither settles the fence nor releases its
+  resources; loss retires the epoch; ordinary cancellation drains it.
+- **Readback.** One bounded region per call, at most 256 rows, horizontally split if required,
+  into a lazily allocated pool of at most two staging buffers sized
+  `alignUp(width × bytesPerTexel, 256) × rows`; `mapAsync(READ)`, copy out, `unmap`; the result
+  resolves after copy-out and unmap; mapping ownership survives queue completion; every readback
+  carries its epoch and identity.
+- **Configuration.** `configureTargets` is transactional: bytes are reserved and accounted first,
+  allocation and validation errors captured (`pushErrorScope`), and the old usable target set is
+  retained if replacement fails.
+- **Allocator.** `allocate` checks `tracked + bytes ≤ 1 GiB` before creating a resource;
+  `release` marks a resource retiring, and bytes leave the total only when every ticket, mapping
+  and retained-owner reference has ended; uniform uploads, query and resolve storage, staging and
+  model buffers are counted; `diagnostics()` reports `{state, epoch, tracked, peak, retiring,
+  inventory}`. Plane's WebGL allocations are reported separately and never summed in.
+- **Launch (tests).** The complete recorded Project 0 launch profile (`--enable-gpu --use-angle=vulkan
+  --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan --enable-webgpu-developer-features`,
+  installed Chrome, headed, §16.5); requested and effective arguments recorded in every report.
 
 ## 10. Numerics and precision
 
 ### 10.1 Representation
-Space cameras use the anchored representation in §5.2. Anchor arithmetic uses controlled high
+Space cameras use the anchored representation in §5.2 (approved for ordinary Space by the user,
+2026-10-21). Anchor arithmetic uses controlled high
 precision; local camera coordinates, orientation and field of view use CPU doubles. Ordinary Space
 evaluates fields in binary32. Qualified 1c profiles use the reference, perturbation and range
 representations specified by §21; their use of binary32 components does not require collapsing a
@@ -699,14 +786,16 @@ graphics diagnostics (extended with the Space backend and its tracked inventory)
 
 **Start (user decision, 2026-10-20):** a fresh start opens **Plane** at its existing default view
 (`INITIAL_VIEW`, Seahorse valley, default appearance and detail) without acquiring a Space device.
-A supported Plane share link opens Plane with its scene; Space share-link support remains subject
-to §19.2 Q6. Project 1 does not restore the previous session on reload; reopening work is done
+A supported Plane share link opens Plane with its scene; Space share links are deferred beyond
+Project 1 (§19.1 Q6, user decision 2026-10-21). Project 1 does not restore the previous session on reload; reopening work is done
 through discoveries, scene files and share links.
 
 ### 13.2 Space layout
 Viewport; parameter panel (family, parameters, iterations, tracing, appearance); viewport indicators
-(estimator category, precision badge, pending, pause, view mode); docked instruments (1b.2); a
-composition strip (1b.3).
+(estimator category, precision badge (1b.2), pending, pause, view mode); docked instruments (1b.2); a
+composition strip (1b.3). (Erratum applied by user decision, 2026-10-21: the precision badge is
+1b.2, consistent with §3.) Space opens with the neutral inspection lighting (§19.1 Q2; presets
+arrive in 1b.3, §13.7).
 
 ### 13.3 Navigation (1b.1)
 - Orbit, pan and dolly; focus on a point (asynchronous depth readback of the picked pixel); overview;
@@ -714,6 +803,39 @@ composition strip (1b.3).
 - Basic flight: look plus move and strafe, explicit speed. Escape releases input; blur or visibility
   loss stops movement immediately. No inertia, collision avoidance or vehicle model. Estimator-scaled
   slow-down is deferred unless it proves useful, and is never collision protection.
+- **Controller (gamepad) exploration (user decision, 2026-10-21: "We should support joystick for
+  exploration as well.").** For supported controller layouts, Space provides controller-driven
+  orbit, pan, dolly and basic flight. Continuous controller navigation follows the camera-history
+  rules. Losing input eligibility or the selected controller stops movement and commits the last
+  preview exactly once. Resuming requires neutral controls. Mouse and keyboard remain complete
+  alternatives.
+  - *Supported layouts in 1b.1:* browser Gamepad API devices reporting `mapping === "standard"`. A
+    connected device with another mapping is reported as connected with an unsupported layout and
+    drives nothing; its axes are never guessed. Whether non-standard joysticks or flight sticks must
+    work is open (§19.2 Q11). Physical devices are unqualified until one has been exercised.
+  - *Input:* the controller is polled once per workspace animation frame, before the flight tick,
+    with no second loop or timer; polling continues while input is eligible even when rendering is
+    idle, and elapsed time is clamped as for flight. A poll produces at most one camera preview,
+    which enters ordinary scheduler admission; controllers never change render cadence. Stick dead
+    zones are radial with a squared response that preserves direction; buttons act on rising edges.
+    Rates, mapping and dead-zone values are plan defaults, not spec constants.
+  - *History:* an orbit controller run is one camera-history entry: it begins at the first accepted
+    non-neutral motion and commits after the motion controls have been observed neutral for a short interval
+    (plan default 200 ms, measured from an observed neutral sample). Within flight, the flight run remains the single
+    entry. Overview and orientation reset stop navigation, commit any open run, then apply one
+    camera-only jump.
+  - *Eligibility and ownership:* input is accepted only while the Space workspace is the current
+    activation with prepared pipelines, the document is visible, the window is focused and viewport
+    navigation is enabled (parameter editing and modal dialogs suspend it). After connection,
+    resumption, controller replacement or ownership loss, controls must return to neutral before new
+    input is accepted. The lowest eligible controller is selected and kept until it disconnects; a
+    newly connected controller never takes control. Escape, stop, suspension and disconnection of
+    the selected controller always stop movement. A missing Gamepad API or a denied
+    `getGamepads()` makes controllers unavailable without affecting other navigation. Browsers may
+    expose a controller only after it is used: the interface invites "Press a controller button to
+    connect", and that interaction performs no navigation.
+  - Controller selection, button state and mapping preferences are runtime input settings, never part
+    of `atlas.scene`. Remapping is deferred (§17), subject to the §19.2 Q11 answer.
 - **Camera exterior status.** The CPU double evaluator classifies the camera position on each
   committed camera. Either an unresolved CPU classification or an unresolved evaluation under the
   renderer's effective inputs shows "camera exterior status unresolved" with overview and reset.
@@ -851,7 +973,7 @@ save with B or the bookmark button, a thumbnail list, open, delete, and the empt
   base64url UTF-8. It carries every coordinate digit and every scene field; opening one is a
   whole-scene restoration after whole-scene validation. An invalid or unsupported link at startup
   opens the fresh-start view (§13.1) with a notice; one encountered during an existing investigation
-  (a `hashchange`) reports the problem without replacing its scene or either history. Space share links remain an open question (§19 Q6).
+  (a `hashchange`) reports the problem without replacing its scene or either history. Space share links are deferred beyond Project 1 (§19.1 Q6, user decision 2026-10-21); Space scenes travel as scene files (1b.1) and discovery cards (1b.3).
 - **Export invariant (normative, Plane and Space):** the complete export request is captured
   **before the first asynchronous wait**. Later edits may update the live scene but cannot alter the
   export's geometry, appearance, dimensions, sampling, companion data or report. The export publishes
@@ -883,6 +1005,7 @@ save with B or the bookmark button, a thumbnail list, open, delete, and the empt
 | Parameter edits | Probes, inspections, comparisons and thumbnails marked stale. |
 | Import over limits | Whole-scene validation; reported, never silently changed. |
 | Lost or stuck input | Blur stops movement; overview, orientation reset and camera history one action away. |
+| Controller disconnected or input suspended | Movement stops and the last preview commits exactly once; held controls cannot resume movement until they return to neutral; mouse and keyboard keep working (§13.3). |
 
 ## 16. Verification
 
@@ -894,7 +1017,7 @@ save with B or the bookmark button, a thumbnail list, open, delete, and the empt
 | Mathematical models | Node, `tests/reference/` | Analytic answers, recurrence identities, full four-component quaternion updates, escape bounds, singular and range cases, stagnation including coordinate collapse |
 | GPU numerics | Headed installed Chrome, physical GPU | Readback against independent references with preregistered tolerances and exclusions |
 | Rendering | Headed, physical GPU | Silhouettes, depth, normals and termination coverage before colour; adversarial rays; convergence studies |
-| Interaction and recovery | Browser | Intermediate frames, workspace switching, pause/edit/update, blur, cancellation, device loss (destroy and injected), failed allocation, stale instruments, both export races |
+| Interaction and recovery | Browser | Intermediate frames, workspace switching, pause/edit/update, blur, scripted controller input through an injected `navigator.getGamepads` (a physical controller is never a gate dependency), cancellation, device loss (destroy and injected), failed allocation, stale instruments, both export races |
 | Complete workflow | Headed browser, recorded | All seven acceptance steps, reload, immutable export, reproduction |
 
 ### 16.2 Validation matrix (frozen in the plan before any GPU comparison)
@@ -936,7 +1059,11 @@ general formula perturbation, reference reuse across parameter changes and specu
 prediction, a general GPU arbitrary-precision framework, a second runtime backend or an interactive
 CPU Space fallback, and unlimited depth, universal accuracy claims or guaranteed performance at every
 admitted depth; estimator-scaled flight assist (unless it proves useful); inertia and collision; general render
-queues; tiled giant stills; parameter maps, variations and publication animation.
+queues; tiled giant stills; parameter maps, variations and publication animation. User decisions of 2026-10-21:
+touch and mobile Space navigation (Plane's mobile behaviour is preserved); Space share URLs (scene
+files from 1b.1 and discovery cards from 1b.3 carry Space scenes). Also deferred: controller
+navigation in Plane; controller remapping and invert options, and non-standard controller layouts,
+unless the §19.2 Q11 answer requires them in 1b.1; controller focus picking.
 
 **User-stated future direction (2026-10-20), outside Project 1:** a landing page that presents the
 project, its goals and what others are doing; and shared discoveries served from a centrally hosted
@@ -962,7 +1089,7 @@ own spec (hosting, identity, moderation, privacy and trust of remote records) an
 
 ## 19. Questions for the user
 
-### 19.1 Answered (2026-10-20)
+### 19.1 Answered (2026-10-20 and 2026-10-21)
 - **Fresh start** (rev 2 Q1): open Plane (§13.1).
 - **Camera moves in undo** (rev 2 Q4): separate camera history, as recommended (§6).
 - **Legacy output** (rev 2 Q7) and legacy reading: "No this is green field development. No need to
@@ -977,16 +1104,24 @@ own spec (hosting, identity, moderation, privacy and trust of remote records) an
 - **Deep zoom** (2026-10-20): "Yes, add deep zoom as 1c in Project 1." Applied as §21 and charter
   amendment A2.
 
+- **Space's initial look** (rev 2 Q2; user decision, 2026-10-21): neutral inspection lighting
+  (§13.2); atmospheric looks remain available as presets (1b.3, §13.7).
+- **Touch/mobile Space navigation** (rev 2 Q5; user decision, 2026-10-21): desktop/laptop first —
+  mouse, trackpad and keyboard; no Space touch gestures in Project 1; Plane keeps its mobile
+  behaviour. The user added: "We should support joystick for exploration as well." Applied as
+  controller exploration of Space in 1b.1 (§13.3), co-designed with Codex (runs
+  20261021T033701Z-268a and 20261021T034408Z-2f95, READY for the standard-layout scope); Plane controller
+  navigation is deferred (§17).
+- **Space share URLs** (rev 2 Q6; user decision, 2026-10-21): scene files only in 1b.1 (discovery
+  cards in 1b.3); Space share URLs are deferred beyond Project 1 (§13.1, §14, §17).
+- **Backend annex and anchored camera** (user decisions, 2026-10-21): the §9.1 WebGPU backend annex is
+  adopted as normative text, and the anchored camera (§5.2, §10.1) is approved for ordinary Space;
+  the §13.2 precision-badge erratum ("(1b.2)") is applied.
+
 ### 19.2 Open
 These affect only 1b and 1c; the architecture supports either answer to each.
-2. **Space's initial look:** neutral inspection or atmospheric exploration? Both remain available as
-   presets.
 3. **Bridge flow:** should the bridge open the linked instruments immediately, or offer a compact
    "Compare the section" action?
-5. **Touch/mobile Space navigation** in Project 1, or desktop-first? (Plane's mobile behaviour is
-   preserved regardless.)
-6. **Space share URLs** in Project 1, or files and discovery cards only? (Plane's native share links
-   exist from 1a regardless.)
 9. **USER DECISION — partial deep zoom:** if the Mandelbulb spike is partial or no-go, may 1c ship
    quaternion-Julia deep zoom while the bulb stays at ordinary precision (recommended), or must 1c
    wait for both families?
@@ -999,10 +1134,17 @@ These affect only 1b and 1c; the architecture supports either answer to each.
     - **Q10:** the 1c spike proposes the reference-preparation pause budgets (typical and deepest)
       for the user's approval before acceptance. The user's stated expectation is that pauses are
       "way lower than a second".
+11. **Controller models (rev 4.2, from the 2026-10-21 joystick decision):** which controller
+    model(s) do you intend to use? Is standard-gamepad support sufficient for 1b.1, or must a
+    joystick/flight stick with a non-standard layout work? 1b.1 currently supports
+    `mapping === "standard"` devices (§13.3). If non-standard sticks are required, a recorded plan
+    amendment adds an explicit mapping profile and a configure/select control before the controller
+    task starts, and remapping leaves §17.
 
 ## 20. Revision triggers
 None of these affects 1a.
-- Project 0 records its decision: confirm or revise §2, §9 (backend annex) and §10.3.
+- Project 0 records its decision: confirm or revise §2, §9 (backend annex) and §10.3. (§9: resolved by
+  §9.1, adopted by the user on 2026-10-21.)
 - Project 0's precision section reports: revisit §10.5 and the §16.2 matrix.
 - **Project-0-dependent (1b, §10):** per the relayed execution decision E8, Project 0's G5-A
   compensated evaluation was defeated by compiler reassociation and recorded as invalid; replacement

@@ -22247,3 +22247,404 @@ Verified the [plan](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/project1
 **Still disputed**
 
 - None.
+
+---
+
+## Codex → Claude — EXEC T08 review r1 — checkpoint 2 (adapter, export, context loss) — CHANGES REQUIRED
+*2026-10-20 18:29:46 PDT*
+
+VERDICT: CHANGES REQUIRED
+
+Spec compliance: ❌ Immutable export capture and adapter routing are implemented correctly, but current-image reporting is not consistently truthful (§7.4), recovery can resume before restoration, and the restart/retry requirements of §14 remain incomplete.
+
+1. **Important — Replacement can resume rendering while the context is still lost.** [src/app.js:489](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/app.js:489)  
+   An export timeout sets `retired`; after release, line 518 immediately replaces the renderer despite `adapter.unavailable`. GPU construction fails on the lost context, CPU fallback clones the canvas, and replacement clears unavailability. The same problem occurs with **loss → restoration while leased → another loss → release**, because `pendingReplacement` retains the earlier restoration.
+
+   Track actual context restoration separately from the adapter’s availability latch. Replace only after the current loss has been restored and the lease released. The proposed `reserved || unavailable` guard alone is insufficient: `unavailable` remains true until replacement, so it would also block legitimate restoration. Add regression checks for both sequences.
+
+2. **Important — `lastReport` does not always describe the displayed image.** [src/app.js:75](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/app.js:75), [src/app.js:551](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/app.js:551)  
+   There are two distinct gaps:
+
+   - Render A, start navigation to B, then change appearance. `adapter.recolor()` changes the retained A image before checking geometry compatibility; it returns no report when B’s geometry differs. The app retains A’s old appearance report. If B fails, that mismatch persists.
+   - Export rendering overwrites/resizes the canvas and clears `adapter.published`, but the app retains its interactive report. Loss and replacement likewise leave the old report exposed after its image/resources cease to be valid.
+
+   Make displayed-image provenance authoritative in the adapter and synchronize the exposed report with it. A non-null report must describe the actual retained or export image; clear it when that cannot be established. Recolor must either produce truthful provenance for the retained geometry or defer painting. Add tests covering pending navigation plus recolor and failure, export encoding, loss, and replacement.
+
+3. **Important — Saving during an export can pair live settings with export pixels.** [src/app.js:415](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/app.js:415)  
+   Hold export encoding, change only the palette, then save a discovery. The appearance edit is deferred by the lease, while `busy` and `dirty` can both remain false. The saved settings describe the new palette; the thumbnail contains the export’s old palette.
+
+   Fix now: reject capture while reserved, unavailable, or retired, and require a valid publication matching the saved scene. T12 replacing this path is not a reason to leave the mismatch operational meanwhile.
+
+4. **Important — Destroying loss-invalidated GL objects contaminates the restored context’s error state.** [src/app.js:495](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/app.js:495)  
+   After restoration, `previous.destroy()` calls deletion methods with objects invalidated by the loss. These calls generate `INVALID_OPERATION`; this is more than console noise. T00b’s `drainWebGL` explicitly rejects a pending GL error before creating its fence. That follows the [Khronos invalidated-object rules](https://registry.khronos.org/webgl/specs/latest/1.0/).
+
+   Add loss-aware disposal: stop the old worker and settle its pending work without submitting invalid old handles to the restored context. Preserve normal destruction for valid resources. Do not hide the problem by consuming errors in the drain. If the fix changes frozen `renderer.js`, explicitly record that narrow exception as **PLAN/SPEC CHANGE**.
+
+5. **Minor — Swallowing stage-hook exceptions can hide failed assertions.** [src/plane/export.js:25](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/plane/export.js:25)  
+   I reproduced a hook that records each stage and then throws an assertion at every stage. All stage names are present, the export completes, and no error is exposed. A stage-presence assertion therefore does not necessarily catch a broken observer.
+
+   Keep observer exceptions isolated from the export outcome and lease release, but expose them through a diagnostic error collection or callback that tests assert is empty. **PLAN/SPEC CHANGE:** finalize Amendment F’s observer-error contract accordingly.
+
+6. **Important — Amendments G(3) and H still need the application lifecycle contract.** [src/app.js:548](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/app.js:548), [tests/workflow.mjs:342](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/tests/workflow.mjs:342)  
+   There is no asynchronous completion signal or directly queryable current device epoch/state. An old report’s epoch is not the current device epoch. The workflow finalizer also still uses its older readback and silently accepts missing WebGL.
+
+   **PLAN/SPEC CHANGE:** land the completion contract described below in the T08 fix round, expose current backend/epoch/availability, and complete expected-backend bookkeeping using T00b’s shared drain. A page expected to remain GPU-backed must fail if its drain returns `no-webgl`.
+
+7. **Important — The specified recovery actions are missing.** [src/app.js:350](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/app.js:350), [src/app.js:516](/mnt/ml_storage/dev/projects/mandelbrot_explorer-wt/review-1a-T08-r1/src/app.js:516)  
+   An interrupted export retains its request internally, but only displays a reason. Clicking Download again captures the live scene, not necessarily the interrupted snapshot. Restoration also requests another render on every restored event without a recovery-attempt limit.
+
+   §14 and charter §3.10 require offering a restart of the retained job and stopping automatic retries after repeated loss. **PLAN/SPEC CHANGE:** add those actions and their tests to T08’s recovery contract; T12 must preserve them. This is an omission in the plan as well as the implementation.
+
+**Specific check 1 — Preservation and plan fidelity**
+
+The comparison against `0f6ecc4` confirms:
+
+- First-pointer-only settling and `stopPointers()` before every history step survive.
+- All **41 existing workflow assertion lines** survive verbatim.
+- All eleven original workflow `requiredPasses` survive; exactly three are added.
+- Amendments A–F’s existing implementations are preserved. Amendment F’s diagnostic policy needs the decision in finding 5.
+
+I compared all three brief code blocks with the implementation. The code deviations are acceptable: T05 pointer fixes and tests; existing bounded input wrappers, server setup, context tracking and cleanup; configurable scene-size limit; preserved cycle pause during reservation; stronger render-outcome/device-loss/WebGL assertions; CPU-context cleanup through the common finalizer; removal of the unused import; formatting, comments, declaration splitting, and the local `target` rename.
+
+Leaving `deferredScene` unused is also acceptable: the post-lease render obtains the authoritative live scene. The report’s missing-seam browser “RED” is not behavioral RED evidence; T08 requires no Node RED. The reported 192-test count appropriately supersedes the planning-time 94.
+
+Thus, the implementation closely follows the amended code blocks, but those blocks do not fully satisfy their own reporting/recovery promises.
+
+**Specific check 2 — Serialization and call sites**
+
+There is exactly one application `adapter.render(...)` call: **app.js:169**, after `busy = true` and the busy/reserved/retired/unavailable guard.
+
+Export uses the exclusive lease’s render after admission drains interactive work. Resize and restoration schedule `flushRender`; saving does not render. No application call bypasses the adapter to invoke renderer `render()` or `color()`.
+
+Recolor at line 75 is **not guarded by `busy`**. It is synchronous and the adapter correctly defers it during a lease or unavailability, so this is not another overlapping interactive render. Its retained-image reporting bug is finding 2.
+
+**Specific check 3 — Loss/lease ordering**
+
+For one loss, without timeout, both restoration-before-release and release-before-restoration are correctly serialized. Releasing the lease does not clear unavailability. Loss arriving after release also invalidates the renderer.
+
+The guarantee fails for the timeout and repeated-loss sequences in finding 1. Existing tests cover only loss during held encoding. In the restore-first case, the baseline is taken *after* restoration, so an illegal earlier replacement/publication could escape detection. Capture identity and counters before restoration, request live edits while held, and assert no renderer replacement, draw submission, or publication until permitted.
+
+**Specific check 4 — Report accuracy**
+
+**No.** Stable recolors produce new reports correctly, and ordinary guarded supersession preserves the retained image. Failures before any image change can also retain the previous report legitimately. But recoloring different retained geometry, export overwrites, loss, replacement, and failures after destructive canvas changes invalidate the blanket claim. Finding 2 needs both adapter and application coverage.
+
+**Specific check 5 — Stage-hook exceptions**
+
+**CHANGE.** Keep isolation; add observability. A test defect should fail validation without changing the product export outcome. Avoiding “No browser runtime errors” by hiding the defect is not sufficient justification.
+
+**Specific check 6 — Implementer concerns**
+
+| Concern | Decision |
+|---|---|
+| a. Discovery capture during a lease | **MUST FIX NOW** — finding 3. |
+| b. Timeout while context remains lost | **MUST FIX NOW** — finding 1; use explicit restoration state, not the proposed guard alone. |
+| c. `whenIdle` reaches its bound while lost | **NOT AN ISSUE** — it yields every 30 ms rather than busy-spinning, and correctly refuses to claim idle. Preserve the classified timeout. |
+| d. Warnings from invalidated-object destruction | **MUST FIX NOW** — finding 4; they can fail the new strict drain. |
+
+The separate concern about a late retired render requires checking the actual renderer: its stale-reference continuation can touch GL before `isCurrent`, but that guard precedes resizing, drawing, and coloring. Retirement must stop its worker/continuation safely; adapter non-publication alone is not sufficient justification for allowing erroneous GL calls.
+
+**Specific check 7 — T00b carry-forward**
+
+T08 supplies useful diagnostics, but **not the required trustworthy current lifecycle snapshot**. `atlas.renderer.gl` identifies the current renderer type; `lastReport.generation.deviceEpoch` describes a historical publication and can remain unchanged through loss.
+
+Add an immutable inspection value such as `{ backend, deviceEpoch, state }`, updated on loss, retirement, and replacement. Tests should retain their expected backend per page and check the epoch across completion/drain operations. CPU pages may accept `no-webgl`; GPU pages may not silently do so. This belongs in **T08’s fix round**, with preservation during T12 extraction.
+
+**Joint design question — AMEND; land in T08**
+
+I agree with fences and yielding zero-timeout polls, with these requirements:
+
+- **Create the fence at publication**, immediately after the final color pass, including recolors. `completion(report)` retrieves that publication’s ticket; it must not insert a later fence and attribute intervening work to an earlier report.
+- Bind the ticket to the report/request identity, captured renderer/context, and device epoch. Check both epoch and actual context loss. After loss, discard invalid fence handles without polling or deleting them against the restored context.
+- Yield before the **first** poll and subsequent polls. Reject null fences, `WAIT_FAILED`, unexpected statuses, and deadline expiry. WebGL requires returning control to the event loop before a new fence can signal. [Khronos WebGL 2 synchronization rules](https://registry.khronos.org/webgl/specs/latest/2.0/)
+- Bound ticket retention and clean up on supersession, loss, and teardown. CPU completion may resolve immediately after painting.
+- Keep reports immutable. Return separate completion evidence identifying the request, epoch, timing clock, and `queue-completion` source. This confirms queued work, not compositor presentation.
+- Define `whenDrawn` precisely: use one deadline to await application submission, capture the resulting publication, then await its ticket. Reject interruption or subsequent supersession rather than silently switching to a newer report.
+- Keep `whenIdle` and `rendered` as application-side progress. Callers needing GPU completion use `whenDrawn`.
+
+I read `948ae67:tests/support/bounded.mjs`. Its teardown drain serves a broader purpose: quiesce submission, fence preceding work, then validate with a one-pixel readback under an external deadline. Keep that distinction.
+
+**Share the small fence/polling primitive** in a browser-safe Plane module; keep test orchestration and validating readback separate. Product code must not import `tests/support` or read pixels per render. This is **PLAN/SPEC CHANGE** completing Amendment G(3), not a deferral to T12 or 1b.1.
+
+**What I ran**
+
+- Reviewed the single commit and full diff `0f6ecc4..eb28ccd`; compared the brief’s complete code blocks and the base workflow assertions/manifests.
+- `node --check src/app.js`, `node --check tests/workflow.mjs`, and `git diff --check 0f6ecc4..eb28ccd`: **passed**.
+- Static relative-module/worker resolution: **37 paths resolved**; Playwright package resolution succeeded.
+- Direct `node --test` over all twelve manifest files exited 0 but exposed only file-level results here. A supervised invocation produced no usable TAP summary, so I did not treat that as assertion-level evidence.
+- A read-only, in-process run importing all twelve manifest files with the launch guard active: **192 passed, 0 failed/skipped/cancelled**. Initial stdin harness attempts inherited an unsuitable `--input-type` into workers; the corrected invocation passed.
+- In-memory reproductions confirmed retained-image/report mismatch, export dimensions versus stale `lastReport`, replacement while unavailable, the proposed guard’s restoration deadlock, and hidden stage-hook assertions.
+- A specification-shaped GL fake confirmed that invalid-object destruction leaves an error rejected by T00b’s drain. This was not a browser reproduction.
+
+I did not run `npm test`’s filesystem-writing wrapper, browser suites, build, or gate. Browser/GPU acceptance remains the controller’s work; the unit manifest is not a finding. No files were edited, and the worktree remains clean at `eb28ccd`.
+
+**Agreed so far**
+
+- Adapter routing, synchronous immutable export reservation, T05 preservation, and fence-based completion.
+
+**Still disputed**
+
+- Acceptance of the reporting, recovery, diagnostics, and lifecycle gaps identified above.
+
+---
+
+## Claude → Codex — PLAN 1b.1 — joystick — Round 1: position and questions (resume of run 20261021T012346Z-8408)
+*2026-10-20 20:35:31 PDT*
+
+# PLAN 1b.1 — joystick — Round 1 (Claude → Codex)
+
+Plan rev 4.1 is at HEAD `5ce1dbc` (unchanged since your READY). The user decided on 2026-10-21:
+(1) adopt the §9.1 annex as normative spec text; (2) approve `anchored-perspective-v1` for ordinary
+Space; (3) confirm §19.2 Q2 neutral lighting, Q6 scene files only (Space share URLs deferred), Q5
+desktop/laptop first (mouse, trackpad, keyboard; no Space touch; Plane keeps mobile) — and the user
+ADDED: **"We should support joystick for exploration as well."**; (4) the §13.2 "(1b.2)" erratum.
+Items 1, 2, 4 and the confirmations are mechanical (spec rev 4.2, plan rev 4.2). The joystick is new
+scope and I want to co-design it with you before writing it into spec §13.3/§19.2 and the plan.
+
+## My position
+
+**Scope.** Browser Gamepad API, Space only in 1b.1: orbit (with dolly/pan) and flight, plus overview,
+orientation reset and flight toggle on buttons. Plane deferred (§17): Plane's navigation is 1a-owned
+(`bindPlaneNavigation`, T12) and §4.3 "Plane unchanged" makes any Plane input change non-cheap in 1b.1.
+I will list Plane gamepad as a question for the user rather than settle it here.
+
+**Ownership.** A new small task **B12b** (Codex, reviewer Claude), Node-only, after B12:
+`src/space/gamepad.js` (pure: snapshot → intents) plus the minimal B12 hooks (a `gamepad` kind). B14
+wires polling into the workspace frame callback and owns the browser check. Alternative: fold into B12
+— I prefer the split so B12 stays as reviewed.
+
+**Input contract.**
+- Only `gamepad.mapping === 'standard'`; others are reported "unsupported mapping" and ignored. The
+  first connected standard pad (lowest index) drives; others ignored.
+- The API has no change events for axes and Chrome exposes a pad only after a button press on it. We
+  poll `navigator.getGamepads()` (injected as `getGamepads`) **once per frame, in the same callback as
+  `flight.tick(now)`**; no second rAF loop, no timers. A poll yields at most one preview
+  (`gestures.grouped`/`flightUpdate`) per frame; render requests go through the scheduler's normal
+  coalescing, so the render cadence and the 2-batch admission limit are untouched. No polling while
+  the workspace is inactive or the document hidden.
+- Mapping (standard layout): orbit mode — left stick yaw/pitch orbit about the focus; right stick Y
+  dolly, right stick X pan-horizontal; D-pad up/down pan-vertical. Flight mode — left stick
+  move/strafe, right stick look (yaw/pitch, upright, no roll), triggers (buttons 6/7, analog) descend/
+  ascend along world Z, bumpers (4/5) halve/double speed (discrete, once per press). Buttons: Start (9)
+  toggles flight (= `F`), B (1) stops flight (= Escape for flight), Back/Select (8) overview, Y (3)
+  orientation reset. No focus on the pad in 1b.1 (needs a centre pick; defer).
+- Dead zone: radial 0.15 on each stick, rescaled to [0, 1] outside it; triggers 0.05. Response curve:
+  `sign · r²` after rescale (plan defaults, not spec constants). Rates: full deflection = the same
+  angular/linear rates the keyboard nudge produces per second, times flight speed in flight.
+- Connect/disconnect: `gamepadconnected`/`gamepaddisconnected` update a panel status; each poll also
+  checks `connected`. Disconnect mid-motion has **blur semantics**: commit the last preview, zero
+  velocity, release.
+
+**History (§6).** Add `gamepad` to `SPACE_KINDS`. In orbit mode one continuous stick run is one
+camera-history entry via the existing wheel-burst mechanism (`grouped('gamepad', camera)`,
+`groupQuietMs = 200`): the run commits after all axes return inside the dead zone for 200 ms. In
+flight mode the flight run is already the single entry; pad motion inside it adds none. Button jumps
+(overview, reset) are camera-only jumps: one entry each, and first commit any open gamepad run. Arbiter
+rule: one Space gesture at a time — while a pointer drag, key-repeat run or wheel burst is open, pad
+motion is ignored, and vice versa (first owner wins; buttons that jump settle the open gesture first,
+as Back/Forward does).
+
+**Focus / activation.** Polling only after the activation token is current and prewarm verified;
+`deactivate()` → `stopNavigation('deactivate')` commits an open gamepad run exactly once; blur and
+`visibilitychange` likewise. Camera exterior status is computed on each **committed** camera as today
+(not per polled frame).
+
+**Accessibility.** Fixed documented mapping in 1b.1; remapping and invert-Y deferred (§17). Keyboard
+and mouse remain complete alternatives.
+
+**Testing without hardware.** Node: fake `Gamepad` snapshots (axes, `{pressed, value}` buttons,
+`mapping`, `connected`, `timestamp`) and the fake clock drive `gamepad.js` and the B12 gestures.
+Browser (B14, headed `shell` group): `page.addInitScript` replaces `navigator.getGamepads` with a
+scripted fake and dispatches `gamepadconnected`. Never a real device in the gate.
+
+**Exit criteria.** Named Node tests (e.g. `a stick run is one camera-history entry`, `inputs inside the
+dead zone produce no motion`, `disconnect mid-run commits the last preview and zeroes velocity`,
+`polling while inactive or hidden does nothing`, `a non-standard mapping is reported and ignored`,
+`one poll produces at most one preview per frame`), and one headed check: `A scripted gamepad orbits
+and flies, each run is one camera-history entry, and a disconnect stops flight`.
+
+## Questions for you
+1. Scope: agree Space-only (Plane deferred), or is Plane pan/zoom cheap enough to include?
+2. B12b vs folding into B12; and is the browser wiring right in B14's `shell` group?
+3. Mapping, dead zone, curve and the per-frame poll rule — any change?
+4. History/arbiter semantics — any conflict with §6, B12's gesture rules or B14's activation contract?
+5. Anything missing for the spec text (§13.3, §19.2 Q5)?
+
+Please answer as a peer: agreed / changes, and say whether the result, as amended by your changes, is
+**READY** as a plan amendment (rev 4.2). Read-only; no edits.
+
+
+---
+
+## Claude — PLAN 1b.1 — joystick — Round 1: bridge failure note
+*2026-10-20 20:37:01 PDT*
+
+Run 20261021T033535Z-8c31 (resume of 20261021T012346Z-8408) failed with no reply: "Error running remote compact task: Selected model is at capacity." The Round 1 prompt above is resent unchanged as a new resume of 20261021T012346Z-8408.
+
+
+---
+
+## Codex — PLAN 1b.1 — joystick — Round 1 reply (run 20261021T033701Z-268a, resume of 20261021T012346Z-8408)
+*2026-10-20 20:43:49 PDT*
+
+**NOT READY yet.** I agree with Space-only and B12b. The remaining scope issue is that **standard-gamepad support may exclude the joystick the user intends**. The engineering amendment is otherwise ready to draft with the changes below.
+
+**1. Scope — agree Space-only; counter standard-only as an interpretation of “joystick.”**
+
+Plane support adds activation, input ownership and history obligations. Keep it deferred in §17; I would not reopen that boundary without an explicit request.
+
+The Gamepad API also represents joysticks, but `mapping === 'standard'` specifically means the controls follow the standard gamepad layout. A browser-exposed joystick can have `mapping === ''`. Rejecting that device is defensible for a documented standard-gamepad feature, but does not necessarily satisfy this user’s request. [W3C Gamepad specification](https://www.w3.org/TR/gamepad/#scope), [mapping definition](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad/mapping).
+
+Carry **one user question**, replacing the proposed Plane question:
+
+> Which controller model(s) do you intend to use? Is standard-gamepad support sufficient for 1b.1, or must a joystick/flight stick with a non-standard layout work?
+
+If the latter, B12b needs an explicit mapping profile and B14 needs a way to configure/select it. We must not guess that device’s axes and buttons. Deferring all remapping then becomes incompatible with the required scope.
+
+**2. Task ownership and integration — agree B12b and B14, with explicit interfaces.**
+
+Keep **B12b: Codex, reviewer Claude**, after B12; make B14 explicitly depend on it. Pure snapshot decoding and the input state machine belong in B12b; browser polling, status and wiring belong in B14. The headed `shell` group is correct when the check exercises the real Space renderer.
+
+Add this B12 flight hook:
+
+```js
+flight.setAnalogInput({forward, strafe, rise, yaw, pitch})
+```
+
+Its components are normalized demands. `flight.tick(now)` remains the sole continuous flight-camera writer; `stop()` clears the analog demands as well as keyboard state. The controller adapter must not also call `flightUpdate` independently in the same frame.
+
+For orbit, compose all active orbit/pan/dolly demands into one pose and submit one preview. A jump action suppresses continuous motion for that frame. This makes the “at most one controller-driven camera update per frame” rule executable.
+
+**3. Mapping, response and polling — mostly agree, with these changes.**
+
+Your standard mapping is acceptable. Document control positions alongside Xbox-style labels, and freeze axis signs. Button actions use rising edges; held bumpers must not repeatedly multiply speed.
+
+Make the radial curve precise. For stick vector `v`, `r = hypot(v.x, v.y)` and `d = 0.15`:
+
+```text
+r ≤ d: output = (0, 0)
+otherwise: output = (v / r) · ((min(r, 1) − d) / (1 − d))²
+```
+
+This squares the magnitude while preserving direction. For triggers, use the analogous scalar curve with dead zone `0.05`. Missing or non-finite input values cannot perpetuate a previous motion demand.
+
+B12 does not currently freeze “keyboard rates per second.” Replace that reference with explicit controller defaults:
+
+- Orbit and flight look: **π/2 radians/s** at full deflection.
+- Orbit pan: **½ the visible focus-plane height/s**.
+- Dolly: exponential distance change, **doubling/halving per second**.
+- Flight translation: the explicit flight speed; cap the combined translation vector’s magnitude at one. **Flight speed does not multiply angular speed.**
+
+Speed buttons use the same validated range as the speed control.
+
+Agree one poll per workspace animation frame, before the flight tick, without another loop or timer. However, this input callback must continue while controller input is enabled **even when rendering is idle**. Integrate elapsed seconds, retain B12’s 100 ms clamp, and reset the time baseline on suspension.
+
+Do not use an unchanged `Gamepad.timestamp` to suppress held-stick movement: it describes input updates, not the passage of simulation time. [W3C timestamp definition](https://www.w3.org/TR/gamepad/#dom-gamepad-timestamp).
+
+Replace the Chrome/button-only assertion with:
+
+> Browser exposure may require controller interaction. Show “Press a controller button to connect”; the discovery interaction itself performs no navigation action.
+
+The specification allows qualifying axis interaction too. [W3C controller exposure rules](https://www.w3.org/TR/gamepad/#dom-navigator-getgamepads).
+
+**4. History, ownership and activation — agree on outcomes; refine the mechanism.**
+
+The wheel-burst timer is insufficient for controller runs. A delayed frame must not split a continuously held stick into two history entries.
+
+Use this replacement:
+
+> An orbit controller run begins on the first accepted non-neutral motion and updates one `gamepad` gesture. It commits after motion controls have been observed neutral for 200 ms. The neutral interval starts from an observed neutral sample, not from the last camera preview. Suspension or disconnection commits immediately.
+
+“Motion controls” includes D-pad and triggers where applicable. B12b can use `drag('gamepad', camera)` / `dragCommit('gamepad')`, or equivalent explicit begin/update/commit hooks; it should not inherit wheel inactivity semantics.
+
+Additional lifecycle rules:
+
+- **Input eligibility:** current activation token, successful prewarm, ready workspace, visible document, focused window, and viewport navigation enabled. Parameter editing and modal dialogs suspend controller navigation.
+- **Neutral re-arming:** after connection, resume, controller replacement, mode change or ownership loss, require neutral motion controls and released action buttons before accepting new input. Held controls must not restart movement on reactivation.
+- **Stable selection:** choose the lowest eligible index initially, then retain that controller until it disconnects. A newly connected controller must not steal control; a replacement starts disarmed.
+- **Separate source ownership from history ownership:** the `flight` history gesture can remain open while control passes between desktop input and controller input. Do not mistake an existing flight gesture for an incompatible owner that rejects every controller sample.
+- **Stopping overrides ownership:** Escape, stop, suspension and selected-controller disconnection always work. Overview/reset first stop navigation and commit the current run, then apply their single camera jump. They must not leave a flight tick able to move the new camera.
+- Disconnection of an **unselected** controller changes status only.
+
+Extend the documented stop reasons with `disconnect` and `input-suspended`; both clear demands and commit once. Camera exterior classification remains on committed cameras.
+
+**5. Spec coverage and verification — extend the amendment slightly.**
+
+Update §3’s release row and §6’s gesture rule as well as §13.3/§19.2; add controller disconnection to §15 and the agreed exclusions to §17. Controller selection, button state and mapping preferences are runtime/input settings, outside `atlas.scene`.
+
+The normative navigation text should include:
+
+> For supported controller layouts, Space provides controller-driven orbit, pan, dolly and basic flight. Continuous controller navigation follows the camera-history rules. Losing input eligibility or the selected controller stops movement and commits the last preview exactly once. Resuming requires neutral controls. Mouse and keyboard remain complete alternatives.
+
+Handle a missing API and `getGamepads()` throwing `SecurityError` as controller-unavailable states without disabling other navigation. An empty list is not proof that no controller is attached. [MDN `getGamepads()`](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/getGamepads).
+
+Keep your tests and add these consequential cases:
+
+- Held deflection across a delayed frame remains one history entry.
+- Equal-duration constant input at different frame rates produces equivalent movement.
+- Held controls across blur, workspace switching or controller replacement cause no resumed movement.
+- Flight receives one update per frame; overview/reset stops it before the jump.
+- Ownership conflicts, button edges and unselected-controller disconnection behave as specified.
+- API absence/denial preserves mouse and keyboard navigation.
+
+The scripted headed check is appropriate gate evidence for integration. Describe physical-device compatibility as unqualified until an actual device has been exercised; hardware need not become a gate dependency.
+
+**Agreed so far**
+
+- Space-only scope; Plane controller navigation deferred.
+- B12b owned by Codex, reviewed by Claude; B14 owns browser integration.
+- Your standard-layout mapping, dead-zone defaults and squared response.
+- One input frame callback, existing scheduler admission, camera-only history and complete desktop alternatives.
+- Synthetic tests without mandatory controller hardware.
+
+**Still disputed**
+
+- Whether standard-only support satisfies the user’s joystick request. If confirmed, I am **READY with the engineering changes above**. If an unmapped joystick is required, mapping support must join B12b/B14 before the amendment is READY.
+
+---
+
+## Claude → Codex — PLAN 1b.1 — joystick — Round 2: acceptance and the disputed scope (resume of run 20261021T033701Z-268a)
+*2026-10-20 20:44:08 PDT*
+
+# PLAN 1b.1 — joystick — Round 2 (Claude → Codex)
+
+I accept all of your engineering changes as stated: `flight.setAnalogInput({forward, strafe, rise,
+yaw, pitch})` with `tick` the sole continuous writer and `stop()` clearing analog demands; one composed
+orbit/pan/dolly preview per frame, jumps suppressing continuous motion that frame; your exact radial
+curve (d = 0.15; triggers 0.05; non-finite or missing values → zero demand); the explicit rates (look
+π/2 rad/s, pan ½ focus-plane height/s, dolly ×2 / ×½ per second, flight translation = flight speed with
+the combined vector capped at 1, speed never scaling angular rate); rising-edge buttons and the
+speed-control range; one poll per workspace animation frame before the flight tick, continuing while
+eligible even when rendering is idle, elapsed time clamped at 100 ms and the baseline reset on
+suspension, never gated on `Gamepad.timestamp`; "Press a controller button to connect"; the
+drag-style `gamepad` gesture whose 200 ms neutral interval starts at an observed neutral sample (not the
+wheel timer); the eligibility list; neutral re-arming; stable selection (lowest eligible index, kept
+until disconnect, replacements start disarmed, unselected disconnect = status only); source ownership
+separate from history ownership; stopping overrides ownership; overview/reset stop then jump; new stop
+reasons `disconnect` and `input-suspended`; controller state outside `atlas.scene`; missing API and
+`SecurityError` → controller unavailable, other navigation intact; your normative §13.3 sentence; §3,
+§6, §15, §17 touches; your six extra tests; physical devices described as unqualified.
+
+**On the disputed point** I agree it is a product question and I will escalate it, not decide it. To
+keep the amendment executable either way, I propose:
+- 1b.1 scope as written now = **standard-layout controllers** (`mapping === 'standard'`). A connected
+  non-standard device is shown as "controller connected — layout not supported in this release" and
+  drives nothing; we never guess its axes.
+- The question goes to the user in this exact form (your wording): *"Which controller model(s) do you
+  intend to use? Is standard-gamepad support sufficient for 1b.1, or must a joystick/flight stick with
+  a non-standard layout work?"*
+- If the answer requires non-standard sticks, a recorded plan amendment adds an explicit mapping
+  profile plus a configure/select control to B12b/B14 (and moves remapping out of §17) **before B12b
+  starts** (B12b is wave 4, so no earlier task is affected). The spec text states that 1b.1 supports
+  standard-layout controllers and that non-standard joysticks await the user's answer (§19.2).
+
+Is the amendment, with your changes and this framing, **READY** as plan rev 4.2 (READY for the
+standard-layout scope, with the one open user question recorded)? If yes, reply READY; if no, name the
+blocker. Read-only; no edits.
+
+
+---
+
+## Codex — PLAN 1b.1 — joystick — Round 2 reply (run 20261021T034408Z-2f95)
+*2026-10-20 20:44:40 PDT*
+
+**READY** — for the standard-layout scope in rev 4.2, with the user question recorded and any required non-standard support amended into B12b/B14 before B12b starts.
