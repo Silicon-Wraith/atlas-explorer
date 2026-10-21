@@ -21,7 +21,38 @@ function setup() {
 }
 
 test('Space declares its own gesture kinds', () => {
-  assert.deepEqual(SPACE_KINDS, ['orbit-drag', 'pan-drag', 'wheel-dolly', 'key-nudge', 'flight', 'focus']);
+  assert.deepEqual(SPACE_KINDS, ['orbit-drag', 'pan-drag', 'wheel-dolly', 'key-nudge', 'flight', 'focus', 'gamepad']);
+});
+
+test('a gamepad drag commits once without a wheel timer and cancel restores its starting pose', () => {
+  const h = setup(), before = h.getCamera();
+  assert.ok(SPACE_KINDS.includes('gamepad'));
+  h.gestures.drag('gamepad', orbit(before, 0.1, 0));
+  h.clock.advance(1000);
+  assert.equal(h.gestures.openKind, 'gamepad');
+  assert.equal(h.history.snapshot().camera.length, 1);
+  assert.equal(h.gestures.dragCancel('gamepad'), true);
+  assert.deepEqual(h.getCamera(), before);
+  h.gestures.drag('gamepad', orbit(before, 0.2, 0));
+  assert.equal(h.gestures.dragCommit('gamepad'), true);
+  assert.equal(h.gestures.dragCommit('gamepad'), false);
+  assert.equal(h.history.snapshot().camera.length, 2);
+  const after = h.getCamera(); h.gestures.undo();
+  assert.deepEqual(h.getCamera(), after);
+});
+
+test('gamepad belongs to the drag allowlist and keeps grouped input and flight from opening', () => {
+  const h = setup(); assert.ok(SPACE_KINDS.includes('gamepad'));
+  h.gestures.drag('gamepad', orbit(h.getCamera(), 0.1, 0));
+  const camera = h.getCamera();
+  for (const kind of ['wheel-dolly', 'key-nudge']) assert.equal(h.gestures.grouped(kind, dolly(camera, 0.8)), false);
+  assert.equal(h.flight.start(), false);
+  assert.equal(h.flight.active, false);
+  assert.equal(h.gestures.openKind, 'gamepad');
+  assert.deepEqual(h.getCamera(), camera);
+  h.gestures.dragCommit('gamepad'); h.flight.start();
+  assert.equal(h.gestures.drag('gamepad', orbit(camera, 0.1, 0)), false);
+  assert.equal(h.gestures.openKind, 'flight');
 });
 
 test('a wheel burst groups within 200 ms', () => {

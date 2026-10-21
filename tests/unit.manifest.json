@@ -43,6 +43,7 @@
     "tests/unit/reference-envelope.test.js",
     "tests/unit/space-gestures.test.js",
     "tests/unit/space-navigation.test.js",
-    "tests/unit/space-recovery.test.js"
+    "tests/unit/space-recovery.test.js",
+    "tests/unit/space-gamepad.test.js"
   ]
 }

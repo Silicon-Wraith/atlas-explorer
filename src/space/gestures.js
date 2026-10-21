@@ -1,8 +1,8 @@
 // Space input owns gestures; shared history owns validated scenes and both stacks.
 import { equalCameras } from './camera.js';
 
-export const SPACE_KINDS = Object.freeze(['orbit-drag', 'pan-drag', 'wheel-dolly', 'key-nudge', 'flight', 'focus']);
-const DRAGS = ['orbit-drag', 'pan-drag'];
+export const SPACE_KINDS = Object.freeze(['orbit-drag', 'pan-drag', 'wheel-dolly', 'key-nudge', 'flight', 'focus', 'gamepad']);
+const DRAGS = ['orbit-drag', 'pan-drag', 'gamepad'];
 const GROUPS = ['wheel-dolly', 'key-nudge'];
 
 // stopNavigation(reason) receives lifecycle reasons (escape, blur, hidden,
@@ -58,6 +58,9 @@ export function createSpaceGestures({ history, onTransition = () => {}, stopNavi
   function drag(kind, camera) {
     if (!DRAGS.includes(kind)) throw new RangeError(`unknown Space drag: ${kind}`);
     if (owns('flight')) return false;
+    // A pointer may have been pressed before the controller's first preview,
+    // then moved later. Its delayed drag must not take over the controller run.
+    if (kind !== 'gamepad' && owns('gamepad')) return false;
     return preview(kind, camera);
   }
   function grouped(kind, camera) {
