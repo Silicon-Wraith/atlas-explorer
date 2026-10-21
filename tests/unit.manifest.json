@@ -6,6 +6,7 @@
     "tests/unit/scene.test.js",
     "tests/unit/plane-scene.test.js",
     "tests/unit/history.test.js",
+    "tests/unit/history-camera-equality.test.js",
     "tests/unit/render-adapter.test.js",
     "tests/unit/renderer-guards.test.js",
     "tests/unit/discoveries.test.js",
@@ -39,6 +40,8 @@
     "tests/unit/space-renderer.test.js",
     "tests/unit/tracing-metadata.test.js",
     "tests/unit/space-tracing.test.js",
-    "tests/unit/reference-envelope.test.js"
+    "tests/unit/reference-envelope.test.js",
+    "tests/unit/space-gestures.test.js",
+    "tests/unit/space-navigation.test.js"
   ]
 }
