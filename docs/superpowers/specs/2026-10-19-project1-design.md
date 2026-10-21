@@ -5,7 +5,7 @@ affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera 
 from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
 compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
 (4) one Discoveries control, filtered per workspace and fed by discovery sources, with only the
-local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.4 (rev 2 was
+local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.5 (rev 4.5 applies three Claude/Codex corrections with no new user decision: (1) §11 model-record shape — records carry no `validation`, which lives in the §16.2 registry (Codex B03 r1 I4, run 20261021T110320Z-1652; analytic `derivationVersion` values are populated strings, only recurrence, initialization and escape metadata are null); (2) the §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) the B01 served-source provenance wording in the 1b.1 plan (Codex B01 r3, run 20261021T110827Z-86bb). Rev 2 was
 Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply Codex's co-author reviews;
 rev 4 adds Project 1c, Space deep zoom, by the user's decision "Yes, add deep zoom as 1c in Project 1."
 (2026-10-20) — §21; rev 4.2 applies the user's decisions of 2026-10-21: the §9.1 WebGPU backend annex
@@ -91,7 +91,7 @@ precision-sensitive quaternion arithmetic requires remediation. The subsequent u
 2026-10-20 says E8 invalidated the G5-A formulation and identifies replacement work as G5-D. These
 reports do not establish qualification; the final recorded decision and numerical evidence control
 the product formulation. Chrome 151 reported empty adapter device strings (historical; identity is configuration-dependent,
-§7.4 erratum); headless WebGPU is unreliable on
+§7.4 erratum, refined rev 4.5); headless WebGPU is unreliable on
 this host.
 
 ## 3. Releases and the acceptance demonstration
@@ -376,12 +376,12 @@ queued → preparing → running → completed
 ### 7.4 Render reports
 A report records: scene hash; request identity; model, numerics and shader versions; backend,
 browser and hardware identity, where every identity field may be `unavailable` and each observed
-field names its evidence source, and no device string is ever invented (**erratum, rev 4.4:**
-Project 0’s recorded Chrome 151 configuration returned empty adapter strings. B01’s Chrome
-155.0.8059.84 configuration, using the complete recorded launch profile, returned populated
-strings. Identity availability is configuration-dependent; record observed fields with their
-source, otherwise `unavailable`; the code asserts neither universal emptiness nor universal
-population); requested and completed dimensions, iterations, tracing settings and samples;
+field names its evidence source, and no device string is ever invented (**erratum, rev 4.4, refined rev 4.5:**
+Chrome 151 returned empty strings; in the paired Chrome 155.0.8059.84 experiment, vendor and
+architecture were observed in both launches, and device and description only with
+`--enable-webgpu-developer-features`; these are configuration-specific, so the code asserts
+neither universal emptiness nor universal population. Record each observed field with its source,
+otherwise `unavailable`); requested and completed dimensions, iterations, tracing settings and samples;
 outcome and its reason; counts of each ray termination status and of unavailable normals;
 estimator category, derivation version and applicable validation record; requested versus
 effective parameters and the sampling conditions; preparation, admission, submission, completion,
@@ -699,10 +699,15 @@ recurrence D ← 8D + 1 from 0 first exceeds the binary32 maximum at update 44).
 
 Every model record:
 ```js
-{ id, recurrenceVersion, initialization, escapeRule, supportedParameters,
-  estimator: { category, semantics, derivationVersion },
-  validation: { recordId, implementationVersion, testedParameters, testedSamplingConditions } }
+{ id, version, recurrenceVersion, initialization, escapeRule, supportedParameters,
+  estimator: { category, semantics, derivationVersion } }
 ```
+Every static model record contains the following metadata fields. Empirical validation records are stored
+separately in the validation registry described by §16.2. Applicable evidence is selected by model,
+evidence class, implementation hashes, profile, effective parameters, sampling conditions and
+spatial domain. A model record does not itself assert validated coverage; absence of matching
+evidence is reported as “no matching validation”. For analytic models `derivationVersion` is a
+populated string; only the recurrence, initialization and escape metadata are null.
 Supported input ranges and empirically tested coverage stay separate. The category appears in model
 metadata, the inspector, diagnostics, reports, and as a compact viewport indicator from 1b.1.
 

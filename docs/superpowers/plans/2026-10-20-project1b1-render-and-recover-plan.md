@@ -52,7 +52,7 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4.4 — records rulings agreed between Claude and Codex (no new user decision; spec
+**Revision:** 4.5 — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
 rev 4.4). **B02 rulings 1–10** (Claude's B02 reviews r1/r2 and Codex run 20261021T072056Z-9083):
 (1) decimal grammar with lexical significant-digit counting, explicit exponent bound, signed zero;
 (2) `toDouble`/`toBinary32` reject non-finite results; (3) **AMENDED by Codex, accepted by Claude**
@@ -70,7 +70,7 @@ Space-to-Plane import-boundary assertion. **B01 joint rulings** (Codex run
 20261021T073220Z-227f): (a) the annex distinguishes adapter, requested and granted limits and
 requests only task-needed increases — no blanket `requiredLimits`; `maxStorageTexturesPerShaderStage`
 (default 4) is the binding risk, so read-only inputs use sampled bindings; owner B06; (b) spec §7.4
-erratum — identity is configuration-dependent (Chrome 151 empty, Chrome 155 populated) and the code
+erratum — identity is configuration-dependent (Chrome 151 empty; Chrome 155 vendor and architecture in both launches, device and description only with `--enable-webgpu-developer-features`; refined rev 4.5) and the code
 asserts neither; (c) B01's fix round includes a developer-features isolation experiment, labelled a
 portability experiment. **Rev 4.3** — applies the B00 contract rulings agreed between Claude's B00 review (r1) and
 Codex (run 20261021T060324Z-4e7f), and the user's decision of 2026-10-21 "approve amending the
@@ -716,8 +716,7 @@ P1–P3 become binding at this task's commit.
   `DeviceError {code: 'no-webgpu' | 'no-adapter' | 'device-refused'}`.
 - Produces (`tests/space.mjs`): the headed suite entry point: `--group <name>` selects a
   registered group (`coexistence` in B01; later tasks add `numerics`, `rendering`, `recovery`,
-  `shell`); each group launches installed Chrome with the complete Project 0 profile, serves the
-  built application, records `{name, details}` passes to its own report file with the requested
+  `shell`); each group launches installed Chrome with the complete Project 0 profile, tests the gate-owned committed source checkout: the unchanged gate serves the repository root on its own port and verifies the build in its separate `build` stage. A standalone run adopts the server answering at `ATLAS_URL` or starts and owns one from its checkout, records which, and establishes provenance by comparing every tracked application file (`index.html`, `src/`, `assets/`) byte for byte with what the server serves, recording the commit and dirty state; a mismatch fails the run before any browser launches. An arbitrary responding server, or a single matching module, never establishes provenance. Each group records `{name, details}` passes to its own report file with the requested
   and effective launch arguments and the `chrome://gpu` identity, and is bounded by
   `installSuiteDeadline`. B01's `requiredPasses`: `WebGL 2 and WebGPU contexts coexist in one
   page`; `Adapter identity reports observed or unavailable fields truthfully`; `A representative
