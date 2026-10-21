@@ -43,13 +43,25 @@ export function createFakePersistence() {
       aborted(signal);
       return stores.writes.get(writeId) ?? null;
     },
-    commit(batch, { signal } = {}) {
+    commit({ puts = [], deletes = [] }, { signal } = {}) {
       return new Promise(resolve => {
         const apply = () => {
           if (fake.failNext) { const reason = fake.failNext; fake.failNext = null; resolve({ status: 'failed', reason }); return; }
           if (signal?.aborted) { resolve({ status: 'aborted', reason: 'aborted before commit' }); return; }
-          for (const { store, value } of batch.puts) stores[store].set(keyOf(store, value), value);
-          for (const { store, key } of batch.deletes) stores[store].delete(key);
+          try {
+            // Stage the batch so a refused request rolls back earlier puts/deletes, just as
+            // IndexedDB aborts the whole transaction. Keep the exposed Map identities stable.
+            const staged = Object.fromEntries(Object.entries(stores).map(([name, rows]) => [name, new Map(rows)]));
+            for (const { store, value } of puts) {
+              const key = keyOf(store, value); compareKeys(key, key);
+              staged[store].set(key, value);
+            }
+            for (const { store, key } of deletes) { compareKeys(key, key); staged[store].delete(key); }
+            for (const [name, rows] of Object.entries(staged)) {
+              stores[name].clear();
+              for (const [key, value] of rows) stores[name].set(key, value);
+            }
+          } catch (error) { resolve({ status: 'failed', reason: error.message }); return; }
           resolve({ status: 'committed' });
         };
         if (fake.holdCommits) held.push(apply); else queueMicrotask(apply);
