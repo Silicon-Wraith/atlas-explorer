@@ -57,6 +57,7 @@ export function bindSpaceNavigation({ surface, gestures, flight, getCamera, pick
   }
   listen(surface, 'pointerdown', event => {
     if (destroyed || editable(event.target) || pointers.size || ![0, 2].includes(event.button)) return;
+    if (gestures.openKind === 'gamepad') return;
     inputVersion++;
     const kind = flight.active ? 'flight' : event.button === 2 || event.shiftKey ? 'pan-drag' : 'orbit-drag';
     if (kind !== 'flight' && !canMove()) return;

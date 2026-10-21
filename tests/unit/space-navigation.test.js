@@ -69,6 +69,36 @@ test('an orbit drag is one camera-history entry and undo does not move the camer
   assert.equal(h.transitions.filter(t => t.cause === 'commit').length, 1);
 });
 
+test('pointerdown during a controller run refuses capture and preserves its single history entry', async () => {
+  for (const button of [0, 2]) {
+    const h = setup(), captures = [], focuses = [];
+    h.surface.setPointerCapture = id => captures.push(id);
+    h.surface.focus = () => focuses.push(true);
+    h.gestures.drag('gamepad', orbit(h.getCamera(), 0.1, 0));
+    const before = h.getCamera(), transitions = h.transitions.length;
+    await h.surface.emit('pointerdown', { button });
+    assert.deepEqual(captures, []); assert.deepEqual(focuses, []);
+    for (const type of ['pointermove', 'pointerup', 'pointercancel']) await h.surface.emit(type, { clientX: 500, button });
+    assert.equal(h.gestures.openKind, 'gamepad'); assert.deepEqual(h.getCamera(), before);
+    assert.equal(h.transitions.length, transitions); assert.equal(h.history.snapshot().camera.length, 1);
+    h.gestures.drag('gamepad', orbit(before, 0.1, 0)); h.gestures.dragCommit('gamepad');
+    assert.equal(h.history.snapshot().camera.length, 2);
+    assert.equal(h.transitions.filter(t => t.cause === 'commit').length, 1);
+  }
+});
+
+test('a pointer pressed before controller ownership cannot displace the run with a delayed move', async () => {
+  for (const button of [0, 2]) {
+    const h = setup(); await h.surface.emit('pointerdown', { button });
+    h.gestures.drag('gamepad', orbit(h.getCamera(), 0.1, 0));
+    const before = h.getCamera(), transitions = h.transitions.length;
+    await h.surface.emit('pointermove', { clientX: 500 }); await h.surface.emit('pointerup');
+    assert.equal(h.gestures.openKind, 'gamepad'); assert.deepEqual(h.getCamera(), before);
+    assert.equal(h.transitions.length, transitions); assert.equal(h.history.snapshot().camera.length, 1);
+    h.gestures.dragCommit('gamepad'); assert.equal(h.history.snapshot().camera.length, 2);
+  }
+});
+
 test('pointerup commits and pointercancel restores the pre-gesture pose', () => {
   for (const event of ['pointerup', 'pointercancel']) {
     const h = setup(), before = h.getCamera();
