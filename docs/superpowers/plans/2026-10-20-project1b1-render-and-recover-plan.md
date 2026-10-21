@@ -52,7 +52,7 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4.5 — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
+**Revision:** 4.6 — rev 4.6 records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
 rev 4.4). **B02 rulings 1–10** (Claude's B02 reviews r1/r2 and Codex run 20261021T072056Z-9083):
 (1) decimal grammar with lexical significant-digit counting, explicit exponent bound, signed zero;
 (2) `toDouble`/`toBinary32` reject non-finite results; (3) **AMENDED by Codex, accepted by Claude**
@@ -326,7 +326,7 @@ cites from Global Constraints); any later amendment changes both together.
   backend is unavailable or destroyed; successful acquisitions receive increasing positive
   epochs. Completed tickets carry observed completion timing; failed and interrupted tickets
   have `queueCompletedAt: null`, `elapsedMs: null` and no timestamp duration, with the error
-  message (failed) or the loss reason (interrupted) as `reason`. A `device.lost.then(...)` observer is
+  message (failed) or the loss reason (interrupted) as `reason`. A ticket settles `failed` only when its work never entered the queue, including synchronous or encode-time failure before queue entry, or after its queue fence has resolved. A failed ticket must never represent work still running on the GPU. Timeout alone is not terminal evidence; observed loss follows the interruption path. A `device.lost.then(...)` observer is
   attached immediately after acquisition and never awaited before returning. Observed loss
   immediately makes the backend unavailable and invalidates its epoch before clients are notified
   (`onLoss({epoch, reason: 'destroyed' | 'unknown' | <reason>, message})`); late callbacks from
@@ -419,8 +419,7 @@ verbatim in `limitations`.
 
 ## Frozen verification protocols (B00 deliverable; changed only by a recorded plan amendment)
 
-**P1 — The §16.2 matrix** (`tests/reference/space-matrix.json`, generated deterministically by
-`tests/reference/matrix.mjs` and committed in B04 before any GPU comparison). Budgets 64, 128,
+**P1 — The §16.2 matrix** (`tests/reference/space-matrix.json` indexes the raw JSON shards under `tests/reference/space-matrix/`; the index and all shards are generated deterministically by `tests/reference/matrix.mjs` and committed in B04 before any GPU comparison. Together they freeze the complete logical matrix, including failed or diagnostic rows and exclusions). Budgets 64, 128,
 256 and 512 throughout the point matrix; bulb powers 2–8. Every stratum is classified in the
 fixture schema as **mandatory** (arithmetic, semantic and geometric qualification) or
 **diagnostic** (the detail ladders). A mandatory stratum must meet its preregistered floor and
@@ -430,29 +429,47 @@ substantiate a mandatory floor (the floor is then revised by a recorded plan ame
 weakened silently). Diagnostic rows may record threshold exceedance or insufficient coverage
 without claiming validation at that distance; they never substitute for mandatory qualification.
 
+**Storage contract (user-approved 2026-10-21).** The index uses schema `atlas.space-matrix-index`, version 1, and contains `matrixTemplate`, `stratumOrder`, `shards`, and `matrixSha256`. `matrixTemplate` preserves the logical matrix's field order, with an empty `strata` array in its original position. Each shard descriptor records its relative path, kind/model grouping, byte length, SHA-256 and stratum IDs. Each shard contains a JSON array of complete strata. Assembly rejects missing, duplicate or unexpected IDs, verifies every shard's exact bytes, and fills `matrixTemplate.strata` in `stratumOrder`. Canonical assembled bytes use UTF-8 `JSON.stringify(matrix)` followed by one LF, with nonfinite values rejected. `matrixSha256` hashes these assembled bytes, excluding index-only metadata. `--check` verifies that assembly is byte-identical to serialized `generateMatrix({seed:1})`.
+
+**User decision, 2026-10-21 (recorded; Codex B04 fix round run 20261021T123550Z-fdcd, convergence run 20261021T114017Z-0210).** The user approved the P1 qualification amendment: overview grid `(376+17u, 96+17v)` on the object footprint; eligibility is status-stability under a 10× tighter trace, with depth recorded and not screened; floors 820 eligible and 64 hits; `C=(2,0,0,0)` is non-surface-bearing; preregistered pass rules of at most 5% status disagreement and at least 95% of hits within 2τ on surface-bearing rows; and the power-7 bulb-generic floor 410→400 only. The user also approved sharded storage (18 raw JSON shards plus a SHA-256 index).
+
+
 | Stratum | Frozen candidates | Floor / required assertions |
 |---|---:|---|
 | Bulb origin, per power × budget | 1 | 1/1 semantic case (zero power map; derivative zero state) |
 | Bulb polar axis `(0, 0, ±2ʲ)`, j = −8…3, per power × budget | 24 | 24/24 semantic cases (φ = 0) |
-| Bulb generic: cell centres of an 8³ grid over [−1.2, 1.2]³, per power × budget | 512 | ≥ 410 continuous-comparison eligible |
+| Bulb generic: cell centres of an 8³ grid over [−1.2, 1.2]³, per power × budget | 512 | ≥400 continuous-comparison eligible for power 7; ≥410 for powers 2–6 and 8; unchanged 512-candidate grids |
 | Quaternion generic: C ∈ {(−.2,.8,0,0), (0,0,0,0), (2,0,0,0), (−.2,.8,.15,−.1), (.25,−.5,.5,−.25), (−.4,.2,−.3,.6)} × κ ∈ {0, ±0.5, ±2, ±4} × budget; an 8 × 8 × 4 cell-centre grid over [−1.5, 1.5]³ | 256 | ≥ 205 eligible; additionally ≥ 64 eligible non-initial-escape cases when \|κ\| ≤ 0.5. **κ = ±4 cells are empty-slice cells** (‖C‖ ≤ 8 ⇒ R(C) ≤ (1 + √33)/2 ≈ 3.3723 < 4): they require empty-slice, miss and initialization-escape assertions, not coverage minimums |
 | Quaternion supported-boundary: the 16 corners of [−4, 4]⁴ plus its 8 face centres × 7 κ values {0, ±0.5, ±2, ±4} × 8 starts (origin, the six ±0.25 axis points, (0.25, −0.5, 0.75)) × 4 budgets | 5,376 | every admission, bound and semantic assertion; singular cases never excluded; exact requested-decimal just-outside-range rejection tests beside them |
 | 32 named adversarial cases: 20 point cases (B08) and 12 ray cases (B10) | 32 | 32/32: zero sensitivity, derivative range (update 44), initialization escape, strict and equal empty-slice bounds, four-component quaternion probes that detect dropped or wrong j/k components, invalid inputs (points); analytic interior and boundary starts, origin-through, polar-axis, grazing, inside-start and both stagnation reasons (rays) |
 | Sphere / rotated box reference rays (Project 0 A.4, re-expressed independently) | 625 / 651 | ≥ 500 / 521 eligible, each with ≥ 64 positive-depth hits |
 | Menger depth 1 / 2 reference rays (41 × 41, oblique direction) | 1,681 each | ≥ 1,345 eligible with ≥ 64 positive-depth hits |
-| Fractal overview rendering: 1,024 rays per power and per quaternion (C, κ) cell, budget 128 | 1,024 | ≥ 820 reference-eligible; hit-count requirements only for preregistered surface-bearing views |
+| Fractal overview rendering: 32×32 integer pixels `(376+17u,96+17v)`, `u,v=0…31`, per bulb power and quaternion (C,κ) cell; upright 2.5R overview camera, 60° vertical FOV, 1280×720, iteration budget 128, 512 steps | 1,024 | ≥820 status-stable reference-eligible rays; ≥64 eligible positive hits on the surface-bearing rows defined below; the overview status and depth pass rules below |
 | Detail approaches: two independently prepared anchors per bulb power, two for the default quaternion and two for C = (−.2,.8,.15,−.1), κ = 0.5; distances 10⁻¹…10⁻⁸; the central 32 × 32 rays of a 1280 × 720 frame; budget 128; 512 steps | 1,024 per anchor and distance | ≥ 512 reference-eligible and ≥ 128 positive-depth hits for a depth claim; the ladder measures where agreement fails — "threshold exceeded" is evidence, not a pass; insufficient coverage is `inconclusive` |
+
+
+At the upright overview camera, focus at the origin, distance `2.5R` along normalized Project 0 A.6 direction, vertical FOV 60°, and frame 1280×720, sample pixels `(i,j)=(376+17u,96+17v)`, `u,v=0…31`. Rays pass through `(i+0.5,j+0.5)`. These are the rounded cell centres of the enclosing sphere's projected bounding square: half-extent `360 tan(asin(1/2.5))/tan(π/6) = 272.13442056664366` pixels. No per-model adjustment.
+
+A ray is reference-eligible when the binary64 surface-v1 trace and the otherwise identical trace with tolerance `0.1τ(t)` both resolve to the same status, approximate hit or miss. Record both depths and their signed difference, tighter minus primary; depth convergence does not screen overview eligibility. An eligible positive hit has primary depth greater than zero. Record every exclusion and its reason.
+
+Every overview stratum requires at least 820 reference-eligible rays. Preregistered surface-bearing strata additionally require at least 64 eligible positive hits. Floors apply separately to each stratum, never pooled.
+
+For overview hit-floor purposes, surface-bearing means every bulb power and quaternion cells with `|κ|≤0.5`, except `C=(2,0,0,0)`. Its three small-κ rows retain the 820 reference floor and status comparison, with positive-hit floor zero and diagnostic-only depth comparison. This classification does not assert an empty slice or require all rays to miss.
+
+Let E be the frozen eligible-ray set and H its positive reference hits. On every overview row, GPU/reference status disagreements must satisfy `20D≤|E|`. On surface-bearing rows, at least 95% of H must return a GPU approximate hit with finite positive depth satisfying `abs(t_GPU−t_ref)≤2τ(t_ref)`; equivalently `20G≥19|H|`. A missing GPU hit counts as a failed depth comparison, not a removed denominator. Depth comparisons on non-surface-bearing rows are diagnostic. Numerical failures, including on excluded rays, are a hard failure, not absorbed into the 5% allowance. Both ordinary traces use surface-v1. These are preregistered engineering thresholds, not geometric error bounds.
+
+Recorded amendment, approved 2026-10-21: for power 7 only, amend the continuous-comparison floor to 400 of the unchanged 512 candidates at each budget. Powers 2–6 and 8 retain 410. All coordinates, sensitivity screens, comparison tolerances, semantic requirements and exclusion reporting remain unchanged. This amendment is based on CPU preflight finding 408 eligible cases at every budget, before any GPU comparison.
 
 Totals before adversarial cases: 15,036 bulb, 43,008 generic quaternion, 5,376 boundary
 quaternion points. These are sampling budgets, not evidence that the floors are attainable; CPU
 preflight establishes that. Compared quantities and proposed tolerances (quantity-specific):
-status and escape index exact; every quaternion component at escape, relative 10⁻⁴ with absolute
+point status and escape index exact; analytic and adversarial ray statuses exact; ordinary fractal overview statuses use the separately specified overview criterion; every quaternion component at escape, relative 10⁻⁴ with absolute
 floor 10⁻⁶ (so that dropped or wrong j/k components are detected); ln R relative 10⁻⁴; log₂ DE
 absolute 2⁻¹⁰ (compared in the log domain; an unavailable estimate must be unavailable on both
 sides); analytic ray depth relative 10⁻³ with floor 10⁻⁶. **Before any numerical GPU comparison,
 B04 records the analysis supporting every tolerance — fused and unfused evaluation, transcendental
 error, conditioning and output quantization — and the tolerances are not represented as derived
-until that analysis exists.** Sensitivity screen (generic strata only): for each candidate,
+until that analysis exists.** Sensitivity screen (generic point strata only): for each candidate,
 independently perturb each relevant effective binary32 input to its adjacent representable
 values; exclude and count the candidate if the CPU reference changes status or escape index, or
 changes a compared continuous quantity by more than one quarter of that quantity's acceptance
@@ -1075,13 +1092,13 @@ spec §11, not B03's code.
   `tests/reference/quaternion.js`, `tests/reference/bulb.js`, `tests/reference/analytic.js`,
   `tests/reference/menger.js`, `tests/reference/camera.js`, `tests/reference/trace.js`,
   `tests/reference/anchors.mjs`, `tests/reference/matrix.mjs` (generator),
-  `tests/reference/space-matrix.json` (generated, committed),
+  `tests/reference/space-matrix.json` (generated index/header, committed) and `tests/reference/space-matrix/*.json` (18 generated data shards, committed): nine non-ladder kinds—bulb-origin, bulb-polar, bulb-generic, quaternion-generic, quaternion-boundary, adversarial-point, adversarial-ray, analytic-ray, fractal-overview—and nine ladder shards, detail-bulb-2 through detail-bulb-8, detail-quaternion-default and detail-quaternion-offplane,
   `tests/reference/quaternion-usability.json` (generated, committed),
   `tests/reference/performance-predictions.json` (generated, committed; each P3 checkpoint's
   termination distribution and acceptance tolerance, with its sha256 recorded)
 - Modify: `tests/reference/performance-workload.json` — materialize B00's frozen rules, clear owned
   unresolved fields, and record the prediction hash.
-- Test: `tests/unit/reference.test.js`
+- Test: `tests/unit/reference-points.test.js`, `tests/unit/reference-rays.test.js`, and `tests/unit/reference-p3.test.js`. Regenerate each partition once; retain live semantic assertions and separate frozen-artifact integrity comparisons. Measure each file's runtime against the unchanged 600,000 ms whole-run bound. The controller registers the files.
 
 **Interfaces:**
 - Consumes: nothing from `src/` (a test asserts it).
@@ -1091,7 +1108,7 @@ spec §11, not B03's code.
   field, interval) → {status, reason, subreason, t, steps}` (the §11.4 rules in binary64, with an
   f32-emulation mode for the stagnation checks), `rayFor(camera, i, j, W, H)` (Project 0 A.1,
   re-expressed), `prepareAnchor(model, effective, ray) → {anchor, t, convergence}` (P1's
-  algorithm), `generateMatrix({seed}) → matrix`, the committed matrix `{schema:
+  algorithm), `generateMatrix({seed}) → matrix`, the assembled logical matrix, stored through the index and shard contract in P1, `{schema:
   'atlas.space-matrix', version: 1, frozenAt, generatorSha256, analysis: {path, sha256}, strata:
   [{id, role: 'mandatory' | 'diagnostic', kind, profile: 'surface-v1' | 'ladder-v1', cases: [{id,
   inputs, camera?, pixel?, expected}], floor, eligible, excluded: [{id, reason, quantity}], state:
@@ -1105,7 +1122,8 @@ spec §11, not B03's code.
 **Design assertions:** §16.2 verbatim, via P1; independence (`tests/reference/` shares no code
 with `src/`); nothing is validated merely because Project 0 tested power 8 and one quaternion
 parameter; floors per stratum, never pooled; semantic and adversarial cases never excluded; the
-detail ladder's exceedances are evidence, not passes.
+detail ladder's exceedances are evidence, not passes. Named semantic tests execute the live independent references on their declared inputs and assert the mathematical/status result. Committed JSON comparisons remain separate determinism tests. Matrix `tolerances.usabilityDistribution` retains 0.05 for P2. P3 retains `perClassAbsoluteFraction: 0.01`; neither tolerance substitutes for the other. Prediction provenance includes the generator hash, so a generator edit changes prediction and workload hashes even when termination counts remain unchanged.
+
 
 - [ ] **Step 1: Write the failing tests** — `reference modules import nothing from src`; `the
   complex and quaternion recurrences agree exactly on the invariant plane`; `the bulb reference
@@ -1113,8 +1131,8 @@ detail ladder's exceedances are evidence, not passes.
   and 400 boxes and the exterior distance is the box-union minimum`; `the reference marcher
   reports stagnation by field coordinate for o = 1, t = 2⁻²⁶ in f32 mode`; `the reference marcher
   reports an interior start as unresolved with estimate-unavailable`; `κ = ±4 strata contain only
-  empty-slice assertions`; `the matrix generator is deterministic and its output matches the
-  committed file's sha256`; `an inconclusive mandatory stratum blocks qualification` (the
+  empty-slice assertions`; `the matrix generator is deterministic and its output
+  matches the committed index's whole-matrix SHA-256; shard byte lengths and hashes, complete ID coverage and assembly order also match`; `an inconclusive mandatory stratum blocks qualification` (the
   generator refuses to mark a mandatory stratum `frozen` below its floor, and `matrixIsQualifiable`
   returns false while any mandatory stratum is inconclusive); `every tolerance names its analysis
   section`; `anchors converge within the declared rule and are recorded with both tolerances`;
@@ -1314,24 +1332,19 @@ report (B11 records the complete product set's preparation time once it exists).
   makeAdmission, setTimer, clearTimer, ...SCHEDULER_DEFAULTS}) → {registerView(viewId, {hidden =
   false}), setEpoch(epoch), request(viewId, {jobId, requestId, priority, kind: 'draft' |
   'settled', plan: JobPlan}) → job` (one coalesced pending interactive request per view: a newer
-  request replaces the pending one, which settles `superseded`; a running job is never replaced,
-  only cancelled), `admit() → [{operation, admission}]` (at most `maxOutstanding` leases outstanding
+  request replaces the pending one, which settles `superseded`; `request()` supersedes only pending interactive work and never cancels running work. Clients explicitly call `cancel(jobId)` when cancellation is required. Issuing an auxiliary lease also makes its owner running), `admit() → [{operation, admission}]` (at most `maxOutstanding` leases outstanding
   across all views and jobs per epoch; priority order; hidden and paused views never admitted;
   auxiliary submissions — probes, readbacks, presentation — take leases from the same pool through
   `requestAuxiliary(viewId, {jobId, priority, operation}) → {done}`), `completed(admission, {epoch, elapsedMs, timestampMs?})` (advances the plan with `{epoch,
   elapsedMs, timestampMs?, targetMs: batchTargetMs}`; the plan's `onAdvance` adapts pending
   batches; `createBatch` enforces hard bounds), `failed(admission, error)`, `interrupted(epoch)` (observed loss: every lease of
-  that epoch settles `interrupted`), `pause(viewId)`, `resume(viewId)`, `update(viewId)` (admits
-  exactly one frozen current snapshot's job, then returns the view to paused), `hidden(viewId,
-  bool)`, `cancel(jobId) → {accepted: boolean, done: Promise<{outcome: 'cancelled', submitted:
-  'none' | 'drained' | 'interrupted'}>}` (stops admission immediately; `done` reports `drained` only
-  after completion evidence for every outstanding lease, or `interrupted` after observed loss;
-  watchdog expiry proves neither), `snapshot()`, `subscribe(listener)}`. The watchdog runs on the
+  that epoch settles `interrupted`), `pause(viewId)`, `resume(viewId)`, `update(viewId)` (pins the newest pending snapshot already submitted through `request()`, before admission; otherwise selects the running job. With neither, it only pauses. Subsequent requests remain coalesced separately. The selected job runs while other work remains paused, then the view remains paused. Explicit `pause()` or `resume()` during an unadmitted Update cancels its selection when a newer request is pending), `hidden(viewId,
+  bool)`, `cancel(jobId) →
+  {accepted: true, done: Promise<{outcome: 'cancelled', submitted: 'none' | 'drained' | 'interrupted'}>}
+  | {accepted: false, done: Promise<null>}` (stops admission immediately; `done` reports `drained` only
+  after every outstanding lease has terminal evidence—completion or failure—or `interrupted` after observed loss. Watchdog expiry proves neither. Failure before cancellation preserves the job's `failed` outcome; failure during cancellation contributes terminal drain evidence without changing the outcome to `failed`. Unknown or retired jobs return `accepted: false`; their outcomes remain on their own `job.done`), `snapshot()`, `subscribe(listener)}`. The watchdog runs on the
   injected timer while leases are outstanding, including for hidden views; it never depends on
-  animation-frame ticks: expiry stops admission for that epoch and settles the job
-  `budget-exceeded` with reason `watchdog`, without claiming cancellation and without releasing the
-  lease's resources. Elapsed work excludes time while the view was paused or hidden; exceeding a
-  budget settles `budget-exceeded` with `{continuation: 'resume' | 'lower-cost'}`; a job settles
+  animation-frame ticks. Expiry stops admission for that epoch and settles only jobs holding outstanding leases as `budget-exceeded`, reason `watchdog`, continuation `lower-cost`. Unissued jobs remain queued. Requests and auxiliary requests received during the stall also queue. The stall clears after every outstanding lease has terminal completion, failure, or loss evidence. Already-settled jobs remain settled. Observed loss still prevents admission until a new epoch is installed. No timeout releases resources or proves cancellation. Elapsed work accrues only while the plan holds at least one admitted operation lease and its view is eligible. Queued, paused and hidden time is excluded; auxiliary leases do not charge this clock. End-to-end latency remains anchored to `requestedAt`. Elapsed-work exhaustion settles `budget-exceeded` with continuation `resume`; watchdog exhaustion uses `lower-cost`. These are recovery offers, not instructions to revive a settled job. Auxiliaries share the lease pool and cancellation ownership by `jobId`, have separate `done` promises, never advance the owner's plan, and are covered by the watchdog but not elapsed-work budgets. Unissued auxiliaries supersede with their pending owner; issued auxiliaries drain through explicit cancellation. An auxiliary request for a job already settled by the watchdog or by failure is rejected. A failure on any lease of a job, auxiliary leases included, fails the whole job when it precedes a cancellation; B09 must therefore report stale picks as stale results, never through `failed()`. Clients call `interrupted(lostEpoch)` on observed loss before calling `setEpoch(nextEpoch)`. A job settles
   `completed` when its plan is exhausted.
 
 **Design assertions:** §7.3 (lifecycle and outcomes; cancelling stops future submissions and
@@ -1347,7 +1360,7 @@ view; priority order; hidden views paused; instruments ≤ 2 Hz, used in 1b.2); 
   before export`; `a hidden or paused view is never admitted and its elapsed work stops`; `update
   admits exactly one frozen snapshot and returns to paused`; `cancel reports none, drained or
   interrupted only on completion or loss evidence` (before any lease: `none` at once; with a lease
-  outstanding: `done` stays pending until `completed` → `drained`, or `interrupted(epoch)` →
+  outstanding: `done` stays pending until terminal `completed` or `failed` evidence for every outstanding lease → `drained`, or `interrupted(epoch)` →
   `interrupted`; a watchdog expiry leaves `done` pending); `the watchdog fires on the injected
   timer while a hidden view holds a lease, settles budget-exceeded and never says cancelled`; `a
   draft exceeding 1 s of unpaused work settles budget-exceeded with a continuation`; `batch bounds
@@ -1382,8 +1395,8 @@ view; priority order; hidden views paused; instruments ≤ 2 Hz, used in 1b.2); 
   adversarial cases and the headed readback assertions.
 
 **Interfaces:**
-- Consumes: `wgslConstants`, status words, the pipeline descriptor schema (B00); the matrix and
-  usability files (B04); the evaluators (B03) for context; the backend (B06).
+- Consumes: `wgslConstants`, status words, the pipeline descriptor schema (B00); the matrix (through the index and shards) and
+  usability files (B04); Pin the logical `matrixSha256`, the index-file SHA-256 and reference/generator hashes at registration. Load required kinds through the pinned index and verify each loaded shard's byte length, SHA-256 and declared IDs before comparison. B04's full integrity check verifies all shards and the assembled hash; a partial load is not whole-matrix qualification and must not be passed off as such. B08 consumes point strata; B10 consumes ray strata and anchors. Merge common stratum inputs with case overrides and reconstruct integer-pixel rays through `(i+0.5,j+0.5)`. Reports join on logical matrix hash and stratum ID. Re-freezing requires new validation-record IDs; old evidence is not silently retargeted.  the evaluators (B03) for context; the backend (B06).
 - Produces: WGSL `bulb_eval(p, power, cap) → PointEval`, `qjulia_eval(q0, C, bound, cap) →
   PointEval`, `sphere_distance`, `box_distance`, `menger_distance(p, depth)` (boxes from a storage
   buffer), `derivative_update` on the `(m, e)` state (`f32` mantissa, `i32` exponent),
@@ -1499,6 +1512,9 @@ with the evidence; tolerances and floors are never relaxed.
   'queue-completion', queueElapsedMs, timestampMs?}` (timestamps are optional duration evidence and
   never replace queue-completion evidence), `preview: boolean`.
 
+
+- **Plan windows and cancellation (B07 ruling (g); Codex run 20261021T123558Z-2470).** Keep at most 256 pending operations, representing at most one sample. Split larger samples into smaller windows; append subsequent windows through `onAdvance`, preserving every existing pending ID and dependency barrier. Outside window boundaries, return replacements only when completion evidence lies outside 0.5–2× `targetMs` and at least eight operations have completed since the previous replacement. Otherwise return `undefined`. Window-boundary replacements are exempt from that spacing. For `C` completions and `W` boundary replacements, a structural Node test on the P3 settled plan asserts pending count ≤256, at most one pending sample, and total replacements ≤`floor(C / 8) + W`. Incremental B00 readiness and validation remain a 1b.3 carry-forward owned with Space export; revisit earlier if measured B09 plans cannot satisfy these bounds. B09 explicitly cancels work that can no longer be used. Update may leave an older, unselected running job paused; the renderer owns its eventual cancellation. A stale or rejected pick is reported as a stale result, never through the scheduler's `failed()`: a failure on any lease fails the whole job, so a stale pick must not fail a settled render (§7.3: rejecting a stale result is not cancelling it).
+
 **Design assertions:** §7.2 (keys versus revisions; A → B → A gets a new revision; a late
 completion never publishable by content equality); §7.3 outcomes; §7.4 (every field truthful or
 `unavailable`/`inapplicable`; job completion separate from per-pixel status); §8.1 (pass order;
@@ -1551,7 +1567,7 @@ backend.
 **Interfaces:**
 - Consumes: `fields.wgsl`, `kernels.js` (B08); descriptors and status words (B00);
   `rayDirection`, `encodeOrdinaryOrigin`, `reconstructHit` (B05); the matrix ray strata and
-  anchors (B04); the renderer's pass sequence and pick API (B09).
+  anchors (B04); Pin the logical `matrixSha256`, the index-file SHA-256 and reference/generator hashes at registration. Load required kinds through the pinned index and verify each loaded shard's byte length, SHA-256 and declared IDs before comparison. B04's full integrity check verifies all shards and the assembled hash; a partial load is not whole-matrix qualification and must not be passed off as such. B08 consumes point strata; B10 consumes ray strata and anchors. Merge common stratum inputs with case overrides and reconstruct integer-pixel rays through `(i+0.5,j+0.5)`. Reports join on logical matrix hash and stratum ID. Re-freezing requires new validation-record IDs; old evidence is not silently retargeted.  the renderer's pass sequence and pick API (B09).
 - Produces: WGSL entries `trace_band` (writes `depth` and the packed `status`), `normals_band`
   (central differences at ε = 0.5·τ(t); writes `normal` with availability), `pick_readback` (one
   pinned geometry sample's depth and packed status; the CPU reconstructs the anchored hit with
@@ -1708,7 +1724,7 @@ navigation; camera-only jumps add one entry; undo never moves the camera); §13.
 dolly, focus by asynchronous depth readback, overview, orientation reset and control with axis
 constraints; flight with explicit speed; Escape releases; blur or visibility loss stops
 immediately; no inertia; camera exterior status); §15 (lost input: overview, reset and history one
-action away). Excludes DOM layout (B14).
+action away). Excludes DOM layout (B14). **B05 note (Codex run 20261021T123602Z-6e35):** B12's "identical camera" check, under which an identical returned camera starts no gesture, uses `equalCameras` (equal values), never `===`: a stalled dolly at the representation floor returns a new object with equal values.
 
 - [ ] **Step 1: Write the failing tests** (fake DOM as in 1a's `navigation.test.js`): `an orbit
   drag is one camera-history entry and undo does not move the camera`; `a wheel burst groups within
@@ -1863,8 +1879,8 @@ physical controller; seventeen named tests passing.
   `stopped`; starts a new episode), onAllocationFailure({request, failed}) → {choices:
   ['release-and-retry', 'lower-resolution', 'fewer-samples'], released}` (releases obsolete
   generations first; offers the explicit lower-cost choice; never changes the request silently),
-  `onBudgetExceeded(job) → {continuation: 'resume' | 'lower-cost'}`, `cancel(jobId) → {accepted,
-  done}` (from the scheduler; never "preempted"), `destroy()`}.
+  `onBudgetExceeded(job) → {continuation: 'resume' | 'lower-cost'}` (offers explicit recovery. Accepted recovery creates a fresh plan with new `jobId` and `requestId`, using the current device epoch. A settled job is never revived. Resume may rebind completed compatible geometry under §7.2's epoch, identity and resource-lifetime checks; the new elapsed-work budget starts fresh), `cancel(jobId) → {accepted,
+  done}` (from the scheduler; forwards both B07 return variants unchanged; never "preempted"; loss handling calls `interrupted(lostEpoch)` before installing the next epoch), `destroy()`}.
 
 **Design assertions:** §14 (device loss keeps the job and snapshot; one automatic viewport
 recovery; repeated loss stops automatic retry; allocation failure releases obsolete resources and
@@ -1955,6 +1971,9 @@ transitively T05, T07, T08, T09b, T10, T11); the dependency table reconciled aga
   and issues at most one current-state request when the publication is stale (Space may then
   publish several refinements from it); it does not restart stopped tours, palette animation or
   flight; a late activation whose token is no longer current does nothing.
+
+
+- **Paused editing.** Workspace edits while paused still submit coalesced `request()` calls. The 1b.3 Update control calls `update()` to select the latest submitted snapshot.
 
 **Design assertions:** §13.1 (two retained investigations, one active view; a switch preserves
 scene, camera, undo and camera history; hidden work pauses; captured input released; a fresh start
