@@ -97,18 +97,26 @@ const lostState = page => ev(page, () => ({ rendered: atlas.rendered, report: at
 // rollback (the complete old value survives and the rolled-back marker is absent), cancellation
 // before commit, reopen with the thumbnail Blob intact, list, count, a cancelled read, deletion of
 // a record and of a write marker in one batch (the operation T09b's pruning uses), and a blocked
-// upgrade classified as `blocked`.
+// upgrade classified as `blocked` whose late upgrade is aborted, so the database stays at version 1
+// (fix round 1). Paging across two connections continues after its anchor through a concurrent
+// insert and delete and equal timestamps. Every test database must be deleted successfully.
 function checkIndexedDb(page) {
   return within(page.evaluate(async () => {
     const { openPersistence } = await import('/src/shared/persistence.js');
     const name = `atlas-test-${Date.now()}`;
-    const value = (id, note) => ({ id, workspace: 'plane', createdAt: '2026-10-20T00:00:00.000Z', note, thumbnail: { blob: new Blob(['x']) } });
+    const value = (id, note, bytes = 'x', createdAt = '2026-10-20T00:00:00.000Z') => ({ id, workspace: 'plane', createdAt, note, thumbnail: { blob: new Blob([bytes]) } });
+    const rawOpen = (database, version) => new Promise((resolve, reject) => { const request = version ? indexedDB.open(database, version) : indexedDB.open(database); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); request.onblocked = () => reject(new Error('raw open blocked')); });
+    const deleted = database => new Promise(resolve => { const request = indexedDB.deleteDatabase(database); request.onsuccess = () => resolve('deleted'); request.onerror = () => resolve(`error: ${request.error?.name}`); request.onblocked = () => resolve('blocked'); });
+    const snapshotOf = async record => record && ({ id: record.id, workspace: record.workspace, createdAt: record.createdAt, note: record.note, keys: Object.keys(record).sort(), thumbnailKeys: Object.keys(record.thumbnail), bytes: await record.thumbnail.blob.text() });
     const results = {};
     const store = await openPersistence({ databaseName: name });
     results.commit = (await store.commit({ puts: [{ store: 'discoveries', value: value('a', 'old') }, { store: 'reports', value: { reportId: 'r1' } }, { store: 'writes', value: { writeId: 'w1', op: 'save', id: 'a' } }] })).status;
-    results.rollback = (await store.commit({ puts: [{ store: 'discoveries', value: value('a', 'new') }, { store: 'writes', value: { writeId: 'w2', op: 'save', id: 'a' } }, { store: 'reports', value: { noKey: true } }] })).status;
+    const committedRecord = await snapshotOf(await store.getDiscovery('a'));
+    results.rollback = (await store.commit({ puts: [{ store: 'discoveries', value: value('a', 'new', 'replacement-bytes') }, { store: 'writes', value: { writeId: 'w2', op: 'save', id: 'a' } }, { store: 'reports', value: { reportId: 'r2' } }, { store: 'reports', value: { noKey: true } }] })).status;
     results.rolledBackMarker = await store.getWriteMarker('w2');
-    results.afterRollback = (await store.getDiscovery('a')).note;
+    const rolledBack = await snapshotOf(await store.getDiscovery('a'));
+    results.afterRollback = rolledBack.note;
+    results.wholeOldRecord = JSON.stringify(rolledBack) === JSON.stringify(committedRecord) && rolledBack.bytes === 'x';
     const controller = new AbortController();
     const pending = store.commit({ puts: [{ store: 'discoveries', value: value('b', 'x') }] }, { signal: controller.signal });
     controller.abort();
@@ -127,11 +135,34 @@ function checkIndexedDb(page) {
     results.deletion = (await reopened.commit({ puts: [{ store: 'writes', value: { writeId: 'w3', op: 'remove', id: 'a' } }], deletes: [{ store: 'discoveries', key: 'a' }, { store: 'writes', key: 'w1' }] })).status;
     results.afterDeletion = { record: await reopened.getDiscovery('a'), deletedMarker: await reopened.getWriteMarker('w1'), removeMarker: (await reopened.getWriteMarker('w3'))?.op ?? null, count: await reopened.countDiscoveries({ workspace: 'plane' }) };
     reopened.close();
-    const raw = await new Promise((resolve, reject) => { const request = indexedDB.open(name); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const raw = await rawOpen(name);
+    results.reports = await new Promise((resolve, reject) => { const request = raw.transaction('reports').objectStore('reports').getAllKeys(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     try { await openPersistence({ databaseName: name, version: 2, timeoutMs: 3000 }); results.blocked = 'opened'; }
     catch (error) { results.blocked = error.code; }
     raw.close();
-    await new Promise(resolve => { const request = indexedDB.deleteDatabase(name); request.onsuccess = request.onerror = request.onblocked = resolve; });
+    // Open requests on one database are served in order, so this open runs after the late v2 one.
+    const after = await rawOpen(name);
+    results.versionAfterUnblock = after.version;
+    results.storesAfterUnblock = [...after.objectStoreNames].sort();
+    after.close();
+    results.deleted = await deleted(name);
+
+    // Paging across two connections: B deletes an item A has shown and inserts one behind A's anchor.
+    const pagingName = `${name}-paging`;
+    const a = await openPersistence({ databaseName: pagingName }), b = await openPersistence({ databaseName: pagingName });
+    const at = (id, second) => ({ store: 'discoveries', value: value(id, id, id, `2026-10-20T00:00:0${second}.000Z`) });
+    await a.commit({ puts: [at('e', 5), at('d', 4), at('c', 3), at('b', 3), at('a', 1)] });
+    const ids = page => page.items.map(item => item.id);
+    const first = await a.listDiscoveries({ workspace: 'plane', limit: 3 });
+    await b.commit({ puts: [at('ba', 3)], deletes: [{ store: 'discoveries', key: 'd' }] });
+    const second = await a.listDiscoveries({ workspace: 'plane', limit: 3, cursor: first.nextCursor });
+    const single = [];
+    for (let cursor = null, page; (page = await a.listDiscoveries({ workspace: 'plane', limit: 1, cursor })), single.push(...ids(page)), page.nextCursor; cursor = page.nextCursor);
+    results.paging = { first: ids(first), second: ids(second), secondNext: second.nextCursor, single };
+    results.badCursor = await a.listDiscoveries({ workspace: 'plane', limit: 3, cursor: '4294967296' }).then(() => 'resolved', error => error.name);
+    results.foreignCursor = await a.listDiscoveries({ workspace: 'space', limit: 3, cursor: first.nextCursor }).then(() => 'resolved', error => error.name);
+    a.close(); b.close();
+    results.pagingDeleted = await deleted(pagingName);
     return results;
   }), LIMITS.operation, 'IndexedDB checks');
 }
@@ -592,6 +623,9 @@ try {
     commit: 'committed', rollback: 'failed', afterRollback: 'old', aborted: 'aborted', abortedAbsent: true,
     reopened: 'old', blobSize: 1, list: ['a'], blocked: 'blocked', rolledBackMarker: null, count: 1, marker: 'a', cancelledRead: 'AbortError',
     deletion: 'committed', afterDeletion: { record: null, deletedMarker: null, removeMarker: 'remove', count: 0 },
+    wholeOldRecord: true, reports: ['r1'], versionAfterUnblock: 1, storesAfterUnblock: ['discoveries', 'reports', 'writes'], deleted: 'deleted',
+    paging: { first: ['e', 'd', 'c'], second: ['ba', 'b', 'a'], secondNext: null, single: ['e', 'c', 'ba', 'b', 'a'] },
+    badCursor: 'RangeError', foreignCursor: 'RangeError', pagingDeleted: 'deleted',
   });
   pass('IndexedDB commits whole batches, rolls back, cancels and reopens');
 

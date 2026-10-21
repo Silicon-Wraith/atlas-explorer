@@ -1,6 +1,8 @@
 // A controlled PersistenceStore for Node tests (the production one is IndexedDB,
 // src/shared/persistence.js). Commits can be held, released, aborted or failed, and reads can
 // be delayed, so tests can order them around pending writes. Signals are honoured.
+import { encodePageCursor, decodePageCursor, afterAnchor } from '../../src/shared/persistence.js';
+
 const aborted = signal => { if (signal?.aborted) { const error = new Error('The read was cancelled.'); error.name = 'AbortError'; throw error; } };
 
 export function createFakePersistence() {
@@ -13,9 +15,16 @@ export function createFakePersistence() {
       fake.listCalls.push({ workspace, cursor });
       if (fake.listDelay) await fake.listDelay(workspace, fake.listCalls.length);
       aborted(signal);
-      const all = [...stores.discoveries.values()].filter(record => record.workspace === workspace).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      const start = cursor ? Number(cursor) : 0;
-      return { items: all.slice(start, start + limit), nextCursor: start + limit < all.length ? String(start + limit) : null };
+      // The production store's order and cursors (T10 fix round 1): createdAt, then id, both
+      // descending; an opaque cursor anchored on the last item returned, never an offset.
+      if (!Number.isInteger(limit) || limit < 1) throw new RangeError(`limit must be a positive integer: ${limit}`);
+      const anchor = decodePageCursor(cursor, workspace);
+      const descending = (a, b) => (a < b ? 1 : a > b ? -1 : 0);
+      const after = [...stores.discoveries.values()]
+        .filter(record => record.workspace === workspace && afterAnchor(anchor, record.createdAt, record.id))
+        .sort((a, b) => descending(a.createdAt, b.createdAt) || descending(a.id, b.id));
+      const items = after.slice(0, limit);
+      return { items, nextCursor: after.length > limit ? encodePageCursor(workspace, items.at(-1)) : null };
     },
     async countDiscoveries({ workspace, signal }) {
       aborted(signal);

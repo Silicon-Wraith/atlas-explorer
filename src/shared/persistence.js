@@ -16,12 +16,18 @@ export class PersistenceError extends Error {
 export function openPersistence({ indexedDB = globalThis.indexedDB, databaseName = DATABASE_NAME, version = DATABASE_VERSION, timeoutMs = 5000 } = {}) {
   return new Promise((resolve, reject) => {
     if (!indexedDB) { reject(new PersistenceError('unavailable', 'This browser does not provide IndexedDB storage.')); return; }
-    let settled = false, request;
+    let settled = false, request, upgrade = null;
     const fail = (code, message) => { if (!settled) { settled = true; clearTimeout(timer); reject(new PersistenceError(code, message)); } };
-    const timer = setTimeout(() => fail('timed-out', `Opening browser storage took longer than ${timeoutMs} ms.`), timeoutMs);
+    // An open that was already reported never changes the schema afterwards: an upgrade still
+    // running at the deadline is aborted (one that already committed cannot be undone).
+    const abortUpgrade = () => { try { upgrade?.abort(); } catch { /* already finished */ } };
+    const timer = setTimeout(() => { fail('timed-out', `Opening browser storage took longer than ${timeoutMs} ms.`); abortUpgrade(); }, timeoutMs);
     try { request = indexedDB.open(databaseName, version); }
     catch (error) { fail('unavailable', error.message); return; }
     request.onupgradeneeded = () => {
+      upgrade = request.transaction;
+      // A late upgrade (after a blocked or timed-out report) is aborted before any schema change.
+      if (settled) { abortUpgrade(); return; }
       const db = request.result;
       if (!db.objectStoreNames.contains('discoveries')) db.createObjectStore('discoveries', { keyPath: STORES.discoveries }).createIndex('byWorkspaceCreated', ['workspace', 'createdAt']);
       if (!db.objectStoreNames.contains('reports')) db.createObjectStore('reports', { keyPath: STORES.reports });
@@ -32,6 +38,7 @@ export function openPersistence({ indexedDB = globalThis.indexedDB, databaseName
     // A connection that arrives after the open was reported (timed out or blocked) is closed, not used.
     request.onsuccess = () => {
       const db = request.result;
+      upgrade = null;
       if (settled) { db.close(); return; }
       settled = true; clearTimeout(timer);
       db.onversionchange = () => db.close();
@@ -58,33 +65,57 @@ function cancellable(start, signal) {
   });
 }
 
-function pageStart(cursor) {
-  if (cursor === null || cursor === undefined) return 0;
-  if (typeof cursor !== 'string' || !/^(0|[1-9]\d{0,15})$/.test(cursor)) throw new RangeError(`not a cursor of this store: ${cursor}`);
-  return Number(cursor);
+// Page cursors are opaque: they name the workspace and the ordering key of the last item
+// returned (createdAt, then id; both descending), so a page continues strictly after that item
+// whatever was inserted or deleted meanwhile. Shared with the test fake.
+const CURSOR_PREFIX = 'after:';
+const MAX_CURSOR_LENGTH = 4096;
+export function encodePageCursor(workspace, { createdAt, id }) {
+  if (![workspace, createdAt, id].every(part => typeof part === 'string')) throw new RangeError('a page cursor needs a workspace, createdAt and id as strings');
+  return CURSOR_PREFIX + JSON.stringify([workspace, createdAt, id]);
 }
+export function decodePageCursor(cursor, workspace) {
+  if (cursor === null || cursor === undefined) return null;
+  let parts = null;
+  if (typeof cursor === 'string' && cursor.startsWith(CURSOR_PREFIX) && cursor.length <= MAX_CURSOR_LENGTH) {
+    try { parts = JSON.parse(cursor.slice(CURSOR_PREFIX.length)); } catch { parts = null; }
+  }
+  if (!Array.isArray(parts) || parts.length !== 3 || !parts.every(part => typeof part === 'string')) throw new RangeError(`not a page cursor of this store: ${String(cursor).slice(0, 80)}`);
+  if (parts[0] !== workspace) throw new RangeError('this page cursor belongs to another workspace');
+  return { createdAt: parts[1], id: parts[2] };
+}
+// True when (createdAt, id) comes after the anchor in newest-first order.
+export const afterAnchor = (anchor, createdAt, id) => !anchor || createdAt < anchor.createdAt || (createdAt === anchor.createdAt && id < anchor.id);
 
 function createStore(db) {
-  const workspaceRange = workspace => IDBKeyRange.bound([workspace, ''], [workspace, '￿']);
-  async function readPage({ workspace, limit, cursor }) {
+  // Every index key of one workspace: [workspace] sorts before, and [workspace, []] after, any
+  // [workspace, createdAt] (arrays sort after strings).
+  const workspaceRange = (workspace, upperCreatedAt) => IDBKeyRange.bound([workspace], upperCreatedAt === undefined ? [workspace, []] : [workspace, upperCreatedAt]);
+  function readPage({ workspace, limit, cursor }) {
     if (!Number.isInteger(limit) || limit < 1) throw new RangeError(`limit must be a positive integer: ${limit}`);
-    const skip = pageStart(cursor);
-    const index = db.transaction('discoveries', 'readonly').objectStore('discoveries').index('byWorkspaceCreated');
+    const anchor = decodePageCursor(cursor, workspace);
+    const transaction = db.transaction('discoveries', 'readonly');
+    const index = transaction.objectStore('discoveries').index('byWorkspaceCreated');
     const items = [];
-    await new Promise((resolve, reject) => {
-      const request = index.openCursor(workspaceRange(workspace), 'prev');
-      let advanced = skip === 0;
-      request.onerror = () => reject(request.error);
+    return new Promise((resolve, reject) => {
+      const failed = error => reject(error ?? new Error('the read was aborted'));
+      transaction.onabort = () => failed(transaction.error);
+      // Index entries with equal keys are ordered by primary key (id), so 'prev' visits createdAt
+      // then id, both descending. Entries at the anchor's createdAt up to the anchor are skipped.
+      const request = index.openCursor(workspaceRange(workspace, anchor?.createdAt), 'prev');
+      request.onerror = () => failed(request.error);
       request.onsuccess = () => {
-        const position = request.result;
-        if (!position) { resolve(); return; }
-        if (!advanced) { advanced = true; position.advance(skip); return; }
-        items.push(position.value);
-        if (items.length > limit) { resolve(); return; }
-        position.continue();
+        try {
+          const position = request.result;
+          if (!position) { resolve(); return; }
+          if (afterAnchor(anchor, position.key[1], position.primaryKey)) {
+            items.push(position.value);
+            if (items.length > limit) { resolve(); return; }
+          }
+          position.continue();
+        } catch (error) { failed(error); }
       };
-    });
-    return { items: items.slice(0, limit), nextCursor: items.length > limit ? String(skip + limit) : null };
+    }).then(() => ({ items: items.slice(0, limit), nextCursor: items.length > limit ? encodePageCursor(workspace, items[limit - 1]) : null }));
   }
   const getFrom = (store, key) => done(db.transaction(store, 'readonly').objectStore(store).get(key)).then(value => value ?? null);
   return Object.freeze({
