@@ -143,6 +143,23 @@ test('releaseObsolete preserves the live viewport cache after a different export
   h.renderer.destroy(); h.fake.destroy();
 });
 
+test('releaseObsolete keeps the cache when the live currentGeneration callback throws', async t => {
+  const h = await rig(); t.after(() => { h.renderer.destroy(); h.fake.destroy(); });
+  const a = request(directScene(), generation(), 'settled'); let throwing = false;
+  const currentGeneration = () => { if (throwing) throw new Error('live generation temporarily unavailable'); return a.generation; };
+  assert.equal((await h.finish(h.renderer.render(a, { currentGeneration }))).outcome, 'completed');
+  const before = h.fake.diagnostics(), releases = h.fake.log.filter(value => value.method === 'release').length;
+  throwing = true;
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+  assert.deepEqual(h.fake.diagnostics(), before);
+  assert.equal(h.fake.log.filter(value => value.method === 'release').length, releases);
+  throwing = false;
+  const b = request(a.sceneSnapshot, a.generation, 'settled');
+  assert.equal((await h.finish(h.renderer.render(b, { currentGeneration }))).outcome, 'completed');
+  assert.ok(!batches(h, b.jobId).some(batch => ['trace', 'normals'].includes(batch.pass)));
+  assert.equal(h.publications.at(-1).geometryRequestId, a.requestId);
+});
+
 test('releaseObsolete follows unsubmitted live geometry edits and keeps the published pick handles', async () => {
   const h = await rig({ depths: [7] }), a = request(directScene(), generation(), 'settled');
   let live = a.generation;
