@@ -191,6 +191,7 @@ const taskList = tasks => (tasks.length ? ` (${tasks.map(task => `${show(task.na
 // Long tasks per recorded phase (PerformanceObserver `longtask`, filtered by interval overlap).
 const longTasksCell = longTasks => {
   if (!longTasks?.byPhase) return 'Long tasks: not recorded.';
+  if (longTasks.observerError) return `Long tasks (PerformanceObserver \`longtask\`): unavailable, the observer could not be installed (${show(longTasks.observerError)}); no long-task count is reported for preparation, dispatch or startup.`;
   const phase = name => `${(longTasks.byPhase[name] ?? []).length}${taskList(longTasks.byPhase[name] ?? [])}`;
   const phaseSpan = name => (longTasks.phases?.[name] ? `${ms(longTasks.phases[name].start)}–${ms(longTasks.phases[name].end)}` : 'unavailable');
   return `Long tasks (PerformanceObserver \`longtask\`, attributed by interval overlap, collected through the terminal task): overlapping the preparation phase: ${phase('preparation')} [${phaseSpan('preparation')}]; overlapping the dispatch phase: ${phase('dispatch')} [${phaseSpan('dispatch')}]; page startup tasks before preparation (recorded separately, not attributed to preparation or dispatch): ${longTasks.startup?.length ?? 0}${taskList(longTasks.startup ?? [])}; after every phase: ${longTasks.outside?.length ?? 0}${taskList(longTasks.outside ?? [])}.`;
@@ -263,7 +264,7 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [], ex
     for (const run of [...runs].sort((a, b) => started(a).localeCompare(started(b)))) {
       const e = entryNamed(run.report ?? [], 'environment') ?? {}, p = entryNamed(run.report ?? [], 'A representative pipeline set prepares within the bound with progress events') ?? {};
       const stage = id => ms((p.stages ?? []).find(item => item.id === id)?.totalMs);
-      const tasks = p.longTasks?.byPhase ? `${p.longTasks.byPhase.preparation?.length ?? 0} / ${p.longTasks.byPhase.dispatch?.length ?? 0} (startup ${p.longTasks.startup?.length ?? 0})` : 'not recorded';
+      const tasks = !p.longTasks?.byPhase ? 'not recorded' : p.longTasks.observerError ? `unavailable (${show(p.longTasks.observerError)})` : `${p.longTasks.byPhase.preparation?.length ?? 0} / ${p.longTasks.byPhase.dispatch?.length ?? 0} (startup ${p.longTasks.startup?.length ?? 0})`;
       push(`| ${run.label} | ${show(e.startedAt)} | ${sourceCell(e)} | ${ms(p.totalMs)} | ${stage('trace')} | ${stage('normals')} | ${stage('display')} | ${ms(p.warm?.totalMs)} | ${ms(p.dispatch?.queueCompletionMs)} | ${tasks} |`);
     }
     push('');

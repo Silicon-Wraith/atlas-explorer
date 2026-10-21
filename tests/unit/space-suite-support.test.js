@@ -228,6 +228,21 @@ test('renderSpikeDocument records conditions and every measured value from the r
   assert.match(multi, /\| later \|[^\n]*def5678`? \(dirty\)/);
 });
 
+test('an observer error makes the long-task measurement unavailable with its reason, in the narrative and in the repeat-run rows', () => {
+  const failed = () => sampleReport().map(entry => (entry.longTasks
+    ? { ...entry, longTasks: { phases: entry.longTasks.phases, byPhase: { preparation: [], dispatch: [] }, startup: [], outside: [], total: 0, observerError: 'longtask entry type unsupported' } }
+    : entry));
+  const text = renderSpikeDocument(failed(), { generatedAt: 'x', commit: 'y', runs: [{ label: 'observer-failed', report: failed() }, { label: 'observer-ok', report: sampleReport() }] });
+  const narrative = text.split('\n').find(line => line.startsWith('Timer:'));
+  assert.match(narrative, /Long tasks[^.]*unavailable[^.]*longtask entry type unsupported/);
+  assert.doesNotMatch(narrative, /preparation phase: 0|dispatch phase: 0/, 'an unavailable observer is never a zero-task measurement');
+  const failedRow = text.split('\n').find(line => line.startsWith('| observer-failed |'));
+  assert.match(failedRow, /\| unavailable \(longtask entry type unsupported\) \|$/);
+  assert.doesNotMatch(failedRow, /\| 0 \/ 0/);
+  assert.match(text.split('\n').find(line => line.startsWith('| observer-ok |')), /\| 0 \/ 1 \(startup 1\) \|$/, 'a working observer still reports its counts');
+  assert.match(renderSpikeDocument(sampleReport(), { generatedAt: 'x', commit: 'y' }), /preparation phase: 0/, 'observerError absent or null keeps the counts');
+});
+
 test('renderSpikeDocument reports the developer-flag experiment with the flag-absent launch labelled a portability experiment', () => {
   const text = renderSpikeDocument(sampleReport(), { generatedAt: 'x', commit: 'y', experiment: experimentReport() });
   assert.match(text, /## Developer-flag experiment/);
