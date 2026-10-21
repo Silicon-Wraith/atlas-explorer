@@ -6,7 +6,7 @@
 Mandelbulb and the quaternion Julia set on WebGPU with orbit and basic flight; recover from bad
 camera positions, cancellation, allocation failure and device loss; save and reopen Space scene
 JSON; show the estimator category, pending marks and distinct ray statuses — with every commit
-gated beside the unchanged Plane gate, and the applicable §16.4 performance targets enforced at
+accounted for and acceptance boundaries validated under the acceptance rule beside the unchanged Plane gate, and the applicable §16.4 performance targets enforced at
 this release.
 
 **Architecture:**
@@ -28,7 +28,7 @@ this release.
 - **The gate is 1a's gate.** `scripts/plane-gate.mjs`, `scripts/run-unit.mjs`, the launch guard,
   supervision, `tests/support/bounded.mjs` and the GPU lock are reused unchanged. 1b.1 appends
   suite entries to `tests/suites.manifest.json` and files to `tests/unit.manifest.json`; it changes
-  no gate code.
+  no full-gate code. The full-gate runner remains unchanged; acceptance auditing (`scripts/audit-gates-1b1.mjs`) and fast-evidence recording are added.
 
 **Tech stack:** plain ES modules, WebGPU (WGSL compute, one fullscreen render pipeline for
 presentation) for Space, WebGL 2 for Plane (unchanged), the Node 20 built-in test runner,
@@ -52,7 +52,7 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4.8 — rev 4.8 records the user's decision of 2026-10-21 on B10 S1: analytic ray depth under `surface-v1` is qualified against a sampling-aware ρ-expanded-object envelope, and relative 10⁻³ accuracy is retained under the new inspection profile `analytic-inspection-v1` (τ×0.1), with a re-freeze, new record IDs and the failed evidence preserved (Claude and Codex independent positions converged; Codex run 20261021T203032Z-7350). **Rev 4.7** — rev 4.7 applies agreed Claude/Codex corrections with no new user decision: (1) B05 — camera interface and rulings (a)–(h) as converged, and the notes for B10, B11, B12 and B14 (B14's initial bulb scene uses `overview(bulb)`; B11 drops the palette allowlist entry) (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee), including the axis-lock heading “forward azimuth minus 90° (modulo 360°)” and the Menger overview radius rule, which supersede rev 4.6's statement that these were not yet in the plan text; (2) B06 — backend plan changes PC1–PC8 (F3 sample-0 initialization owned by B11 with a B06 zero-readback test; F2 probe and `preparation-failed` owned by B09; encode-only presenter; F8 asynchronous creation errors fail their tickets; F9 caller subdivides horizontally with one lease per region; target handles caller-owned until `release()`; frozen 8×8 dispatch ABI; `destroyDevice()` loss semantics) (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca). **Rev 4.6** records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
+**Revision:** 4.9 — rev 4.9 records the user's approval (2026-10-21) of the following on acceptance gates: full gates on merged feature candidates and on integration boundaries; tree-identical promotions take fast checks; non-promotable WIP; a mechanically checked `docs-fast` allowance; a versioned, fail-closed disposition manifest; and an enumerated retrospective transition (Claude and Codex converged; Codex runs 20261021T212923Z-663c, 20261021T214134Z-fcb2 and 20261021T214354Z-244e). **Rev 4.8** — rev 4.8 records the user's decision of 2026-10-21 on B10 S1: analytic ray depth under `surface-v1` is qualified against a sampling-aware ρ-expanded-object envelope, and relative 10⁻³ accuracy is retained under the new inspection profile `analytic-inspection-v1` (τ×0.1), with a re-freeze, new record IDs and the failed evidence preserved (Claude and Codex independent positions converged; Codex run 20261021T203032Z-7350). **Rev 4.7** — rev 4.7 applies agreed Claude/Codex corrections with no new user decision: (1) B05 — camera interface and rulings (a)–(h) as converged, and the notes for B10, B11, B12 and B14 (B14's initial bulb scene uses `overview(bulb)`; B11 drops the palette allowlist entry) (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee), including the axis-lock heading “forward azimuth minus 90° (modulo 360°)” and the Menger overview radius rule, which supersede rev 4.6's statement that these were not yet in the plan text; (2) B06 — backend plan changes PC1–PC8 (F3 sample-0 initialization owned by B11 with a B06 zero-readback test; F2 probe and `preparation-failed` owned by B09; encode-only presenter; F8 asynchronous creation errors fail their tickets; F9 caller subdivides horizontally with one lease per region; target handles caller-owned until `release()`; frozen 8×8 dispatch ABI; `destroyDevice()` loss semantics) (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca). **Rev 4.6** records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
 rev 4.4). **B02 rulings 1–10** (Claude's B02 reviews r1/r2 and Codex run 20261021T072056Z-9083):
 (1) decimal grammar with lexical significant-digit counting, explicit exponent bound, signed zero;
 (2) `toDouble`/`toBinary32` reject non-finite results; (3) **AMENDED by Codex, accepted by Claude**
@@ -131,13 +131,19 @@ on 2026-10-21; the user approved starting 1b.1 on 2026-10-21 and answered Q11 ("
   unchanged. `shared/` never holds GPU handles, quaternion operations, camera matrices, BigInt
   coordinates or a universal renderer. Backend-specific API access (`navigator.gpu`, `GPUDevice`,
   WGSL) is confined to `src/space/render/webgpu/`, except explicit test adapters.
-- **Gate on every commit (spec §16.3; 1a rules):** after each commit run `npm run gate` with
-  exactly one of `ATLAS_GPU_HANDOFF="<who, when>"` or `ATLAS_GPU_DEFERRED="<reason>"`; a pending
-  commit is a candidate until a later `ATLAS_GPU_HANDOFF` run passes on that exact commit; a
-  failed candidate is corrected in private history and every rewritten SHA is gated; a later
-  passing commit never accepts a failed ancestor. Every browser or GPU run is wrapped in
-  `flock /mnt/ml_storage/scratch/atlas-gpu.lock`. Space groups are `gpu: true` with the same
-  handoff and deferral semantics as `browser-hardware` and `graphics`.
+- **Acceptance gates (spec §16.3; rev 4.9 amendment, user-approved 2026-10-21, replacing the 1a per-commit rule from the cutover):** Rev 4.9 proposes the converged acceptance-gate amendment and enumerated retrospective classifications; the user approved it on 2026-10-21. Existing requirements remain binding until the recorded cutover.
+  - **Full gate.** `npm run gate` with exactly one of `ATLAS_GPU_HANDOFF="<who, when>"` or `ATLAS_GPU_DEFERRED="<reason>"`. A deferred run is a candidate until a later `ATLAS_GPU_HANDOFF` run passes on that exact commit. Every browser or GPU run is wrapped in `flock /mnt/ml_storage/scratch/atlas-gpu.lock`. Space groups are `gpu: true`, with the same handoff and deferral semantics as `browser-hardware` and `graphics`.
+  - **Fast checks.** The guarded unit runner on the commit's own manifest, plus `npm run build`. The result is recorded in the ledger.
+  - **Feature candidate.** Before acceptance, the task branch merges the current integration tip into itself. The full gate then runs on that merged candidate, which is the reviewed final tip.
+  - **Promotion.** Pin the reviewed candidate and integration SHAs. After the candidate’s full gate passes, stage the promotion merge. If its tree equals the candidate’s, require passing fast checks and record both parents, both tree IDs and the original gate reference. If the trees differ, review and full-gate the staged merge (`merge-gated`). Immediately before accepting promotion, verify that integration still names the pinned SHA; otherwise refresh, review and re-gate the candidate. No promotion is accepted before its required checks pass.
+  - **WIP.** Intermediate commits on a task branch take fast checks and diagnostic checks. They are never promotable individually, and a later gated tip does not retroactively accept them. History rewriting is not required; rewriting invalidates evidence links to replaced SHAs, and no per-commit exceptions are issued for WIP.
+  - **Integration gate.** The merger owns it, under the GPU lock. It is required at B14, at final B15, before any promotion to main, and at a validated checkpoint the user explicitly requests. Pausing work does not trigger a gate. An existing qualifying run may satisfy multiple checkpoints for the same validated candidate; checkpoint names alone do not require duplicate runs.
+  - **Documentation allowance (`docs-fast`).** It applies only when every changed path is on a mechanically checked allowlist that is versioned in the acceptance manifest. The allowlist holds exact narrative and log paths and designated output-only audit summaries. It excludes policy manifests, exception approvals, requirement-changing specs and plans, and evidence consumed by acceptance. Generated summaries are validated against their underlying evidence. Eligibility is judged against the already-approved allowlist; a commit cannot expand its own exemption. `docs-fast` requires passing recorded fast checks; path eligibility alone is insufficient.
+  - **Dispositions** (versioned acceptance manifest, fail-closed): `feature-gated`, `merge-tree-identical`, `merge-gated`, `wip`, `docs-fast`, `integration-gated`, `exception`, and the transition-only `validated-later`. An unknown classification or missing boundary evidence fails. Evidence reuse is recorded separately from `judgeRecord`.
+  - **Transition.** Following user approval, the cutover is the commit merging this amendment into `feat/project1b1`. Record its full SHA and the approval provenance in the acceptance manifest. Only the four explicitly listed historical commits receive retrospective classification; all other pre-cutover requirements, records and scoped exceptions remain unchanged. The manifest records full SHAs.
+    - `40fecc3194529ce26a7ee4cd03176805998eb834` → `validated-later`. Its tree is identical to `123fb965d4320f5bc81cd02807a30f6e15789176`, whose full gate passed at 21:36 UTC, after the 19:13 UTC promotion. The original chronology is preserved.
+    - `85820e580471b7656b15a8e1f3cd786cd343a164`, `b46e2159171f342c227b907b366f36d313b4328e` and `9f7875cd455e0bec90e75314babad5ff52a0e600` (1b1/B10) → historical `wip`. Their eventual candidate must satisfy the promotion rule.
+    - B10 commits after the cutover fall under the rule directly.
 - **Headed only (Project 0 E7):** acceptance uses the complete recorded Project 0 launch
   profile — `--enable-gpu --use-angle=vulkan
   --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan --enable-webgpu-developer-features`
@@ -1413,7 +1419,7 @@ cited by profile and fragment hash; the product kernel separately identified by
 - [ ] **Step 4: Commit** — `"Add the Space field kernels and validate them against the frozen matrix (1b.1 B08)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
 **Expected outputs:** six headed passes; the per-stratum table in the report. A mandatory stratum
-that fails or is inconclusive blocks the commit: the kernel is fixed or the failure is escalated
+that fails or is inconclusive blocks acceptance and promotion: the kernel is fixed or the failure is escalated
 with the evidence; tolerances and floors are never relaxed.
 
 ---
@@ -2013,20 +2019,21 @@ unchanged assertions.
 - Create: `tests/space-performance.mjs` (headed, `gpu: true`, `benchmark: true`; one manifest
   entry per P3 scene: `space-performance-bulb`, `space-performance-quaternion`,
   `space-performance-menger`, each `--scene <id>`), `tests/support/timing.mjs`,
-  `scripts/audit-gates-1b1.mjs` (a thin wrapper over T13's ledger functions writing the 1b.1
-  output path), `docs/reports/project1b/1b1-performance-<scene>.json` (one per scene, generated),
+  `scripts/audit-gates-1b1.mjs` (writes the 1b.1 output path; contract under Interfaces),
+  `tests/unit/acceptance-audit.test.js` (WIP cannot satisfy a boundary; stale-target promotions fail; unapproved retrospective classifications fail; missing or invalid fast evidence fails), `docs/reports/project1b/1b1-performance-<scene>.json` (one per scene, generated),
   `docs/reports/project1b/1b1-investigation.md` (the recorded investigation),
   `docs/reports/project1b/gate-ledger-1b1.json` (generated by the audit)
 - Modify: `tests/suites.manifest.json`, `README.md`, `HANDOFF.md`, `AGENTS.md`, `CLAUDE.md` (exact
   replacements for the Space paths and commands; the protocol section identical in AGENTS.md and
   CLAUDE.md)
-- Test: `tests/unit/timing.test.js`; the performance suites.
+- Test: `tests/unit/timing.test.js`, `tests/unit/acceptance-audit.test.js` (assertions: WIP cannot satisfy a boundary; stale-target promotions fail; unapproved retrospective classifications fail; missing or invalid fast evidence fails); the performance suites.
 
 **Interfaces:**
 - Consumes: **(1a, unlanded)** `auditLedger`, `judgeRecord`, `requiredIdsFromManifest` (T13;
   gate execution unchanged); `window.atlas.space` harness commands and subscriptions (B14); P3,
   its workload manifest (B00) and `performance-predictions.json` (B04), both by hash; the B08 and
   B10 suite reports (stratum results keyed by matrix hash and stratum id).
+- Produces (`scripts/audit-gates-1b1.mjs`): `scripts/audit-gates-1b1.mjs` implements disposition-aware auditing while retaining legacy per-commit validation outside the approved transition. It consumes a versioned acceptance manifest recording full commit SHAs, policy version, approval provenance, cutover, retrospective classifications, feature boundaries, WIP ancestry, promotion parents/tree IDs, the approved documentation allowance and evidence references. The live manifest and final audit remain outside the commits they describe. Full-gate records retain their schema and exact-commit validation through `judgeRecord`. Fast checks produce separately typed records identifying the clean, unchanged commit/tree, manifests, unit/build outcomes and confirmed cleanup; they cannot satisfy a full-gate requirement. The audit verifies classifications against Git ancestry and boundary evidence, rather than trusting labels. Existing `scripts/audit-gates.mjs` retains legacy behavior.
 - Produces (`timing.mjs`): `scheduleAbsolute({clock, setTimer}, targets, callback) →
   {rearms, lateByMs[], longTasks[], invalidated}` (rounds every positive wait up to a whole
   millisecond; re-arms against absolute targets; a request issued more than 4 ms late is
@@ -2041,13 +2048,12 @@ unchanged assertions.
   duplicate-conflicting, failed or inconclusive results block acceptance, and diagnostic records
   never fill a missing mandatory result.
 
-**Design assertions:** §16.4 verbatim through P3; Project 0's timer requirements; §16.3 (every
-1b.1 commit accepted by its own gate record); §3 (the 1b.1 release row demonstrated end to end).
+**Design assertions:** §16.4 verbatim through P3; Project 0's timer requirements; §16.3 (every audited commit is accounted for under the applicable policy; every acceptance boundary has qualifying evidence; WIP remains non-promotable and is never reported as accepted; exception inputs are explicitly scoped); §3 (the 1b.1 release row demonstrated end to end).
 
 - [ ] **Step 1: Tests** — Node: `waits are rounded up and scheduled against absolute targets`;
   `a late issuance is recorded as a timing anomaly and an established application failure stays
   failed`; `three passing trials cannot rescue an earlier application failure accompanied by late
-  issuance`; `the audit wrapper writes the 1b.1 ledger path and judges every commit in the range`;
+  issuance`; `the audit wrapper writes the 1b.1 ledger path and judges every commit in the range against the versioned acceptance manifest, failing closed on an unknown disposition or missing boundary evidence`; `a promotion is accepted as merge-tree-identical only when its tree object ID equals the gated candidate's`; `a docs-fast commit cannot expand its own allowlist`;
   `the evidence join blocks on a missing, conflicting or inconclusive mandatory stratum`. Headed
   (each scene suite's `requiredPasses`, one per P3 target, asserting its threshold on every valid
   passing trial, at least three within five attempts and no established application target
@@ -2069,13 +2075,10 @@ unchanged assertions.
 - [ ] **Step 4: Commit and gate** — `"1b.1 acceptance: performance evidence, recorded
   investigation and handoff (B15)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 - [ ] **Step 5: Audit** — `node scripts/audit-gates-1b1.mjs <1b.1 base> <implementation head>`
-  on the exact head just gated: every 1b.1 commit `accepted`; commit the summary as
-  `gate-ledger-1b1.json` (`"1b.1 gate audit"`), gate that commit, and run a final audit including
-  it, retaining that final record in `artifacts/gates/` outside the commit it describes; the task
-  report names the audited head explicitly.
+  on the exact head just gated. Audit the fully gated implementation head under the applicable policies, requiring every commit to be accounted for and every acceptance boundary validated. Commit `gate-ledger-1b1.json`. If this commit changes only already-approved output-only summary paths, validate the summary against its evidence, run and record fast checks, and classify it `docs-fast`; otherwise apply the ordinary acceptance rule. Run a final audit including that commit, retain the result externally in `artifacts/gates/`, and name the final audited head.
 
 **Expected outputs:** three performance reports with per-trial results; the investigation
-document; the audit summary with every commit accepted and the audited head named.
+document; the audit summary with every commit accounted for, accepted boundaries and WIP reported separately, and the audited head named.
 
 ---
 
