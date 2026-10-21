@@ -92,6 +92,50 @@ const watchContext = page => ev(page, () => {
 // not replaced (`atlas.renderer.__witness` is set on it before the loss).
 const lostState = page => ev(page, () => ({ rendered: atlas.rendered, report: atlas.lastReport?.reportId ?? null, witness: atlas.renderer.__witness ?? null, state: atlas.device.state, webgl: !!atlas.renderer.gl, events: [...window.__contextEvents] }));
 
+// Real IndexedDB (T10, spec §14), from the application page (the server refuses fixtures under
+// `tests/`), on a database of its own: whole-batch commit including the write marker, whole-batch
+// rollback (the complete old value survives and the rolled-back marker is absent), cancellation
+// before commit, reopen with the thumbnail Blob intact, list, count, a cancelled read, deletion of
+// a record and of a write marker in one batch (the operation T09b's pruning uses), and a blocked
+// upgrade classified as `blocked`.
+function checkIndexedDb(page) {
+  return within(page.evaluate(async () => {
+    const { openPersistence } = await import('/src/shared/persistence.js');
+    const name = `atlas-test-${Date.now()}`;
+    const value = (id, note) => ({ id, workspace: 'plane', createdAt: '2026-10-20T00:00:00.000Z', note, thumbnail: { blob: new Blob(['x']) } });
+    const results = {};
+    const store = await openPersistence({ databaseName: name });
+    results.commit = (await store.commit({ puts: [{ store: 'discoveries', value: value('a', 'old') }, { store: 'reports', value: { reportId: 'r1' } }, { store: 'writes', value: { writeId: 'w1', op: 'save', id: 'a' } }] })).status;
+    results.rollback = (await store.commit({ puts: [{ store: 'discoveries', value: value('a', 'new') }, { store: 'writes', value: { writeId: 'w2', op: 'save', id: 'a' } }, { store: 'reports', value: { noKey: true } }] })).status;
+    results.rolledBackMarker = await store.getWriteMarker('w2');
+    results.afterRollback = (await store.getDiscovery('a')).note;
+    const controller = new AbortController();
+    const pending = store.commit({ puts: [{ store: 'discoveries', value: value('b', 'x') }] }, { signal: controller.signal });
+    controller.abort();
+    results.aborted = (await pending).status;
+    results.abortedAbsent = (await store.getDiscovery('b')) === null;
+    store.close();
+    const reopened = await openPersistence({ databaseName: name });
+    const fetched = await reopened.getDiscovery('a');
+    results.reopened = fetched.note;
+    results.blobSize = fetched.thumbnail.blob.size;
+    results.list = (await reopened.listDiscoveries({ workspace: 'plane', limit: 10 })).items.map(item => item.id);
+    results.count = await reopened.countDiscoveries({ workspace: 'plane' });
+    results.marker = (await reopened.getWriteMarker('w1'))?.id ?? null;
+    const cancelled = new AbortController(); cancelled.abort();
+    results.cancelledRead = await reopened.getDiscovery('a', { signal: cancelled.signal }).then(() => 'resolved', error => error.name);
+    results.deletion = (await reopened.commit({ puts: [{ store: 'writes', value: { writeId: 'w3', op: 'remove', id: 'a' } }], deletes: [{ store: 'discoveries', key: 'a' }, { store: 'writes', key: 'w1' }] })).status;
+    results.afterDeletion = { record: await reopened.getDiscovery('a'), deletedMarker: await reopened.getWriteMarker('w1'), removeMarker: (await reopened.getWriteMarker('w3'))?.op ?? null, count: await reopened.countDiscoveries({ workspace: 'plane' }) };
+    reopened.close();
+    const raw = await new Promise((resolve, reject) => { const request = indexedDB.open(name); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    try { await openPersistence({ databaseName: name, version: 2, timeoutMs: 3000 }); results.blocked = 'opened'; }
+    catch (error) { results.blocked = error.code; }
+    raw.close();
+    await new Promise(resolve => { const request = indexedDB.deleteDatabase(name); request.onsuccess = request.onerror = request.onblocked = resolve; });
+    return results;
+  }), LIMITS.operation, 'IndexedDB checks');
+}
+
 // One export of the current viewport of `view`. With `withEdits`, three phases are witnessed
 // before the page edits the live scene: admission held by a hook; the export render pending on a
 // held worker message (the view is switched away and back first, so the export misses the
@@ -543,6 +587,13 @@ try {
   assert.deepEqual(after.scene, before.scene);
   assert.deepEqual(after.history, before.history, 'neither history changes');
   pass('An invalid link during an investigation changes nothing');
+
+  assert.deepEqual(await checkIndexedDb(page), {
+    commit: 'committed', rollback: 'failed', afterRollback: 'old', aborted: 'aborted', abortedAbsent: true,
+    reopened: 'old', blobSize: 1, list: ['a'], blocked: 'blocked', rolledBackMarker: null, count: 1, marker: 'a', cancelledRead: 'AbortError',
+    deletion: 'committed', afterDeletion: { record: null, deletedMarker: null, removeMarker: 'remove', count: 0 },
+  });
+  pass('IndexedDB commits whole batches, rolls back, cancels and reopens');
 
   await checkExportImmutability(page, 'WebGL');
   pass('An edit during a WebGL export does not change the exported image');
