@@ -85,3 +85,29 @@ export function entryNearEdge(ray, interval, box, margin = 1e-3) {
   const point = ray.origin.map((v, i) => v + Math.max(0, interval.enter) * ray.direction[i]);
   return boxLocal(point, box).filter((v, i) => box.half[i] - Math.abs(v) < margin).length > 1;
 }
+// Rev 4.8 surface-v1 analytic envelope (plan B04 P1; tolerance-analysis.md#depth). t⁻ is the first
+// forward intersection, max(0, enter) when exit >= max(0, enter), with the object expanded outward by
+// rho; null when the forward ray misses the expansion. Computed independently of the oracle intervals
+// above and of the marcher: an explicit quadratic at radius + rho and explicit inflated local slabs.
+export function expandedSphereEntry(ray, rho, radius = 1) {
+  const [o, d] = [ray.origin, ray.direction], r = radius + rho;
+  const a = d[0] * d[0] + d[1] * d[1] + d[2] * d[2], b = o[0] * d[0] + o[1] * d[1] + o[2] * d[2];
+  const c = o[0] * o[0] + o[1] * o[1] + o[2] * o[2] - r * r, discriminant = b * b - a * c;
+  if (!(a > 0) || discriminant < 0) return null;
+  const root = Math.sqrt(discriminant), enter = (-b - root) / a, exit = (-b + root) / a;
+  return exit >= Math.max(0, enter) ? Math.max(0, enter) : null;
+}
+// Slab entry for a local axis-aligned box (centre, half) inflated by rho; shared by the box and the Menger leaves.
+export function inflatedSlabEntry(origin, direction, center, half, rho) {
+  let enter = -Infinity, exit = Infinity;
+  for (let axis = 0; axis < 3; axis++) {
+    const o = origin[axis] - center[axis], d = direction[axis], h = half[axis] + rho;
+    if (d === 0) { if (Math.abs(o) > h) return null; continue; }
+    const near = (-h - o) / d, far = (h - o) / d;
+    enter = Math.max(enter, Math.min(near, far)); exit = Math.min(exit, Math.max(near, far));
+  }
+  return exit >= Math.max(0, enter) ? Math.max(0, enter) : null;
+}
+export function expandedBoxEntry(ray, rho, box = ROTATED_BOX) {
+  return inflatedSlabEntry(boxLocal(ray.origin, box), boxLocal(ray.direction, box, true), [0, 0, 0], box.half, rho);
+}

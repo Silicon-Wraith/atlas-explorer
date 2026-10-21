@@ -37,6 +37,9 @@
     "tests/unit/space-numerics.test.js",
     "tests/unit/space-keys.test.js",
     "tests/unit/space-renderer.test.js",
+    "tests/unit/tracing-metadata.test.js",
+    "tests/unit/space-tracing.test.js",
+    "tests/unit/reference-envelope.test.js",
     "tests/unit/space-gestures.test.js",
     "tests/unit/space-navigation.test.js"
   ]

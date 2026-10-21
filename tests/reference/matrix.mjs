@@ -5,8 +5,8 @@ import { pathToFileURL } from 'node:url';
 import { nextUp, nextDown, bits, derivativeUpdate } from './f32.js';
 import { bulbOrbit } from './bulb.js';
 import { quaternionOrbit, quaternionBound, admitsRequestedComponent } from './quaternion.js';
-import { sphereInterval, boxInterval, ROTATED_BOX, entryNearEdge, sphereDistance, boxDistance } from './analytic.js';
-import { mengerIntervals } from './menger.js';
+import { sphereInterval, boxInterval, ROTATED_BOX, entryNearEdge, sphereDistance, boxDistance, expandedSphereEntry, expandedBoxEntry } from './analytic.js';
+import { mengerIntervals, expandedMengerEntry } from './menger.js';
 import { overviewCamera, yawCamera, rayFor, normalize, lookCamera } from './camera.js';
 import { traceRay, traceModel, modelRadius } from './trace.js';
 import { prepareAnchor, anchorSeed, detailCamera } from './anchors.mjs';
@@ -113,17 +113,38 @@ export const TOLERANCES = {
   component2: tolerance('relative', 1e-4, 'components', 1e-6), component3: tolerance('relative', 1e-4, 'components', 1e-6),
   logEscapeRadius: tolerance('relative', 1e-4, 'radius'), log2DE: tolerance('absolute', 2 ** -10, 'distance'),
   depth: tolerance('relative', 1e-3, 'depth', 1e-6),
+  // Rev 4.8: surface-v1 analytic depth lies in [max(0, t-) - delta, t* + delta], delta the `depth` allowance.
+  analyticEnvelope: tolerance('surface-v1-expanded-object-envelope', 1e-3, 'depth', 1e-6),
   overviewStatus: tolerance('absolute-fraction', 0.05, 'overview'), overviewDepth: tolerance('surface-v1-tau-multiple', 2, 'overview'),
   usabilityDistribution: tolerance('absolute-fraction', 0.05, 'coverage'),
 };
 const allowance = (quantity, value) => { const t = TOLERANCES[quantity]; return t.kind === 'relative' ? Math.max(t.floor ?? 0, t.value * Math.abs(value)) : t.value; };
+// Rev 4.8 (user-approved 2026-10-21, post-discovery): the two mandatory analytic depth checks and the
+// profiles they run under. analytic-inspection-v1 scales the whole surface-v1 tolerance, floor included.
+const ANALYTIC_ALPHA = 2 * Math.tan(Math.PI / 6) / 720;
+export const PROFILES = Object.freeze({
+  'surface-v1': { tolerance: 'max(1e-6, 0.5*alpha*t)', toleranceFloor: 1e-6, toleranceFactor: 0.5, alpha: '2*tan(verticalFov/2)/height', stepMultiplier: 0.9 },
+  'analytic-inspection-v1': { derivedFrom: 'surface-v1', toleranceScale: 0.1, tolerance: '0.1*max(1e-6, 0.5*alpha*t) = max(1e-7, 0.05*alpha*t)',
+    toleranceFloor: 1e-7, toleranceFactor: 0.05, alpha: '2*tan(verticalFov/2)/height', stepMultiplier: 0.9, caps: 'unchanged from surface-v1',
+    sampling: { height: 720, verticalFovDegrees: 60, maxSteps: 512, rays: 'the unchanged P1 analytic reference rays, exclusions and eligibility' },
+    use: 'analytic ray depth inspection only; never an ordinary render profile', amendment: '2026-10-21 rev 4.8' },
+});
+export const ANALYTIC_CHECKS = Object.freeze([
+  { id: 'surface-envelope', profile: 'surface-v1', quantity: 'analyticEnvelope', criterion: 'max(0, tMinus) - delta <= t <= tStar + delta',
+    rho: 'tau_surface(tStar) = max(1e-6, 0.5*alpha*tStar)', delta: 'max(1e-6, 1e-3*|tStar|)',
+    tMinus: 'first forward intersection with the object expanded outward by rho: sphere radius 1 + rho (quadratic); box half-extents + rho (local slabs); union of Menger leaves with half-extents + rho (local slabs)' },
+  { id: 'inspection-relative', profile: 'analytic-inspection-v1', quantity: 'depth', criterion: '|t - tStar| <= max(1e-6, 1e-3*|tStar|)' },
+]);
 export function matrixHeader({ seed = 1 } = {}) {
   if (seed !== 1) throw new RangeError('P1 has one frozen seed: 1 (enumeration only)');
   return { schema: 'atlas.space-matrix', version: 1, frozenAt: '2026-10-21', seed,
     generatorSha256: sha256(read('matrix.mjs')), referenceSha256: Object.fromEntries(referenceNames.map(name => [name, sha256(read(name))])),
     analysis: { path: 'tests/reference/tolerance-analysis.md', sha256: sha256(read('tolerance-analysis.md')) },
-    tolerances: TOLERANCES,
-    rules: { arithmeticInputs: 'effective-binary32', continuousFloor: 'escaped and all continuous quantities available and quarter-tolerance stable',
+    tolerances: TOLERANCES, profiles: PROFILES,
+    rules: {
+      analytic: { checks: ANALYTIC_CHECKS, required: 'both checks, on every analytic stratum', sampling: { height: 720, verticalFovDegrees: 60, maxSteps: 512, stepMultiplier: 0.9 },
+        status: 'exact on every case under both profiles', depthDomain: 'reference-eligible positive hits (unchanged)', numericalFailureMax: 0,
+        envelopeFixture: 'case.envelope = {rho, delta, tMinus} on every eligible positive hit', amendment: 'user-approved 2026-10-21, rev 4.8, post-discovery' }, arithmeticInputs: 'effective-binary32', continuousFloor: 'escaped and all continuous quantities available and quarter-tolerance stable',
       rayInputs: 'camera/pixel strata inherit stratum.inputs; rayFor(stratum.camera, ...case.pixel, 1280, 720) passes through (i + 0.5, j + 0.5); case.inputs contains overrides; absent expected reason/subreason means null; steps are not compared',
       screen: 'each relevant effective binary32 input individually nextDown/nextUp, including all four C and all four q0 components',
       overview: { width: 1280, height: 720, cells: [32, 32], pixels: { first: [376, 96], step: [17, 17], last: [903, 623] },
@@ -286,6 +307,7 @@ function analyticRays(kind) {
   const cases = [], excluded = []; let positiveHits = 0;
   const nx = kind === 'sphere' ? 25 : kind === 'box' ? 31 : 41, ny = kind === 'sphere' ? 25 : kind === 'box' ? 21 : 41;
   const depth = kind === 'menger-1' ? 1 : 2;
+  const expandedEntry = (ray, rho) => kind === 'sphere' ? expandedSphereEntry(ray, rho) : kind === 'box' ? expandedBoxEntry(ray, rho) : expandedMengerEntry(ray, depth, rho);
   for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
     const x = kind === 'box' ? -1.5 + i / 10 : -1.2 + 2.4 * i / (nx - 1), z = kind === 'box' ? -0.5 + j / 20 : -1.2 + 2.4 * j / (ny - 1);
     const ray = { origin: [x, -4, z], direction: kind.startsWith('menger') ? normalize([0.3, 1, 0.2]) : [0, 1, 0] };
@@ -296,10 +318,42 @@ function analyticRays(kind) {
     const hit = interval && interval.exit >= Math.max(0, interval.enter), t = hit ? Math.max(0, interval.enter) : null, id = `${kind}/${i}/${j}`;
     if (edge) excluded.push({ id, reason: kind === 'sphere' ? 'A.4 tangent margin 0.02' : 'A.4 face-edge margin 0.001', quantity: 'depth' });
     else if (hit && t > 0) positiveHits++;
-    cases.push({ id, inputs: { ray, model: kind.startsWith('menger') ? 'menger' : kind, effective: kind.startsWith('menger') ? { depth } : {} },
-      expected: { status: hit ? 'approximate hit' : 'miss', t }, referenceEligible: !edge });
+    const c = { id, inputs: { ray, model: kind.startsWith('menger') ? 'menger' : kind, effective: kind.startsWith('menger') ? { depth } : {} },
+      expected: { status: hit ? 'approximate hit' : 'miss', t }, referenceEligible: !edge };
+    if (!edge && hit && t > 0) {
+      // Rev 4.8 surface-v1 envelope: rho = tau_surface(t*), delta = the depth allowance, t- from the expansion.
+      const rho = Math.max(1e-6, 0.5 * ANALYTIC_ALPHA * t), delta = allowance('depth', t), tMinus = expandedEntry(ray, rho);
+      if (tMinus === null || !(tMinus <= t)) throw new Error(`${id}: the expansion must contain the object`);
+      c.envelope = { rho, delta, tMinus };
+    }
+    cases.push(c);
   }
-  return stratum(`analytic/${kind}`, 'analytic-ray', {}, cases, { reference: kind === 'sphere' ? 500 : kind === 'box' ? 521 : 1345, positiveHits: 64 }, { reference: cases.length - excluded.length, positiveHits }, excluded);
+  return stratum(`analytic/${kind}`, 'analytic-ray', {}, cases, { reference: kind === 'sphere' ? 500 : kind === 'box' ? 521 : 1345, positiveHits: 64 }, { reference: cases.length - excluded.length, positiveHits }, excluded,
+    { checks: ANALYTIC_CHECKS.map(check => check.id), cpuPreflight: analyticPreflight(cases) });
+}
+// Binary64 traces of both checks (CPU evidence only; never a GPU result and never a screen).
+function analyticPreflight(cases) {
+  const run = (scale, check) => {
+    let statusFailures = 0, depthFailures = 0, numericalFailures = 0, worst = 0;
+    for (const c of cases) {
+      const profile = { name: 'surface-v1', height: 720, maxSteps: 512, ...(scale === 1 ? {} : { toleranceScale: scale }) };
+      const r = traceModel(c.inputs.model, c.inputs.effective, c.inputs.ray, profile);
+      numericalFailures += Number(r.status === 'numerical failure'); statusFailures += Number(r.status !== c.expected.status);
+      if (!c.envelope) continue;
+      const { delta, tMinus } = c.envelope, hit = r.status === 'approximate hit';
+      const ok = check === 'surface-envelope' ? hit && r.t >= Math.max(0, tMinus) - delta && r.t <= c.expected.t + delta : hit && Math.abs(r.t - c.expected.t) <= delta;
+      depthFailures += Number(!ok);
+      if (hit) worst = Math.max(worst, check === 'surface-envelope' ? Math.max((Math.max(0, tMinus) - r.t) / delta, (r.t - c.expected.t) / delta, 0) : Math.abs(r.t - c.expected.t) / delta);
+    }
+    return { statusFailures, depthFailures, numericalFailures, worstExcessOverDelta: worst };
+  };
+  const inspectionDisplacement = Math.max(0, ...cases.filter(c => c.envelope).map(c => {
+    const kind = c.id.split('/')[0], rho = 0.1 * c.envelope.rho;
+    const entry = kind === 'sphere' ? expandedSphereEntry(c.inputs.ray, rho) : kind === 'box' ? expandedBoxEntry(c.inputs.ray, rho) : expandedMengerEntry(c.inputs.ray, c.inputs.effective.depth, rho);
+    return (c.expected.t - Math.max(0, entry)) / c.envelope.delta;
+  }));
+  return { scope: 'binary64 reference tracer; CPU preflight, not GPU qualification', 'surface-envelope': run(1, 'surface-envelope'),
+    'inspection-relative': run(0.1, 'inspection-relative'), inspectionStoppingDisplacementOverDelta: inspectionDisplacement };
 }
 function convergence(primary, tighter) {
   if (!['approximate hit', 'miss'].includes(primary.status) || primary.status !== tighter.status) return 'unresolved or status disagreement';
