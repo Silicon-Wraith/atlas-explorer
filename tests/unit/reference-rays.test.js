@@ -1,26 +1,17 @@
+// Fast ray semantics; complete matrices, anchors and usability run in tests/reference.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { nextUp, nextDown, derivativeUpdate } from '../reference/f32.js';
-import { complexOrbit } from '../reference/complex.js';
-import { quaternionOrbit, quaternionBound, componentsAgree, admitsRequestedComponent } from '../reference/quaternion.js';
-import { bulbOrbit } from '../reference/bulb.js';
+import { nextUp } from '../reference/f32.js';
+import { quaternionOrbit, quaternionBound } from '../reference/quaternion.js';
 import { sphereDistance, boxDistance, sphereInterval, boxInterval } from '../reference/analytic.js';
 import { mengerBoxes, mengerDistance } from '../reference/menger.js';
-import { overviewCamera, cameraBasis, rayFor, yawCamera } from '../reference/camera.js';
+import { overviewCamera, rayFor, yawCamera } from '../reference/camera.js';
 import { traceRay, traceModel } from '../reference/trace.js';
-import { prepareAnchor } from '../reference/anchors.mjs';
-import { generateMatrix, matrixIsQualifiable, finalizeStratum, materializePerformance, predictCheckpoint,
-  serialize, sha256, matrixHeader, generateStrata, generateAnchors, generateUsability, createMatrixIndex, assembleMatrix, loadMatrix, compareOverview, overviewStratum, pointAdversarial, rayAdversarial } from '../reference/matrix.mjs';
+import { compareOverview, overviewStratum, rayAdversarial } from '../reference/matrix.mjs';
 
-const dir = new URL('../reference/', import.meta.url);
-const json = name => JSON.parse(readFileSync(new URL(name, dir), 'utf8'));
-const bytes = name => readFileSync(new URL(name, dir));
 const close = (a, b, tolerance = 1e-12) => assert.ok(Math.abs(a - b) <= tolerance, `${a} versus ${b}`);
 const profile = { name: 'surface-v1', height: 720, verticalFovDegrees: 60, maxSteps: 512 };
 
-const committed = loadMatrix();
 test('Menger depths enumerate 20 and 400 boxes and the exterior distance is the box-union minimum', () => {
   for (const depth of [1, 2]) {
     const boxes = mengerBoxes(depth);
@@ -44,18 +35,6 @@ test('the reference marcher reports an interior start as unresolved with estimat
   assert.equal(result.status, 'unresolved'); assert.equal(result.reason, 'estimate-unavailable');
 });
 
-test('anchors converge within the declared rule and are recorded with both tolerances', () => {
-  const anchors = committed.anchors;
-  assert.equal(anchors.length, 18);
-  for (const anchor of anchors) {
-    assert.deepEqual(anchor.convergence.tolerances, [1e-13, 1e-15]);
-    assert.equal(anchor.convergence.converged, true, anchor.id);
-    const result = prepareAnchor(anchor.model, anchor.effective, anchor.seedRay);
-    assert.deepEqual(result.anchor, anchor.anchor); assert.deepEqual(result.convergence, anchor.convergence);
-    assert.ok(anchor.convergence.deltaT <= anchor.convergence.limit);
-  }
-});
-
 test('analytic intervals, boundary starts, empty slices and invalid rays stay distinct', () => {
   assert.deepEqual(sphereInterval({ origin: [0, -4, 0], direction: [0, 1, 0] }, 1), { enter: 3, exit: 5 });
   assert.equal(boxInterval({ origin: [3, 0, 0], direction: [0, 1, 0] }, { center: [0, 0, 0], half: [1, 1, 1] }), null);
@@ -77,24 +56,6 @@ test('outward enclosing slabs do not create interior starts for exterior Menger 
     assert.notEqual(result.detail, 'interior');
   }
 });
-
-test('the quaternion usability prediction is independently reproducible', { timeout: 10000 }, () => {
-  const prediction = generateUsability();
-  assert.deepEqual(prediction.settings.camera.positionLocal, [1.92, -1.44, 0.7]);
-  assert.equal(prediction.acceptance.perClassAbsoluteFraction, 0.05);
-  assert.deepEqual(prediction, json('quaternion-usability.json'));
-});
-
-const regenerated = [];
-const strata = generateStrata({ partition: 'rays' });
-const expectedRows = committed.strata.filter(s => ['adversarial-ray', 'analytic-ray', 'fractal-overview', 'detail-ladder'].includes(s.kind));
-for (const expected of expectedRows) test(`regenerates P1 stratum ${expected.id}`, { timeout: 10000 }, () => {
-  const actual = strata.next(); assert.equal(actual.done, false); assert.equal(serialize(actual.value), serialize(expected)); regenerated.push(actual.value);
-});
-test('the rays partition regenerates exactly its declared shards', () => {
-  assert.equal(strata.next().done, true); assert.deepEqual(regenerated.map(s => s.id), expectedRows.map(s => s.id));
-});
-
 
 test('overview uses the approved integer footprint and status-only eligibility', () => {
   const row = overviewStratum('probe', 'mandelbulb', { power: 8 });

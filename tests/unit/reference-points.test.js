@@ -1,24 +1,16 @@
+// Fast semantics and integrity checks; full regeneration is in tests/reference.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import { nextUp, nextDown, derivativeUpdate } from '../reference/f32.js';
 import { complexOrbit } from '../reference/complex.js';
 import { quaternionOrbit, quaternionBound, componentsAgree, admitsRequestedComponent } from '../reference/quaternion.js';
 import { bulbOrbit } from '../reference/bulb.js';
-import { sphereDistance, boxDistance, sphereInterval, boxInterval } from '../reference/analytic.js';
-import { mengerBoxes, mengerDistance } from '../reference/menger.js';
-import { overviewCamera, cameraBasis, rayFor, yawCamera } from '../reference/camera.js';
-import { traceRay, traceModel } from '../reference/trace.js';
-import { prepareAnchor } from '../reference/anchors.mjs';
-import { generateMatrix, matrixIsQualifiable, finalizeStratum, materializePerformance, predictCheckpoint,
-  serialize, sha256, matrixHeader, generateStrata, generateAnchors, generateUsability, createMatrixIndex, assembleMatrix, loadMatrix, compareOverview, overviewStratum, pointAdversarial, rayAdversarial } from '../reference/matrix.mjs';
+import { generateMatrix, matrixIsQualifiable, finalizeStratum, serialize, sha256, matrixHeader,
+  createMatrixIndex, assembleMatrix, pointAdversarial } from '../reference/matrix.mjs';
 
 const dir = new URL('../reference/', import.meta.url);
-const json = name => JSON.parse(readFileSync(new URL(name, dir), 'utf8'));
 const bytes = name => readFileSync(new URL(name, dir));
-const close = (a, b, tolerance = 1e-12) => assert.ok(Math.abs(a - b) <= tolerance, `${a} versus ${b}`);
-const profile = { name: 'surface-v1', height: 720, verticalFovDegrees: 60, maxSteps: 512 };
 
 // Recursively inspect every local dependency, including future re-exports/dynamic imports.
 function independent(source, path, seen = new Set()) {
@@ -34,9 +26,6 @@ function independent(source, path, seen = new Set()) {
   }
 }
 
-const committed = loadMatrix();
-let livePointRows;
-const points = () => livePointRows ??= [...generateStrata({ partition: 'points' })];
 test('reference modules import nothing from src', () => {
   for (const file of readdirSync(dir).filter(name => /\.(m?js)$/.test(name))) independent(readFileSync(new URL(file, dir), 'utf8'), new URL(file, dir));
   for (const bad of ["import { rayFor } from '../../src/space/camera.js';", "export * from '../../src/space/camera.js';", "await import('../../src/space/camera.js');"]) {
@@ -62,22 +51,6 @@ test('the bulb reference reproduces the axis orbit 0, 1, 2, 257 and the derivati
     assert.deepEqual(result.orbit, [[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 0, 257]]);
     assert.deepEqual(result.derivatives, [0, 1, 9, 9217]);
     assert.equal(result.escapeIndex, 3);
-  }
-});
-
-test('κ = ±4 strata contain only empty-slice assertions', () => {
-  const matrix = { strata: points() };
-  const strata = matrix.strata.filter(s => s.kind === 'quaternion-generic' && Math.abs(s.parameters.kappa) === 4);
-  assert.equal(strata.length, 6 * 2 * 4);
-  for (const stratum of strata) {
-    assert.equal(stratum.floor.continuous, 0); assert.equal(stratum.floor.semantic, 256);
-    assert.equal(stratum.excluded.length, 0);
-    for (const c of stratum.cases) {
-      const { C, kappa } = c.inputs.parameters;
-      assert.ok(Math.abs(kappa) > quaternionBound(C));
-      assert.equal(quaternionOrbit([...c.inputs.effective, kappa], C, c.inputs.cap).escapeIndex, 0);
-      assert.equal(traceModel('quaternion-julia', { C, kappa }, { origin: [0, -5, 0], direction: [0, 1, 0] }, profile).status, 'miss');
-    }
   }
 });
 
@@ -123,50 +96,6 @@ test('exact requested-decimal boundary rejection precedes binary32 conversion', 
   for (const sign of ['', '-']) {
     const outside = `${sign}4.000000000000000000000000000000000000000000000000000000000000001`;
     assert.equal(Math.abs(Math.fround(Number(outside))), 4); assert.equal(admitsRequestedComponent(outside), false);
-  }
-});
-
-test('the frozen boundary strata retain every semantic case and exact decimal rejection', () => {
-  const rows = points().filter(s => s.kind === 'quaternion-boundary');
-  assert.equal(rows.length, 24 * 7 * 4);
-  assert.equal(rows.reduce((n, s) => n + s.cases.length, 0), 5376);
-  for (const row of rows) {
-    assert.equal(row.excluded.length, 0);
-    for (const c of row.cases) {
-      assert.equal(c.expected.admitted, true);
-      const { C, kappa } = c.inputs.parameters;
-      const bound = quaternionBound(C);
-      assert.ok(bound >= Math.max(2, (1 + Math.sqrt(1 + 4 * Math.hypot(...C))) / 2));
-      assert.equal(c.expected.emptySlice, Math.abs(kappa) > bound);
-      const live = quaternionOrbit([...c.inputs.effective, kappa], C, c.inputs.cap, { bound });
-      assert.notEqual(live.status, 'numerical failure');
-      if (c.expected.emptySlice) assert.equal(live.escapeIndex, 0);
-    }
-    for (const c of row.rejectionCases) {
-      assert.equal(c.expected, 'out-of-range'); assert.equal(admitsRequestedComponent(c.requested), false);
-    }
-  }
-});
-
-const regenerated = [];
-const strata = (function* () { yield* points(); })();
-const expectedRows = committed.strata.filter(s => !['adversarial-ray', 'analytic-ray', 'fractal-overview', 'detail-ladder'].includes(s.kind));
-for (const expected of expectedRows) test(`regenerates P1 stratum ${expected.id}`, { timeout: 10000 }, () => {
-  const actual = strata.next(); assert.equal(actual.done, false); assert.equal(serialize(actual.value), serialize(expected)); regenerated.push(actual.value);
-});
-test('the points partition regenerates exactly its declared shards', () => {
-  assert.equal(strata.next().done, true); assert.deepEqual(regenerated.map(s => s.id), expectedRows.map(s => s.id));
-});
-
-
-test('the approved power-7 floor changes no other power or candidate grid', () => {
-  const rows = points().filter(s => s.kind === 'bulb-generic');
-  assert.equal(rows.length, 28);
-  for (const row of rows) {
-    assert.equal(row.cases.length, 512);
-    assert.equal(row.floor.continuous, row.parameters.power === 7 ? 400 : 410);
-    assert.equal(row.state, 'frozen');
-    if (row.parameters.power === 7) assert.equal(row.eligible.continuous, 408);
   }
 });
 
@@ -231,20 +160,6 @@ test('partial shard loading rejects content IDs that disagree with its declared 
   assert.deepEqual(selected.stratumIds, ['a']);
   assert.deepEqual(JSON.parse(changedBytes).map(row => row.id), ['x']);
   assert.throws(() => assembleMatrix(index, path => shards.get(path), options), /shard IDs or grouping mismatch/);
-});
-
-test('the matrix generator is deterministic and its output matches the committed index whole-matrix sha256', () => {
-  const index = json('space-matrix.json');
-  assert.equal(index.shards.length, 18); assert.equal(index.stratumOrder.length, 1123);
-  assert.equal(sha256(serialize(committed)), index.matrixSha256);
-  assert.equal(serialize(createMatrixIndex(committed).index), serialize(index));
-  const { strata, anchors, ...header } = committed;
-  assert.deepEqual(header, matrixHeader({ seed: committed.seed }));
-  assert.equal(committed.analysis.sha256, matrixHeader().analysis.sha256);
-  assert.equal(matrixIsQualifiable(committed), true);
-  assert.deepEqual(generateMatrix({ strata: [] }), generateMatrix({ strata: [] }));
-  assert.equal(matrixHeader().tolerances.usabilityDistribution.value, 0.05);
-  assert.equal(Object.hasOwn(matrixHeader().tolerances, 'distribution'), false);
 });
 
 test('all 20 adversarial point cases exercise the live reference semantics', () => {

@@ -1,24 +1,15 @@
+// Fast P3 contracts; every prediction pixel is recomputed by tests/reference.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { nextUp, nextDown, derivativeUpdate } from '../reference/f32.js';
-import { complexOrbit } from '../reference/complex.js';
-import { quaternionOrbit, quaternionBound, componentsAgree, admitsRequestedComponent } from '../reference/quaternion.js';
-import { bulbOrbit } from '../reference/bulb.js';
-import { sphereDistance, boxDistance, sphereInterval, boxInterval } from '../reference/analytic.js';
-import { mengerBoxes, mengerDistance } from '../reference/menger.js';
-import { overviewCamera, cameraBasis, rayFor, yawCamera } from '../reference/camera.js';
-import { traceRay, traceModel } from '../reference/trace.js';
-import { prepareAnchor } from '../reference/anchors.mjs';
-import { generateMatrix, matrixIsQualifiable, finalizeStratum, materializePerformance, predictCheckpoint,
-  serialize, sha256, matrixHeader, generateStrata, generateAnchors, generateUsability, createMatrixIndex, assembleMatrix, loadMatrix, compareOverview, overviewStratum, pointAdversarial, rayAdversarial } from '../reference/matrix.mjs';
+import { cameraBasis, rayFor, yawCamera } from '../reference/camera.js';
+import { materializePerformance, serialize, sha256 } from '../reference/matrix.mjs';
 
 const dir = new URL('../reference/', import.meta.url);
 const json = name => JSON.parse(readFileSync(new URL(name, dir), 'utf8'));
 const bytes = name => readFileSync(new URL(name, dir));
 const close = (a, b, tolerance = 1e-12) => assert.ok(Math.abs(a - b) <= tolerance, `${a} versus ${b}`);
-const profile = { name: 'surface-v1', height: 720, verticalFovDegrees: 60, maxSteps: 512 };
 
 test('P3 materialization is deterministic and its output matches the committed bytes', () => {
   const workload = json('performance-workload.json'), predictions = json('performance-predictions.json');
@@ -74,29 +65,7 @@ test('P3 readiness, prediction hash and absent embedded self hash are enforced',
   visit(manifest); assert.deepEqual(hashes, ['predictionArtifact.sha256']);
 });
 
-let predictions;
-try { predictions = json('performance-predictions.json'); } catch { /* RED */ }
-const regeneratedPredictions = [];
-if (predictions) for (const checkpoint of predictions.checkpoints) {
-  const manifest = json('performance-workload.json');
-  const scene = manifest.scenes.find(s => s.id === checkpoint.sceneId);
-  const replay = manifest.coverageCheckpoints.materialized[scene.id].find(c => c.predictionId === checkpoint.id);
-  const counts = Object.fromEntries(Object.keys(checkpoint.counts).map(k => [k, 0]));
-  for (let row = 0; row < checkpoint.height; row += 16) test(`regenerates P3 prediction ${checkpoint.id} rows ${row}`, { timeout: 10000 }, () => {
-    const shard = predictCheckpoint(scene, replay, manifest.output, { rowStart: row, rowEnd: Math.min(row + 16, checkpoint.height) });
-    assert.equal(Object.values(shard.counts).reduce((a, b) => a + b, 0), checkpoint.width * Math.min(16, checkpoint.height - row));
-    for (const key of Object.keys(counts)) counts[key] += shard.counts[key];
-  });
-  test(`P3 checkpoint ${checkpoint.id} has exact regenerated counts and quality`, () => {
-    const regenerated = predictCheckpoint(scene, replay, manifest.output, { counts });
-    assert.deepEqual(regenerated, checkpoint); regeneratedPredictions.push(regenerated);
-  });
-}
-test('regenerated P3 predictions reproduce the complete artifact and recorded hash', () => {
-  const regenerated = { schema: 'atlas.performance-predictions', version: 1, referenceSha256: matrixHeader().referenceSha256, checkpoints: regeneratedPredictions };
-  assert.equal(serialize(regenerated), bytes('performance-predictions.json').toString());
-  assert.equal(sha256(serialize(regenerated)), json('performance-workload.json').predictionArtifact.sha256);
-});
+const predictions = json('performance-predictions.json');
 
 test('P3 retains unresolved dependencies when checkpoint predictions are missing', () => {
   const manifest = json('performance-workload.json');
