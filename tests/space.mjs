@@ -1574,23 +1574,32 @@ async function runRendering({ page }) {
   const alpha720 = 2 * Math.tan(Math.PI / 6) / 720;
   const strataOf = kind => strata.filter(row => row.kind === kind);
 
-  // 1. Analytic rays (trace_rays, one batch per stratum).
-  const analytic = strataOf('analytic-ray');
-  const analyticRuns = await ev(page, traceRaysInPage, { label: 'analytic', batches: analytic.map(row => {
+  // 1. Analytic rays (trace_rays, one batch per stratum and profile). Rev 4.8: both mandatory checks — the
+  // surface-v1 expanded-object envelope and analytic-inspection-v1 relative 1e-3 — with exact statuses under
+  // both. The inspection profile's floor and factor come from the pinned matrix metadata, never from here.
+  const analytic = strataOf('analytic-ray'), inspectionMeta = view.profiles['analytic-inspection-v1'];
+  assert.equal(inspectionMeta.toleranceScale, 0.1);
+  const INSPECTION = Object.freeze({ ...SURFACE_V1, toleranceFloor: inspectionMeta.toleranceFloor, toleranceFactor: inspectionMeta.toleranceFactor, stepMultiplier: inspectionMeta.stepMultiplier });
+  const analyticProfiles = [['surface', SURFACE_V1], ['inspection', INSPECTION]];
+  const analyticRuns = await ev(page, traceRaysInPage, { label: 'analytic', batches: analyticProfiles.flatMap(([, profile]) => analytic.map(row => {
     const first = row.cases[0].inputs, pitch = 64;
     return { modelId: first.model, depth: first.effective.depth, rays: row.cases.map(c => c.inputs.ray),
-      uniforms: passes.traceRaysUniforms({ modelId: first.model, effective: first.effective, count: row.cases.length, pitch, profile: { ...SURFACE_V1, alpha: alpha720 } }) };
-  }) }, 'analytic rays', LIMITS.deep);
+      uniforms: passes.traceRaysUniforms({ modelId: first.model, effective: first.effective, count: row.cases.length, pitch, profile: { ...profile, alpha: alpha720 } }) };
+  })) }, 'analytic rays', LIMITS.deep);
   const analyticRows = analytic.map((row, i) => {
-    assert.equal(analyticRuns[i].outcome, 'completed', `${row.id}: ${analyticRuns[i].reason}`);
     assert.ok(row.cases.every(c => c.inputs.model === row.cases[0].inputs.model && JSON.stringify(c.inputs.effective) === JSON.stringify(row.cases[0].inputs.effective)), `${row.id}: one model per stratum`);
-    return tracing.compareAnalyticStratum(row, passes.decodeRayResults(bytes(analyticRuns[i].base64), row.cases.length), tol);
+    const decoded = Object.fromEntries(analyticProfiles.map(([name], p) => {
+      const run = analyticRuns[p * analytic.length + i];
+      assert.equal(run.outcome, 'completed', `${row.id} ${name}: ${run.reason}`);
+      return [name, passes.decodeRayResults(bytes(run.base64), row.cases.length)];
+    }));
+    return tracing.compareAnalyticStratum(row, decoded, tol);
   });
   results.push(...analyticRows);
-  report.push({ name: 'Analytic ray strata (recorded, per stratum)', rows: analyticRows.map(tracing.analyticReportRow) });
+  report.push({ name: 'Analytic ray strata (recorded, per stratum; surface-v1 envelope and analytic-inspection-v1)', inspectionProfile: INSPECTION, rows: analyticRows.map(tracing.analyticReportRow) });
   check(RENDERING_PASSES[0], () => {
     assert.equal(analyticRows.length, 4);
-    for (const row of analyticRows) assert.equal(row.passed, true, `${row.id} ${row.state}: ${JSON.stringify({ belowFloor: row.belowFloor, countMismatch: row.countMismatch, nf: row.numericalFailures, failures: row.failures.slice(0, 6) })}`);
+    for (const row of analyticRows) assert.equal(row.passed, true, `${row.id} ${row.state}: ${JSON.stringify({ belowFloor: row.belowFloor, countMismatch: row.countMismatch, nf: row.numericalFailures, checks: row.checks, failures: row.failures.slice(0, 6) })}`);
     return { rows: analyticRows.map(({ failures, ...row }) => row) };
   });
 

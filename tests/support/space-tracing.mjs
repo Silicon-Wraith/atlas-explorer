@@ -3,8 +3,9 @@
 // loaded shards' byte lengths, SHA-256 and declared IDs assembleMatrix verifies, never whole-matrix
 // qualification — and compares decoded GPU results with the frozen expectations.
 // Rules (P2 and the P1 overview text; no tolerance, floor or eligibility rule is introduced here):
-//   - analytic rays: status exact on every case; depth (relative 1e-3, floor 1e-6, P1 `depth`) on the
-//     reference-eligible hits; eligible counts recounted and checked against the frozen counts and floors;
+//   - analytic rays (rev 4.8): status exact on every case under both surface-v1 and analytic-inspection-v1;
+//     on the reference-eligible hits, the surface-v1 expanded-object envelope and inspection relative 1e-3
+//     (floor 1e-6, P1 `depth`), both mandatory; eligible counts recounted against the frozen counts and floors;
 //   - adversarial rays: status, reason, subreason and the interior detail exactly; depth recorded only;
 //   - overview: B04's compareOverview (20D <= |E|; on surface-bearing rows 20G >= 19|H| with
 //     |t - t_ref| <= 2τ(t_ref), a missing hit failing; numerical failure anywhere is a hard failure), plus
@@ -26,7 +27,7 @@ export function loadPinnedRayStrata({ kinds = RAY_STRATUM_KINDS } = {}) {
   const index = verifyMatrixPins(readFileSync(new URL('space-matrix.json', referenceDir)));
   const view = assembleMatrix(index, path => readFileSync(new URL(path, referenceDir)), { kinds: [...kinds] });
   if (view.complete !== false) throw new Error('a ray-strata load must be a partial view');
-  return { ...view, indexSha256: MATRIX_PINS.indexSha256, tolerances: index.matrixTemplate.tolerances, rules: index.matrixTemplate.rules,
+  return { ...view, indexSha256: MATRIX_PINS.indexSha256, tolerances: index.matrixTemplate.tolerances, rules: index.matrixTemplate.rules, profiles: index.matrixTemplate.profiles,
     anchors: index.matrixTemplate.anchors,
     shards: index.shards.filter(shard => kinds.includes(shard.kind)).map(({ path, kind, byteLength, sha256 }) => ({ path, kind, byteLength, sha256 })) };
 }
@@ -48,24 +49,47 @@ function verdict(stratum, { valid, failures, numericalFailures, recounted }) {
   return { state: !conclusive ? 'inconclusive' : passed ? 'passed' : 'failed', passed };
 }
 
-export function compareAnalyticStratum(stratum, results, tolerances) {
-  const recounted = recount(stratum), failures = [];
-  let numericalFailures = 0, valid = Array.isArray(results) && results.length === stratum.cases.length, worstDepth = 0, depthCompared = 0;
+// Rev 4.8 (plan B04 P1, user-approved 2026-10-21): two mandatory checks, each with exact statuses on every case
+// and zero numerical failures. surface-envelope: a surface-v1 run, each eligible positive hit within
+// [max(0, t-) - delta, t* + delta] from the frozen case.envelope; inspection-relative: an
+// analytic-inspection-v1 run, |t - t*| <= max(1e-6, 1e-3|t*|) (P1 `depth`). A missing hit fails depth.
+const ANALYTIC_CHECKS = [['surface-envelope', 'surface', 'surface-v1'], ['inspection-relative', 'inspection', 'analytic-inspection-v1']];
+function analyticCheck(stratum, results, tolerances, check) {
+  const failures = [];
+  let numericalFailures = 0, valid = Array.isArray(results) && results.length === stratum.cases.length, worstDepth = 0, worstExcess = 0, depthCompared = 0;
   stratum.cases.forEach((c, i) => {
     const a = results?.[i];
-    if (!RAY_STATUSES.includes(a?.status)) { valid = false; failures.push({ id: c.id, quantity: 'result', expected: c.expected.status, actual: a?.status ?? 'absent' }); return; }
+    if (!RAY_STATUSES.includes(a?.status)) { valid = false; failures.push({ check, id: c.id, quantity: 'result', expected: c.expected.status, actual: a?.status ?? 'absent' }); return; }
     if (a.status === 'numerical failure') numericalFailures++;
-    if (a.status !== c.expected.status) failures.push({ id: c.id, quantity: 'status', expected: c.expected.status, actual: a.status, t: a.t });
-    if (c.referenceEligible && hitOf(c) && a.status === 'approximate hit') {
-      depthCompared++;
-      const ratio = Math.abs(a.t - c.expected.t) / depthAllowance(tolerances.depth, c.expected.t);
-      worstDepth = Math.max(worstDepth, ratio);
-      if (!(ratio <= 1)) failures.push({ id: c.id, quantity: 'depth', expected: c.expected.t, actual: a.t, ratio });
-    }
+    if (a.status !== c.expected.status) failures.push({ check, id: c.id, quantity: 'status', expected: c.expected.status, actual: a.status, t: a.t });
+    if (!(c.referenceEligible && hitOf(c))) return;
+    if (check === 'surface-envelope' && !c.envelope) { valid = false; failures.push({ check, id: c.id, quantity: 'envelope', actual: 'absent' }); return; }
+    if (a.status !== 'approximate hit') return; // already a status failure; a missing hit never passes depth
+    depthCompared++;
+    const delta = depthAllowance(tolerances.depth, c.expected.t);
+    const excess = check === 'surface-envelope' ? Math.max(Math.max(0, c.envelope.tMinus) - delta - a.t, a.t - (c.expected.t + delta), 0) / delta
+      : Math.max(Math.abs(a.t - c.expected.t) - delta, 0) / delta;
+    // surface-envelope records the early-stop displacement (t* - t)/delta that the envelope budgets.
+    const ratio = check === 'surface-envelope' ? (c.expected.t - a.t) / delta : Math.abs(a.t - c.expected.t) / delta;
+    worstDepth = Math.max(worstDepth, ratio); worstExcess = Math.max(worstExcess, excess);
+    if (!(Number.isFinite(a.t) && excess === 0)) failures.push({ check, id: c.id, quantity: 'depth', expected: c.expected.t, actual: a.t, ...(c.envelope ? { tMinus: c.envelope.tMinus } : {}), delta });
   });
+  return { valid, failures, numericalFailures, depthCompared, worstDepth, worstExcess };
+}
+export function compareAnalyticStratum(stratum, results, tolerances) {
+  const recounted = recount(stratum), checks = {}, failures = [];
+  let valid = true, numericalFailures = 0;
+  for (const [id, key, profile] of ANALYTIC_CHECKS) {
+    const r = analyticCheck(stratum, results?.[key], tolerances, id);
+    const conclusive = stratum.state === 'frozen' && recounted.belowFloor.length === 0 && recounted.mismatch.length === 0;
+    checks[id] = { profile, passed: conclusive && r.valid && r.failures.length === 0 && r.numericalFailures === 0, valid: r.valid, depthCompared: r.depthCompared,
+      ...(id === 'surface-envelope' ? { worstDisplacementOverDelta: r.worstDepth, worstEnvelopeExcessOverDelta: r.worstExcess } : { worstDepthRatio: r.worstDepth }), numericalFailures: r.numericalFailures,
+      statusFailures: r.failures.filter(f => f.quantity === 'status').length, depthFailures: r.failures.filter(f => f.quantity === 'depth').length };
+    valid &&= r.valid; numericalFailures += r.numericalFailures; failures.push(...r.failures);
+  }
   const v = verdict(stratum, { valid, failures: failures.length, numericalFailures, recounted });
   return { id: stratum.id, kind: stratum.kind, role: stratum.role, ...v, eligible: recounted.counts, floor: stratum.floor, belowFloor: recounted.belowFloor,
-    countMismatch: recounted.mismatch, cases: stratum.cases.length, depthCompared, worstDepthRatio: worstDepth, numericalFailures, failureCount: failures.length,
+    countMismatch: recounted.mismatch, cases: stratum.cases.length, checks, numericalFailures, failureCount: failures.length,
     depthFailures: failures.filter(f => f.quantity === 'depth').length, statusFailures: failures.filter(f => f.quantity === 'status').length,
     failures: failures.slice(0, 20), excluded: stratum.excluded?.length ?? 0 };
 }

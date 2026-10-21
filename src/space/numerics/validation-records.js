@@ -7,10 +7,33 @@ import { PRECISION_CARRY_FORWARD_LIMITATIONS } from './validation-domains.js';
 
 export { createValidationRegistry, PRECISION_CARRY_FORWARD_LIMITATIONS } from './validation-domains.js';
 
-// Pinned at registration (plan rev 4.6 B08): the logical matrix hash, the index-file hash, the
+// Pinned at registration (plan rev 4.6 B08; re-frozen at rev 4.8, B10 fix round 2): the logical matrix hash, the index-file hash, the
 // generator and every reference source. Equal to scripts/gate/reference-evidence.mjs's approved
 // identities (a unit test asserts it); a re-freeze needs new record IDs, never a silent retarget.
 export const MATRIX_PINS = deepFreeze({
+  matrixSha256: 'b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c',
+  indexSha256: '3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828',
+  generatorSha256: '138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd',
+  referenceSha256: {
+    'f32.js': '77408939eba83d4cdf79584f04e5a1a1857995c789a40524a8849b5a340ae3fb',
+    'complex.js': 'e69bcf7845b2ddaf35d1bdd40ab8e7c08c7fb198daf94782c495d5baef478bb2',
+    'quaternion.js': '31708ad36542b79b2e8c0b07ea438d8ee8c207d83a9e4d39e1f233d3ad711bc3',
+    'bulb.js': '2a0916987fc64b41e6a63e349d16ca0c0c18a3f685a05454723f3db10e4d85c0',
+    'analytic.js': '0354d0364eca6454febeb05c55fa50fd9f6bbcc706bb5397a3cae04c73a9aada',
+    'menger.js': '4f6a998b44835304b9fa3e022b41433124dc6715180f4d905bd0e7b27b9c5f45',
+    'camera.js': '0f0cbb8584e30d7942393c4d15801e022d7d20867e66b9335fb55527468956df',
+    'trace.js': '1a027b9fde051cf3e9704a3442abdb94747888139a3d5dbef08ab5e945115e96',
+    'anchors.mjs': '523f5236b3105769a9c789c4a0bab045c0e6a5fac97b67c51e35f4073e7724ad',
+    'matrix.mjs': '138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd',
+  },
+});
+// Rev 4.8 re-freeze (user-approved 2026-10-21, B10 S1): every record pinned to the new logical matrix gets a
+// new ID ending in MATRIX_FREEZE, including records whose strata are byte-identical. The rev 4.6 freeze and the
+// IDs that named its evidence stay here unchanged; that evidence (the failed analytic depth runs among it) is
+// never retargeted to the new matrix.
+export const MATRIX_FREEZE = 'matrix-rev4.8';
+const frozen = id => `${id}/${MATRIX_FREEZE}`;
+export const PRIOR_MATRIX_PINS = deepFreeze({
   matrixSha256: 'd17a04fc8b6c83a56c99a418947c4081bdc197fc2c75d49868e3534af58919b4',
   indexSha256: 'faa95f4fbfb667ce05932c09601f278cacc7969494b92f306ae3e20beefd74a0',
   generatorSha256: '05d171561dc77762e24a448b931c668ca321027132f56e6a3810dbe03817e05d',
@@ -27,6 +50,12 @@ export const MATRIX_PINS = deepFreeze({
     'matrix.mjs': '05d171561dc77762e24a448b931c668ca321027132f56e6a3810dbe03817e05d',
   },
 });
+const PRIOR_ANCHORS = [...[2, 3, 4, 5, 6, 7, 8].map(p => ['mandelbulb', `bulb-${p}`]), ['quaternion-julia', 'quaternion-default'], ['quaternion-julia', 'quaternion-offplane']];
+export const PRIOR_RECORD_IDS = deepFreeze({
+  arithmetic: [...[2, 3, 4, 5, 6, 7, 8].map(p => `mandelbulb@1/arithmetic/p${p}`), 'quaternion-julia@1/arithmetic'],
+  tracing: ['sphere@1/tracing', 'box@1/tracing', 'menger@1/tracing', ...[2, 3, 4, 5, 6, 7, 8].map(p => `mandelbulb@1/tracing/p${p}`), 'quaternion-julia@1/tracing'],
+  geometric: PRIOR_ANCHORS.flatMap(([model, label]) => [0, 1].map(side => `${model}@1/geometric/${label}/anchor-${side}`)),
+});
 // B08 consumes the point strata; B10 consumes the ray strata and anchors.
 export const POINT_STRATUM_KINDS = Object.freeze(['bulb-origin', 'bulb-polar', 'bulb-generic', 'quaternion-generic', 'quaternion-boundary', 'adversarial-point']);
 export const BULB_POWERS = Object.freeze([2, 3, 4, 5, 6, 7, 8]);
@@ -34,8 +63,8 @@ export const POINT_BUDGETS = Object.freeze([64, 128, 256, 512]);
 const KAPPAS = [0, 0.5, -0.5, 2, -2, 4, -4];
 export const ADVERSARIAL_POINT_STRATUM = 'adversarial/points';
 export const ARITHMETIC_PROFILE = 'surface-v1';
-export const bulbRecordId = power => `mandelbulb@1/arithmetic/p${power}`;
-export const QUATERNION_RECORD_ID = 'quaternion-julia@1/arithmetic';
+export const bulbRecordId = power => frozen(`mandelbulb@1/arithmetic/p${power}`);
+export const QUATERNION_RECORD_ID = frozen('quaternion-julia@1/arithmetic');
 export const ARITHMETIC_RECORD_IDS = Object.freeze([...BULB_POWERS.map(bulbRecordId), QUATERNION_RECORD_ID]);
 
 // The frozen stratum IDs each record covers (B04's generator fixes them).
@@ -99,15 +128,19 @@ export const ADVERSARIAL_RAY_STRATUM = 'adversarial/rays';
 export const USABILITY_STRATUM = 'usability/quaternion-default';
 export const TRACING_PROFILE = 'surface-v1';
 export const LADDER_PROFILE = 'ladder-v1';
-export const tracingBulbRecordId = power => `mandelbulb@1/tracing/p${power}`;
-export const TRACING_RECORD_IDS = Object.freeze(['sphere@1/tracing', 'box@1/tracing', 'menger@1/tracing', ...BULB_POWERS.map(tracingBulbRecordId), 'quaternion-julia@1/tracing']);
+// Rev 4.8: analytic tracing records also carry the mandatory analytic-inspection-v1 depth check.
+export const INSPECTION_PROFILE = 'analytic-inspection-v1';
+export const tracingBulbRecordId = power => frozen(`mandelbulb@1/tracing/p${power}`);
+export const SPHERE_TRACING_RECORD_ID = frozen('sphere@1/tracing'), BOX_TRACING_RECORD_ID = frozen('box@1/tracing'), MENGER_TRACING_RECORD_ID = frozen('menger@1/tracing');
+export const QUATERNION_TRACING_RECORD_ID = frozen('quaternion-julia@1/tracing');
+export const TRACING_RECORD_IDS = Object.freeze([SPHERE_TRACING_RECORD_ID, BOX_TRACING_RECORD_ID, MENGER_TRACING_RECORD_ID, ...BULB_POWERS.map(tracingBulbRecordId), QUATERNION_TRACING_RECORD_ID]);
 const QUATERNION_CS = 6;
 
 export function requiredTracingStrata(recordId) {
-  if (recordId === 'sphere@1/tracing') return ['analytic/sphere', ADVERSARIAL_RAY_STRATUM];
-  if (recordId === 'box@1/tracing') return ['analytic/box', ADVERSARIAL_RAY_STRATUM];
-  if (recordId === 'menger@1/tracing') return ['analytic/menger-1', 'analytic/menger-2', ADVERSARIAL_RAY_STRATUM];
-  if (recordId === 'quaternion-julia@1/tracing') {
+  if (recordId === SPHERE_TRACING_RECORD_ID) return ['analytic/sphere', ADVERSARIAL_RAY_STRATUM];
+  if (recordId === BOX_TRACING_RECORD_ID) return ['analytic/box', ADVERSARIAL_RAY_STRATUM];
+  if (recordId === MENGER_TRACING_RECORD_ID) return ['analytic/menger-1', 'analytic/menger-2', ADVERSARIAL_RAY_STRATUM];
+  if (recordId === QUATERNION_TRACING_RECORD_ID) {
     const ids = [];
     for (let c = 0; c < QUATERNION_CS; c++) for (const k of KAPPAS) ids.push(`overview/quaternion/c${c}/k${k}`);
     return [...ids, USABILITY_STRATUM, ADVERSARIAL_RAY_STRATUM];
@@ -154,7 +187,9 @@ export function buildTracingRecords({ results, implementationHashes }) {
       testedParameters, testedSamplingConditions: { maxIterations: [128], maxSteps: [512] }, testedDomain,
       coverage: { scope: 'ray strata loaded through the pinned index (a partial view); not whole-matrix qualification', strata: covered.length,
         rows: covered.map(row => ({ id: row.id, state: row.state, eligible: row.eligible ?? null, floor: row.floor ?? null, excluded: row.excluded ?? null,
-          ...(row.kind === 'fractal-overview' ? { disagreements: row.disagreements ?? null, hits: row.hits ?? null, goodDepths: row.goodDepths ?? null, surfaceBearing: row.surfaceBearing ?? null } : {}) })) },
+          ...(row.kind === 'fractal-overview' ? { disagreements: row.disagreements ?? null, hits: row.hits ?? null, goodDepths: row.goodDepths ?? null, surfaceBearing: row.surfaceBearing ?? null } : {}),
+          ...(row.kind === 'analytic-ray' ? { checks: row.checks ?? null } : {}) })),
+        ...(['sphere', 'box', 'menger'].includes(modelId) ? { profiles: [TRACING_PROFILE, INSPECTION_PROFILE] } : {}) },
       inconclusive: covered.filter(row => row.state === 'inconclusive').map(row => row.id),
       limitations: [...PRECISION_CARRY_FORWARD_LIMITATIONS,
         'A heuristic marcher\'s miss does not prove that the mathematical ray misses the set; a small DE certifies nothing (spec §11.4). These are preregistered engineering thresholds, not geometric error bounds.'],
@@ -171,7 +206,7 @@ export function buildGeometricRecords({ ladders, anchors, implementationHashes }
     const rows = ladders.filter(row => row.anchorId === anchor.id);
     if (rows.some(row => row.role !== 'diagnostic' || row.profile !== LADDER_PROFILE)) throw new RangeError(`${anchor.id}: geometric records consume diagnostic ladder-v1 rows only`);
     const agreeing = rows.filter(row => row.outcome === 'agreement').map(row => row.distance);
-    const modelId = anchor.model, recordId = `${modelId}@1/geometric/${anchor.id}`;
+    const modelId = anchor.model, recordId = frozen(`${modelId}@1/geometric/${anchor.id}`);
     if (!agreeing.length) { withheld.push({ recordId, outcomes: rows.map(row => ({ distance: row.distance, outcome: row.outcome })) }); continue; }
     records.push(deepFreeze({
       recordId, modelId, evidenceClass: 'geometric', implementationHashes: { ...implementationHashes },

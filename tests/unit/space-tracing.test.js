@@ -23,19 +23,47 @@ test('ray strata load through the pinned index as a partial view with their shar
   assert.throws(() => loadPinnedRayStrata({ kinds: ['bulb-generic'] }), /ray strata/);
 });
 
-test('analytic rays pass on exact statuses and depths within the frozen tolerance, and fail otherwise', () => {
-  const row = byId('analytic/sphere'), ok = echo(row);
-  const passed = compareAnalyticStratum(row, ok, view.tolerances);
+test('analytic rays pass only when the surface-v1 envelope and the analytic-inspection-v1 depth both hold with exact statuses', () => {
+  const row = byId('analytic/sphere'), ok = echo(row), both = (surface, inspection = ok) => compareAnalyticStratum(row, { surface, inspection }, view.tolerances);
+  const passed = both(ok);
   assert.equal(passed.state, 'passed'); assert.deepEqual(passed.eligible, row.eligible);
-  const i = row.cases.findIndex(c => c.referenceEligible && c.expected.status === 'approximate hit');
-  const deep = ok.map((r, k) => (k === i ? { ...r, t: r.t * (1 + 2e-3) } : r));
-  assert.equal(compareAnalyticStratum(row, deep, view.tolerances).failures[0].quantity, 'depth');
-  // A depth-excluded (tangent margin) case is still compared on status.
-  const j = row.cases.findIndex(c => !c.referenceEligible);
+  assert.deepEqual(Object.keys(passed.checks), ['surface-envelope', 'inspection-relative']);
+  assert.ok(Object.values(passed.checks).every(check => check.passed && check.depthCompared === row.eligible.positiveHits));
+  // The case with the largest stopping displacement: an early surface-v1 stop inside the envelope passes.
+  const [c, i] = row.cases.map((c, i) => [c, i]).filter(([c]) => c.envelope).sort(([a], [b]) => (b.expected.t - b.envelope.tMinus) - (a.expected.t - a.envelope.tMinus))[0];
+  assert.ok(c.expected.t - c.envelope.tMinus > 2 * c.envelope.delta, 'the frozen envelope budgets a displacement beyond the relative allowance');
+  const at = t => ok.map((r, k) => (k === i ? { ...r, t } : r));
+  const early = c.envelope.tMinus - 0.5 * c.envelope.delta;
+  assert.equal(both(at(early)).passed, true);
+  assert.equal(both(ok, at(early)).checks['inspection-relative'].depthFailures, 1, 'the inspection profile keeps relative 1e-3');
+  for (const t of [c.envelope.tMinus - 1.01 * c.envelope.delta, c.expected.t + 1.01 * c.envelope.delta]) {
+    const result = both(at(t));
+    assert.equal(result.passed, false); assert.equal(result.checks['surface-envelope'].depthFailures, 1);
+    assert.deepEqual(result.failures.map(f => [f.check, f.quantity]), [['surface-envelope', 'depth']]);
+  }
+  // A missing hit fails the depth comparison; a depth-excluded (tangent margin) case is still compared on status.
+  assert.equal(both(ok.map((r, k) => (k === i ? { ...r, status: 'miss' } : r))).passed, false);
+  const j = row.cases.findIndex(x => !x.referenceEligible);
   const flipped = ok.map((r, k) => (k === j ? { ...r, status: r.status === 'miss' ? 'approximate hit' : 'miss' } : r));
-  assert.equal(compareAnalyticStratum(row, flipped, view.tolerances).failures[0].quantity, 'status');
-  const failure = ok.map((r, k) => (k === 0 ? { ...r, status: 'numerical failure' } : r));
-  assert.equal(compareAnalyticStratum(row, failure, view.tolerances).passed, false);
+  assert.deepEqual(both(ok, flipped).failures.map(f => [f.check, f.quantity]), [['inspection-relative', 'status']]);
+  assert.equal(both(ok.map((r, k) => (k === 0 ? { ...r, status: 'numerical failure' } : r))).passed, false);
+  assert.equal(compareAnalyticStratum(row, { surface: ok }, view.tolerances).passed, false, 'both checks are mandatory');
+});
+
+test('the frozen analytic envelope fixture equals the live expanded-object entry', async () => {
+  const { expandedSphereEntry, expandedBoxEntry } = await import('../reference/analytic.js');
+  const { expandedMengerEntry } = await import('../reference/menger.js');
+  for (const row of view.strata.filter(r => r.kind === 'analytic-ray')) {
+    const kind = row.id.split('/')[1];
+    assert.deepEqual(row.checks, ['surface-envelope', 'inspection-relative']);
+    const hits = row.cases.filter(c => c.referenceEligible && c.expected.status === 'approximate hit' && c.expected.t > 0);
+    assert.equal(row.cases.filter(c => c.envelope).length, hits.length);
+    for (const c of hits) {
+      const live = kind === 'sphere' ? expandedSphereEntry(c.inputs.ray, c.envelope.rho) : kind === 'box' ? expandedBoxEntry(c.inputs.ray, c.envelope.rho) : expandedMengerEntry(c.inputs.ray, c.inputs.effective.depth, c.envelope.rho);
+      assert.equal(live, c.envelope.tMinus, c.id); assert.ok(c.envelope.tMinus <= c.expected.t);
+    }
+  }
+  assert.deepEqual([view.profiles['analytic-inspection-v1'].toleranceFloor, view.profiles['analytic-inspection-v1'].toleranceFactor], [1e-7, 0.05]);
 });
 
 test('adversarial rays compare status, reason, subreason and the interior detail exactly', () => {
@@ -106,7 +134,13 @@ test('tracing records register only when every covered mandatory stratum passed;
   const registry = createValidationRegistry();
   for (const record of all.records) registry.register(record);
   const one = buildTracingRecords({ results: ids.map(id => (id === 'overview/bulb/p4' ? { ...pass(id), state: 'failed', passed: false } : pass(id))), implementationHashes: hashes });
-  assert.deepEqual(one.withheld.map(w => w.recordId), ['mandelbulb@1/tracing/p4']);
+  assert.deepEqual(one.withheld.map(w => w.recordId), ['mandelbulb@1/tracing/p4/matrix-rev4.8']);
+  // Rev 4.8: an analytic record lists both mandatory checks and both profiles in its coverage.
+  const checks = { 'surface-envelope': { profile: 'surface-v1', passed: true }, 'inspection-relative': { profile: 'analytic-inspection-v1', passed: true } };
+  const withChecks = buildTracingRecords({ results: ids.map(id => (id === 'analytic/sphere' ? { ...pass(id), kind: 'analytic-ray', checks } : pass(id))), implementationHashes: hashes });
+  const sphere = withChecks.records.find(r => r.modelId === 'sphere');
+  assert.deepEqual(sphere.coverage.rows.find(r => r.id === 'analytic/sphere').checks, checks);
+  assert.deepEqual(sphere.coverage.profiles, ['surface-v1', 'analytic-inspection-v1']);
   const anchors = [{ id: 'bulb-8/anchor-0', model: 'mandelbulb', effective: { power: 8 }, anchor: [0.1, 0.2, 0.3] }];
   const rows = [0.1, 0.01, 1e-8].map((distance, i) => ({ id: `detail/bulb-8/anchor-0/${i}`, role: 'diagnostic', profile: 'ladder-v1', anchorId: 'bulb-8/anchor-0', distance,
     outcome: ['agreement', 'exceedance', 'inconclusive'][i], eligible: {}, effective: {}, requested: {} }));
@@ -114,7 +148,7 @@ test('tracing records register only when every covered mandatory stratum passed;
   assert.deepEqual(geometric.records[0].testedDomain.distances, [0.1]);
   registry.register(geometric.records[0]);
   const query = { modelId: 'mandelbulb', evidenceClass: 'geometric', implementationHashes: hashes, profile: 'ladder-v1', effective: { power: 8 }, sampling: { maxIterations: 128, maxSteps: 512 } };
-  assert.equal(registry.lookup({ ...query, domain: { anchorId: 'bulb-8/anchor-0', anchor: [0.1, 0.2, 0.3], pixels: geometric.records[0].testedDomain.pixels, distance: 0.1 } })?.recordId, 'mandelbulb@1/geometric/bulb-8/anchor-0');
+  assert.equal(registry.lookup({ ...query, domain: { anchorId: 'bulb-8/anchor-0', anchor: [0.1, 0.2, 0.3], pixels: geometric.records[0].testedDomain.pixels, distance: 0.1 } })?.recordId, 'mandelbulb@1/geometric/bulb-8/anchor-0/matrix-rev4.8');
   assert.equal(registry.lookup({ ...query, domain: { anchorId: 'bulb-8/anchor-0', anchor: [0.1, 0.2, 0.3], pixels: geometric.records[0].testedDomain.pixels, distance: 0.01 } }), null, 'no claim at an exceeded distance');
   assert.equal(buildGeometricRecords({ ladders: rows.map(r => ({ ...r, outcome: 'exceedance' })), anchors, implementationHashes: hashes }).records.length, 0);
 });
@@ -125,7 +159,7 @@ test('B10-F5: the analytic report row keeps the comparator\'s complete status-fa
   for (const [c, i] of hits) results[i] = { ...results[i], t: c.expected.t * 1.01 };
   const last = row.cases.length - 1;
   results[last] = { ...results[last], status: results[last].status === 'miss' ? 'unresolved' : 'miss' };
-  const comparison = compareAnalyticStratum(row, results, view.tolerances);
+  const comparison = compareAnalyticStratum(row, { surface: results, inspection: echo(row) }, view.tolerances);
   assert.equal(comparison.statusFailures, 1); assert.ok(comparison.depthFailures >= 25);
   assert.equal(analyticReportRow(comparison).statusFailures, 1, 'the late status failure survives the 20-failure sample');
 });
