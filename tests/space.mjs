@@ -10,7 +10,8 @@
 // installSuiteDeadline. B01 registers `coexistence` (gated) and `developer-flag-experiment` (a
 // separately reported portability experiment, never gated); B06 registers `recovery`; B08 registers
 // `numerics` (the field kernels against B04's frozen matrix); B10 registers `rendering` (tracing, normals and
-// picking against B04's ray strata and anchors); later tasks add shell. The spike document is written only after the run passed, its report was
+// picking against B04's ray strata and anchors) and B11 adds its shading, accumulation, display and product-set
+// checks to that group; later tasks add shell. The spike document is written only after the run passed, its report was
 // persisted and every page, context and browser was drained and closed.
 import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
@@ -1536,6 +1537,286 @@ async function renderingFinishInPage() {
   return { uncaptured, final: { state: final.state, epoch: final.epoch, tracked: final.tracked } };
 }
 
+// ---- B11 in the rendering group (plan B11: shading, accumulation, display and the complete product set) ----
+// Every batch runs through the production backend (one admission lease per submission and readback). The
+// product shade, diagnostic, accumulate and display pipelines execute; three test-only fixtures (injected
+// through loadSource, never shipped) write synthetic geometry, poison targets and capture presented images.
+export const APPEARANCE_PASSES = Object.freeze([
+  'A settled image accumulates eight jittered samples and the result is bit-identical across completion orders',
+  'Shadowed samples never enter a direct-light accumulation and the first settled direct-light image precedes full quality',
+  'Diagnostic modes show the legend colours exactly for the status words',
+  'Secondary-ray failures remain visibly diagnostic and are counted',
+  'Diagnostic outcomes survive accumulation',
+  'The complete product pipeline set prewarms within the bound and its preparation time is recorded',
+  'sample 0 after an appearance reset on poisoned accumulation and flag targets equals a fresh allocation, for subdivided regions and the following samples',
+]);
+// The synthetic geometry classes of fixture-pattern (4-pixel columns): appearance tests predict each pixel's
+// per-sample status word, normal availability and therefore its accumulated flags on the CPU.
+export const PATTERN_CLASSES = Object.freeze(['hit', 'miss', 'point-budget', 'estimate-unavailable', 'interior', 'ray-step-budget', 'stagnation-ray',
+  'stagnation-field', 'numerical-failure', 'unavailable-normal', 'unresolved-in-one-sample', 'numerical-in-one-sample', 'unavailable-normal-in-one-sample']);
+const APPEARANCE_FIXTURES = {
+  'fixture-pattern': `struct U { origin: vec2<u32>, size: vec2<u32>, sample_index: u32 };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var depth_out: texture_storage_2d<r32float, write>;
+@group(0) @binding(2) var status_out: texture_storage_2d<r32uint, write>;
+@group(0) @binding(3) var normal_out: texture_storage_2d<rgba16float, write>;
+fn word(status: u32, reason: u32, subreason: u32, steps: u32) -> u32 { return status | (reason << 4u) | (subreason << 8u) | (steps << 12u); }
+@compute @workgroup_size(8, 8, 1)
+fn pattern(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = u.origin + gid.xy;
+  let kind = (p.x / 4u) % 13u;
+  let steps = (p.x * 7u + p.y * 3u) % 512u;
+  let mine = (p.y % 8u) == u.sample_index;
+  var w = word(0u, 0u, 0u, steps);
+  var n = vec4<f32>(0.0, 0.6, 0.8, 1.0);
+  let none = vec4<f32>(0.0);
+  switch kind {
+    case 1u: { w = word(1u, 0u, 0u, steps); n = none; }
+    case 2u: { w = word(2u, 1u, 0u, steps); n = none; }
+    case 3u: { w = word(2u, 2u, 0u, steps); n = none; }
+    case 4u: { w = word(2u, 2u, 1u, steps); n = none; }
+    case 5u: { w = word(2u, 3u, 0u, steps); n = none; }
+    case 6u: { w = word(2u, 4u, 1u, steps); n = none; }
+    case 7u: { w = word(2u, 4u, 2u, steps); n = none; }
+    case 8u: { w = word(3u, 0u, 0u, steps); n = none; }
+    case 9u: { n = none; }
+    case 10u: { if (mine) { w = word(2u, 3u, 0u, steps); n = none; } }
+    case 11u: { if (mine) { w = word(3u, 0u, 0u, steps); n = none; } }
+    case 12u: { if (mine) { n = none; } }
+    default: {}
+  }
+  textureStore(depth_out, vec2<i32>(p), vec4<f32>(1.5 - 0.01 * f32(kind), 0.0, 0.0, 1.0));
+  textureStore(status_out, vec2<i32>(p), vec4<u32>(w, 0u, 0u, 1u));
+  textureStore(normal_out, vec2<i32>(p), n);
+}`,
+  'fixture-poison': `struct U { origin: vec2<u32>, size: vec2<u32> };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var acc0: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(2) var acc1: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(3) var flags_out: texture_storage_2d<r32uint, write>;
+@compute @workgroup_size(8, 8, 1)
+fn poison(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = vec2<i32>(u.origin + gid.xy);
+  textureStore(acc0, p, vec4<f32>(1.0e30, -7.0, 3.0e38, 1.0e6));
+  textureStore(acc1, p, vec4<f32>(-1.0e30, 9.0, 1.0e-30, 5.0));
+  textureStore(flags_out, p, vec4<u32>(0xffffffffu, 0u, 0u, 1u));
+}`,
+  'fixture-capture': `struct U { origin: vec2<u32>, size: vec2<u32>, base: u32 };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var display_in: texture_2d<f32>;
+@group(0) @binding(2) var<storage, read_write> captured: array<u32>;
+@compute @workgroup_size(8, 8, 1)
+fn capture(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = u.origin + gid.xy;
+  let b = vec4<u32>(round(textureLoad(display_in, vec2<i32>(p), 0) * 255.0));
+  captured[u.base + p.y * u.size.x + p.x] = b.x | (b.y << 8u) | (b.z << 16u) | (b.w << 24u);
+}`,
+};
+
+// The complete product set on a fresh backend and device, before any other pipeline in this page is compiled.
+async function productPreparationInPage() {
+  const { createWebGPUBackend } = await import('/src/space/render/webgpu/backend.js');
+  const appearance = await import('/src/space/render/webgpu/appearance.js');
+  const { PREPARATION_BOUND_MS } = await import('/src/space/render/webgpu/pipelines.js');
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;right:0;bottom:0;width:16px;height:9px;z-index:2147483647;pointer-events:none';
+  document.body.append(canvas);
+  const backend = createWebGPUBackend({ canvas, clock: performance });
+  try {
+    const acquired = await backend.acquire(), events = [], set = appearance.productPipelineSet(), started = performance.now();
+    const receipt = await backend.prepare({ epoch: acquired.epoch, pipelineSet: set, onProgress: event => events.push({ ...event, atMs: performance.now() - started }) });
+    const preparationMs = performance.now() - started;
+    const required = appearance.productPipelineDescriptors().map(d => d.pipelineId);
+    return { preparationMs, boundMs: PREPARATION_BOUND_MS, pipelineSetId: receipt.pipelineSetId, preparedPipelineIds: receipt.preparedPipelineIds, required, events,
+      verify: appearance.verifyPrewarm({ requiredPipelineIds: required, preparedPipelineIds: receipt.preparedPipelineIds }),
+      verifyMissing: appearance.verifyPrewarm({ requiredPipelineIds: required, preparedPipelineIds: receipt.preparedPipelineIds.filter(id => id !== 'shade_band:menger') }),
+      uncaptured: backend.testAdapter.uncapturedErrors(), implementationHashes: appearance.appearanceImplementationHashes() };
+  } finally { backend.destroy(); canvas.remove(); }
+}
+
+// The fixtures on the shared rendering backend (__b10); every helper below uses its leases and readbacks.
+async function appearanceSetupInPage() {
+  const s = globalThis.__b10, { backend } = s;
+  const { createPipelineSet } = await import('/src/space/render/backend.js');
+  const u = (fields, byteLength = 16) => ({ byteLength, fields: [{ name: 'origin', type: 'vec2<u32>', offset: 0 }, { name: 'size', type: 'vec2<u32>', offset: 8 }, ...fields] });
+  const b = (slot, type, access) => ({ slot, type, access });
+  const fixture = (pipelineId, entryPoint, bindings, layout) => ({ pipelineId, kind: 'compute', sourceIds: [pipelineId], entryPoint, constants: {}, bindings: [b('u', 'uniform-buffer', 'read'), ...bindings], uniformLayout: layout });
+  const set = createPipelineSet({ id: 'b11-fixtures', descriptors: [
+    fixture('fixture-pattern', 'pattern', [b('depth', 'storage-texture', 'write'), b('status', 'storage-texture', 'write'), b('normal', 'storage-texture', 'write')], u([{ name: 'sampleIndex', type: 'u32', offset: 16 }], 32)),
+    fixture('fixture-poison', 'poison', [b('acc0', 'storage-texture', 'write'), b('acc1', 'storage-texture', 'write'), b('flags', 'storage-texture', 'write')], u([])),
+    fixture('fixture-capture', 'capture', [b('display', 'texture', 'read'), b('captured', 'storage-buffer', 'read-write')], u([{ name: 'base', type: 'u32', offset: 16 }], 32)),
+  ] });
+  const fixtures = await backend.prepare({ epoch: backend.currentEpoch(), pipelineSet: set });
+  const appearance = await import('/src/space/render/webgpu/appearance.js');
+  const product = await backend.prepare({ epoch: backend.currentEpoch(), pipelineSet: appearance.appearancePipelineSet() });
+  const zero = { normalFieldSamples: 0, shadowRays: 0, shadowSteps: 0, aoSamples: 0, raySteps: 0, iterations: 0 };
+  globalThis.__b11 = {
+    // One fixture batch over `region` (single dispatch), awaited.
+    async fixture(jobId, pipelineId, region, inputs, outputs, uniforms) {
+      const done = await backend.submitBatch({ identity: s.identity(jobId), pipelineId, pass: 'probe', region, sample: { sequence: 'atlas-aa-v1', seed: 0, index: 0 },
+        bounds: { pixels: region.width * region.height, ...zero }, inputs, outputs, uniforms: { origin: [region.x, region.y], size: [region.width, region.height], ...uniforms } }, s.lease(jobId)).done;
+      if (done.outcome !== 'completed') throw new Error(`${pipelineId}: ${done.outcome} ${done.reason}`);
+    },
+    zero,
+  };
+  return { fixtures: fixtures.preparedPipelineIds, appearance: product.preparedPipelineIds };
+}
+
+// The B09 renderer on the shared backend through an instrumented proxy. The proxy (a) keeps every released
+// handle alive until the test has read it, (b) optionally poisons each configured target set before the renderer
+// sees it, (c) optionally overrides full-stage shade uniforms (a test profile, like B10's ε profiles), (d) copies
+// the renderer's own status/normal/lightingStatus readbacks per ordinal, and (e) captures every presented display
+// image with a fixture dispatch queued directly behind the presentation, so no later write can precede it.
+async function rendererJobInPage(spec) {
+  const s = globalThis.__b10, a = globalThis.__b11, { backend } = s;
+  const { createSpaceRenderer } = await import('/src/space/render/renderer.js');
+  const { createSpaceScene, sceneCodec } = await import('/src/space/scene-adapter.js');
+  const { createSpaceRequest } = await import('/src/space/render-adapter.js');
+  const { TARGET_LAYOUT_V1 } = await import('/src/space/render/backend.js');
+  const appearance = await import('/src/space/render/webgpu/appearance.js');
+  const { KERNEL_VERSION } = await import('/src/space/render/webgpu/kernels.js');
+  const { TRACING_VERSION } = await import('/src/space/render/webgpu/passes.js');
+  const W = spec.size.width, H = spec.size.height, pixels = W * H, aux = `b11-aux-${spec.label}`;
+  const base = createSpaceScene({ model: spec.model, ...(spec.parameters ? { parameters: spec.parameters } : {}) });
+  const scene = sceneCodec.validate({ ...base, appearance: { ...base.appearance, ...spec.appearance }, sampling: { ...base.sampling, ...spec.sampling },
+    tracing: { ...base.tracing, ...spec.tracing }, ...(spec.camera ? { camera: spec.camera } : {}) });
+  const ordinals = scene.sampling.targetSamples + 1;
+  const capture = backend.allocate({ name: `b11-capture-${spec.label}`, bytes: 4 * pixels * ordinals, usage: 'storage' });
+  const kept = [], frames = {}, batches = [], captures = [], statuses = [];
+  let presents = 0, lastAccumulate = null;
+  const poison = async targets => {
+    const { width, height } = targets.internalSize, h = targets.handles;
+    await a.fixture(aux, 'fixture-poison', { x: 0, y: 0, width, height }, {}, { acc0: h.accumulation[0], acc1: h.accumulation[1], flags: h.accumulationFlags }, {});
+  };
+  const proxy = Object.freeze({ ...backend,
+    async configureTargets(description) { const targets = await backend.configureTargets(description); if (spec.poison) await poison(targets); return targets; },
+    release(handle) { kept.push(handle); },
+    submitBatch(batch, options) {
+      const b = spec.override && batch.pass === 'shade' && batch.uniforms.lightingStage === 1 ? { ...batch, uniforms: { ...batch.uniforms, ...spec.override } } : batch;
+      batches.push({ pipelineId: b.pipelineId, pass: b.pass, sample: b.sample.index, region: b.region, ordinal: presents,
+        lightingStage: b.uniforms.lightingStage ?? null, shadowSteps: b.uniforms.shadowSteps ?? null, aoSamples: b.uniforms.aoSamples ?? null, shadowRays: b.uniforms.shadowRays ?? null,
+        maxIterations: b.uniforms.maxIterations ?? null, toleranceFactor: b.uniforms.toleranceFactor ?? null });
+      if (b.pass === 'accumulate') lastAccumulate = { next: b.outputs.next, flags: b.outputs.accumulationFlags };
+      return backend.submitBatch(b, options);
+    },
+    readback(desc, options) {
+      const ticket = backend.readback(desc, options), ordinal = presents, field = desc.fields[0];
+      if ((spec.captureFields ?? []).includes(field)) {
+        ticket.result.then(result => {
+          const bpt = TARGET_LAYOUT_V1[field].bytesPerTexel, frame = ((frames[ordinal] ??= {})[field] ??= new Uint8Array(pixels * bpt)), r = desc.region;
+          for (let row = 0; row < r.height; row++) frame.set(result.data.subarray(row * r.width * bpt, (row + 1) * r.width * bpt), ((r.y + row) * W + r.x) * bpt);
+        }, () => {});
+      }
+      return ticket;
+    },
+    present(desc, options) {
+      const ticket = backend.present(desc, options);
+      if (presents < ordinals) {
+        captures.push(backend.submitBatch({ identity: s.identity(aux), pipelineId: 'fixture-capture', pass: 'probe', region: { x: 0, y: 0, width: W, height: H },
+          sample: { sequence: 'atlas-aa-v1', seed: 0, index: 0 }, bounds: { pixels, ...a.zero }, inputs: { display: desc.display, captured: capture }, outputs: { captured: capture },
+          uniforms: { origin: [0, 0], size: [W, H], base: presents * pixels } }, s.lease(aux)).done);
+      }
+      presents++;
+      return ticket;
+    } });
+  const versions = { kernelVersion: KERNEL_VERSION, tracingVersion: TRACING_VERSION }, viewId = `space-b11-${spec.label}`;
+  const renderer = createSpaceRenderer({ backend: proxy, clock: () => performance.now(), viewId, versions, pipelineSet: appearance.productPipelineSet() });
+  const publications = [], reports = [];
+  renderer.onPublish(p => publications.push({ kind: p.kind, samples: p.samples, sampleIndex: p.sampleIndex, pending: p.pending, stage: p.quality.lighting.stage,
+    shadowSteps: p.quality.lighting.shadowSteps, aoSamples: p.quality.lighting.aoSamples, publishedAt: p.publishedAt, accumulationKey: p.accumulationKey, appearanceKey: p.appearanceKey }));
+  renderer.onReport(r => reports.push(JSON.parse(JSON.stringify(r))));
+  renderer.onStatus(e => statuses.push({ ...e }));
+  try {
+    await renderer.prepare();
+    const request = createSpaceRequest({ scene, purpose: 'interactive', width: W, height: H, profile: spec.profile ?? 'settled',
+      generation: { deviceEpoch: backend.currentEpoch(), viewRevision: 1, geometryRevision: 1, appearanceRevision: 1 }, viewId, versions });
+    const job = renderer.render(request);
+    if (spec.cancelAfter) renderer.onPublish(() => { if (publications.length === spec.cancelAfter) renderer.cancel(job.jobId); });
+    const done = await job.done;
+    const captured = await Promise.all(captures);
+    if (captured.some(c => c.outcome !== 'completed')) throw new Error(`capture: ${JSON.stringify(captured.filter(c => c.outcome !== 'completed'))}`);
+    const out = { outcome: done.outcome, reason: done.reason ?? null, quality: JSON.parse(JSON.stringify(request.quality)), scene: JSON.parse(JSON.stringify(scene)), presents, publications, statuses,
+      report: reports.at(-1) ?? null, batches, frames: {} };
+    const count = Math.min(presents, ordinals);
+    if (count) out.captures = s.base64(await s.read(capture, { x: 0, y: 0, width: 4 * pixels * count, height: 1 }, 'capture', aux));
+    if (lastAccumulate) {
+      out.accumulation = s.base64(await s.read(lastAccumulate.next, { x: 0, y: 0, width: W, height: H }, 'accumulation', aux));
+      out.flags = s.base64(await s.read(lastAccumulate.flags, { x: 0, y: 0, width: W, height: H }, 'accumulationFlags', aux));
+    }
+    for (const [ordinal, fields] of Object.entries(frames)) out.frames[ordinal] = Object.fromEntries(Object.entries(fields).map(([field, bytes]) => [field, s.base64(bytes)]));
+    return out;
+  } finally {
+    renderer.destroy();
+    for (const handle of new Set([...kept, capture])) { try { backend.release(handle); } catch { /* already released */ } }
+  }
+}
+
+// The passes driven directly, band by band, in a chosen order: geometry (trace and normals, or the synthetic
+// pattern), shading or a diagnostic, accumulation per sample, then display. Fresh targets per call.
+async function passesInPage(spec) {
+  const s = globalThis.__b10, a = globalThis.__b11, { backend, passes } = s;
+  const appearance = await import('/src/space/render/webgpu/appearance.js');
+  const jobId = `b11-passes-${spec.label}`, size = spec.internalSize, W = size.width, H = size.height;
+  const targets = await backend.configureTargets({ epoch: backend.currentEpoch(), layoutId: s.contract.TARGET_LAYOUT_ID, internalSize: size, outputSize: size });
+  const h = targets.handles, menger = spec.modelId === 'menger' ? { menger_boxes: s.boxes[spec.effective.depth] } : {};
+  const lighting = spec.lighting, profile = spec.profile;
+  const bounds = region => ({ pixels: region.width * region.height, raySteps: profile.maxSteps, iterations: profile.maxIterations, normalFieldSamples: 6,
+    shadowRays: lighting.shadowRays, shadowSteps: lighting.shadowSteps, aoSamples: lighting.aoSamples });
+  const bandsFor = (pass, sample) => {
+    const list = [];
+    for (let y = 0; y < H; y += spec.bandRows) list.push({ x: 0, y, width: W, height: Math.min(spec.bandRows, H - y) });
+    if (spec.order !== 'permuted') return list;
+    // A different completion order per pass and sample: rotate, and reverse on odd samples.
+    const k = (pass.length * 7 + sample * 3) % list.length, rotated = [...list.slice(k), ...list.slice(0, k)];
+    return sample % 2 ? rotated.reverse() : rotated;
+  };
+  const run = async (pass, pipelineId, sample, uniformsFor, inputs, outputs) => {
+    const tickets = bandsFor(pass, sample).map(region => backend.submitBatch({ identity: s.identity(jobId), pipelineId, pass, region,
+      sample: { sequence: 'atlas-aa-v1', seed: spec.seed, index: sample }, bounds: bounds(region), inputs, outputs, uniforms: uniformsFor(region) }, s.lease(jobId)).done);
+    const done = await Promise.all(tickets);
+    const failed = done.filter(d => d.outcome !== 'completed');
+    if (failed.length) throw new Error(`${pipelineId} sample ${sample}: ${failed[0].outcome} ${failed[0].reason}`);
+  };
+  const out = { perSample: [] };
+  try {
+    for (let sample = 0; sample < spec.samples; sample++) {
+      const sampling = { seed: spec.seed, sampleIndex: sample }, common = { modelId: spec.modelId, camera: spec.camera, effective: spec.effective, internalSize: size, sampling, profile };
+      if (spec.geometry === 'pattern') {
+        for (const region of bandsFor('pattern', sample)) await a.fixture(jobId, 'fixture-pattern', region, {}, { depth: h.depth, status: h.status, normal: h.normal }, { sampleIndex: sample });
+      } else {
+        await run('trace', `trace_band:${spec.modelId}`, sample, region => passes.traceUniforms({ ...common, region }), { ...menger }, { depth: h.depth, status: h.status });
+        await run('normals', `normals_band:${spec.modelId}`, sample, region => passes.normalsUniforms({ ...common, region }), { depth: h.depth, status: h.status, ...menger }, { normal: h.normal });
+      }
+      const geometryIn = { depth: h.depth, status: h.status, normal: h.normal }, sampleOut = { sampleColor: h.sampleColor, lightingStatus: h.lightingStatus };
+      if (spec.viewMode === 'shaded') await run('shade', `shade_band:${spec.modelId}`, sample, region => appearance.shadeUniforms({ ...common, region, lighting }), { ...geometryIn, ...menger }, sampleOut);
+      else await run('shade', spec.viewMode === 'depth' ? `diagnostic_depth:${spec.modelId}` : `diagnostic_${spec.viewMode}`, sample,
+        region => appearance.diagnosticUniforms({ ...common, viewMode: spec.viewMode, region }), geometryIn, sampleOut);
+      const previous = h.accumulation[sample & 1], next = h.accumulation[(sample + 1) & 1];
+      await run('accumulate', 'accumulate_band', sample, region => appearance.accumulateUniforms({ region, sampleIndex: sample }),
+        { status: h.status, normal: h.normal, lightingStatus: h.lightingStatus, sampleColor: h.sampleColor, previous, accumulationFlags: h.accumulationFlags }, { next, accumulationFlags: h.accumulationFlags });
+      if (spec.perSample) {
+        const full = { x: 0, y: 0, width: W, height: H };
+        out.perSample.push({ status: s.base64(await s.read(h.status, full, 'status', jobId)), normal: s.base64(await s.read(h.normal, full, 'normal', jobId)),
+          lightingStatus: s.base64(await s.read(h.lightingStatus, full, 'lightingStatus', jobId)) });
+      }
+    }
+    const last = spec.samples - 1, accumulation = h.accumulation[(last + 1) & 1];
+    const lightingStage = spec.viewMode === 'shaded' ? appearance.LIGHTING_STAGE_CODES[lighting.stage] : appearance.LIGHTING_STAGE_CODES.diagnostic;
+    await run('display', 'display_band', last, region => appearance.displayUniforms({ region, lightingStage, viewMode: appearance.VIEW_MODE_CODES[spec.viewMode] }),
+      { accumulation, accumulationFlags: h.accumulationFlags }, { display: h.display });
+    const full = { x: 0, y: 0, width: W, height: H };
+    out.display = s.base64(await s.read(h.display, full, 'display', jobId));
+    out.accumulation = s.base64(await s.read(accumulation, full, 'accumulation', jobId));
+    out.flags = s.base64(await s.read(h.accumulationFlags, full, 'accumulationFlags', jobId));
+    return out;
+  } finally { for (const handle of Object.values(h).flat()) backend.release(handle); }
+}
+
+const VIEW_MODE_LIST = Object.freeze(['shaded', 'normals', 'depth', 'steps', 'termination']);
+
 async function runRendering({ page }) {
   const tracing = await import('./support/space-tracing.mjs');
   const passes = await import('../src/space/render/webgpu/passes.js');
@@ -1551,7 +1832,10 @@ async function runRendering({ page }) {
   await page.goto(url, { timeout: LIMITS.launch });
   await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
   await idleWithin(page);
-  const setup = await ev(page, renderingSetupInPage, { fixtures: RENDERING_FIXTURES }, 'rendering setup', LIMITS.deep);
+  // B11: the complete product set is prepared first, on a fresh device, so its time is not a warm recompilation.
+  const productPreparation = await ev(page, productPreparationInPage, undefined, 'product pipeline preparation', LIMITS.deep);
+  report.push({ name: 'Complete product pipeline set prepared on a fresh device (recorded)', ...productPreparation });
+  const setup = await ev(page, renderingSetupInPage, { fixtures: { ...RENDERING_FIXTURES, ...APPEARANCE_FIXTURES } }, 'rendering setup', LIMITS.deep);
   assert.deepEqual(setup.acquired.requestedLimits, {}, 'no blanket requiredLimits');
   assert.deepEqual(setup.product.preparedPipelineIds, passes.tracePipelineDescriptors().map(d => d.pipelineId));
   assert.deepEqual(setup.validation.preparedPipelineIds, passes.validationPipelineDescriptors().map(d => d.pipelineId));
@@ -1810,6 +2094,280 @@ async function runRendering({ page }) {
     assert.equal(picked.current.depth, picked.fresh.depth, 'the same geometry gives the same pinned depth');
     return { size: picked.size, fresh: { depth: picked.fresh.depth, exact, tau, radius, pixel, jitter }, stale: Object.keys(picked.stale), publications: picked.publications, reports: picked.reports };
   });
+
+  // ---- B11: shading, accumulation, display and the complete product set ----
+  const appearance = await import('../src/space/render/webgpu/appearance.js');
+  const status = await import('../src/space/render/status.js');
+  const { resolveQuality } = await import('../src/space/render/profiles.js');
+  const { createSpaceScene } = await import('../src/space/scene-adapter.js');
+  const { effectiveParameters } = await import('../src/space/numerics/parameters.js');
+  const appearanceSetup = await ev(page, appearanceSetupInPage, undefined, 'appearance setup', LIMITS.deep);
+  report.push({ name: 'Appearance pipelines and fixtures prepared on the rendering backend (recorded)', ...appearanceSetup });
+  const u32s = b64 => { const b = bytes(b64); return new Uint32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
+  const f32s = b64 => { const b = bytes(b64); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
+  const normalAvailability = b64 => passes.decodeNormals(bytes(b64), bytes(b64).byteLength / 8);
+  const captureOf = (job, ordinal) => { const pixels = job.quality.internalSize.width * job.quality.internalSize.height, all = bytes(job.captures); return all.subarray(4 * pixels * ordinal, 4 * pixels * (ordinal + 1)); };
+  const same = (a, b) => Buffer.from(a).equals(Buffer.from(b));
+  const differing = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++; return n; };
+  const job = spec => ev(page, rendererJobInPage, spec, `renderer job ${spec.label}`, LIMITS.deep);
+  const direct = spec => ev(page, passesInPage, spec, `passes ${spec.label}`, LIMITS.deep);
+  const F = appearance.ACCUMULATION_FLAGS, legendOf = name => appearance.legendBytes(status.LEGEND[name]);
+  // Per-sample flags from the renderer's own readbacks of one ordinal.
+  const ordinalFlags = (run, ordinal) => {
+    const frame = run.frames[ordinal], words = u32s(frame.status), lights = u32s(frame.lightingStatus), normals = normalAvailability(frame.normal);
+    return Array.from(words, (word, i) => appearance.sampleFlags({ statusWord: word, normalAvailable: normals[i].available, lightingWord: lights[i] }));
+  };
+  const orFlags = (run, ordinals) => ordinals.map(o => ordinalFlags(run, o)).reduce((acc, list) => acc.map((v, i) => v | list[i]));
+  // Every pixel whose accumulated flags name a legend shows that legend's bytes exactly.
+  const legendMismatches = (displayBytes, flags, viewMode) => {
+    const bad = [];
+    for (let i = 0; i < flags.length; i++) {
+      const legend = appearance.displayLegend(flags[i], viewMode); if (!legend) continue;
+      const got = [...displayBytes.subarray(4 * i, 4 * i + 4)], want = legendOf(legend);
+      if (got.join() !== want.join()) bad.push({ pixel: i, legend, got, want });
+    }
+    return bad;
+  };
+
+  // 6 first in time: the product set was prepared on a fresh device before anything else in this page.
+  check(APPEARANCE_PASSES[5], () => {
+    const p = productPreparation;
+    assert.deepEqual(p.preparedPipelineIds, p.required, 'every product pipeline was prepared, in descriptor order');
+    assert.deepEqual(p.required, appearance.productPipelineDescriptors().map(d => d.pipelineId), 'the served product set is the checkout\'s');
+    assert.equal(p.pipelineSetId, appearance.PRODUCT_PIPELINE_SET_ID);
+    assert.deepEqual(p.verify, { ok: true, missing: [] });
+    assert.deepEqual(p.verifyMissing, { ok: false, missing: ['shade_band:menger'] }, 'a missing variant is reported');
+    assert.ok(p.preparationMs > 0 && p.preparationMs < p.boundMs, `preparation ${p.preparationMs} ms within the ${p.boundMs} ms bound`);
+    assert.equal(p.events[0].stage, 'preparing');
+    assert.equal(p.events.length, p.required.length + 1, 'one progress event per prepared pipeline');
+    assert.deepEqual(p.events.slice(1).map(e => e.completed), p.required.map((_, i) => i + 1));
+    assert.deepEqual([...new Set(p.events.slice(1).map(e => e.stage))].sort(), [...p.required].sort());
+    assert.deepEqual(p.uncaptured, []);
+    assert.deepEqual(p.implementationHashes, appearance.appearanceImplementationHashes(), 'the served appearance metadata is the checkout\'s');
+    return { preparationMs: p.preparationMs, boundMs: p.boundMs, pipelines: p.required.length, lastCompletionMs: p.events.at(-1).atMs };
+  });
+
+  // Settled full-quality Menger (depth 1; shadows and AO), fresh and on poisoned targets; a direct-only
+  // reference; the same samples driven directly in permuted band orders; a job cancelled after its third image.
+  const size = { width: 320, height: 180 }, pixels = size.width * size.height, captureFields = ['status', 'normal', 'lightingStatus'];
+  const fullA = await job({ label: 'menger-full', model: 'menger', size, captureFields });
+  const fullP = await job({ label: 'menger-full-poisoned', model: 'menger', size, captureFields, poison: true });
+  const directOnly = await job({ label: 'menger-direct', model: 'menger', size, appearance: { lightingQuality: 'direct' }, sampling: { targetSamples: 1 }, captureFields });
+  const cancelled = await job({ label: 'menger-cancelled', model: 'menger', size, cancelAfter: 3 });
+  const mengerScene = createSpaceScene({ model: 'menger' }), mengerQuality = resolveQuality(mengerScene, 'settled', size);
+  const permuted = await direct({ label: 'menger-permuted', modelId: 'menger', camera: mengerScene.camera, effective: effectiveParameters('menger', mengerScene.parameters).effective,
+    internalSize: mengerQuality.internalSize, profile: { ...mengerQuality.iteration, ...mengerQuality.tracing }, lighting: mengerQuality.lighting, viewMode: 'shaded',
+    samples: 8, seed: mengerQuality.sampling.seed, geometry: 'trace', bandRows: 37, order: 'permuted' });
+  report.push({ name: 'Settled Menger jobs (recorded)', jobs: [fullA, fullP, directOnly, cancelled].map(r => ({ outcome: r.outcome, reason: r.reason, presents: r.presents, publications: r.publications,
+    samples: r.report?.samples, milestones: r.report?.milestones, lightingFailures: r.report?.lightingFailures, rayTermination: r.report?.rayTermination,
+    accumulateRegionsPerSample: Object.values(r.batches.filter(b => b.pass === 'accumulate').reduce((acc, b) => ({ ...acc, [b.ordinal]: (acc[b.ordinal] ?? 0) + 1 }), {})) })) });
+
+  check(APPEARANCE_PASSES[0], () => {
+    assert.equal(fullA.outcome, 'completed', fullA.reason);
+    assert.deepEqual(fullA.report.samples, { target: 8, completed: 8 });
+    const sums = f32s(fullA.accumulation);
+    for (let i = 0; i < pixels; i++) assert.equal(sums[4 * i + 3], 8, `pixel ${i}: eight samples accumulated`);
+    // The same eight samples, driven band by band in permuted orders with other band shapes, are bit-identical.
+    assert.ok(same(bytes(fullA.accumulation), bytes(permuted.accumulation)), 'accumulation bit-identical across completion orders');
+    assert.ok(same(bytes(fullA.flags), bytes(permuted.flags)), 'flags identical across completion orders');
+    assert.ok(same(captureOf(fullA, 8), bytes(permuted.display)), 'display identical across completion orders');
+    // Seeded jitter: sample 0 is the centre geometry; later samples move the silhouette.
+    const hitFrames = Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7, 8].map(o => [o, Array.from(u32s(fullA.frames[o].status), w => (w & 15) === 0)])), hits = o => hitFrames[o];
+    assert.deepEqual(hits(1), hits(0), 'the full sequence starts from the centre sample');
+    const moved = [2, 3, 4, 5, 6, 7, 8].map(o => differing(hits(o), hits(1)));
+    assert.ok(moved.every(n => n > 0), `each jittered sample moves the silhouette (${moved})`);
+    let mixed = 0;
+    for (let i = 0; i < pixels; i++) { const n = [1, 2, 3, 4, 5, 6, 7, 8].filter(o => hits(o)[i]).length; if (n > 0 && n < 8) mixed++; }
+    assert.ok(mixed > 0, 'antialiased edge pixels mix hits and misses');
+    // A sample count below the target leaves a complete image reported as partial quality, never pending.
+    assert.equal(cancelled.outcome, 'cancelled', cancelled.reason);
+    assert.equal(cancelled.publications.length, 3);
+    assert.ok(cancelled.report.samples.completed < cancelled.report.samples.target, JSON.stringify(cancelled.report.samples));
+    assert.equal(cancelled.report.samples.completed, cancelled.publications.at(-1).samples);
+    assert.ok([...fullA.publications, ...cancelled.publications].every(p => p.pending === false));
+    assert.ok(!cancelled.statuses.some(e => e.pending === true), 'no pending mark for a partial-quality image');
+    for (let o = 0; o < Math.min(cancelled.presents, 9); o++) { const image = captureOf(cancelled, o); for (let i = 3; i < image.length; i += 4) assert.equal(image[i], 255, `ordinal ${o}: a complete image`); }
+    return { samples: fullA.report.samples, mixedEdgePixels: mixed, silhouetteMovedPerSample: moved, permutedBandRows: 37, cancelled: cancelled.report.samples };
+  });
+
+  check(APPEARANCE_PASSES[1], () => {
+    const pubs = fullA.publications;
+    assert.deepEqual(pubs.map(p => p.kind), ['settled-first', ...Array(8).fill('refinement')]);
+    assert.deepEqual(pubs.map(p => p.stage), ['direct', ...Array(8).fill('full')]);
+    assert.deepEqual(pubs.map(p => p.samples), [1, 1, 2, 3, 4, 5, 6, 7, 8]);
+    assert.equal(pubs[0].shadowSteps, 0); assert.equal(pubs[0].aoSamples, 0);
+    assert.ok(pubs.slice(1).every(p => p.accumulationKey === pubs[1].accumulationKey) && pubs[0].accumulationKey !== pubs[1].accumulationKey, 'two accumulation identities');
+    assert.ok(pubs.every((p, i) => i === 0 || p.publishedAt >= pubs[i - 1].publishedAt));
+    assert.ok(fullA.report.milestones.settledFirstImageMs < fullA.report.milestones.fullQualityMs, JSON.stringify(fullA.report.milestones));
+    // The direct-light image is the direct-light accumulation alone; no secondary work enters it.
+    const shades = fullA.batches.filter(b => b.pass === 'shade');
+    assert.ok(shades.filter(b => b.ordinal === 0).every(b => b.lightingStage === 0 && b.shadowSteps === 0 && b.aoSamples === 0 && b.shadowRays === 0));
+    assert.ok(shades.filter(b => b.ordinal > 0).every(b => b.lightingStage === 1 && b.shadowSteps === 64 && b.aoSamples === 5 && b.shadowRays === 1));
+    assert.ok(u32s(fullA.frames[0].lightingStatus).every(w => w === 0), 'the direct sample has no lighting-failure word');
+    assert.ok(same(captureOf(fullA, 0), captureOf(directOnly, 0)), 'the settled-first image equals a direct-only job\'s');
+    assert.ok(directOnly.batches.filter(b => b.pass === 'shade').every(b => b.lightingStage === 0 && b.shadowSteps === 0 && b.aoSamples === 0));
+    // Full quality: eight full-light samples only (the count is 8, not 9) and visibly different lighting.
+    const sums = f32s(fullA.accumulation);
+    assert.ok(Array.from({ length: pixels }, (_, i) => sums[4 * i + 3]).every(n => n === 8));
+    const darkened = differing(captureOf(fullA, 0), captureOf(fullA, 1));
+    assert.ok(darkened > 0, 'shadows and AO change the full-light image');
+    return { milestones: fullA.report.milestones, publications: pubs.map(p => `${p.kind}/${p.stage}/${p.samples}`), changedBytesDirectToFull: darkened, lightingFailures: fullA.report.lightingFailures };
+  });
+
+  check(APPEARANCE_PASSES[6], () => {
+    assert.equal(fullP.outcome, 'completed', fullP.reason);
+    const regions = fullA.batches.filter(b => b.pass === 'accumulate' && b.sample === 0);
+    assert.ok(regions.filter(b => b.ordinal === 0).length > 1 && regions.filter(b => b.ordinal === 1).length > 1, 'sample 0 is subdivided into several regions');
+    for (let o = 0; o < 9; o++) assert.ok(same(captureOf(fullP, o), captureOf(fullA, o)), `ordinal ${o}: the image on poisoned targets equals the fresh one`);
+    assert.ok(same(bytes(fullP.accumulation), bytes(fullA.accumulation)), 'final accumulation equals a fresh allocation');
+    assert.ok(same(bytes(fullP.flags), bytes(fullA.flags)), 'final flags equal a fresh allocation');
+    return { ordinals: 9, sample0Regions: { direct: regions.filter(b => b.ordinal === 0).length, full: regions.filter(b => b.ordinal === 1).length }, poison: 'accumulation (±1e30, …) and flags 0xffffffff' };
+  });
+
+  // Synthetic geometry (fixture-pattern) through the product diagnostic, shade, accumulate and display passes.
+  const patternSize = { width: 52, height: 16 }, PATTERN = 13;
+  const patternSample = (x, y, s) => {
+    const kind = Math.floor(x / 4) % PATTERN, steps = (x * 7 + y * 3) % 512, mine = y % 8 === s;
+    const table = { 1: [1, 0, 0], 2: [2, 1, 0], 3: [2, 2, 0], 4: [2, 2, 1], 5: [2, 3, 0], 6: [2, 4, 1], 7: [2, 4, 2], 8: [3, 0, 0], 9: [0, 0, 0], 10: mine ? [2, 3, 0] : [0, 0, 0], 11: mine ? [3, 0, 0] : [0, 0, 0], 12: [0, 0, 0] };
+    const [st, reason, subreason] = table[kind] ?? [0, 0, 0];
+    const available = st === 0 && kind !== 9 && !(kind === 12 && mine);
+    return { kind, statusWord: status.packStatus({ status: st, reason, subreason, steps }), normalAvailable: available, steps, hit: st === 0, miss: st === 1 };
+  };
+  const interior = camera.lookAt({ ...SPACE_DEFAULTS.camera, positionLocal: [0.2, -0.1, 0.1], focusLocal: [1, 0, 0] }, [1, 0, 0]);
+  const patternProfile = { maxIterations: 128, maxSteps: 512, stepMultiplier: 0.9, toleranceFloor: 1e-6, toleranceFactor: 0.5 };
+  const directLighting = { stage: 'direct', normalFieldSamples: 6, shadowRays: 0, shadowSteps: 0, aoSamples: 0 };
+  const patternRuns = {};
+  for (const samples of [1, 8]) for (const viewMode of VIEW_MODE_LIST) {
+    patternRuns[`${viewMode}/${samples}`] = await direct({ label: `pattern-${viewMode}-${samples}`, modelId: 'sphere', camera: interior, effective: {}, internalSize: patternSize,
+      profile: patternProfile, lighting: directLighting, viewMode, samples, seed: 1, geometry: 'pattern', bandRows: 5, order: 'permuted' });
+  }
+  const expectedPatternFlags = samples => Array.from({ length: patternSize.width * patternSize.height }, (_, i) => {
+    const x = i % patternSize.width, y = Math.floor(i / patternSize.width);
+    let flags = 0; for (let s = 0; s < samples; s++) flags |= appearance.sampleFlags({ ...patternSample(x, y, s), lightingWord: 0 });
+    return flags;
+  });
+
+  check(APPEARANCE_PASSES[2], () => {
+    const expected = expectedPatternFlags(1), details = {};
+    for (const viewMode of VIEW_MODE_LIST) {
+      const run = patternRuns[`${viewMode}/1`], display = bytes(run.display), code = appearance.VIEW_MODE_CODES[viewMode];
+      assert.deepEqual([...u32s(run.flags)], expected, `${viewMode}: accumulated flags`);
+      assert.deepEqual(legendMismatches(display, expected, code), [], `${viewMode}: legend colours`);
+      let legend = 0, exact = 0, approx = 0;
+      for (let i = 0; i < expected.length; i++) {
+        const x = i % patternSize.width, y = Math.floor(i / patternSize.width), p = patternSample(x, y, 0), got = [...display.subarray(4 * i, 4 * i + 4)];
+        if (appearance.displayLegend(expected[i], code)) { legend++; continue; }
+        assert.equal(got[3], 255);
+        if (viewMode === 'termination') { assert.deepEqual(got.slice(0, 3), appearance.TERMINATION_COLOURS[p.hit ? 'hit' : 'miss'], `termination pixel ${x},${y}`); exact++; }
+        else if (p.miss && viewMode !== 'steps' && viewMode !== 'shaded') { assert.deepEqual(got.slice(0, 3), appearance.TERMINATION_COLOURS.miss, `${viewMode} miss ${x},${y}`); exact++; }
+        else if (viewMode === 'normals') { [0.5, 0.800048828125, 0.89990234375].forEach((v, k) => assert.ok(Math.abs(got[k] - v * 255) <= 1, `normal byte ${got}`)); approx++; }
+        else if (viewMode === 'steps') {
+          const cost = Math.min(1, p.steps / 512), low = [0.05, 0.08, 0.3], high = [1, 0.85, 0.2];
+          low.forEach((l, k) => assert.ok(Math.abs(got[k] - (l + (high[k] - l) * cost) * 255) <= 1, `cost ramp ${x},${y}: ${got}`)); approx++;
+        } else if (viewMode === 'depth' && p.hit) {
+          // An unavailable normal keeps its depth: a grey value, never the unavailable-normal legend.
+          assert.ok(got[0] === got[1] && got[1] === got[2], `depth is grey ${got}`); approx++;
+        }
+      }
+      details[viewMode] = { legend, exact, approx };
+    }
+    // Every status word reaches its legend: the unresolved reasons and subreasons, numerical failure, the unavailable normal.
+    const kinds = viewMode => { const run = patternRuns[`${viewMode}/1`], display = bytes(run.display); return Object.fromEntries(Array.from({ length: PATTERN }, (_, k) => [k, [...display.subarray(4 * 4 * k, 4 * 4 * k + 4)].join()])); };
+    for (const viewMode of VIEW_MODE_LIST) {
+      const seen = kinds(viewMode);
+      for (const k of [2, 3, 4, 5, 6, 7]) assert.equal(seen[k], legendOf('unresolved').join(), `${viewMode}: ${PATTERN_CLASSES[k]} is the unresolved legend`);
+      assert.equal(seen[8], legendOf('numericalFailure').join(), `${viewMode}: numerical failure legend`);
+      assert.equal(seen[9] === legendOf('unavailableNormal').join(), viewMode === 'shaded' || viewMode === 'normals', `${viewMode}: unavailable-normal legend only where the normal is shown`);
+    }
+    return details;
+  });
+
+  // The product half of the survival check: a bulb whose 40-step budget leaves some rays unresolved in some samples only.
+  const survival = await job({ label: 'bulb-steps-40', model: 'mandelbulb', size: { width: 160, height: 90 }, tracing: { maxSteps: 40 }, captureFields });
+  check(APPEARANCE_PASSES[4], () => {
+    const expected = expectedPatternFlags(8), details = {};
+    for (const viewMode of VIEW_MODE_LIST) {
+      const run = patternRuns[`${viewMode}/8`], display = bytes(run.display), code = appearance.VIEW_MODE_CODES[viewMode];
+      assert.deepEqual([...u32s(run.flags)], expected, `${viewMode}: flags are the OR over eight samples`);
+      const accumulated = f32s(run.accumulation);
+      assert.ok(Array.from({ length: expected.length }, (_, i) => accumulated[4 * i + 3]).every(n => n === 8));
+      assert.deepEqual(legendMismatches(display, expected, code), [], `${viewMode}: a one-sample outcome survives accumulation`);
+      for (const k of [10, 11]) for (let y = 0; y < patternSize.height; y++) {
+        const i = y * patternSize.width + 4 * k;
+        assert.deepEqual([...display.subarray(4 * i, 4 * i + 4)], legendOf(k === 10 ? 'unresolved' : 'numericalFailure'), `${viewMode}: ${PATTERN_CLASSES[k]} row ${y}`);
+      }
+      details[viewMode] = { pixels: expected.length, flagged: expected.filter(Boolean).length };
+    }
+    // The renderer: flags equal the OR of every full-light sample's readback; legend pixels are exact.
+    assert.equal(survival.outcome, 'completed', survival.reason);
+    const ordinals = [1, 2, 3, 4, 5, 6, 7, 8], orred = orFlags(survival, ordinals), flags = [...u32s(survival.flags)];
+    assert.deepEqual(flags, orred, 'renderer flags are the OR of the per-sample outcomes');
+    assert.deepEqual(legendMismatches(captureOf(survival, 8), flags, appearance.VIEW_MODE_CODES.shaded), []);
+    const perSample = ordinals.map(o => ordinalFlags(survival, o));
+    const partial = flags.filter((f, i) => f & (F.primaryUnresolved | F.primaryNumericalFailure) && perSample.some(list => !(list[i] & (F.primaryUnresolved | F.primaryNumericalFailure)))).length;
+    assert.ok(partial > 0, 'some pixels are unresolved in only some samples, and keep their legend');
+    details.renderer = { flagged: flags.filter(Boolean).length, unresolvedInSomeSamplesOnly: partial, rayTermination: survival.report.rayTermination };
+    return details;
+  });
+
+  // Secondary failures, each forced by a full-stage shade test profile (the primary trace is the product's).
+  const lightSize = { width: 160, height: 90 }, lightFields = captureFields;
+  const lightJobs = {
+    shadowSteps: await job({ label: 'sphere-shadow-1-step', model: 'sphere', size: lightSize, sampling: { targetSamples: 2 }, captureFields: lightFields, override: { shadowSteps: 1 } }),
+    iterations: await job({ label: 'bulb-secondary-1-iteration', model: 'mandelbulb', size: lightSize, sampling: { targetSamples: 2 }, captureFields: lightFields, override: { maxIterations: 1 } }),
+    numerical: await job({ label: 'sphere-secondary-overflow', model: 'sphere', size: lightSize, sampling: { targetSamples: 2 }, captureFields: lightFields, override: { toleranceFactor: 1e25 } }),
+  };
+  check(APPEARANCE_PASSES[3], () => {
+    const details = {}, sphereBasis = camera.basis(SPACE_DEFAULTS.camera);
+    const l = (() => { const v = [0, 1, 2].map(k => -0.45 * sphereBasis.right[k] + 0.6 * sphereBasis.up[k] - 0.66 * sphereBasis.forward[k]); const n = Math.hypot(...v); return v.map(c => c / n); })();
+    for (const [name, run] of Object.entries(lightJobs)) {
+      assert.equal(run.outcome, 'completed', `${name}: ${run.reason}`);
+      const last = 2, words = u32s(run.frames[last].status), lights = u32s(run.frames[last].lightingStatus), normals = normalAvailability(run.frames[last].normal);
+      const tally = { shadow: 0, ao: 0, both: 0, shadowOnly: 0, aoOnly: 0 }, reasons = {};
+      for (let i = 0; i < lights.length; i++) {
+        const { shadow, ao } = status.unpackLightingStatus(lights[i]);
+        if (shadow || ao) assert.ok((words[i] & 15) === 0 && normals[i].available, `${name}: a lighting failure only on a lit hit (pixel ${i})`);
+        if (shadow) tally.shadow++; if (ao) tally.ao++; if (shadow && ao) tally.both++; if (shadow && !ao) tally.shadowOnly++; if (ao && !shadow) tally.aoOnly++;
+        for (const [which, f] of [['shadow', shadow], ['ao', ao]]) if (f) { const key = `${which}:${status.STATUS_LABELS.ray[f.status]}/${status.STATUS_LABELS.reason[f.reason]}/${f.subreason}`; reasons[key] = (reasons[key] ?? 0) + 1; }
+        if (name !== 'iterations' && (words[i] & 15) === 0 && normals[i].available) {
+          const nl = normals[i].normal.reduce((sum, c, k) => sum + c * l[k], 0);
+          if (Math.abs(nl) < 2e-3) continue;
+          if (name === 'shadowSteps') {
+            assert.equal(!!shadow, nl > 0, `${name}: pixel ${i} (n·l ${nl}) fails its shadow exactly when it faces the light`);
+            if (shadow) assert.deepEqual(shadow, { status: status.RAY_STATUS.unresolved, reason: status.UNRESOLVED_REASON.rayStepBudget, subreason: 0 });
+            assert.equal(ao, null, `${name}: AO resolves`);
+          } else {
+            assert.deepEqual(ao, { status: status.RAY_STATUS.numericalFailure, reason: 0, subreason: 0 }, `${name}: AO numerical failure (pixel ${i})`);
+            assert.deepEqual(shadow, nl > 0 ? { status: status.RAY_STATUS.numericalFailure, reason: 0, subreason: 0 } : null, `${name}: shadow (pixel ${i}, n·l ${nl})`);
+          }
+        }
+      }
+      // Counted: the report's lightingFailures are the last sample's words.
+      assert.deepEqual(run.report.lightingFailures, { shadow: tally.shadow, ao: tally.ao, both: tally.both }, `${name}: report counts`);
+      // Visibly diagnostic: the accumulated flags are the OR of the full-light samples and every flagged pixel shows its legend.
+      const flags = [...u32s(run.flags)];
+      assert.deepEqual(flags, orFlags(run, [1, 2]), `${name}: flags`);
+      assert.deepEqual(legendMismatches(captureOf(run, 2), flags, appearance.VIEW_MODE_CODES.shaded), [], `${name}: legend pixels`);
+      details[name] = { ...tally, reasons };
+    }
+    assert.ok(details.shadowSteps.shadow > 0 && details.shadowSteps.ao === 0);
+    assert.ok(details.numerical.both > 0 && details.numerical.aoOnly > 0, 'simultaneous numerical failures, and AO alone where the surface faces away');
+    assert.ok(details.iterations.both > 0, 'a simultaneous shadow and AO failure');
+    // A one-iteration secondary budget leaves orbits unescaped: unresolved (never numerical) failures, with the
+    // point budget among the shadow and AO reasons; the distribution is recorded.
+    const iterationReasons = Object.keys(details.iterations.reasons);
+    assert.ok(iterationReasons.every(key => /^(shadow|ao):unresolved\//.test(key)), JSON.stringify(details.iterations.reasons));
+    assert.ok(['shadow', 'ao'].every(which => iterationReasons.includes(`${which}:unresolved/point-budget/0`)), JSON.stringify(details.iterations.reasons));
+    return details;
+  });
+
+  // Representative images for manual review (recorded only; rgba8 display bytes, base64).
+  report.push({ name: 'Representative settled images (recorded, rgba8 base64)', images: [
+    { label: 'menger depth 1, settled, full lighting, 8 samples', ...size, rgba: Buffer.from(captureOf(fullA, 8)).toString('base64') },
+    { label: 'menger depth 1, settled-first direct light', ...size, rgba: Buffer.from(captureOf(fullA, 0)).toString('base64') },
+    { label: 'mandelbulb p8, 40-step budget, full lighting, 8 samples', width: 160, height: 90, rgba: Buffer.from(captureOf(survival, 8)).toString('base64') },
+    { label: 'sphere, shadow test profile (1 step): failures shown', width: 160, height: 90, rgba: Buffer.from(captureOf(lightJobs.shadowSteps, 2)).toString('base64') },
+  ] });
 
   // Validation records: tracing per family (only when every covered mandatory stratum passed) and
   // geometric per anchor (the agreeing ladder distances only).
