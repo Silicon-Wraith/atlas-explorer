@@ -1,0 +1,1187 @@
+{
+  "backend": {
+    "remediationClosed": false,
+    "gates": {
+      "G1": {
+        "gate": "G1",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G1-headed-20261020T163911020Z-webgpu-g5d-g1-headed"
+        ]
+      },
+      "G2": {
+        "gate": "G2",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G2-fresh-0-20261020T163930816Z-webgpu-g5d-g2-headed",
+          "G2-fresh-1-20261020T163930816Z-webgpu-g5d-g2-headed",
+          "G2-fresh-2-20261020T163930816Z-webgpu-g5d-g2-headed",
+          "G2-warm-20261020T163930816Z-webgpu-g5d-g2-headed"
+        ]
+      },
+      "G3": {
+        "gate": "G3",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G3-box-20261020T163920789Z-webgpu-g5d-g3-headed",
+          "G3-menger-1-20261020T163920789Z-webgpu-g5d-g3-headed",
+          "G3-menger-2-20261020T163920789Z-webgpu-g5d-g3-headed",
+          "G3-sphere-20261020T163920789Z-webgpu-g5d-g3-headed"
+        ]
+      },
+      "G4": {
+        "gate": "G4",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G4-bulb-samples-20261020T163914368Z-webgpu-g5d-g4-headed"
+        ]
+      },
+      "G5": {
+        "gate": "G5",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G5-qjulia-plane-20261020T163917297Z-webgpu-g5d-g5-headed",
+          "G5-qjulia-operational-20261020T163917297Z-webgpu-g5d-g5-headed"
+        ]
+      },
+      "G6": {
+        "gate": "G6",
+        "status": "invalid/inconclusive",
+        "reasons": [
+          "G7 schedule deviation: request 160 fired 4.30 ms late (limit 4 ms) (cause: unknown); not accepted as execution of the frozen schedule"
+        ],
+        "evidenceIds": [
+          "G6-bulb-overview_0-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G6-bulb-overview_1-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G6-bulb-overview_2-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G6-bulb-detail-0.05_0-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G6-bulb-detail-0.05_1-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G6-bulb-detail-0.05_2-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G6-bulb-detail-0.005_0-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G6-bulb-detail-0.005_1-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G6-bulb-detail-0.005_2-20261020T163936979Z-webgpu-g5d-timing-headed"
+        ]
+      },
+      "G7": {
+        "gate": "G7",
+        "status": "invalid/inconclusive",
+        "reasons": [
+          "invalid metrics",
+          "G7 schedule deviation: request 160 fired 4.30 ms late (limit 4 ms) (cause: unknown); not accepted as execution of the frozen schedule",
+          "metrics: G7: the burst window covered 9221.199999809265 ms, not the frozen 23040 ms (accepted up to 35040 ms)"
+        ],
+        "evidenceIds": [
+          "G7-0-20261020T163936979Z-webgpu-g5d-timing-headed",
+          "G7-1-20261020T163936979Z-webgpu-g5d-timing-headed"
+        ]
+      },
+      "G8": {
+        "gate": "G8",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G8-0-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-1-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-2-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-3-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-4-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-5-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-6-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-7-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-8-20261020T164521726Z-webgpu-g5d-g8-headed",
+          "G8-9-20261020T164521726Z-webgpu-g5d-g8-headed"
+        ]
+      },
+      "G9": {
+        "gate": "G9",
+        "status": "invalid/inconclusive",
+        "reasons": [
+          "missing required trials"
+        ],
+        "evidenceIds": []
+      },
+      "G10": {
+        "gate": "G10",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G10-bulb-overview-20261020T164526541Z-webgpu-g5d-g10-headed",
+          "G10-bulb-detail-0.05-20261020T164526541Z-webgpu-g5d-g10-headed",
+          "G10-bulb-detail-0.005-20261020T164526541Z-webgpu-g5d-g10-headed"
+        ]
+      },
+      "G11": {
+        "gate": "G11",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G11-4k-20261020T163923791Z-webgpu-g5d-g11-headed"
+        ]
+      },
+      "G12": {
+        "gate": "G12",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G12-sequence-20261020T164529515Z-webgpu-g5d-g12-headed"
+        ]
+      },
+      "G13": {
+        "gate": "G13",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G13-intentional-20261020T163927143Z-webgpu-g5d-g13-headed",
+          "G13-injected-20261020T163927143Z-webgpu-g5d-g13-headed",
+          "G13-repeated-20261020T163927143Z-webgpu-g5d-g13-headed"
+        ]
+      }
+    }
+  },
+  "decision": {
+    "outcome": "inconclusive",
+    "next": "resolve missing or invalid WebGPU evidence"
+  },
+  "g5Observations": {
+    "G5-qjulia-plane-20261020T163917297Z-webgpu-g5d-g5-headed": {
+      "slot": "qjulia-plane",
+      "metrics": {
+        "samples": 4096,
+        "eligible": 3684,
+        "diagnostics": 412,
+        "statusErrors": 0,
+        "indexErrors": 0,
+        "logRRatio": 0.27446631787665454
+      },
+      "invalidation": null
+    },
+    "G5-qjulia-operational-20261020T163917297Z-webgpu-g5d-g5-headed": {
+      "slot": "qjulia-operational",
+      "metrics": {
+        "samples": 287,
+        "qualifying": 223,
+        "diagnostics": 64,
+        "components": 19108,
+        "statusErrors": 0,
+        "indexErrors": 0,
+        "numericalFailures": 0,
+        "componentRatio": 0.19243534038149068,
+        "logRRatio": 0.10932112776388266
+      },
+      "invalidation": null,
+      "form": "g5d-plain-qsq-wrapper-prereg-v1",
+      "collected": {
+        "batches": 5,
+        "samples": 287,
+        "continuation": true
+      },
+      "qualifyingIds": [
+        "I000000",
+        "I000001",
+        "I000002",
+        "I000003",
+        "I000004",
+        "I000005",
+        "I000006",
+        "I000007",
+        "R000000",
+        "R000001",
+        "R000002",
+        "R000003",
+        "R000004",
+        "R000005",
+        "R000006",
+        "R000007",
+        "U000001",
+        "U000002",
+        "U000003",
+        "U000004",
+        "U000005",
+        "U000006",
+        "U000009",
+        "U000010",
+        "U000011",
+        "U000012",
+        "U000013",
+        "U000014",
+        "U000015",
+        "U000016",
+        "U000017",
+        "U000020",
+        "U000021",
+        "U000022",
+        "U000023",
+        "U000024",
+        "U000025",
+        "U000026",
+        "U000028",
+        "U000030",
+        "U000031",
+        "U000033",
+        "U000034",
+        "U000035",
+        "U000036",
+        "U000037",
+        "U000039",
+        "U000040",
+        "U000041",
+        "U000042",
+        "U000044",
+        "U000045",
+        "U000049",
+        "U000050",
+        "U000051",
+        "U000052",
+        "U000053",
+        "U000054",
+        "U000055",
+        "U000057",
+        "U000058",
+        "U000059",
+        "U000061",
+        "U000062",
+        "U000063",
+        "U000064",
+        "U000065",
+        "U000066",
+        "U000067",
+        "U000068",
+        "U000069",
+        "U000070",
+        "U000071",
+        "U000073",
+        "U000077",
+        "U000078",
+        "U000080",
+        "U000083",
+        "U000084",
+        "U000085",
+        "U000086",
+        "U000088",
+        "U000089",
+        "U000090",
+        "U000092",
+        "U000164",
+        "U000175",
+        "U000194",
+        "U000195",
+        "U000232",
+        "U000248",
+        "U000264",
+        "U000295",
+        "U000390",
+        "U000410",
+        "U000572",
+        "U000575",
+        "U000578",
+        "U000671",
+        "U000692",
+        "U000696",
+        "U000698",
+        "U000709",
+        "U000755",
+        "U000788",
+        "U000877",
+        "U000914",
+        "U000920",
+        "U000938",
+        "U000947",
+        "U001025",
+        "U001034",
+        "U001101",
+        "U001165",
+        "U001187",
+        "U001244",
+        "U001249",
+        "U001286",
+        "U001293",
+        "U001307",
+        "U001325",
+        "U001346",
+        "U001392",
+        "U001415",
+        "U001424",
+        "U001447",
+        "U001450",
+        "U001529",
+        "U001559",
+        "U001572",
+        "U001603",
+        "U001684",
+        "U001688",
+        "U001740",
+        "U001749",
+        "U001787",
+        "U001877",
+        "U001908",
+        "U001912",
+        "U001998",
+        "U002008",
+        "U002009",
+        "U002015",
+        "U002033",
+        "U002068",
+        "U002084",
+        "U002090",
+        "U002115",
+        "U002125",
+        "U002129",
+        "U002175",
+        "U002285",
+        "U002297",
+        "U002316",
+        "U002341",
+        "U002403",
+        "U002695",
+        "U002903",
+        "U003271",
+        "U003283",
+        "U003482",
+        "U003484",
+        "U003560",
+        "U003868",
+        "U004281",
+        "U004431",
+        "U004495",
+        "U004605",
+        "U004606",
+        "U004614",
+        "U004883",
+        "U005119",
+        "U005161",
+        "U005302",
+        "U005636",
+        "U005703",
+        "U005737",
+        "U006303",
+        "U006604",
+        "U006747",
+        "U006811",
+        "U006992",
+        "U007054",
+        "U007253",
+        "U007340",
+        "U007352",
+        "U007417",
+        "U008108",
+        "U008658",
+        "U008677",
+        "U009165",
+        "U009424",
+        "U009463",
+        "U009850",
+        "U009977",
+        "U010513",
+        "U010522",
+        "U011190",
+        "U011513",
+        "U011517",
+        "U011550",
+        "U011993",
+        "U012265",
+        "U012718",
+        "U012809",
+        "U013079",
+        "U013438",
+        "U013732",
+        "U013801",
+        "U014539",
+        "U015448",
+        "U015832",
+        "U017038",
+        "U017089",
+        "U017513",
+        "U023169",
+        "U024990",
+        "U026343",
+        "U026449",
+        "U027432",
+        "U027718",
+        "U028572",
+        "U028774"
+      ],
+      "qualifying": {
+        "samples": 223,
+        "outside": 0,
+        "statusIndex": 0,
+        "numericalFailures": 0,
+        "maxComponentRatio": 0.19243534038149068,
+        "maxLogRRatio": 0.10932112776388266,
+        "failing": []
+      },
+      "diagnostics": {
+        "role": "diagnostic",
+        "authority": "E9",
+        "samples": 64,
+        "statusIndexDisagreements": 1,
+        "outsideNumericalCriteria": 61,
+        "maxComponentRatio": 72190.06146000013,
+        "maxLogRRatio": 18845.33407042553,
+        "outside": [
+          {
+            "id": "N000056",
+            "status": "escaped",
+            "e": 35,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 509.11170233292995,
+            "logRRatio": 55.73261436642995,
+            "nonfinite": []
+          },
+          {
+            "id": "N000058",
+            "status": "escaped",
+            "e": 60,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 2125.9650764628827,
+            "logRRatio": 1729.6749442938667,
+            "nonfinite": []
+          },
+          {
+            "id": "N000088",
+            "status": "escaped",
+            "e": 105,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 41.33401754254252,
+            "logRRatio": 29.60759191932185,
+            "nonfinite": []
+          },
+          {
+            "id": "N000106",
+            "status": "escaped",
+            "e": 53,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 2.1133567289295816,
+            "logRRatio": 0.5305048024204431,
+            "nonfinite": []
+          },
+          {
+            "id": "N000114",
+            "status": "escaped",
+            "e": 115,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 73.63294890286443,
+            "logRRatio": 15.14969795186681,
+            "nonfinite": []
+          },
+          {
+            "id": "N000124",
+            "status": "escaped",
+            "e": 54,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 84.64791825503697,
+            "logRRatio": 54.12069525371429,
+            "nonfinite": []
+          },
+          {
+            "id": "N000156",
+            "status": "escaped",
+            "e": 123,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 86.00230191590775,
+            "logRRatio": 39.78929289954718,
+            "nonfinite": []
+          },
+          {
+            "id": "N000184",
+            "status": "escaped",
+            "e": 116,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 60.59493890836007,
+            "logRRatio": 17.9151310009788,
+            "nonfinite": []
+          },
+          {
+            "id": "N000200",
+            "status": "escaped",
+            "e": 57,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 43.16636052960606,
+            "logRRatio": 14.408962416445135,
+            "nonfinite": []
+          },
+          {
+            "id": "N000206",
+            "status": "escaped",
+            "e": 82,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 21.27460340249255,
+            "logRRatio": 28.18171533616318,
+            "nonfinite": []
+          },
+          {
+            "id": "N000242",
+            "status": "escaped",
+            "e": 34,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 139.57305093296387,
+            "logRRatio": 9.244920449386248,
+            "nonfinite": []
+          },
+          {
+            "id": "N000244",
+            "status": "escaped",
+            "e": 68,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 38.48321780740659,
+            "logRRatio": 49.752301008212044,
+            "nonfinite": []
+          },
+          {
+            "id": "N000254",
+            "status": "escaped",
+            "e": 74,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 61.11001424022851,
+            "logRRatio": 0.729839934621427,
+            "nonfinite": []
+          },
+          {
+            "id": "N000268",
+            "status": "escaped",
+            "e": 35,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 286.1834815046071,
+            "logRRatio": 8.664181517032041,
+            "nonfinite": []
+          },
+          {
+            "id": "N000274",
+            "status": "escaped",
+            "e": 36,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 130.1855928040035,
+            "logRRatio": 23.299584314499025,
+            "nonfinite": []
+          },
+          {
+            "id": "N000298",
+            "status": "escaped",
+            "e": 94,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 317.98161367995573,
+            "logRRatio": 23.478734776660982,
+            "nonfinite": []
+          },
+          {
+            "id": "N000314",
+            "status": "escaped",
+            "e": 35,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 5.480866944552645,
+            "logRRatio": 1.027376639684757,
+            "nonfinite": []
+          },
+          {
+            "id": "N000318",
+            "status": "escaped",
+            "e": 54,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 704.5185320312243,
+            "logRRatio": 14.24552285855003,
+            "nonfinite": []
+          },
+          {
+            "id": "N000324",
+            "status": "escaped",
+            "e": 106,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 337.65791877215025,
+            "logRRatio": 76.77828705168194,
+            "nonfinite": []
+          },
+          {
+            "id": "N000342",
+            "status": "escaped",
+            "e": 65,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 195.83100066098876,
+            "logRRatio": 50.3682146458063,
+            "nonfinite": []
+          },
+          {
+            "id": "N000348",
+            "status": "escaped",
+            "e": 78,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 11.536705319871631,
+            "logRRatio": 7.698833676217885,
+            "nonfinite": []
+          },
+          {
+            "id": "N000352",
+            "status": "escaped",
+            "e": 112,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 115.68221516201143,
+            "logRRatio": 27.791229479079085,
+            "nonfinite": []
+          },
+          {
+            "id": "N000366",
+            "status": "escaped",
+            "e": 87,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 967.1337159250547,
+            "logRRatio": 308.66248233946845,
+            "nonfinite": []
+          },
+          {
+            "id": "N000374",
+            "status": "escaped",
+            "e": 70,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 55.91756006590236,
+            "logRRatio": 16.550122773169942,
+            "nonfinite": []
+          },
+          {
+            "id": "N000392",
+            "status": "escaped",
+            "e": 49,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 5.564225689367011,
+            "logRRatio": 2.655415456209347,
+            "nonfinite": []
+          },
+          {
+            "id": "N000394",
+            "status": "escaped",
+            "e": 45,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 5.006433137458175,
+            "logRRatio": 5.91779868776358,
+            "nonfinite": []
+          },
+          {
+            "id": "N000398",
+            "status": "escaped",
+            "e": 78,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 67.90678126601183,
+            "logRRatio": 7.1471021251720215,
+            "nonfinite": []
+          },
+          {
+            "id": "N000412",
+            "status": "escaped",
+            "e": 82,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 267.54071885724085,
+            "logRRatio": 29.51422325094542,
+            "nonfinite": []
+          },
+          {
+            "id": "N000416",
+            "status": "escaped",
+            "e": 33,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 1.5427275501889008,
+            "logRRatio": 0.40162423728517715,
+            "nonfinite": []
+          },
+          {
+            "id": "N000464",
+            "status": "escaped",
+            "e": 96,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 24319.49890711227,
+            "logRRatio": 18845.33407042553,
+            "nonfinite": []
+          },
+          {
+            "id": "N000490",
+            "status": "escaped",
+            "e": 35,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 3.5438825216850427,
+            "logRRatio": 3.173779765190912,
+            "nonfinite": []
+          },
+          {
+            "id": "U001960",
+            "status": "escaped",
+            "e": 44,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 8.482959262145794,
+            "logRRatio": 3.940581690491985,
+            "nonfinite": []
+          },
+          {
+            "id": "U007107",
+            "status": "escaped",
+            "e": 46,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 3.3298612078709966,
+            "logRRatio": 2.858343955403888,
+            "nonfinite": []
+          },
+          {
+            "id": "U010166",
+            "status": "escaped",
+            "e": 40,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 120.40083937576851,
+            "logRRatio": 119.2162494368334,
+            "nonfinite": []
+          },
+          {
+            "id": "U020965",
+            "status": "escaped",
+            "e": 46,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 5.900759730741025,
+            "logRRatio": 5.3105035968376235,
+            "nonfinite": []
+          },
+          {
+            "id": "U021372",
+            "status": "escaped",
+            "e": 37,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 63.88362622397112,
+            "logRRatio": 48.36596061121191,
+            "nonfinite": []
+          },
+          {
+            "id": "U023291",
+            "status": "escaped",
+            "e": 113,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 60.77601387857106,
+            "logRRatio": 11.86970807561048,
+            "nonfinite": []
+          },
+          {
+            "id": "U024150",
+            "status": "escaped",
+            "e": 59,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 53.003185754763194,
+            "logRRatio": 25.382760302091352,
+            "nonfinite": []
+          },
+          {
+            "id": "U035691",
+            "status": "escaped",
+            "e": 60,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 3.1804180921638876,
+            "logRRatio": 0.5778497531290726,
+            "nonfinite": []
+          },
+          {
+            "id": "U042729",
+            "status": "escaped",
+            "e": 34,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 24.626161365937854,
+            "logRRatio": 6.192553463450786,
+            "nonfinite": []
+          },
+          {
+            "id": "U045421",
+            "status": "escaped",
+            "e": 94,
+            "statusError": false,
+            "indexError": true,
+            "componentRatio": 72190.06146000013,
+            "logRRatio": 0,
+            "nonfinite": []
+          },
+          {
+            "id": "U047781",
+            "status": "escaped",
+            "e": 50,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 7.464115338131359,
+            "logRRatio": 0.1249135725281053,
+            "nonfinite": []
+          },
+          {
+            "id": "U048058",
+            "status": "escaped",
+            "e": 32,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 58.188725801285706,
+            "logRRatio": 18.065188747244488,
+            "nonfinite": []
+          },
+          {
+            "id": "U055751",
+            "status": "escaped",
+            "e": 45,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 9.892583694771401,
+            "logRRatio": 6.678865229391941,
+            "nonfinite": []
+          },
+          {
+            "id": "U061187",
+            "status": "escaped",
+            "e": 73,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 78.36869214194076,
+            "logRRatio": 10.70845230711065,
+            "nonfinite": []
+          },
+          {
+            "id": "U061302",
+            "status": "escaped",
+            "e": 81,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 30441.130697301254,
+            "logRRatio": 11796.788109254685,
+            "nonfinite": []
+          },
+          {
+            "id": "U062159",
+            "status": "escaped",
+            "e": 59,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 3.3842972470085813,
+            "logRRatio": 1.5216789722156558,
+            "nonfinite": []
+          },
+          {
+            "id": "U066278",
+            "status": "escaped",
+            "e": 42,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 33.07828952255143,
+            "logRRatio": 6.160327182988619,
+            "nonfinite": []
+          },
+          {
+            "id": "U067671",
+            "status": "escaped",
+            "e": 50,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 98.2107384573808,
+            "logRRatio": 8.624279128074022,
+            "nonfinite": []
+          },
+          {
+            "id": "U070163",
+            "status": "escaped",
+            "e": 36,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 8.04900491952106,
+            "logRRatio": 2.1774119510824943,
+            "nonfinite": []
+          },
+          {
+            "id": "U071851",
+            "status": "escaped",
+            "e": 94,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 215.33663499083409,
+            "logRRatio": 24.26384971599816,
+            "nonfinite": []
+          },
+          {
+            "id": "U072161",
+            "status": "escaped",
+            "e": 33,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 134.36421351720583,
+            "logRRatio": 2.910184700396637,
+            "nonfinite": []
+          },
+          {
+            "id": "U075979",
+            "status": "escaped",
+            "e": 59,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 151.24843612798702,
+            "logRRatio": 46.99446287691742,
+            "nonfinite": []
+          },
+          {
+            "id": "U077360",
+            "status": "escaped",
+            "e": 33,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 1.1107656899035627,
+            "logRRatio": 0.09048751645064458,
+            "nonfinite": []
+          },
+          {
+            "id": "U079992",
+            "status": "escaped",
+            "e": 38,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 1.5103612551568895,
+            "logRRatio": 1.1570692543679157,
+            "nonfinite": []
+          },
+          {
+            "id": "U080248",
+            "status": "escaped",
+            "e": 38,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 1.981814837775387,
+            "logRRatio": 1.2055204144456406,
+            "nonfinite": []
+          },
+          {
+            "id": "U083704",
+            "status": "escaped",
+            "e": 46,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 88.11871482686517,
+            "logRRatio": 98.1433814962209,
+            "nonfinite": []
+          },
+          {
+            "id": "U088146",
+            "status": "escaped",
+            "e": 43,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 9.827487987003403,
+            "logRRatio": 1.8504157509780683,
+            "nonfinite": []
+          },
+          {
+            "id": "U089848",
+            "status": "escaped",
+            "e": 69,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 60.09487821190156,
+            "logRRatio": 43.31074125894282,
+            "nonfinite": []
+          },
+          {
+            "id": "U090133",
+            "status": "escaped",
+            "e": 121,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 184.9800333301871,
+            "logRRatio": 108.40832557821001,
+            "nonfinite": []
+          },
+          {
+            "id": "U093510",
+            "status": "escaped",
+            "e": 62,
+            "statusError": false,
+            "indexError": false,
+            "componentRatio": 2113.433820102697,
+            "logRRatio": 645.3661600332647,
+            "nonfinite": []
+          }
+        ]
+      },
+      "bands": {
+        "S0": {
+          "samples": 86,
+          "outside": 0,
+          "statusIndex": 0,
+          "numericalFailures": 0,
+          "maxComponentRatio": 0.11900621756346888,
+          "maxLogRRatio": 0.019806680658552553
+        },
+        "S1": {
+          "samples": 65,
+          "outside": 0,
+          "statusIndex": 0,
+          "numericalFailures": 0,
+          "maxComponentRatio": 0.19213038438685867,
+          "maxLogRRatio": 0.06724040473609347
+        },
+        "S2": {
+          "samples": 32,
+          "outside": 0,
+          "statusIndex": 0,
+          "numericalFailures": 0,
+          "maxComponentRatio": 0.19243534038149068,
+          "maxLogRRatio": 0.10932112776388266
+        },
+        "SB": {
+          "samples": 32,
+          "outside": 0,
+          "statusIndex": 0,
+          "numericalFailures": 0,
+          "maxComponentRatio": 0.18778830311955885,
+          "maxLogRRatio": 0
+        },
+        "S3": {
+          "samples": 64,
+          "outside": 61,
+          "statusIndex": 1,
+          "numericalFailures": 60,
+          "maxComponentRatio": 72190.06146000013,
+          "maxLogRRatio": 18845.33407042553
+        },
+        "initial": {
+          "samples": 8,
+          "outside": 0,
+          "statusIndex": 0,
+          "numericalFailures": 0,
+          "maxComponentRatio": 0,
+          "maxLogRRatio": 0.002143779631946412
+        }
+      },
+      "continuation": {
+        "componentRatio": 2.7497713106862958,
+        "numericalFailure": true,
+        "nonfinite": [],
+        "rows": [
+          "beee6666 3f866666 3d800000 be000000",
+          "bf8d77ff be361475 bd6e6666 3dee6666",
+          "3f79144d 3f98b5b5 3e03be25 be83be25",
+          "bf426ba0 4047c80c 3e802e64 bf002e64",
+          "c11ae4fe c07c3ffa bec2b217 3f42b217",
+          "429a8648 429a39b9 40eb9a93 c16b9a93",
+          "c3782840 463a3271 448e3692 c50e3692",
+          "cd0d8a58 cab47e22 c909db3a 4989db3a"
+        ],
+        "matches": [
+          "F"
+        ],
+        "historical": {
+          "webgpu-1": 2.7497713106862958,
+          "webgpu-remediation": 4.744852004194964
+        },
+        "role": "diagnostic (E8): not a qualifying pass"
+      },
+      "operationalMatches": [],
+      "caseAgreement": {
+        "U": 45,
+        "F": 81,
+        "A": 63,
+        "Q": 53
+      },
+      "scope": "Qualifying escaping orbits cover escape indices 0–11 only; escape indices 12–128 are not validated by this qualification. Bounded orbits are tested through 128 updates."
+    }
+  },
+  "qualification": {
+    "id": "project0-g5d-v1",
+    "path": "spikes/project0/qualification/g5d-v1.json",
+    "sha256": "e0f26d9e83e592f25fc6777134efca82427948df93257ce6eb485d48e8a91c24"
+  },
+  "scope": "Qualification scope: headed execution only, under E7; G5 as amended by E8 and E9 (operational orbits through first escape or 128 updates; S3 measured as a non-gating diagnostic).",
+  "excludedTrials": {
+    "G1/headless": {
+      "authority": "E7",
+      "collection": "not-scheduled-in-this-campaign",
+      "disposition": "not-required",
+      "summary": "not required under E7; prior failure retained"
+    },
+    "G5/qjulia-offplane": {
+      "authority": "E8",
+      "collection": "freshly-collected-in-G5/qjulia-operational",
+      "disposition": "diagnostic",
+      "summary": "diagnostic under E8; freshly collected; not a qualifying pass"
+    }
+  },
+  "knownLimitations": [
+    {
+      "authority": "E7",
+      "evidence": [
+        {
+          "kind": "diagnosis",
+          "path": "docs/reports/project0/webgpu-g1c-diagnosis.md",
+          "sha256": "cdf7b66649e29853e13c59b877694afa98c4597d71ca8381cd3f8ab102cd5ac4"
+        },
+        {
+          "kind": "manifest",
+          "path": "docs/reports/project0/webgpu-1-manifest.json",
+          "sha256": "d733e85046a39d64d7fefe7f50ff0c39d822b0ca0ae69fe9ec92b8fbb7c9dfdd"
+        },
+        {
+          "kind": "record",
+          "path": "20261019T235719304Z-webgpu-1-g1-headless/G1-headless-20261019T235719304Z-webgpu-1-g1-headless.json",
+          "recordId": "G1-headless-20261019T235719304Z-webgpu-1-g1-headless",
+          "sha256": "1461dc310889a2034897d5da976d830728728c0bdf2e4ece3417a6273b09f275"
+        }
+      ],
+      "id": "g1-headless-gpu-process-crash",
+      "summary": "On the recorded host, Chrome 151 headless: the GPU process crashes (SIGSEGV) at startup; the first crash precedes any WebGPU request. Headless G1 evidence could not be collected (G1-C: browser/GPU-process failure, no admissible correction)."
+    }
+  ],
+  "headlessRow": "G1/headless — Not required under E7; not scheduled in this campaign. Prior headless collection was unsuccessful; browser/GPU-process crash remains a known limitation on the recorded host.",
+  "dispositions": {
+    "G1/headless": {
+      "authority": "E7",
+      "collection": "not-scheduled-in-this-campaign",
+      "disposition": "not-required",
+      "summary": "not required under E7; prior failure retained"
+    },
+    "G5/qjulia-offplane": {
+      "authority": "E8",
+      "collection": "freshly-collected-in-G5/qjulia-operational",
+      "disposition": "diagnostic",
+      "summary": "diagnostic under E8; freshly collected; not a qualifying pass"
+    },
+    "S3": {
+      "authority": "E9",
+      "collection": "measured-in-G5/qjulia-operational",
+      "disposition": "diagnostic",
+      "summary": "diagnostic under E9; sensitivity exclusions retained"
+    }
+  }
+}

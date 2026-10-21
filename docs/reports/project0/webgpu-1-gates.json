@@ -1,0 +1,135 @@
+{
+  "backend": {
+    "remediationClosed": false,
+    "gates": {
+      "G1": {
+        "gate": "G1",
+        "status": "invalid/inconclusive",
+        "reasons": [
+          "invalid metrics",
+          "metrics: adapter device identity is missing or unrecognised (\"\")",
+          "metrics: adapter.info is redacted or empty; adapter device identity is missing or unrecognised (null); probe dispatch did not complete on the selected adapter"
+        ],
+        "evidenceIds": [
+          "G1-headed-20261019T235716360Z-webgpu-1-g1-headed",
+          "G1-headless-20261019T235719304Z-webgpu-1-g1-headless"
+        ]
+      },
+      "G3": {
+        "gate": "G3",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G3-box-20261019T235728294Z-webgpu-1-g3-headed",
+          "G3-menger-1-20261019T235728294Z-webgpu-1-g3-headed",
+          "G3-menger-2-20261019T235728294Z-webgpu-1-g3-headed",
+          "G3-sphere-20261019T235728294Z-webgpu-1-g3-headed"
+        ]
+      },
+      "G4": {
+        "gate": "G4",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G4-bulb-samples-20261019T235722495Z-webgpu-1-g4-headed"
+        ]
+      },
+      "G5": {
+        "gate": "G5",
+        "status": "fail",
+        "reasons": [
+          "qjulia-offplane: componentRatio=2.7497713106862958"
+        ],
+        "evidenceIds": [
+          "G5-qjulia-plane-20261019T235725379Z-webgpu-1-g5-headed",
+          "G5-qjulia-offplane-20261019T235725379Z-webgpu-1-g5-headed"
+        ]
+      },
+      "G11": {
+        "gate": "G11",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G11-4k-20261019T235731353Z-webgpu-1-g11-headed"
+        ]
+      },
+      "G13": {
+        "gate": "G13",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G13-intentional-20261019T235734546Z-webgpu-1-g13-headed",
+          "G13-injected-20261019T235734546Z-webgpu-1-g13-headed",
+          "G13-repeated-20261019T235734546Z-webgpu-1-g13-headed"
+        ]
+      },
+      "G2": {
+        "gate": "G2",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G1 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G6": {
+        "gate": "G6",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G1 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G7": {
+        "gate": "G7",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G1 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G8": {
+        "gate": "G8",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G1 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G9": {
+        "gate": "G9",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G1 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G10": {
+        "gate": "G10",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G1 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G12": {
+        "gate": "G12",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G1 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      }
+    }
+  },
+  "decision": {
+    "outcome": "inconclusive",
+    "next": "resolve missing or invalid WebGPU evidence"
+  }
+}

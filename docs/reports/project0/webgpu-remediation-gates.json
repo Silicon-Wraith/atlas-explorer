@@ -1,0 +1,201 @@
+{
+  "backend": {
+    "remediationClosed": false,
+    "gates": {
+      "G1": {
+        "gate": "G1",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G1-headed-20261020T051007602Z-webgpu-remediation-g1-headed"
+        ]
+      },
+      "G3": {
+        "gate": "G3",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G3-box-20261020T051016819Z-webgpu-remediation-g3-headed",
+          "G3-menger-1-20261020T051016819Z-webgpu-remediation-g3-headed",
+          "G3-menger-2-20261020T051016819Z-webgpu-remediation-g3-headed",
+          "G3-sphere-20261020T051016819Z-webgpu-remediation-g3-headed"
+        ]
+      },
+      "G4": {
+        "gate": "G4",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G4-bulb-samples-20261020T051010827Z-webgpu-remediation-g4-headed"
+        ]
+      },
+      "G5": {
+        "gate": "G5",
+        "status": "invalid/inconclusive",
+        "reasons": [
+          "invalid metrics",
+          "metrics: compensation unvalidated: primitives: 798 of 1371 differ from Model F; primitives: 798 of 1371 pairs fail the rounded-high or high + low = exact identity; updates: 694 of 1024 differ from Model F; offplane: 7 of 8 differ from Model F; observations match model(s) none; frozen off-plane comparison recorded separately: numerical failure: componentRatio=4.744852004194964"
+        ],
+        "evidenceIds": [
+          "G5-qjulia-plane-20261020T051013812Z-webgpu-remediation-g5-headed",
+          "G5-qjulia-offplane-20261020T051013812Z-webgpu-remediation-g5-headed"
+        ]
+      },
+      "G11": {
+        "gate": "G11",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G11-4k-20261020T051019732Z-webgpu-remediation-g11-headed"
+        ]
+      },
+      "G13": {
+        "gate": "G13",
+        "status": "pass",
+        "reasons": [],
+        "evidenceIds": [
+          "G13-intentional-20261020T051022962Z-webgpu-remediation-g13-headed",
+          "G13-injected-20261020T051022962Z-webgpu-remediation-g13-headed",
+          "G13-repeated-20261020T051022962Z-webgpu-remediation-g13-headed"
+        ]
+      },
+      "G2": {
+        "gate": "G2",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G5 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G5 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G6": {
+        "gate": "G6",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G5 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G5 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G7": {
+        "gate": "G7",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G5 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G5 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G8": {
+        "gate": "G8",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G5 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G5 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G9": {
+        "gate": "G9",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G5 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G5 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G10": {
+        "gate": "G10",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G5 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G5 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      },
+      "G12": {
+        "gate": "G12",
+        "status": "not run",
+        "reason": "campaign stopped: correctness gate G5 is invalid/inconclusive",
+        "reasons": [
+          "campaign stopped: correctness gate G5 is invalid/inconclusive"
+        ],
+        "evidenceIds": []
+      }
+    }
+  },
+  "decision": {
+    "outcome": "inconclusive",
+    "next": "resolve missing or invalid WebGPU evidence"
+  },
+  "g5Observations": {
+    "G5-qjulia-plane-20261020T051013812Z-webgpu-remediation-g5-headed": {
+      "slot": "qjulia-plane",
+      "metrics": {
+        "samples": 4096,
+        "eligible": 3684,
+        "diagnostics": 412,
+        "statusErrors": 0,
+        "indexErrors": 0,
+        "logRRatio": 0.30653689340412127
+      },
+      "invalidation": null
+    },
+    "G5-qjulia-offplane-20261020T051013812Z-webgpu-remediation-g5-headed": {
+      "slot": "qjulia-offplane",
+      "componentRatio": 4.744852004194964,
+      "numericalFailure": true,
+      "compensation": {
+        "validated": false,
+        "matches": [],
+        "problems": [
+          "primitives: 798 of 1371 differ from Model F",
+          "primitives: 798 of 1371 pairs fail the rounded-high or high + low = exact identity",
+          "updates: 694 of 1024 differ from Model F",
+          "offplane: 7 of 8 differ from Model F"
+        ]
+      },
+      "metrics": null,
+      "invalidation": "compensation unvalidated: primitives: 798 of 1371 differ from Model F; primitives: 798 of 1371 pairs fail the rounded-high or high + low = exact identity; updates: 694 of 1024 differ from Model F; offplane: 7 of 8 differ from Model F; observations match model(s) none; frozen off-plane comparison recorded separately: numerical failure: componentRatio=4.744852004194964"
+    }
+  },
+  "qualification": {
+    "id": "project0-e7-headed-v1",
+    "path": "spikes/project0/qualification/e7-headed-v1.json",
+    "sha256": "99ea9a3030fd31f68a3cb39cc97b10227fd28afdfc38e55a82119618991d8c51"
+  },
+  "scope": "Qualification scope: headed execution only, under E7.",
+  "excludedTrials": {
+    "G1/headless": {
+      "disposition": "not-required",
+      "authority": "E7",
+      "collection": "not-scheduled-in-this-campaign"
+    }
+  },
+  "knownLimitations": [
+    {
+      "id": "g1-headless-gpu-process-crash",
+      "authority": "E7",
+      "summary": "On the recorded host, Chrome 151 headless: the GPU process crashes (SIGSEGV) at startup; the first crash precedes any WebGPU request. Headless G1 evidence could not be collected (G1-C: browser/GPU-process failure, no admissible correction).",
+      "evidence": [
+        {
+          "kind": "diagnosis",
+          "path": "docs/reports/project0/webgpu-g1c-diagnosis.md",
+          "sha256": "cdf7b66649e29853e13c59b877694afa98c4597d71ca8381cd3f8ab102cd5ac4"
+        },
+        {
+          "kind": "manifest",
+          "path": "docs/reports/project0/webgpu-1-manifest.json",
+          "sha256": "d733e85046a39d64d7fefe7f50ff0c39d822b0ca0ae69fe9ec92b8fbb7c9dfdd"
+        },
+        {
+          "kind": "record",
+          "recordId": "G1-headless-20261019T235719304Z-webgpu-1-g1-headless",
+          "path": "20261019T235719304Z-webgpu-1-g1-headless/G1-headless-20261019T235719304Z-webgpu-1-g1-headless.json",
+          "sha256": "1461dc310889a2034897d5da976d830728728c0bdf2e4ece3417a6273b09f275"
+        }
+      ]
+    }
+  ],
+  "headlessRow": "G1/headless — Not required under E7; not scheduled in this campaign. Prior headless collection was unsuccessful; browser/GPU-process crash remains a known limitation on the recorded host."
+}
