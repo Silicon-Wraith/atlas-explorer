@@ -36,6 +36,7 @@
     "tests/unit/kernel-metadata.test.js",
     "tests/unit/space-numerics.test.js",
     "tests/unit/space-keys.test.js",
-    "tests/unit/space-renderer.test.js"
+    "tests/unit/space-renderer.test.js",
+    "tests/unit/space-recovery.test.js"
   ]
 }
