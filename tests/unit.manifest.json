@@ -12,6 +12,7 @@
     "tests/unit/discoveries-control.test.js",
     "tests/unit/export.test.js",
     "tests/unit/gestures.test.js",
-    "tests/unit/gpu-drain.test.js"
+    "tests/unit/gpu-drain.test.js",
+    "tests/unit/completion.test.js"
   ]
 }

@@ -15,3 +15,5 @@
 /* T05: the history controls (Back, Forward, Undo, Redo) wrap onto a second row of the navigation bar on narrow layouts, so the bar keeps clear of the panel. */
 @media(max-width:760px){.navigation{flex-wrap:wrap;max-width:210px}.navigation>.nav-divider:last-of-type{display:none}.tour-status{bottom:335px}}
 @media(max-width:400px){.navigation{max-width:200px}}
+/* T08: the automatic-recovery pause after repeated graphics loss offers a resume action in the status bar. */
+.resume-button{border:1px solid var(--gold);color:var(--gold);border-radius:3px;padding:3px 8px;font-size:7px;letter-spacing:.5px}.resume-button[hidden]{display:none}

@@ -15,6 +15,7 @@ import { createReportBuilder, observed, PLANE_INAPPLICABLE_FIELDS } from '../sha
 import { createRenderRequest, isPublishable, RUNTIME_ID } from '../shared/render-request.js';
 import { fnv1a64, canonicalJson } from '../shared/scene.js';
 import { toPlaneState, sceneCodec, planeDependencies } from './scene-adapter.js';
+import { createFence, awaitFence, CompletionError } from './completion.js';
 
 let requestCounter = 0;
 
@@ -55,9 +56,35 @@ const geometryCurrent = (request, generation) => generation.deviceEpoch === requ
 
 export function createPlaneRenderAdapter({ renderer, clock }) {
   if (typeof clock !== 'function') throw new TypeError('createPlaneRenderAdapter requires a clock');
-  // published: { request (the current publication), geometry (the request that computed it) } | null
+  // published: the image on the canvas — { request (the current publication), geometry (the request
+  // that computed it), report (the publication's report), ticket (its completion fence) } | null.
+  // It is the authoritative provenance of the displayed image: a lost context, a retirement, a
+  // replacement clear it, and every non-null report describes the image actually retained.
   // unavailable: the graphics context was lost and the renderer has not been replaced yet.
   let current = renderer, epoch = 0, losses = 0, retired = false, unavailable = false, inFlight = null, lease = null, deferredScene = null, published = null;
+
+  // Completion tickets (plan amendment G(3)): one fence per publication, created right after its
+  // final colour pass and bound to the report, the renderer and its context, the device epoch and
+  // the loss count. Only the current publication's fence is kept: a superseded fence is deleted when
+  // the renderer, context and loss count are unchanged (supersession, retirement, a healthy
+  // replacement) and dropped untouched once the context was lost. Tickets are remembered per report
+  // (weakly) so a completion asked for after the fact can still tell interruption from supersession.
+  const tickets = new WeakMap();
+  const ticketFor = (report, renderer) => ({ report, renderer, gl: renderer.gl, sync: createFence(renderer.gl), deviceEpoch: epoch, losses, dropped: null });
+  function dropPublication(reason = 'superseded') {
+    const ticket = published?.ticket;
+    if (ticket) {
+      if (ticket.sync && ticket.renderer === current && ticket.losses === losses && !ticket.gl.isContextLost?.()) ticket.gl.deleteSync(ticket.sync);
+      ticket.sync = null; ticket.dropped = reason;
+    }
+    published = null;
+  }
+  function publish(request, geometry, report, renderer = current) {
+    dropPublication();
+    published = { request, geometry, report, ticket: ticketFor(report, renderer) };
+    tickets.set(report, published.ticket);
+    return report;
+  }
 
   const environment = renderer => ({
     backend: observed(renderer.mode, 'renderer.mode'),
@@ -105,11 +132,13 @@ export function createPlaneRenderAdapter({ renderer, clock }) {
         const publication = publicationFor(request, scene, currentGeneration());
         renderer.color(toPlaneState(scene).settings);
         builder.mark('published');
-        published = { request: publication, geometry: request };
-        return builder.finish('completed', { completed: { width: renderer.canvas.width, height: renderer.canvas.height }, publication: publication === request ? null : publication });
+        return publish(publication, request, builder.finish('completed', { completed: { width: renderer.canvas.width, height: renderer.canvas.height }, publication: publication === request ? null : publication }), renderer);
       } catch (error) {
         if (myEpoch !== epoch) return builder.finish('interrupted', { reason: 'the graphics context was lost or the renderer replaced during the render' });
         if (error?.name === 'AbortError') return builder.finish('superseded', { reason: 'a newer view was requested' });
+        // A failure may have resized the canvas or reallocated the field before it was raised: the
+        // retained image's validity is no longer established, so nothing is described.
+        if (renderer === current) dropPublication('failed');
         return builder.finish('failed', { reason: error?.message || String(error) });
       }
     })();
@@ -120,19 +149,50 @@ export function createPlaneRenderAdapter({ renderer, clock }) {
 
   // An appearance edit on the published geometry. → { status: 'applied', report } (a completed
   // report for the new publication), { status: 'deferred' } during an export lease, or
-  // { status: 'retired' }. Before anything is published, it only recolors.
+  // { status: 'retired' }. Before anything is published, it only recolors. While a different
+  // geometry is still rendering, the retained geometry is republished with the live appearance:
+  // the report names the image actually on the canvas, not the scene the explorer is heading to.
   function recolor(scene, generation) {
     if (lease) { deferredScene = scene; return { status: 'deferred', report: null }; }
     if (retired) return { status: 'retired', report: null };
     if (unavailable) return { status: 'unavailable', report: null };
     current.color(toPlaneState(scene).settings);
-    if (!published || planeDependencies(scene).geometry !== planeDependencies(published.geometry.sceneSnapshot).geometry) return { status: 'applied', report: null };
-    const geometryRequest = published.geometry;
-    const publication = createPlaneRequest({ scene, purpose: 'interactive', width: current.canvas.width, height: current.canvas.height, generation, viewId: geometryRequest.viewId });
+    if (!published) return { status: 'applied', report: null };
+    const geometryRequest = published.geometry, retained = geometryRequest.sceneSnapshot;
+    const displayed = planeDependencies(scene).geometry === planeDependencies(retained).geometry ? scene : { ...retained, appearance: scene.appearance };
+    const publication = createPlaneRequest({ scene: displayed, purpose: published.request.output.purpose, width: current.canvas.width, height: current.canvas.height, generation, viewId: geometryRequest.viewId });
     const builder = builderFor(geometryRequest);
     builder.mark('published');
-    published = { request: publication, geometry: geometryRequest };
-    return { status: 'applied', report: builder.finish('completed', { completed: { width: current.canvas.width, height: current.canvas.height }, publication, reason: 'appearance applied to completed geometry' }) };
+    return { status: 'applied', report: publish(publication, geometryRequest, builder.finish('completed', { completed: { width: current.canvas.width, height: current.canvas.height }, publication, reason: 'appearance applied to completed geometry' })) };
+  }
+
+  // GPU completion of one publication (plan amendment G(3)). `timeoutMs` is the one bound for the
+  // whole wait (finite; a non-positive bound is already exhausted). Resolves once the fence created
+  // at that publication signals; rejects 'interrupted' when the device was lost, retired or replaced
+  // since that publication (its captured identity is checked first, and again after the fence
+  // signals), 'superseded' when a newer publication replaced it (never switching to the newer one),
+  // 'timeout' when the bound is exhausted. The CPU fallback paints synchronously, so its publication
+  // is complete as soon as it is published. Evidence carries the identities captured at publication.
+  // → frozen { reportId, requestId, deviceEpoch, source, clock, completedAt, polls, waitMs }
+  async function completion(report, { timeoutMs, now = () => clock(), yieldTask } = {}) {
+    if (!Number.isFinite(timeoutMs)) throw new RangeError('completion needs a finite bound');
+    const ticket = tickets.get(report);
+    if (!ticket) throw new CompletionError('this report was never published by this adapter', 'interrupted');
+    const still = () => {
+      if (ticket.renderer !== current || ticket.deviceEpoch !== epoch || ticket.losses !== losses || ticket.gl?.isContextLost?.() || ticket.dropped === 'failed') throw new CompletionError('the graphics device was lost, retired or replaced since this publication', 'interrupted');
+      if (ticket.dropped || published?.ticket !== ticket) throw new CompletionError('this publication was superseded', 'superseded');
+    };
+    still();
+    if (timeoutMs <= 0) throw new CompletionError('no time remains for GPU completion', 'timeout');
+    const started = now();
+    const evidence = (source, polls, waitMs) => Object.freeze({ reportId: report.reportId, requestId: report.requestId, deviceEpoch: ticket.deviceEpoch, source, clock: 'page-performance-now', completedAt: clock(), polls, waitMs });
+    if (!ticket.gl) return evidence('synchronous-paint', 0, 0);
+    const { polls, waitMs } = await awaitFence({ gl: ticket.gl, sync: ticket.sync, ms: timeoutMs, stillValid: still, now, yieldTask });
+    // The final asynchronous boundary: a loss between the signal and this continuation, and the one
+    // absolute deadline, which holds through the continuation itself — no late success.
+    still();
+    if (now() - started >= timeoutMs) throw new CompletionError(`GPU completion did not arrive within ${timeoutMs} ms`, 'timeout');
+    return evidence('queue-completion', polls, waitMs);
   }
 
   function cancelInteractive() { if (!lease) current.cancel?.(); }
@@ -142,7 +202,7 @@ export function createPlaneRenderAdapter({ renderer, clock }) {
     return (await bounded(inFlight, timeoutMs)).settled;
   }
 
-  function retire() { retired = true; epoch++; published = null; }
+  function retire() { retired = true; epoch++; dropPublication('retired'); }
 
   // Synchronous: called before the export's first await, so no live work can slip ahead.
   function reserveExclusive(request) {
@@ -177,12 +237,15 @@ export function createPlaneRenderAdapter({ renderer, clock }) {
         if (!outcome.settled) { retire(); return builder.finish('interrupted', { reason: 'the export render exceeded its time limit; the renderer was retired' }); }
         // The captured epoch is checked before the result is classified or anything is colored.
         if (myEpoch !== epoch) return builder.finish('interrupted', { reason: 'the graphics context was lost during the export render' });
-        if (outcome.error) return builder.finish(outcome.error.name === 'AbortError' ? 'interrupted' : 'failed', { reason: outcome.error.message });
+        if (outcome.error) {
+          if (outcome.error.name !== 'AbortError') dropPublication('failed'); // see the interactive failure path
+          return builder.finish(outcome.error.name === 'AbortError' ? 'interrupted' : 'failed', { reason: outcome.error.message });
+        }
         builder.mark('completed');
         renderer.color(settings);
         builder.mark('published');
-        published = null; // the canvas now shows the export, not an interactive publication
-        return builder.finish('completed', { completed: { width: renderer.canvas.width, height: renderer.canvas.height } });
+        // The canvas now shows the export image: that is the publication until the next render.
+        return publish(request, request, builder.finish('completed', { completed: { width: renderer.canvas.width, height: renderer.canvas.height } }), renderer);
       },
       retire() { active(); retire(); },
       // → the latest live scene deferred during the lease, or null.
@@ -199,10 +262,10 @@ export function createPlaneRenderAdapter({ renderer, clock }) {
   // A lost graphics context: nothing rendered before it is publishable, an export holding the lease
   // can no longer complete, and nothing — render, recolor or export — may use the renderer until
   // replaceRenderer(). Releasing a lease does not restore it.
-  function invalidate() { epoch++; losses++; published = null; unavailable = true; }
+  function invalidate() { epoch++; losses++; dropPublication('lost'); unavailable = true; }
 
   return Object.freeze({
-    render, recolor, cancelInteractive, whenIdle, reserveExclusive, invalidate,
+    render, recolor, cancelInteractive, whenIdle, reserveExclusive, invalidate, completion,
     get reserved() { return lease !== null; },
     get retired() { return retired; },
     get unavailable() { return unavailable; },
@@ -210,6 +273,8 @@ export function createPlaneRenderAdapter({ renderer, clock }) {
     get renderer() { return current; },
     // The request the canvas currently shows (null after an export, a loss or a replacement).
     get published() { return published?.request ?? null; },
-    replaceRenderer(next) { if (lease) throw new LeaseError('cannot replace the renderer during an export'); current = next; retired = false; unavailable = false; epoch++; inFlight = null; published = null; },
+    // The displayed image's provenance: { request, report } or null when nothing describable is shown.
+    get publication() { return published ? { request: published.request, report: published.report } : null; },
+    replaceRenderer(next) { if (lease) throw new LeaseError('cannot replace the renderer during an export'); dropPublication('replaced'); current = next; retired = false; unavailable = false; epoch++; inFlight = null; },
   });
 }

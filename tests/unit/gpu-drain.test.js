@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { LIMITS, drainWebGL, drainGpuWithin, BoundedWaitTimeout, closeWithin, cleanupState } from '../support/bounded.mjs';
 import { cleanupPages } from '../support/workflow-cleanup.mjs';
+import { expectBackend, expectedBackend, drainExpecting } from '../support/expected-backend.mjs';
 import { validateEvidence, classifySuiteRun } from '../../scripts/gate/lib.mjs';
 
 // A queued GPU: a fence cannot signal without a task yield, and readback must follow the signal.
@@ -257,7 +258,7 @@ for (const suite of ['browser', 'navigation']) {
       browser: { contexts: () => [context] }, server: { kill: () => calls.push('kill') },
       report, reportPath: 'unused', record: false, process: processState,
       writeReport: write, writeFile: async (path, data) => write(JSON.parse(data)),
-      drainGpuWithin: async target => { assert.equal(target, page); calls.push('drain'); throw new Error('injected GPU timeout'); },
+      drainExpecting: async target => { assert.equal(target, page); calls.push('drain'); throw new Error('injected GPU timeout'); },
       cleanupPages: options => cleanupPages({ ...options, log: () => {} }),
       closeWithin: async () => { calls.push('close'); },
     });
@@ -279,7 +280,8 @@ for (const suite of ['browser', 'navigation']) {
     assert.doesNotMatch(source, /\.\s*close\s*\(/, 'raw close bypasses draining and bounded cleanup');
     assert.doesNotMatch(source.replace(helper, '').replace(closeAll, ''), /\bcloseWithin\s*\(/, 'plain close outside a draining cleanup');
     for (const reload of source.matchAll(/\b(\w+)\.reload\s*\(/g)) {
-      const precedingDrain = new RegExp(`await\\s+drainGpuWithin\\(\\s*${reload[1]}\\s*\\)\\s*;\\s*(?://[^\\n]*\\n\\s*)?await\\s*$`);
+      // T08: every suite drain goes through the expected-backend wrapper (tests/support/expected-backend.mjs).
+      const precedingDrain = new RegExp(`await\\s+drainExpecting\\(\\s*${reload[1]}\\s*\\)\\s*;\\s*(?://[^\\n]*\\n\\s*)?await\\s*$`);
       assert.match(source.slice(0, reload.index), precedingDrain, `${reload[1]}.reload must immediately follow a drain of the same page`);
     }
   });
@@ -291,7 +293,7 @@ for (const suite of ['browser', 'navigation']) {
     const calls = [], written = [], page = {}, resource = suite === 'navigation' ? page : {};
     await assert.rejects(runInNewContext(`(async () => { ${declaration}; await closeDrained(resource, 'test', [page]); })()`, {
       page, resource, report: [],
-      drainGpuWithin: async target => { assert.equal(target, page); calls.push('drain'); throw new Error('injected drain failure'); },
+      drainExpecting: async target => { assert.equal(target, page); calls.push('drain'); throw new Error('injected drain failure'); },
       writeReport: async entries => { calls.push('write'); written.push(JSON.parse(JSON.stringify(entries))); },
       cleanupPages: options => cleanupPages({ ...options, log: () => {} }),
       closeWithin: async target => { assert.equal(target, resource); calls.push('close'); },
@@ -314,7 +316,7 @@ test('navigation timing excludes prior work and distinguishes submission from va
       assert.equal(ms, LIMITS.deep); clock += 10;
       return { initial: 3, final: 5, width: 1280, height: 720 };
     },
-    drainGpuWithin: async (page, ms) => {
+    drainExpecting: async (page, ms) => {
       drains++;
       if (drains === 2) assert.equal(ms, LIMITS.deep - 10, 'completion uses the remaining original bound');
       clock += drains === 1 ? 100 : 20;
@@ -336,7 +338,7 @@ for (const missing of ['preceding', 'completion']) {
     await assert.rejects(runInNewContext(`(async () => { ${body} })()`, {
       page: {}, LIMITS, assert, performance: { now: () => 0 },
       within: promise => promise, ev: async () => ({}),
-      drainGpuWithin: async () => {
+      drainExpecting: async () => {
         drains++;
         return { status: drains === (missing === 'preceding' ? 1 : 2) ? 'no-webgl' : 'complete' };
       },
@@ -344,3 +346,31 @@ for (const missing of ['preceding', 'completion']) {
     assert.equal(drains, missing === 'preceding' ? 1 : 2, 'reject at the first invalid completion observation');
   });
 }
+
+// T08 (plan amendment H carry-forward): every suite drain carries the backend the page was opened
+// on. The wrapper rejects a GPU page that drains to no-webgl, a device whose backend, epoch or state
+// changed across the drain, and a page without a device snapshot; a CPU page must drain to no-webgl.
+function fakePage({ status, before = { backend: 'webgl', deviceEpoch: 2, state: 'ready' }, after = before }) {
+  let reads = 0;
+  return {
+    evaluate: async (fn, arg) => {
+      if (fn === drainWebGL) { assert.ok(arg.ms > 0); return { status }; }
+      if (String(fn).includes('atlas?.device')) return ++reads === 1 ? before : after;
+      return undefined; // whenIdle
+    },
+  };
+}
+test('a drain through the expected-backend wrapper requires the declared backend, a settled device and a matching drain status', async () => {
+  const webgl = expectBackend(fakePage({ status: 'complete' }), 'webgl');
+  assert.equal(expectedBackend(webgl), 'webgl');
+  assert.deepEqual(await drainExpecting(webgl, 50), { status: 'complete' });
+  const cpu = expectBackend(fakePage({ status: 'no-webgl', before: { backend: 'cpu', deviceEpoch: 0, state: 'ready' } }), 'cpu');
+  assert.deepEqual(await drainExpecting(cpu, 50), { status: 'no-webgl' });
+  assert.equal(expectedBackend(fakePage({ status: 'complete' })), 'webgl', 'an undeclared page is expected to be WebGL');
+  await assert.rejects(drainExpecting(expectBackend(fakePage({ status: 'no-webgl' }), 'webgl'), 50), /webgl page drained to no-webgl/);
+  await assert.rejects(drainExpecting(expectBackend(fakePage({ status: 'no-webgl', before: { backend: 'cpu', deviceEpoch: 0, state: 'ready' } }), 'webgl'), 50), /expected a webgl backend; the device reports cpu/);
+  await assert.rejects(drainExpecting(expectBackend(fakePage({ status: 'complete', before: { backend: 'webgl', deviceEpoch: 2, state: 'ready' }, after: { backend: 'webgl', deviceEpoch: 3, state: 'ready' } }), 'webgl'), 50), /device changed during the drain/);
+  await assert.rejects(drainExpecting(expectBackend(fakePage({ status: 'complete', after: { backend: 'webgl', deviceEpoch: 2, state: 'lost' } }), 'webgl'), 50), /device changed during the drain/);
+  await assert.rejects(drainExpecting(expectBackend(fakePage({ status: 'complete', before: null }), 'webgl'), 50), /no atlas.device/);
+  assert.throws(() => expectBackend({}, 'gpu'), RangeError);
+});
