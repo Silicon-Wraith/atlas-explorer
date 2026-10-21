@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { LIMITS, within, idleWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { cleanupPages } from './support/workflow-cleanup.mjs';
 
 const { chromium } = await import('playwright');
 installSuiteDeadline('browser');
@@ -15,6 +16,12 @@ const hardware = process.argv.includes('--hardware');
 const reportPath = `artifacts/${hardware ? 'hardware-' : ''}browser-report.json`;
 let server, browser;
 const report = [];
+const writeReport = entries => writeFile(reportPath, JSON.stringify(entries, null, 2));
+async function closeDrained(resource, label, pages) {
+  const failed = await cleanupPages({ pages, drain: page => drainGpuWithin(page), report, writeReport,
+    closeAll: () => closeWithin(resource, label) });
+  if (failed) throw new Error(`${label}: GPU drain or report failed`);
+}
 const pass = (name, details = {}) => { report.push({ name, ...details }); console.log(`PASS ${name}`, details); };
 const errors = [];
 function watchErrors(page) {
@@ -148,6 +155,7 @@ try {
   await page.getByRole('button', { name: /Your discoveries/ }).click();
   await page.waitForFunction(() => document.querySelector('#saved-count').textContent === '1', null, { timeout: LIMITS.operation });
   assert.equal(await page.locator('.saved-wrapper').count(), 1);
+  await drainGpuWithin(page); // Reload discards the old document's accessible GL context too.
   await page.reload({ timeout: LIMITS.launch }); await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
   assert.equal(await page.locator('#saved-count').textContent(), '1');
   pass('Bookmarks persist across reloads');
@@ -175,7 +183,7 @@ try {
   await sharedPage.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
   assert.deepEqual(await ev(sharedPage, () => atlas.view), { re: '-2', im: '0', zoom: 40 });
   assert.deepEqual(await ev(sharedPage, () => atlas.scene), sharedScene, 'the generated link restores the complete scene');
-  await closeWithin(sharedPage, 'sharedPage'); pass('Shared URL restores precision and settings');
+  await closeDrained(sharedPage, 'sharedPage', [sharedPage]); pass('Shared URL restores precision and settings');
 
   await page.getByRole('button', { name: 'Capture', exact: true }).click();
   await page.locator('#export-size').selectOption('current');
@@ -220,17 +228,27 @@ try {
   await page.screenshot({ path: 'artifacts/atlas-laptop.png', animations: 'disabled' });
   pass('Laptop layout keeps exact-coordinate navigation accessible');
 
-  const response = await within(page.evaluate(async () => {
-    const start = performance.now(), initial = atlas.view.zoom;
-    for (let i = 0; i < 6; i++) {
-      document.querySelector('#zoom-in').click();
-      await new Promise(resolve => setTimeout(resolve, 40));
-    }
-    await new Promise(resolve => setTimeout(resolve, 300));
-    await atlas.whenIdle();
-    atlas.renderer.gl.finish();
-    return { elapsedMs: performance.now() - start, initial, final: atlas.view.zoom, width: atlas.renderer.canvas.width, height: atlas.renderer.canvas.height };
-  }), LIMITS.deep, 'repeated GPU navigation');
+  const precedingDrain = await drainGpuWithin(page);
+  assert.equal(precedingDrain.status, 'complete', 'GPU timing requires a live WebGL context');
+  const response = await within((async () => {
+    // Both elapsed observations use the host clock (including Playwright round trips). Prior
+    // work is already complete; submission and final completion share the original deep bound.
+    const start = performance.now();
+    const result = await ev(page, async () => {
+      const initial = atlas.view.zoom;
+      for (let i = 0; i < 6; i++) {
+        document.querySelector('#zoom-in').click();
+        await new Promise(resolve => setTimeout(resolve, 40));
+      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await atlas.whenIdle();
+      return { initial, final: atlas.view.zoom, width: atlas.renderer.canvas.width, height: atlas.renderer.canvas.height };
+    }, undefined, 'repeated GPU navigation submission', LIMITS.deep);
+    const submissionMs = performance.now() - start;
+    const completion = await drainGpuWithin(page, LIMITS.deep - submissionMs);
+    return { ...result, submissionMs, completionMs: performance.now() - start, precedingDrain, completion };
+  })(), LIMITS.deep, 'repeated GPU navigation');
+  assert.equal(response.completion.status, 'complete', 'the final GPU draw must complete');
   assert.ok(Math.abs(response.final - response.initial - 6 * Math.log10(2)) < 1e-10);
   assert.equal(response.width, 1280); assert.equal(response.height, 720);
   pass('Repeated GPU navigation reaches the latest view and full resolution', { response });
@@ -272,8 +290,8 @@ try {
   assert.equal(await ev(mobile, () => visualViewport.scale), 1);
   await within(touch.detach(), LIMITS.operation, 'touch.detach');
   pass('Mobile layout, settings, touch drag, and cursor-centered pinch zoom');
-  await closeWithin(mobileContext, 'mobileContext');
-  await closeWithin(context, 'context');
+  await closeDrained(mobileContext, 'mobileContext', mobileContext.pages());
+  await closeDrained(context, 'context', context.pages());
 
   // Exercise actual startup fallback, including a context that lacks float targets.
   for (const unavailable of ['webgl2', 'float-targets']) {
@@ -332,16 +350,25 @@ try {
       pass('CPU palette caching, render cancellation, and responsive navigation', { responsiveness });
     }
     pass(`Automatic CPU fallback when ${unavailable} is unavailable`, { startupMs });
-    await closeWithin(cpuContext, 'cpuContext');
+    await closeDrained(cpuContext, 'cpuContext', cpuContext.pages());
   }
 
   assert.deepEqual(errors, []);
   pass('No browser runtime errors');
-  await writeFile(reportPath, JSON.stringify(report, null, 2));
+  await writeReport(report);
 } catch (error) {
   report.push({ name: 'FAIL', error: error.stack });
   throw error;
 } finally {
-  await writeFile(reportPath, JSON.stringify(report, null, 2));
-  await closeWithin(browser, 'browser'); server?.kill('SIGTERM');
+  // Preserve the original failure if the suite deadline fires while pages are draining.
+  try { await writeReport(report); } catch { /* cleanupPages retries after the drains. */ }
+  const contexts = browser?.contexts() ?? [];
+  const failed = await cleanupPages({
+    pages: contexts.flatMap(context => context.pages()), drain: page => drainGpuWithin(page), report, writeReport,
+    closeAll: async () => {
+      for (const context of contexts) await closeWithin(context, 'context');
+      await closeWithin(browser, 'browser'); server?.kill('SIGTERM');
+    },
+  });
+  if (failed) process.exitCode = 1;
 }
