@@ -22,7 +22,7 @@ import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
@@ -1098,6 +1098,22 @@ async function runNumerics({ page }) {
   assert.deepEqual(mapRun.outcomes, { completed: mapBatches.length });
   const mapDecoded = decode(mapRun, mapBatches);
 
+  // Menger applicability probes (fix round 2): a shared seam whose touching boxes cover all eight
+  // orthants is union interior (codex-B08-consult2-findings.md); faces, strict interiors and exterior
+  // points keep their classes; exterior distances against B04's mengerDistance (analytic tolerance).
+  const { mengerDistance } = await import('./reference/menger.js');
+  const third = Math.fround(1 / 3), twoThirds = Math.fround(2 / 3);
+  const mengerProbes = [
+    { depth: 1, c: [-twoThirds, -twoThirds, -third], expected: 'interior' }, { depth: 1, c: [-twoThirds, -third, -twoThirds], expected: 'interior' },
+    { depth: 1, c: [Math.fround(0.8), Math.fround(0.8), Math.fround(0.8)], expected: 'interior' }, { depth: 1, c: [1, Math.fround(0.9), Math.fround(0.9)], expected: 'boundary' },
+    { depth: 1, c: [1.5, 0, 0], expected: 'exterior' }, { depth: 1, c: [0, 0, 0], expected: 'exterior' }, { depth: 2, c: [Math.fround(-7 / 9), Math.fround(-8 / 9), Math.fround(-8 / 9)], expected: 'interior' },
+    { depth: 2, c: [0, 0, 0], expected: 'exterior' },
+  ];
+  const mengerBatches = mengerProbes.map(({ depth, c }) => ({ modelId: 'menger', effective: { depth }, cap: 1, points: [c] }));
+  const mengerRun = await ev(page, pointsInPage, { label: 'menger', pitch: 1, batches: mengerBatches }, 'menger probes', LIMITS.deep);
+  assert.deepEqual(mengerRun.outcomes, { completed: mengerBatches.length });
+  const mengerDecoded = decode(mengerRun, mengerBatches).map(d => d[0]);
+
   // Per-stratum qualification table.
   const table = [];
   for (const row of strata) {
@@ -1129,6 +1145,15 @@ async function runNumerics({ page }) {
     }));
     assert.deepEqual(failures.slice(0, 8), [], `${failures.length} power-map failures`);
     return { probes: mapBatches.reduce((n, batch) => n + batch.points.length, 0), worst };
+  });
+  check('Menger applicability: union-interior seams, faces and exterior distances (fix round 2; recorded, not a manifest pass)', () => {
+    const rows = mengerProbes.map((probe, i) => ({ ...probe, actual: mengerDecoded[i].applicability, distance: mengerDecoded[i].distance, reference: mengerDistance(probe.c, probe.depth).distance }));
+    for (const row of rows) {
+      assert.equal(row.actual, row.expected, `depth ${row.depth} ${JSON.stringify(row.c)}`);
+      if (row.expected === 'exterior') assert.ok(Math.abs(row.distance - row.reference) <= Math.max(1e-6, 1e-3 * row.reference), `distance ${row.distance} vs ${row.reference}`);
+      else assert.equal(row.distance, 0);
+    }
+    return { rows };
   });
   check(NUMERICS_PASSES[0], () => {
     const rows = table.filter(row => row.kind.startsWith('bulb'));
@@ -1192,12 +1217,12 @@ async function runNumerics({ page }) {
       assert.equal(gpu.zero, false, `update ${n}`);
       assert.ok(gpu.mantissa >= 1 && gpu.mantissa < 2, `update ${n}: normalized mantissa ${gpu.mantissa}`);
       assert.equal(gpu.exponent, reference.exponent, `update ${n}: exponent`);
-      assert.ok(Math.abs(Math.log2(gpu.mantissa) - Math.log2(reference.mantissa)) <= tol.log2DE.value, `update ${n}: log2 D within 2^-10`);
+      assert.equal(gpu.mantissa, reference.mantissa, `update ${n}: exact binary32 state (fix round 2 ruling)`);
       if (n >= 44) assert.ok(gpu.exponent > 127, `update ${n} lies beyond the binary32 scalar range`);
       bitExact += Number(gpu.mantissa === reference.mantissa);
     }
     assert.deepEqual(probes[43].derivative, frozen, 'update 44 equals the frozen reference state');
-    return { update44: probes[43].derivative, update128: probes[127].derivative, bitExactMantissas: bitExact, of: 128 };
+    return { update44: probes[43].derivative, update128: probes[127].derivative, exactStates: bitExact, of: 128 };
   });
   check(NUMERICS_PASSES[5], () => {
     const { records, withheld } = buildArithmeticRecords({ results: table, implementationHashes: setup.implementationHashes });
@@ -1221,6 +1246,76 @@ async function runNumerics({ page }) {
   report.push({ name: 'Numerics teardown (recorded)', ...finish });
   assert.deepEqual(finish.uncaptured, [], `no uncaptured WebGPU errors: ${JSON.stringify(finish.uncaptured)}`);
   assert.deepEqual(failedChecks, [], `numerics checks failed: ${failedChecks.join('; ')}`);
+}
+
+// ---- the numerics-divergence diagnostic (B08 fix round 2; test-only, never gated) -----------------
+// Runs the served fields.wgsl bulb_power_map through a test-only compute shader that records, per
+// update, z_n, |z_n|, and the power map's normalization and complex-product intermediates, so the
+// first GPU/CPU-f32 divergence can be attributed to an operation. No production code is involved
+// beyond the served kernel source.
+const DIVERGENCE_STEPS = 20;
+async function divergenceInPage({ cases, intermediates, steps }) {
+  const { acquireDevice } = await import('/src/space/render/webgpu/device.js');
+  const { wgslConstants } = await import('/src/space/render/status.js');
+  const fields = await (await fetch('/src/space/render/webgpu/shaders/fields.wgsl')).text();
+  const { device } = await acquireDevice({ onLost: () => {} });
+  const code = `${wgslConstants()}\n${fields}\n@group(0) @binding(2) var<storage, read> menger_boxes: array<MengerBox>;
+@group(0) @binding(0) var<storage, read> input: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> out: array<vec4<f32>>;
+@compute @workgroup_size(1) fn diag(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let c = input[gid.x].xyz; let p = u32(input[gid.x].w);
+  var z = vec3<f32>(0.0);
+  for (var n = 0u; n < ${steps}u; n++) {
+    let r = length(z);
+    let m = bulb_power_map(z, r, p);
+    var a = vec4<f32>(0.0); var b = vec4<f32>(0.0); var wq = vec4<f32>(0.0);
+    ${intermediates}
+    let base = (gid.x * ${steps}u + n) * 5u;
+    z = m.xyz + c;
+    out[base] = vec4<f32>(z, length(z)); out[base + 1u] = vec4<f32>(r, a.x, a.y, a.z); out[base + 2u] = b; out[base + 3u] = wq; out[base + 4u] = m;
+  }
+}`;
+  const module = device.createShaderModule({ code });
+  const info = (await module.getCompilationInfo()).messages.filter(m => m.type === 'error').map(m => `${m.lineNum}: ${m.message}`);
+  if (info.length) return { error: info };
+  const pipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: 'diag' } });
+  const input = device.createBuffer({ size: cases.length * 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+  device.queue.writeBuffer(input, 0, new Float32Array(cases.flatMap(({ c, p }) => [...c, p])));
+  const bytes = cases.length * steps * 5 * 16;
+  const out = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+  const read = device.createBuffer({ size: bytes, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+  const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass();
+  pass.setPipeline(pipeline); pass.setBindGroup(0, device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: input } }, { binding: 1, resource: { buffer: out } }] }));
+  pass.dispatchWorkgroups(cases.length); pass.end();
+  encoder.copyBufferToBuffer(out, 0, read, 0, bytes); device.queue.submit([encoder.finish()]);
+  await read.mapAsync(GPUMapMode.READ);
+  const values = Array.from(new Float32Array(read.getMappedRange().slice(0)));
+  read.unmap(); device.destroy();
+  return { values };
+}
+// The intermediates replicate the kernel body under test (a: s, rho_s, rho; b: t, unit; wq: w, q).
+export const DIVERGENCE_INTERMEDIATES = {
+  'max-scaling': `let s = max(abs(z.x), abs(z.y)); if (s >= SMALLEST_NORMAL) { let t = vec2<f32>(z.x, z.y) / s; let rho_s = length(t); let rho = s * rho_s; let unit = t / rho_s;
+    var w = vec2<f32>(1.0, 0.0); var q = vec2<f32>(1.0, 0.0); for (var k = 0u; k < p; k++) { w = complex_mul(w, vec2<f32>(z.z, rho)); q = complex_mul(q, unit); }
+    a = vec4<f32>(s, rho_s, rho, 0.0); b = vec4<f32>(t, unit); wq = vec4<f32>(w, q); }`,
+  'pow2-scaling': `let s = max(abs(z.x), abs(z.y)); if (s >= SMALLEST_NORMAL) { let e = frexp(s).exp; let t = ldexp(vec2<f32>(z.x, z.y), vec2<i32>(-e)); let h = length(t); let rho = ldexp(h, e); let unit = t / h;
+    var w = vec2<f32>(1.0, 0.0); var q = vec2<f32>(1.0, 0.0); for (var k = 0u; k < p; k++) { w = complex_mul(w, vec2<f32>(z.z, rho)); q = complex_mul(q, unit); }
+    a = vec4<f32>(s, h, rho, 0.0); b = vec4<f32>(t, unit); wq = vec4<f32>(w, q); }`,
+};
+async function runNumericsDivergence({ page }) {
+  await page.goto(url, { timeout: LIMITS.launch });
+  await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
+  const { readFileSync } = await import('node:fs');
+  const a = JSON.parse(readFileSync('tests/reference/space-matrix/bulb-generic.json', 'utf8'));
+  const row = a.find(x => x.id === 'bulb/p4/n64/generic');
+  const cases = [340, 364].map(i => ({ id: row.cases[i].id, c: row.cases[i].inputs.effective, p: 4 }));
+  const variant = process.env.ATLAS_DIVERGENCE_VARIANT ?? 'max-scaling';
+  const result = await ev(page, divergenceInPage, { cases, intermediates: DIVERGENCE_INTERMEDIATES[variant], steps: DIVERGENCE_STEPS }, 'divergence probe', LIMITS.deep);
+  assert.ok(!result.error, JSON.stringify(result.error));
+  report.push({ name: 'Bulb orbit divergence probe (diagnostic; test-only)', variant, cases: cases.map((c, k) => ({ ...c,
+    steps: Array.from({ length: DIVERGENCE_STEPS }, (_, n) => { const o = (k * DIVERGENCE_STEPS + n) * 20, v = result.values.slice(o, o + 20);
+      return { n: n + 1, z: v.slice(0, 3), norm: v[3], rIn: v[4], s: v[5], rhoS: v[6], rho: v[7], t: v.slice(8, 10), unit: v.slice(10, 12), w: v.slice(12, 14), q: v.slice(14, 16), map: v.slice(16, 19), rp1: v[19] }; }) })) });
+  pass('Bulb orbit divergence probe recorded (diagnostic)');
 }
 
 // ---- harness ---------------------------------------------------------------------------------------
@@ -1286,7 +1381,7 @@ async function ensureServer() {
 
 let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
-const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics };
+const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence };
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
 let source = null, serverOwnership = null;
 
@@ -1323,7 +1418,7 @@ try {
   ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
   console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
   assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
-  if (['coexistence', 'recovery', 'numerics'].includes(options.group)) {
+  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence'].includes(options.group)) {
     // One launch under the complete profile; the application page is a WebGL (Plane) page, so its close
     // in the finally goes through the local expected-backend drain wrapper (drainExpecting).
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });

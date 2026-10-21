@@ -6,7 +6,8 @@
 //     index exactly; components, ln R and log2 DE within their tolerances); when status and index are
 //     eligible and the reference escaped, estimate availability must agree on both sides;
 //   - semantic cases (origin, polar axis, boundary, empty slices, adversarial) compare status, index,
-//     availability, every available continuous quantity, the zero state and log2 D; bulb axis values
+//     availability, every available continuous quantity, the zero state and log2 D (log2 D under
+//     2^-10 is a SUPPLEMENTAL check, not a frozen B04 tolerance; fix round 2 ruling); bulb axis values
 //     must keep x = y = 0 exactly (φ = 0);
 //   - a numerical failure (on any case, eligible or excluded), a missing or malformed result or a
 //     wrong result count is a hard failure; disagreements on excluded quantities are diagnostic only;

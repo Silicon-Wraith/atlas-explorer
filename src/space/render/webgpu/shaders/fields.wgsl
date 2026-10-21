@@ -5,7 +5,8 @@
 // the operation it protects; nothing detects a NaN after the fact, and non-finite inputs are
 // recognised from their bit patterns. A module that calls menger_distance declares
 //   var<storage, read> menger_boxes: array<MengerBox>;
-// at a binding of its own choosing (points.wgsl uses @binding(3)).
+// at a binding of its own choosing (points.wgsl owns @binding(3); B10 chooses its own slot). Both share
+// this declaration contract and the 32-byte MengerBox layout (lo.xyz, 0, hi.xyz, 0).
 
 struct Deriv { zero: bool, m: f32, e: i32 } // the explicit zero state, or D = m·2^e with 1 <= m < 2
 struct PointEval { status: u32, index: u32, value: vec4<f32>, d: Deriv, estimate: u32, log_r: f32, log2_de: f32 }
@@ -84,7 +85,8 @@ fn complex_mul(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
 // θ = acos(z/r), φ = atan2(y, x) and ρ = √(x² + y²) > 0: (z + iρ)^p = r^p(cos pθ + i sin pθ) = A + iB
 // and ((x + iy)/ρ)^p = cos pφ + i sin pφ = U + iV, so P_p(z) = (B·U, B·V, A) exactly in real
 // arithmetic; both powers are evaluated by repeated complex multiplication (B08 fix round 1,
-// Claude/Codex ruling (b), codex-B08-consult-findings.md).
+// Claude/Codex ruling (b), codex-B08-consult-findings.md; power-of-two normalization, fix round 2,
+// codex-B08-consult2-findings.md).
 fn bulb_power_map(z: vec3<f32>, r: f32, p: u32) -> vec4<f32> {
   if (r == 0.0) { return vec4<f32>(0.0); } // the power map is zero at r = 0
   var rp1 = 1.0;
@@ -97,13 +99,14 @@ fn bulb_power_map(z: vec3<f32>, r: f32, p: u32) -> vec4<f32> {
     for (var k = 0u; k < p; k++) { zp = zp * z.z; }
     return vec4<f32>(0.0, 0.0, zp, rp1);
   }
-  // x² + y² can underflow in binary32, so (x, y) is scaled by s = max(|x|, |y|) before its norm.
-  // guard: s >= the smallest normal binary32 here, so the quotient is finite with |t| <= 1
-  let t = vec2<f32>(z.x, z.y) / s;
-  let rho_s = length(t); // in [1, √2]: the larger scaled component is ±1
-  let rho = s * rho_s;
-  // guard: rho_s >= 1
-  let unit = t / rho_s;
+  // x² + y² can underflow in binary32, so (x, y) is scaled exactly by the power of two 2^-e with
+  // s = m·2^e, 0.5 <= m < 1 (fix round 2, Codex's uniform candidate): no rounded quotient enters ρ.
+  let e = frexp(s).exp;
+  let t = ldexp(vec2<f32>(z.x, z.y), vec2<i32>(-e)); // |t| <= 1, the larger component in [0.5, 1)
+  let h = length(t); // in [0.5, √2)
+  let rho = ldexp(h, e); // exact: >= 2^-126 because s >= SMALLEST_NORMAL
+  // guard: h >= 0.5
+  let unit = t / h;
   let base = vec2<f32>(z.z, rho);
   var w = vec2<f32>(1.0, 0.0);
   var q = vec2<f32>(1.0, 0.0);
@@ -188,24 +191,34 @@ fn box_distance(p: vec3<f32>) -> AnalyticEval {
 }
 
 // The finite Menger union at depth 1 (20 boxes) or 2 (400 boxes): the minimum point-to-box
-// distance outside the union. A point on a box but strictly inside none is reported as boundary
-// (the shared-face orthant analysis of B03's binary64 evaluator is not repeated here).
+// distance outside the union. A point strictly inside a box is interior; a point on box faces is
+// interior when the boxes touching it cover all eight orthants around it (a shared seam), otherwise
+// boundary (fix round 2: union-interior classification, as B03's binary64 evaluator decides it).
+// Orthant o has bit `axis` set for the + side; a box whose lo face holds the point covers only +.
+const ORTHANTS_PLUS: vec3<u32> = vec3<u32>(0xaau, 0xccu, 0xf0u);
 fn menger_distance(p: vec3<f32>, depth: u32) -> AnalyticEval {
   if (!admissible3(p) || (depth != 1u && depth != 2u)) { return analytic_failure(); }
   let count = select(400u, 20u, depth == 1u);
   if (arrayLength(&menger_boxes) < count) { return analytic_failure(); }
   var nearest = COORDINATE_LIMIT;
   var touched = false;
+  var orthants = 0u;
   for (var i = 0u; i < count; i++) {
     let b = menger_boxes[i];
     let gap = max(max(b.lo.xyz - p, p - b.hi.xyz), vec3<f32>(0.0));
     if (all(gap == vec3<f32>(0.0))) {
       if (all(p > b.lo.xyz) && all(p < b.hi.xyz)) { return AnalyticEval(true, 0.0, APPLICABILITY_INTERIOR); }
+      var mask = 0xffu;
+      for (var axis = 0u; axis < 3u; axis++) {
+        if (p[axis] == b.lo[axis]) { mask = mask & ORTHANTS_PLUS[axis]; }
+        else if (p[axis] == b.hi[axis]) { mask = mask & (~ORTHANTS_PLUS[axis] & 0xffu); }
+      }
       touched = true;
+      orthants = orthants | mask;
     } else {
       nearest = min(nearest, length(gap));
     }
   }
-  if (touched) { return AnalyticEval(true, 0.0, APPLICABILITY_BOUNDARY); }
+  if (touched) { return AnalyticEval(true, 0.0, select(APPLICABILITY_BOUNDARY, APPLICABILITY_INTERIOR, orthants == 0xffu)); }
   return AnalyticEval(true, nearest, APPLICABILITY_EXTERIOR);
 }

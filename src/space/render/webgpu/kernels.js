@@ -19,15 +19,15 @@ export const KERNEL_FORMULATION = deepFreeze({
   // The bulb power map (B08 fix round 1; Claude/Codex ruling (b), codex-B08-consult-findings.md):
   // (z + iρ)^p and ((x + iy)/ρ)^p by repeated complex multiplication, returning (B·U, B·V, A); it
   // supersedes the acos/atan2/sin/cos evaluation of 6e99c4b, whose failed GPU evidence is retained.
-  bulb: { form: 'bulb-complex-power-v1', supersedes: '6e99c4b acos-atan2-trig' },
+  bulb: { form: 'bulb-complex-power-pow2-v2', supersedes: ['6e99c4b acos-atan2-trig', 'c511240 bulb-complex-power-v1 (max-quotient normalization)'] },
 });
 export const KERNEL_SOURCE_IDS = Object.freeze(['fields', 'points']);
 export const FIELD_IDS = Object.freeze(['sphere', 'box', 'menger', 'mandelbulb', 'quaternion-julia']);
 export const DERIVATIVE_PIPELINE_ID = 'points-derivative';
 export const pointsPipelineId = modelId => `points-${modelId}`;
-// The points pass has no entry in B00's PASSES; a point batch is submitted as field evaluation
-// under the trace family's pass name (flagged for a ruling in the B08 report).
-export const POINT_BATCH_PASS = 'trace';
+// Point and derivative batches use B00's existing 'probe' pass, with their own pipeline IDs and bounds
+// (fix round 2 ruling, codex-B08-consult2-findings.md); B00 needs no new pass.
+export const POINT_BATCH_PASS = 'probe';
 
 export const POINT_INPUT_BYTES = 16; // vec4<f32>: x, y, z, 0 (probes: grow, add, updates, 0)
 export const POINT_RESULT_BYTES = 64;
