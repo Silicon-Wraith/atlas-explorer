@@ -115,6 +115,14 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     }
   }
   function forgetGeometry() { if (geometryCache) release(geometryCache.handles); geometryCache = null; }
+  function compatibleGeometry(request, generation = request.generation) {
+    return geometryCache && geometryCache.request.generation.deviceEpoch === request.generation.deviceEpoch &&
+      request.generation.deviceEpoch === generation.deviceEpoch && generation.deviceEpoch === backend.currentEpoch() &&
+      geometryCache.request.generation.geometryRevision === request.generation.geometryRevision &&
+      request.generation.geometryRevision === generation.geometryRevision && geometryCache.request.keys.geometryKey === request.keys.geometryKey &&
+      geometryCache.sampleKey === sampleKey(request.keys.geometryKey, request.quality.sampling, 0) &&
+      geometryCache.handles.every(handle => owners.has(handle));
+  }
   function fresh(record) {
     try { return !destroyed && current === record && !record.result && !record.cancelled && record.request.viewId === viewId &&
       record.request.generation.deviceEpoch === backend.currentEpoch() && isPublishable(record.request, record.currentGeneration()); }
@@ -152,7 +160,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     } : null, details: { ...fields, geometryRequestId: record.geometryRequestId, appearanceRebound: record.geometryRequestId !== record.request.requestId,
       ...(result.continuation ? { continuation: result.continuation } : {}), ...(result.submitted ? { submitted: result.submitted } : {}),
     } });
-    record.result = Object.freeze({ ...result, report });
+    record.result = Object.freeze({ ...result, ...(record.error?.code === undefined ? {} : { errorCode: record.error.code }), report });
     release(record.handles); record.handles = []; jobs.delete(record.request.jobId);
     emit('Report', report); record.done.resolve(record.result);
   }
@@ -569,9 +577,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         hold(flatHandles(targets));
         if (record.result || destroyed) { release(flatHandles(targets)); return; }
         record.handles.push(...flatHandles(targets)); record.targets = targets;
-        if (geometryCache && geometryCache.request.generation.deviceEpoch === request.generation.deviceEpoch && geometryCache.request.keys.geometryKey === request.keys.geometryKey &&
-          geometryCache.request.generation.geometryRevision === request.generation.geometryRevision &&
-          geometryCache.sampleKey === sampleKey(request.keys.geometryKey, request.quality.sampling, 0) && geometryCache.handles.every(handle => owners.has(handle))) {
+        if (compatibleGeometry(request)) {
           const handles = { ...targets.handles };
           for (const [i, name] of ['depth', 'status', 'normal'].entries()) {
             release([handles[name]]); record.handles = record.handles.filter(handle => handle !== handles[name]); handles[name] = geometryCache.handles[i];
@@ -647,7 +653,35 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     } catch { return stale(); }
     finally { release(handles); }
   }
-  return Object.freeze({ prepare, render, pick, classifyEffectiveCamera, cancel,
+  // Synchronous per-call accounting, in bytes. Consult the live viewport even if
+  // an export most recently rendered (or failed). Appearance-only edits leave
+  // geometry reusable; an unsubmitted geometry/epoch change does not.
+  function releaseObsolete() {
+    const receipt = { freed: 0, retiring: 0 };
+    if (!geometryCache) return Object.freeze(receipt);
+    const live = interactive ?? current;
+    if (live) {
+      let generation;
+      try { generation = live.currentGeneration(); } catch { return Object.freeze(receipt); }
+      // Without a live generation there is no evidence that the cache is obsolete.
+      if (!generation || compatibleGeometry(live.request, generation)) return Object.freeze(receipt);
+    }
+    // Shared publication, job and pick owners stay live, and are counted in
+    // neither field. Diagnostics describe only the known handles we relinquish;
+    // unrelated staging buffers and already-retiring resources are excluded.
+    const relinquished = geometryCache.handles.filter(handle => owners.get(handle) === 1);
+    const matches = (entry, handle) => entry.id === handle.id && entry.epoch === handle.epoch;
+    const before = backend.diagnostics().inventory.filter(entry => relinquished.some(handle => matches(entry, handle)));
+    forgetGeometry();
+    const after = backend.diagnostics().inventory;
+    for (const entry of before) {
+      const remaining = after.find(value => matches(value, entry));
+      if (!remaining) receipt.freed += entry.bytes;
+      else if (remaining.state === 'retiring') receipt.retiring += entry.bytes;
+    }
+    return Object.freeze(receipt);
+  }
+  return Object.freeze({ prepare, render, pick, classifyEffectiveCamera, cancel, releaseObsolete,
     resize({ width, height }) {
       const previous = current?.request; if (!previous || sameSize(previous.output, { width, height })) return null;
       const generation = { ...previous.generation, viewRevision: previous.generation.viewRevision + 1, geometryRevision: previous.generation.geometryRevision + 1 };
