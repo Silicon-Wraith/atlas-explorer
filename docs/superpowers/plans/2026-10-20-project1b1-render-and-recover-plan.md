@@ -52,7 +52,27 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4.3 — applies the B00 contract rulings agreed between Claude's B00 review (r1) and
+**Revision:** 4.4 — records rulings agreed between Claude and Codex (no new user decision; spec
+rev 4.4). **B02 rulings 1–10** (Claude's B02 reviews r1/r2 and Codex run 20261021T072056Z-9083):
+(1) decimal grammar with lexical significant-digit counting, explicit exponent bound, signed zero;
+(2) `toDouble`/`toBinary32` reject non-finite results; (3) **AMENDED by Codex, accepted by Claude**
+— `ANCHOR_LIMITS = {digits: 400, exponent: [-400,400]}` and the shared `parseAnchorDecimal`
+(normalized leading position in [−400, 400]; admitted exponents span [−799, 400]), which B05
+imports; `anchorAdd` returns `{unchanged: true, reason: 'precision-limit'}` rather than emit an
+inadmissible anchor; B05 derives its own working-integer budget (exact products can need 2,200
+places); recentre drops a decimal tail only within an aggregate `2⁻⁴⁰ × scale` bound; (4) scale,
+local-vector and quaternion limits; (5) Menger default `{depth: 1}`; (6) `escapeRadius` domain and
+two outward steps; (7) tagged `SUPPORTED_DOMAINS` and exact registry arrays (B03 consumes the
+tags; B08/B10 own sampling vocabulary); (8) exact implementation-hash and profile matching; (9)
+`PRECISION_CARRY_FORWARD_LIMITATIONS` (any amendment to the *Precision carry-forward* paragraph
+updates the constant in the same commit); (10) B11 owns the palette import move and the
+Space-to-Plane import-boundary assertion. **B01 joint rulings** (Codex run
+20261021T073220Z-227f): (a) the annex distinguishes adapter, requested and granted limits and
+requests only task-needed increases — no blanket `requiredLimits`; `maxStorageTexturesPerShaderStage`
+(default 4) is the binding risk, so read-only inputs use sampled bindings; owner B06; (b) spec §7.4
+erratum — identity is configuration-dependent (Chrome 151 empty, Chrome 155 populated) and the code
+asserts neither; (c) B01's fix round includes a developer-features isolation experiment, labelled a
+portability experiment. **Rev 4.3** — applies the B00 contract rulings agreed between Claude's B00 review (r1) and
 Codex (run 20261021T060324Z-4e7f), and the user's decision of 2026-10-21 "approve amending the
 adopted §9.1 annex to add allocate" (spec rev 4.3). Final rulings: (1) pipeline ABI — binding
 order, access sets, uniform layouts, override constants, split render entry points, `layout:
@@ -290,7 +310,16 @@ cites from Global Constraints); any later amendment changes both together.
   `maxBufferSize`, `maxStorageBufferBindingSize`, `maxUniformBufferBindingSize`,
   `maxTextureDimension2D`,
   `maxComputeWorkgroupsPerDimension`, `maxComputeInvocationsPerWorkgroup`, `maxBindGroups`,
-  `maxStorageBuffersPerShaderStage`.
+  `maxStorageBuffersPerShaderStage`, `maxStorageTexturesPerShaderStage`. Adapter-supported,
+  requested and granted device limits are distinct and each is recorded; allocations and
+  pipeline layouts are validated against the granted limits. `requestDevice` passes no blanket
+  `requiredLimits`: the WebGPU defaults suffice for the specified workloads (the largest 4K
+  target texture is 126.5625 MiB, the 4K target set is ten textures rather than one buffer, and
+  texture allocations are not governed by the buffer-binding limits), so a task requests only an
+  increase it needs and the adapter supports, with that need stated. The binding risk is
+  `maxStorageTexturesPerShaderStage` (default 4): read-only inputs use sampled-texture bindings
+  (`textureLoad`) rather than storage textures. B06 owns this (rev 4.4, joint ruling with Codex
+  run 20261021T073220Z-227f).
 - **Epochs and loss.** Every acquisition attempt receives a fresh identity; the epoch is an
   integer advanced on each successful acquisition, supplied to requests as
   `generation.deviceEpoch` (no second editable epoch field). The epoch is zero if and only if the
@@ -714,6 +743,14 @@ representative; B11 verifies the complete product set.
 identity fields as observed; whether `timestamp-query` was granted). A failure here blocks B06
 onward and goes to the user with the evidence.
 
+**Fix round 1 (rev 4.4, joint ruling (c), Codex run 20261021T073220Z-227f):** B01's fix round
+includes a separately reported developer-features isolation experiment: two fresh-profile
+launches on the same host, build, driver and source, under the GPU lock and handoff, differing
+only in `--enable-webgpu-developer-features`; each records effective arguments, all four identity
+fields, fallback status, adapter/device limits and features, and the same acquisition/compute
+probe. The flag-absent run is labelled a **portability experiment**; it cannot replace acceptance
+under the mandated profile, and it does not block B06.
+
 ---
 
 ### Task B02: Space scenes — model codecs, effective parameters, domains (spec §5, §10.1, §11, §14)
@@ -729,36 +766,69 @@ onward and goes to the user with the evidence.
 **Interfaces:**
 - Consumes: `createSceneCodec({modelCodecs, maxSceneBytes})`, `SceneError`, `requireObject`,
   `isPlainObject`, `canonicalJson`, `APPLICATION_VERSION`, `DEFAULT_MAX_SCENE_BYTES` (1a T03).
-- Produces (`parameters.js`): `MAX_PARAMETER_DIGITS = 64`, `parseDecimal(text, path) → {sign,
-  digits, exponent}` (accepts only `-?\d+(\.\d+)?([eE][-+]?\d+)?` with ≤ 64 significant digits and
-  |exponent| ≤ 400; `SceneError('invalid-value', …, path)` otherwise; never materializes beyond
+- Produces (`parameters.js`): `MAX_PARAMETER_DIGITS = 64`, `ANCHOR_LIMITS = {digits: 400,
+  exponent: [-400,400]}` (deeply frozen), `parseAnchorDecimal(text, path) → {sign, digits,
+  exponent}`. It shares the parameter grammar and bounded scanner, uses a 400-significant-digit
+  budget, requires explicit exponent magnitude ≤400, and for nonzero values requires normalized
+  leading position `digits.length + exponent − 1` in `[-400,400]`. Zero bypasses only the
+  leading-position check. Invalid input throws `SceneError('invalid-value', …, path)`. Parsing
+  never materializes the anchor as a Number or BigInt. `parseDecimal(text, path) → {sign,
+  digits, exponent}` (accepts only `-?\d+(\.\d+)?([eE][-+]?\d+)?` with ≤64 significant digits counted lexically from the first nonzero mantissa digit
+  through the last mantissa digit, including trailing zeros, and explicit exponent magnitude ≤400.
+  The normalized exponent may exceed that bound. Signed zero is preserved through conversion and
+  its bit pattern; `SceneError('invalid-value', …, path)` otherwise; never materializes beyond
   the budget), `compareDecimal(a, b) → -1 | 0 | 1` (exact), `inRange(text, lo, hi)` (exact, before
-  any rounding), `toDouble(text)`, `toBinary32(text) → {requested, double, value, bits}` (`value =
-  Math.fround(double)`; `bits` = 8 lowercase hex digits), `effectiveParameters(modelId,
+  any rounding), `toDouble(text)` validates the decimal and returns `Number(text)`, throwing
+  `SceneError('invalid-value')` if the result is non-finite. `toBinary32(text) → {requested,
+  double, value, bits}` uses `double = toDouble(text)` and `value = Math.fround(double)`, throwing
+  `SceneError('invalid-value')` if `value` is non-finite. This two-stage conversion, including
+  double rounding, defines ordinary-profile semantics. Underflow to a subnormal or signed zero
+  remains defined; `bits` contains eight lowercase hexadecimal digits. `effectiveParameters(modelId,
   parameters) → {requested, effective, bits}` (`mandelbulb`: `power` an integer string 2–8;
-  `quaternion-julia`: `C[4]` and `kappa` in [−4, 4]; `menger`: `depth` 1 or 2; `sphere`, `box`:
-  `{}`), `escapeRadius(effectiveC: [4 × f32]) → {value, bound}` (`value = max(2, (1 + √(1 +
+  `quaternion-julia`: `C[4]` and `kappa` in [−4, 4]; `menger`: `depth` is the JSON integer selector 1 or 2, defaulting to 1 for native creation.
+  Every effective numeric parameter, including depth, carries binary32 bits; `sphere`, `box`:
+  `{}`), `escapeRadius(effectiveC: [4 × finite, binary32-exact values in [-4,4]]) → {value, bound}`
+  (invalid shape reports `invalid-value` at `effectiveC`, and an invalid component reports it at
+  `effectiveC[i]`. The bound uses exactly two `nextUp32` steps after each rounded operation.) (`value = max(2, (1 + √(1 +
   4‖C‖))/2)` in binary32 arithmetic; `bound` outward-rounded by two `nextUp` steps after each
   rounding operation so `bound ≥` the real-arithmetic radius), `sliceIsEmpty(effectiveKappa, bound)
   → boolean` (strict `|κ| > bound`), `nextUp32(x)`, `nextDown32(x)`.
-- Produces (`validation-domains.js`): `SUPPORTED_DOMAINS` (per model, the requested-value
-  ranges above), `inSupportedDomain(modelId, parameters) → {ok, violations: [{path, reason}]}`,
+- Produces (`validation-domains.js`): `SUPPORTED_DOMAINS` uses `{kind: 'set', values: [...]}` for power and
+  depth, and inclusive `{kind: 'interval', min: '-4', max: '4'}` descriptors for kappa and each of
+  C’s four components. Sphere and box use `{}`. This admission metadata is separate from registry
+  coverage. `inSupportedDomain(modelId, parameters) → {ok, violations: [{path, reason}]}`,
   `VALIDATION_RECORD_FIELDS = ['recordId', 'modelId', 'evidenceClass', 'implementationHashes',
   'referenceHashes', 'matrixHash', 'profile', 'testedParameters', 'testedSamplingConditions',
   'testedDomain', 'coverage', 'inconclusive', 'limitations']` (`evidenceClass` is `'arithmetic'`,
   `'tracing'` or `'geometric'`; `testedDomain` is the exact input set or spatial sampling domain),
   `createValidationRegistry() → {register(record), lookup({modelId, evidenceClass,
   implementationHashes, profile, effective, sampling, domain}) → record | null, list()}` (a lookup
-  matches only when every hash equals the record's, the effective inputs and sampling conditions
-  fall inside the tested sets, and the requested `domain` matches the record's `testedDomain`
+  matches only when `implementationHashes` has exactly the record’s key set and equal values,
+  `profile` is equal, and effective inputs and sampling conditions match their tested
+  alternatives. Parameter and sampling arrays enumerate alternatives; vectors are alternatives
+  represented as nested arrays. Domain values compare exactly except the closed aliases `heights
+  → height` and `distances → distance`, whose arrays enumerate alternatives. Tested and query
+  condition key sets match exactly after alias mapping. Arrays never imply intervals. Reference
+  and matrix hashes are provenance; B08/B10 pin them at registration and issue new record IDs for
+  a re-frozen matrix. B08/B10 define each evidence class’s sampling vocabulary, and callers
+  project to that vocabulary. The requested `domain` matches the record's `testedDomain`
   for every evidence class — point/input sets for arithmetic, ray/condition sets for tracing,
   camera/anchor sampling domains for geometric; an omitted domain returns `null`; `list()` shows
   historical records without claiming applicability; nothing is inferred, and a local detail
   record never matches another camera patch). B02 registers no records; B08 and B10 do.
+  `PRECISION_CARRY_FORWARD_LIMITATIONS` is a frozen array containing the five substantive
+  sentences preceding “Every 1b.1 validation record…” in the binding Precision carry-forward
+  paragraph, verbatim with prose line wraps joined. B08/B10 assert that every product record
+  includes every entry. Generic registry fixtures may use empty limitations. B02's test reads that
+  paragraph from this plan at test time, so any amendment to the paragraph must update the
+  constant in the same commit (rev 4.4).
 - Produces (`scene-adapter.js`): `SPACE_CONVENTIONS = 'atlas-space-rh-zup-abcd-v1'`,
   `SPACE_MODELS` (`sphere@1`, `box@1`, `menger@1`, `mandelbulb@1`, `quaternion-julia@1`),
-  `CAMERA_KIND = 'anchored-perspective-v1'`, `CAMERA_LIMITS = {anchorDigits: 400, exponent:
-  [−1074, 1023], localMagnitude: 2 ** 20, fovDegrees: [10, 120]}`, `TRACING_PROFILE =
+  `CAMERA_KIND = 'anchored-perspective-v1'`, `CAMERA_LIMITS = {anchorDigits: 400, anchorExponent: [-400,400],
+  exponent: [-1074,1023], localMagnitude: 2 ** 20, fovDegrees: [10,120]}`; the anchor limits
+  derive from `ANCHOR_LIMITS`. Scale mantissa is in `[1,2)`. Local-coordinate limits apply to
+  Euclidean vector norms. Quaternion admission requires `abs(norm(q) − 1) ≤ 1e-6`; stored
+  components are neither normalized nor sign-canonicalized. `TRACING_PROFILE =
   'surface-v1'`, `TRACING_LIMITS = {maxIterations: [1, 512], maxSteps: [1, 1024], targetSamples:
   [1, 64]}`, `VIEW_MODES = ['shaded', 'normals', 'depth', 'steps', 'termination']`,
   `SPACE_DEFAULTS` (camera: anchor `["0", "0", "0"]`, scale `{mantissa: 1, exponent: 0}`,
@@ -769,7 +839,9 @@ onward and goes to the user with the evidence.
   'full', fog: {enabled: false}, viewMode: 'shaded'}` (`lightingQuality` is `'direct'` |
   `'full'`; the palette selects the depth and step-count ramps and is enabled in those modes;
   normal and termination colours are fixed; shaded mode keeps the neutral inspection material); sampling `{seed: 1, sequence: 'atlas-aa-v1', targetSamples: 8}`;
-  `slices: []`), `spaceModelCodecs`, `createSpaceSceneAdapter({maxSceneBytes}) → {sceneCodec,
+  `slices: []`. Native model-parameter defaults are `{}` for sphere and box, `{depth: 1}` for
+  Menger, `{power: '8'}` for Mandelbulb, and `{C: ['-0.2','0.8','0','0'], kappa: '0'}` for
+  quaternion Julia. Sampling seed is an integer in `[0, 2³²−1]`.), `spaceModelCodecs`, `createSpaceSceneAdapter({maxSceneBytes}) → {sceneCodec,
   createSpaceScene({model, parameters?, camera?, iteration?, tracing?, appearance?, sampling?}),
   encodeSceneFile(scene), decodeSceneFile(text)}`, and the default adapter's bound methods as
   named exports plus `SPACE_INITIAL_SCENE` (the bulb default).
@@ -880,8 +952,10 @@ covers `space/numerics/`.
 - Test: `tests/unit/space-derivative.test.js`, `tests/unit/space-models.test.js`
 
 **Interfaces:**
-- Consumes: `effectiveParameters`, `escapeRadius`, `sliceIsEmpty` (B02); `POINT_STATUS`,
-  `ESTIMATOR_CATEGORIES` (B00).
+- Consumes: `effectiveParameters`, `escapeRadius`, `sliceIsEmpty`, `SUPPORTED_DOMAINS` (B02);
+  `POINT_STATUS`, `ESTIMATOR_CATEGORIES` (B00). Each model record's `supportedParameters` uses
+  B02's tagged `SUPPORTED_DOMAINS` descriptors (`{kind: 'set', values}` and inclusive `{kind:
+  'interval', min, max}`) rather than untagged arrays (rev 4.4).
 - Produces (`derivative.js`): `ZERO` (frozen `{zero: true}`), `fromNumber(x) → {zero: false, m,
   e}` (`0.5 ≤ m < 1`, integer `e`), `update(d, grow, {add = 1}) → D'` for `D' = grow·D + add`
   without materializing an overflowing scalar, `log2(d) → number | null` (`null` for the zero
@@ -1072,16 +1146,23 @@ table in the task report.
 - Test: `tests/unit/space-camera.test.js`
 
 **Interfaces:**
-- Consumes: `CAMERA_KIND`, `CAMERA_LIMITS` (B02). Anchors use their own bounded decimal parser
-  (`parseAnchorDecimal`, up to `CAMERA_LIMITS.anchorDigits`); B02's `parseDecimal` stays limited to
-  64 significant digits for parameters.
+- Consumes `CAMERA_KIND` and `CAMERA_LIMITS` from B02’s scene adapter, and `parseAnchorDecimal`
+  from B02’s `numerics/parameters.js`. B05 uses that parser for anchor admission and emitted
+  anchors; it does not implement another anchor parser. Parameter parsing remains limited to 64
+  significant digits.
 - Produces: `RECENTRE_BOUND_LOG2 = -40` (the bound is `2⁻⁴⁰ × scale`, kept in scaled or
   log form; it is never materialized as a possibly underflowing double), `anchorAdd(anchor, scale,
-  local) → anchor'` (exact decimal arithmetic on `BigInt`-scaled integers), `recentre(camera) →
+  local) → anchor' | {unchanged: true, reason: 'precision-limit'}` uses exact decimal arithmetic on
+  BigInt-scaled integers. Return an anchor only if it satisfies B02’s shared parser; otherwise
+  return the precision-limit outcome without changing the input anchor. `recentre(camera) →
   {camera, driftBoundLog2} | {camera, unchanged: true, reason: 'precision-limit'}` (moves the
   local part into the anchor when `‖positionLocal‖ > 1024` or `< 2⁻¹⁰`, re-expressing `focusLocal`
-  consistently; when the bound cannot be met within `anchorDigits`, the camera is returned
-  unchanged with an explicit precision-limit result), `encodeOrdinaryOrigin(camera) → {highF32:
+  consistently; when the bound cannot be met within both the digit and anchor-exponent limits, the camera is
+  returned unchanged with an explicit precision-limit result. A decimal tail may be discarded only
+  after bounding the total resulting world-space error, including focus re-expression, by
+  `2⁻⁴⁰ × scale`; individual digit magnitudes alone are insufficient. B05 derives its
+  working-integer budget separately: anchor exponents alone do not bound exact scale/local
+  multiplication.), `encodeOrdinaryOrigin(camera) → {highF32:
   [3], lowF32: [3], errorBoundLog2} | {unavailable: true, reason}` (the ordinary binary32
   transport: `high` is the binary32 rounding of the double–double value, `low` the binary32
   rounding of the exact remainder, computed in that order from the exact anchor, after
@@ -1184,7 +1265,13 @@ presentation and readback; shared and UI code never see `GPUDevice`); §8.3 (1 G
 accounting; Plane separate); §15 (first-use compilation visible; the cap checked before
 allocating); the annex (admission leases; fresh attempt identity; loss observer attached at
 acquisition; transactional configuration; ping-pong accumulation; no direct canvas copy;
-banded readback with 256-byte row alignment).
+banded readback with 256-byte row alignment). **Device limits (rev 4.4, joint ruling (a), Codex run
+20261021T073220Z-227f):** B06 records adapter-supported, requested and granted limits
+separately, validates allocations and pipeline layouts against the granted limits, and requests
+no blanket `requiredLimits` (the defaults suffice) — only an increase a task needs and the
+adapter supports; `maxStorageTexturesPerShaderStage` (default 4) is the binding risk, so
+read-only inputs use sampled-texture bindings; workgroup-storage and binding limits are checked
+against the eventual shaders.
 
 - [ ] **Step 1: Node tests (allocator):** `allocation is refused before creation when it would
   exceed the cap`; `release keeps bytes tracked until the last retaining owner retires`;
@@ -1519,6 +1606,9 @@ per family with their domains.
 - Modify (mechanical): `src/plane/palettes.js` — imports `PALETTES`, `paletteBytes` and the
   interpolation from `src/shared/palettes.js` and re-exports them; keeps `colorPixel` unchanged;
   its exports and byte results stay identical
+- Modify (mechanical): `src/space/scene-adapter.js` — import `PALETTES` from
+  `src/shared/palettes.js`. Add an assertion that no `src/space/**` module imports `src/plane/**`
+  (rev 4.4, B02 ruling 10).
 - Modify: `tests/space.mjs` (`rendering` group), `tests/suites.manifest.json`
 - Test: `tests/unit/shared-palettes.test.js`; headed checks.
 

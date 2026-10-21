@@ -5,7 +5,7 @@ affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera 
 from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
 compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
 (4) one Discoveries control, filtered per workspace and fed by discovery sources, with only the
-local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.3 (rev 2 was
+local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.4 (rev 2 was
 Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply Codex's co-author reviews;
 rev 4 adds Project 1c, Space deep zoom, by the user's decision "Yes, add deep zoom as 1c in Project 1."
 (2026-10-20) — §21; rev 4.2 applies the user's decisions of 2026-10-21: the §9.1 WebGPU backend annex
@@ -15,7 +15,17 @@ layout, §19.1), and the §13.2
 precision-badge erratum; rev 4.3 applies the user's decision of 2026-10-21 "approve amending the
 adopted §9.1 annex to add allocate" (§9 method list, §9.1 Allocator and limits) together with the
 B00 contract clarifications agreed with Codex (run 20261021T060324Z-4e7f: pipeline descriptor
-ownership, epoch and ticket timing). **§21 (1c) remains a draft amendment awaiting the user's review.**)
+ownership, epoch and ticket timing); rev 4.4 records rulings agreed between Claude and Codex, with
+no new user decision: B02 rulings 1–10 (Codex run 20261021T072056Z-9083, ruling 3 amended by Codex
+and accepted by Claude) — §5.2 Space anchors admitted through the shared anchor parser (≤ 400
+significant digits, explicit exponent magnitude ≤ 400, normalized leading position in [−400, 400])
+and the two-stage `Number`/`Math.fround` parameter conversion with non-finite results rejected;
+and the B01 joint rulings (Codex run 20261021T073220Z-227f) — (a) §9.1 distinguishes adapter,
+requested and granted limits, requests only task-needed increases (no blanket `requiredLimits`;
+`maxStorageTexturesPerShaderStage` is the binding risk; read-only inputs use sampled bindings;
+owner B06), (b) the §7.4 identity erratum (configuration-dependent: Chrome 151 empty, Chrome 155
+populated; the code asserts neither), (c) a developer-features isolation experiment, labelled a
+portability experiment, in B01's fix round (plan). **§21 (1c) remains a draft amendment awaiting the user's review.**)
 **Authors:** Claude and Codex, co-designed as peers. The verbatim exchange is archived in
 `docs/codesign/project1-log.md`, a project-specific log kept beside the protocol's
 `docs/codesign/conversation-log.md` (which holds the charter and Project 0 co-design).
@@ -80,7 +90,8 @@ latency 18–22 ms, 10 minutes stable on the RTX 6000 Ada; WGSL may fuse multipl
 precision-sensitive quaternion arithmetic requires remediation. The subsequent update relayed on
 2026-10-20 says E8 invalidated the G5-A formulation and identifies replacement work as G5-D. These
 reports do not establish qualification; the final recorded decision and numerical evidence control
-the product formulation. Chrome 151 reports empty adapter device strings; headless WebGPU is unreliable on
+the product formulation. Chrome 151 reported empty adapter device strings (historical; identity is configuration-dependent,
+§7.4 erratum); headless WebGPU is unreliable on
 this host.
 
 ## 3. Releases and the acceptance demonstration
@@ -246,7 +257,9 @@ A scene describes an experiment. Runtime state describes its execution and is no
   `[512, 1024, 2048, 4096, 8192, 16384][detail] + max(0, ceil((zoom − 3) · 32))` (today's
   `app.js:85`).
 - **Space camera:** `anchored-perspective-v1` (rev 4, so that 1b and 1c share one representation):
-  `{ kind: "anchored-perspective-v1", anchor: [x, y, z] exact decimal strings, scale: { mantissa,
+  `{ kind: "anchored-perspective-v1", anchor: [x, y, z] exact decimal strings` (admitted through the shared Space anchor parser: at
+  most 400 significant digits, explicit exponent magnitude at most 400, and nonzero normalized
+  leading decimal position in `[-400,400]`; zero bypasses only the leading-position check)`, scale: { mantissa,
   exponent } (a normalized finite mantissa and a bounded integer binary exponent), positionLocal,
   focusLocal: three CPU doubles each, orientationWxyz, verticalFovDegrees }`. The represented world
   position is `anchor + scale × positionLocal`. CPU navigation performs the anchor arithmetic at
@@ -258,9 +271,12 @@ A scene describes an experiment. Runtime state describes its execution and is no
   constraints and orientation reset remain available. Serialization preserves the orientation.
   **User decision (2026-10-21):** this representation is approved for ordinary Space as well as
   for 1c ("APPROVE").
-- **Space parameters:** requested values remain decimal strings (for example
-  `C: ["-0.2", "0.8", "0", "0"]`, `kappa: "0"`, `power: "8"`). Ordinary-profile preparation derives
-  effective binary32 values and bit patterns. Deep-profile preparation derives the effective
+- **Space parameters:** Requested fractal parameters C, kappa, and power remain decimal strings. Menger depth is
+  a JSON integer selector, 1 or 2. Ordinary-profile preparation derives effective binary64 values
+  with `Number(text)` and binary32 values with `Math.fround` of that binary64 result, preserving
+  this two-stage rounding definition and reporting its bits. Conversion helpers reject non-finite
+  results; underflow to subnormals or signed zero remains defined. Effective values never replace
+  requested scene values. Deep-profile preparation derives the effective
   parameter representation specified by its qualified numerical profile (§21.5). Requests, reports
   and inspection results identify that representation and its precision beside the requested
   strings; effective values never overwrite requested values.
@@ -360,8 +376,12 @@ queued → preparing → running → completed
 ### 7.4 Render reports
 A report records: scene hash; request identity; model, numerics and shader versions; backend,
 browser and hardware identity, where every identity field may be `unavailable` and each observed
-field names its evidence source (Chrome 151 returns empty adapter strings, so no device string is
-ever invented); requested and completed dimensions, iterations, tracing settings and samples;
+field names its evidence source, and no device string is ever invented (**erratum, rev 4.4:**
+Project 0’s recorded Chrome 151 configuration returned empty adapter strings. B01’s Chrome
+155.0.8059.84 configuration, using the complete recorded launch profile, returned populated
+strings. Identity availability is configuration-dependent; record observed fields with their
+source, otherwise `unavailable`; the code asserts neither universal emptiness nor universal
+population); requested and completed dimensions, iterations, tracing settings and samples;
 outcome and its reason; counts of each ray termination status and of unavailable normals;
 estimator category, derivation version and applicable validation record; requested versus
 effective parameters and the sampling conditions; preparation, admission, submission, completion,
@@ -510,7 +530,16 @@ the production `allocate` method and `maxUniformBufferBindingSize` (Allocator an
   `maxBufferSize`, `maxStorageBufferBindingSize`, `maxUniformBufferBindingSize`,
   `maxTextureDimension2D`,
   `maxComputeWorkgroupsPerDimension`, `maxComputeInvocationsPerWorkgroup`, `maxBindGroups`,
-  `maxStorageBuffersPerShaderStage`.
+  `maxStorageBuffersPerShaderStage`, `maxStorageTexturesPerShaderStage`. Adapter-supported,
+  requested and granted device limits are distinct and each is recorded; allocations and
+  pipeline layouts are validated against the granted limits. `requestDevice` passes no blanket
+  `requiredLimits`: the WebGPU defaults suffice for the specified workloads (the largest 4K
+  target texture is 126.5625 MiB, the 4K target set is ten textures rather than one buffer, and
+  texture allocations are not governed by the buffer-binding limits), so a task requests only an
+  increase it needs and the adapter supports, with that need stated. The binding risk is
+  `maxStorageTexturesPerShaderStage` (default 4): read-only inputs use sampled-texture bindings
+  (`textureLoad`) rather than storage textures. B06 owns this (rev 4.4, joint ruling with Codex
+  run 20261021T073220Z-227f).
 - **Epochs and loss.** Every acquisition attempt receives a fresh identity; the epoch is an
   integer advanced on each successful acquisition, supplied to requests as
   `generation.deviceEpoch` (no second editable epoch field). The epoch is zero if and only if the
