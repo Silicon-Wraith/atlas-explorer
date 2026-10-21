@@ -52,8 +52,10 @@ export async function acquireDevice({ gpu = globalThis.navigator?.gpu, powerPref
   catch (error) { throw new DeviceError('device-refused', `requestDevice refused: ${error?.message ?? error}`, { cause: error }); }
   if (!device) throw new DeviceError('device-refused', 'requestDevice returned no device');
   const limits = Object.freeze(Object.fromEntries(RECORDED_LIMITS.map(key => [key, observedLimit(device.limits?.[key])])));
-  // Attached immediately after acquisition, never awaited; the attempt identifies which device was lost.
-  Promise.resolve(device.lost).then(lost => { onLost?.({ attemptId, reason: lost?.reason ?? 'unknown', message: lost?.message ?? '' }); }, () => {});
+  // device.lost.then(...) attached synchronously, immediately after acquisition, never awaited; the
+  // attempt identifies which device was lost. A device whose loss cannot be observed is refused.
+  if (typeof device.lost?.then !== 'function') throw new DeviceError('device-refused', 'the device exposes no observable lost promise');
+  device.lost.then(lost => { onLost?.({ attemptId, reason: lost?.reason ?? 'unknown', message: lost?.message ?? '' }); }, () => {});
   return {
     device, adapter, attemptId, identity, isFallbackAdapter,
     features: Object.freeze({ requested: Object.freeze(requested), granted: Object.freeze(granted), available: Object.freeze(available), timestampQuery: granted.includes('timestamp-query') }),

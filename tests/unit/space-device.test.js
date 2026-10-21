@@ -9,6 +9,10 @@ function fakeGpu({ adapter = {}, info = {}, features = ['timestamp-query', 'shad
   const calls = [];
   let resolveLost;
   const lost = new Promise(resolve => { resolveLost = resolve; });
+  // Instrumented subscription: acquireDevice must have called lost.then by the time it resolves.
+  const subscribe = lost.then.bind(lost);
+  const subscriptions = [];
+  lost.then = (...args) => { subscriptions.push(performance.now()); return subscribe(...args); };
   const device = { limits: { maxBufferSize: 256 * 2 ** 20, maxStorageBufferBindingSize: 128 * 2 ** 20, maxUniformBufferBindingSize: 65536, maxTextureDimension2D: 8192, maxComputeWorkgroupsPerDimension: 65535, maxComputeInvocationsPerWorkgroup: 256, maxBindGroups: 4, maxStorageBuffersPerShaderStage: 8, ...limits }, lost, label: 'fake' };
   const infoObject = { vendor: '', architecture: '', device: '', description: '', ...info };
   const gpuAdapter = {
@@ -23,7 +27,7 @@ function fakeGpu({ adapter = {}, info = {}, features = ['timestamp-query', 'shad
   };
   if (exposeFallbackOnAdapter) gpuAdapter.isFallbackAdapter = true;
   const gpu = { async requestAdapter(options) { calls.push(`requestAdapter:${options?.powerPreference}`); return nullAdapter ? null : gpuAdapter; } };
-  return { gpu, calls, device, adapter: gpuAdapter, loseDevice: info => resolveLost(info) };
+  return { gpu, calls, device, adapter: gpuAdapter, subscriptions, loseDevice: info => resolveLost(info) };
 }
 
 test('acquireDevice reads adapter.info on the retained adapter before requestDevice and returns a fresh attemptId', async () => {
@@ -82,6 +86,8 @@ test('device.lost is observed before acquireDevice returns and reports the attem
   const fake = fakeGpu();
   const events = [];
   const result = await acquireDevice({ gpu: fake.gpu, onLost: event => events.push(event) });
+  // Checked immediately, before any timer turn: a subscription deferred to a later task would be absent here.
+  assert.equal(fake.subscriptions.length, 1, 'device.lost.then is subscribed exactly once by the time acquisition resolves');
   assert.deepEqual(events, [], 'the loss observer is attached, never awaited');
   fake.loseDevice({ reason: 'destroyed', message: 'device destroyed' });
   await new Promise(resolve => setTimeout(resolve, 0));
@@ -91,6 +97,11 @@ test('device.lost is observed before acquireDevice returns and reports the attem
   const second = fakeGpu();
   const observed = [];
   const again = await acquireDevice({ gpu: second.gpu, onLost: event => observed.push(event) });
+  assert.equal(second.subscriptions.length, 1);
+  // Without an onLost callback the observer is still attached (the annex: attached immediately after acquisition).
+  const silent = fakeGpu();
+  await acquireDevice({ gpu: silent.gpu });
+  assert.equal(silent.subscriptions.length, 1, 'the loss observer is attached even without a callback');
   second.loseDevice({ reason: 'unknown', message: '' });
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(observed, [{ attemptId: again.attemptId, reason: 'unknown', message: '' }]);

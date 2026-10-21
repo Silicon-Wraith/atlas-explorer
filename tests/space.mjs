@@ -1,31 +1,39 @@
 // The headed Space suite (plan B01; spec §16.1, §16.5, §9.1 "Launch (tests)"). One entry point,
-// separately registered groups:  node tests/space.mjs --group <name> [--write-spike] [--include-run <report.json>]…
+// separately registered groups:
+//   node tests/space.mjs --group <name> [--write-spike] [--include-run <report.json>]… [--include-experiment <report.json>]
 // Every group launches installed Chrome headed with the complete recorded Project 0 profile on the
-// physical GPU (E7: headed only), serves the application, records {name, details} passes to its own
-// report with the requested and effective launch arguments and the chrome://gpu identity, and is
-// bounded by installSuiteDeadline. B01 registers `coexistence`; later tasks add numerics, rendering,
-// recovery and shell.
+// physical GPU (E7: headed only), tests the gate-owned committed source checkout (the unchanged gate
+// serves the repository root on its own port; a standalone run must identify the served checkout,
+// which the environment entry does by commit, dirty state and a byte comparison of the served
+// device.js), records {name, details} passes to its own report with the requested and effective
+// launch arguments, the chrome://gpu identity, the GPU handoff and the source, and is bounded by
+// installSuiteDeadline. B01 registers `coexistence` (gated) and `developer-flag-experiment` (a
+// separately reported portability experiment, never gated); later tasks add numerics, rendering,
+// recovery and shell. The spike document is written only after the run passed, its report was
+// persisted and every page, context and browser was drained and closed.
 import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { spawn, execFileSync } from 'node:child_process';
 import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev, CHROME_TMPDIR, chromeLaunchEnv } from './support/bounded.mjs';
 import { cleanupPages } from './support/workflow-cleanup.mjs';
-import { PROJECT0_LAUNCH_ARGS, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, renderSpikeDocument, SPIKE_DOCUMENT_PATH } from './support/space-suite.mjs';
+import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
 
 function parseArgs(argv) {
-  const options = { group: null, writeSpike: false, includeRuns: [] };
+  const options = { group: null, writeSpike: false, includeRuns: [], includeExperiment: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--group') options.group = argv[++i];
     else if (argv[i] === '--write-spike') options.writeSpike = true;
     else if (argv[i] === '--include-run') options.includeRuns.push(argv[++i]);
+    else if (argv[i] === '--include-experiment') options.includeExperiment = argv[++i];
     else if (argv[i] === '--headless') throw new Error('the Space suite is headed only (Project 0 E7); --headless is refused');
     else throw new Error(`unknown argument ${argv[i]}`);
   }
@@ -131,6 +139,19 @@ async function canvasAndProbeInPage() {
 // kernels (B08, B10, B11) are separate, independently identified implementations.
 async function prepareInPage({ boundMs, dispatch }) {
   const { device } = globalThis.__spaceSpike;
+  // Timer resolution measured, not assumed: the smallest positive performance.now() delta.
+  const timer = (() => {
+    const samples = 4096, deltas = new Set();
+    let resolutionMs = Infinity, last = performance.now();
+    for (let i = 0; i < samples; i++) { const now = performance.now(); const delta = now - last; if (delta > 0) { deltas.add(delta); if (delta < resolutionMs) resolutionMs = delta; } last = now; }
+    return { resolutionMs: Number.isFinite(resolutionMs) ? resolutionMs : null, samples, distinctDeltas: deltas.size };
+  })();
+  // Long tasks and scheduled waits are recorded whatever the outcome (plan timer rules).
+  const longTasks = [], waits = { preparationBound: { armed: 0, rearmed: 0, fired: false } };
+  let observer = null;
+  try { observer = new PerformanceObserver(list => { for (const entry of list.getEntries()) longTasks.push({ name: entry.name, startTime: entry.startTime, duration: entry.duration }); }); observer.observe({ type: 'longtask', buffered: true }); }
+  catch (error) { longTasks.push({ name: 'observer-unavailable', error: String(error?.message ?? error) }); }
+  const diagnostics = () => { observer?.takeRecords?.().forEach(entry => longTasks.push({ name: entry.name, startTime: entry.startTime, duration: entry.duration })); return { timer, longTasks, waits }; };
   const STATUS = `
     const RAY_HIT: u32 = 0u; const RAY_MISS: u32 = 1u; const RAY_UNRESOLVED: u32 = 2u; const RAY_NUMERICAL_FAILURE: u32 = 3u;
     const REASON_NONE: u32 = 0u; const REASON_POINT_BUDGET: u32 = 1u; const REASON_RAY_STEP_BUDGET: u32 = 3u;
@@ -277,14 +298,24 @@ async function prepareInPage({ boundMs, dispatch }) {
     events.push({ set: label, stage: 'complete', index: stages.length, total: stages.length, elapsedMs: performance.now() - started });
     return { stages: results, totalMs: performance.now() - started, pipelines };
   }
-  let timer;
-  const timeout = new Promise((_, reject) => { timer = setTimeout(() => { invalidated = true; reject(Object.assign(new Error(`preparation did not finish within ${boundMs} ms`), { events })); }, boundMs); });
+  let boundTimer;
+  // One absolute bound, armed once and never rearmed; a timeout invalidates the attempt and late
+  // pipeline promises cannot revive it.
+  const timeout = new Promise((_, reject) => { waits.preparationBound.armed++; boundTimer = setTimeout(() => { waits.preparationBound.fired = true; invalidated = true; reject(new Error(`preparation did not finish within ${boundMs} ms`)); }, boundMs); });
   timeout.catch(() => {}); // the race surfaces the rejection; nothing is left unhandled
   let cold, warm;
   try { cold = await Promise.race([prepareSet('cold'), timeout]); warm = await Promise.race([prepareSet('warm'), timeout]); }
-  finally { clearTimeout(timer); }
+  catch (error) {
+    // Available progress is preserved on failure: the error carries every event and diagnostic so far.
+    throw new Error(`${error.message}; progress ${JSON.stringify({ events, ...diagnostics() })}`);
+  } finally { clearTimeout(boundTimer); }
   const result = { boundMs, totalMs: cold.totalMs, stages: cold.stages, events, warm: { totalMs: warm.totalMs, stages: warm.stages.map(({ id, totalMs }) => ({ id, totalMs })) } };
-  if (dispatch) result.dispatch = await dispatchInPage(device, cold.pipelines, dispatch);
+  if (dispatch) {
+    try { result.dispatch = await dispatchInPage(device, cold.pipelines, dispatch); }
+    catch (error) { throw new Error(`dispatch failed: ${error.message}; progress ${JSON.stringify({ events, stages: cold.stages, ...diagnostics() })}`); }
+  }
+  Object.assign(result, diagnostics());
+  observer?.disconnect();
   return result;
 
   // A representative draft-sized dispatch of the prepared set (recorded, never a requirement):
@@ -342,10 +373,13 @@ async function prepareInPage({ boundMs, dispatch }) {
 
 async function destroyInPage() {
   const spike = globalThis.__spaceSpike;
+  const waits = { lossObservation: { armed: 1, rearmed: 0, fired: false } };
   spike.device.destroy();
-  const lost = await Promise.race([spike.device.lost, new Promise(resolve => setTimeout(() => resolve(null), 5000))]);
+  let timer;
+  const lost = await Promise.race([spike.device.lost, new Promise(resolve => { timer = setTimeout(() => { waits.lossObservation.fired = true; resolve(null); }, 5000); })]);
+  clearTimeout(timer);
   await new Promise(resolve => setTimeout(resolve, 0));
-  return { lost: lost ? { reason: lost.reason, message: lost.message } : null, observer: spike.lost, uncaptured: spike.uncaptured };
+  return { lost: lost ? { reason: lost.reason, message: lost.message } : null, observer: spike.lost, uncaptured: spike.uncaptured, waits };
 }
 
 // ---- the coexistence group --------------------------------------------------------------------------
@@ -408,7 +442,32 @@ async function runCoexistence({ context, page, environment }) {
   assert.equal(destroyed.lost?.reason, 'destroyed', `device.lost after destroy(): ${JSON.stringify(destroyed.lost)}`);
   assert.equal(destroyed.observer.length, 1, 'the onLost observer fires once'); assert.equal(destroyed.observer[0].attemptId, acquired.attemptId);
   assert.deepEqual(destroyed.uncaptured, [], 'no uncaptured WebGPU errors');
-  pass('WebGPU device destroyed without disturbing WebGL', { lost: destroyed.lost, observer: destroyed.observer, webglAfterDestroy });
+  pass('WebGPU device destroyed without disturbing WebGL', { lost: destroyed.lost, observer: destroyed.observer, webglAfterDestroy, waits: destroyed.waits });
+}
+
+// ---- the developer-flag experiment (never gated; the flag-absent launch is a portability experiment) ----
+// Two fresh-profile launches on the same host, build, driver and source, differing only in
+// --enable-webgpu-developer-features; each records its environment, the acquisition, every identity
+// field, the fallback flag, features, limits and the compute probe. Nothing is asserted about whether
+// identity fields are populated; acquisition, the probe and a clean teardown are asserted.
+async function runDeveloperFlagExperiment({ launchProfile }) {
+  for (const [launch, args] of [['with-developer-flag', [...PROJECT0_LAUNCH_ARGS]], ['without-developer-flag', PROJECT0_LAUNCH_ARGS.filter(flag => flag !== DEVELOPER_FLAG)]]) {
+    const { context, environment } = await launchProfile({ label: launch, args });
+    assert.equal(environment.effectiveArguments.developerFeatures, launch === 'with-developer-flag', `the developer flag must be effective only in the flagged launch (${launch})`);
+    const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl');
+    watchErrors(page);
+    await page.goto(url, { timeout: LIMITS.launch });
+    await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
+    await idleWithin(page);
+    const acquired = await ev(page, acquireInPage, undefined, `acquireDevice (${launch})`);
+    const webgpu = await ev(page, canvasAndProbeInPage, undefined, `WebGPU probe (${launch})`);
+    assert.equal(webgpu.probe.sum, 2016); assert.equal(webgpu.probe.ordered, true);
+    const destroyed = await ev(page, destroyInPage, undefined, `device.destroy (${launch})`);
+    assert.equal(destroyed.lost?.reason, 'destroyed'); assert.deepEqual(destroyed.uncaptured, []);
+    const name = launch === 'with-developer-flag' ? 'Adapter identity with --enable-webgpu-developer-features' : 'Adapter identity without --enable-webgpu-developer-features (portability experiment; never qualification)';
+    pass(name, { launch, attemptId: acquired.attemptId, identity: acquired.identity, isFallbackAdapter: acquired.isFallbackAdapter, features: acquired.features, limits: acquired.limits, probe: webgpu.probe, canvasFormat: webgpu.canvasFormat, lost: destroyed.lost });
+    await closeDrained(page, `application page (${launch})`);
+  }
 }
 
 // ---- harness ---------------------------------------------------------------------------------------
@@ -428,23 +487,71 @@ async function readEffectiveEnvironment(context) {
   let chromeGpu, text = '';
   try {
     await gpuPage.goto('chrome://gpu', { timeout: LIMITS.launch });
+    // Absolute deadline; each 250 ms wait is a fresh arm (recorded as polls), never an accumulated delay.
     const deadline = performance.now() + LIMITS.operation;
-    let reason = 'no snapshot';
+    let reason = 'no snapshot', polls = 0;
     while (performance.now() < deadline) {
+      polls++;
       text = await ev(gpuPage, collectVisibleText, undefined, 'chrome://gpu text');
       if (text.includes('Graphics Feature Status')) {
-        try { chromeGpu = activeGpuIdentity(text); break; } catch (error) { reason = error.message; }
+        try { chromeGpu = { ...activeGpuIdentity(text), polls }; break; } catch (error) { reason = error.message; }
       } else reason = 'no Graphics Feature Status section yet';
-      await new Promise(resolveWait => setTimeout(resolveWait, 250));
+      await new Promise(resolveWait => setTimeout(resolveWait, Math.max(1, Math.min(250, Math.ceil(deadline - performance.now())))));
     }
-    if (!chromeGpu) chromeGpu = { reason, available: false };
+    if (!chromeGpu) chromeGpu = { reason, available: false, polls };
   } finally { await closeDrained(gpuPage, 'chrome://gpu'); }
   const webgpuStatus = graphicsFeatureStatus(text, 'WebGPU');
   return { effectiveCommandLine, chromeVersion, userAgent, chromeGpu, webgpuStatus };
 }
 
-let server, browser;
-const groups = { coexistence: runCoexistence };
+// The served checkout is identified, never assumed: the commit and dirty state of this checkout, and a
+// byte comparison between the served device.js and the checkout's file.
+async function sourceIdentity() {
+  const git = args => { try { return execFileSync('git', args, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return null; } };
+  const commit = git(['rev-parse', '--short', 'HEAD']) ?? 'unknown';
+  const porcelain = git(['status', '--porcelain']);
+  const modulePath = 'src/space/render/webgpu/device.js';
+  const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+  const local = sha256(await readFile(modulePath));
+  let served = null;
+  try { served = sha256(Buffer.from(await (await fetch(`${url}/${modulePath}`, { signal: AbortSignal.timeout(LIMITS.launch) })).arrayBuffer())); } catch { served = null; }
+  return { commit, dirty: porcelain === null ? 'unknown' : porcelain.length > 0, servedUrl: url, servedModule: modulePath, localSha256: local, servedSha256: served, servedModuleMatches: served === local };
+}
+
+let server;
+const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
+const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment };
+const source = await sourceIdentity();
+const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
+
+// Launch installed Chrome headed with `args` in a fresh profile, read its effective environment and
+// record it. Every launch in a run is recorded with its label; the gated coexistence group launches once.
+async function launchProfile({ label, args }) {
+  const requestedArgs = ['--disable-dev-shm-usage', ...args];
+  const startedAt = new Date().toISOString();
+  const browser = await chromium.launch({ channel: 'chrome', chromiumSandbox: true, headless: false, env: chromeLaunchEnv(), timeout: LIMITS.launch, args: requestedArgs });
+  launched.push(browser);
+  const viewport = { width: 1280, height: 720, deviceScaleFactor: 1 };
+  const context = boundContext(await within(browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1 }), LIMITS.launch, 'newContext'));
+  const effective = await readEffectiveEnvironment(context);
+  const effectiveArguments = checkEffectiveArguments(effective.effectiveCommandLine, args);
+  const environment = {
+    name: 'environment', group: options.group, launch: label, startedAt, browser: 'installed Chrome', browserVersion: browser.version(), chromeVersion: effective.chromeVersion,
+    userAgent: effective.userAgent,
+    headed: true, chromiumSandbox: true, viewport, requestedArgs, effectiveCommandLine: effective.effectiveCommandLine, effectiveArguments,
+    chromeGpu: effective.chromeGpu, webgpuStatus: effective.webgpuStatus, display: process.env.DISPLAY ?? null, url, handoff, source,
+  };
+  report.push(environment);
+  assert.deepEqual(effectiveArguments.missing, [], `the requested profile did not reach Chrome: missing ${effectiveArguments.missing.join(' ')}`);
+  assert.equal(effectiveArguments.noSandbox, false, 'Chrome launched without its sandbox');
+  assert.equal(effectiveArguments.headless, false, 'Chrome launched headless (E7: headed only)');
+  assert.equal(effectiveArguments.gpuWatchdogDisabled, false, 'Chrome launched with the GPU watchdog disabled');
+  assert.equal(source.servedModuleMatches, true, `the served device.js does not match this checkout (${JSON.stringify(source)})`);
+  console.log(`environment ${JSON.stringify({ launch: label, chromeVersion: environment.chromeVersion, effectiveArguments, chromeGpu: environment.chromeGpu, webgpuStatus: environment.webgpuStatus, handoff, source })}`);
+  return { browser, context, environment };
+}
+
+let cleanupFailed = true, reportPersisted = false;
 try {
   try { await fetch(url, { signal: AbortSignal.timeout(LIMITS.launch) }); } catch {
     const port = new URL(url).port || '80';
@@ -452,54 +559,46 @@ try {
     server.stderr.on('data', data => process.stderr.write(data));
     await within(new Promise((resolveReady, reject) => { server.stdout.once('data', resolveReady); server.once('error', reject); server.once('exit', code => reject(new Error(`Preview server exited: ${code}`))); }), LIMITS.launch, 'preview server readiness');
   }
-  const requestedArgs = ['--disable-dev-shm-usage', ...PROJECT0_LAUNCH_ARGS];
-  const startedAt = new Date().toISOString();
-  browser = await chromium.launch({ channel: 'chrome', chromiumSandbox: true, headless: false, env: chromeLaunchEnv(), timeout: LIMITS.launch, args: requestedArgs });
-  const viewport = { width: 1280, height: 720, deviceScaleFactor: 1 };
-  const context = boundContext(await within(browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1 }), LIMITS.launch, 'newContext'));
-  const effective = await readEffectiveEnvironment(context);
-  const effectiveArguments = checkEffectiveArguments(effective.effectiveCommandLine, PROJECT0_LAUNCH_ARGS);
-  const environment = {
-    name: 'environment', group: options.group, startedAt, browser: 'installed Chrome', browserVersion: browser.version(), chromeVersion: effective.chromeVersion,
-    userAgent: effective.userAgent,
-    headed: true, chromiumSandbox: true, viewport, requestedArgs, effectiveCommandLine: effective.effectiveCommandLine, effectiveArguments,
-    chromeGpu: effective.chromeGpu, webgpuStatus: effective.webgpuStatus, display: process.env.DISPLAY ?? null, url,
-  };
-  report.push(environment);
-  assert.deepEqual(effectiveArguments.missing, [], `the recorded Project 0 profile did not reach Chrome: missing ${effectiveArguments.missing.join(' ')}`);
-  assert.equal(effectiveArguments.noSandbox, false, 'Chrome launched without its sandbox');
-  assert.equal(effectiveArguments.headless, false, 'Chrome launched headless (E7: headed only)');
-  assert.equal(effectiveArguments.gpuWatchdogDisabled, false, 'Chrome launched with the GPU watchdog disabled');
-  console.log(`environment ${JSON.stringify({ chromeVersion: environment.chromeVersion, effectiveArguments, chromeGpu: environment.chromeGpu, webgpuStatus: environment.webgpuStatus })}`);
-
-  const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl');
-  watchErrors(page);
-  await groups[options.group]({ context, page, environment });
+  if (options.group === 'coexistence') {
+    const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });
+    const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl');
+    watchErrors(page);
+    await groups.coexistence({ context, page, environment });
+  } else await groups[options.group]({ launchProfile });
   assert.deepEqual(errors, []);
   pass('No browser runtime errors');
   await writeReport(report);
-  if (options.writeSpike) {
-    const runs = [{ label: 'this run', report }];
-    for (const path of options.includeRuns) runs.push({ label: path.replace(/^.*\//, ''), report: JSON.parse(await readFile(path, 'utf8')) });
-    let commit = 'unknown';
-    try { commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { /* recorded as unknown */ }
-    await mkdir(dirname(SPIKE_DOCUMENT_PATH), { recursive: true });
-    await writeFile(SPIKE_DOCUMENT_PATH, renderSpikeDocument(report, { generatedAt: new Date().toISOString(), commit, runs }));
-    console.log(`spike document written to ${SPIKE_DOCUMENT_PATH}`);
-  }
+  reportPersisted = true;
 } catch (error) {
   report.push({ name: 'FAIL', error: error.stack });
+  reportPersisted = false;
   throw error;
 } finally {
   // Preserve the original failure if the suite deadline fires while pages are draining.
   try { await writeReport(report); } catch { /* cleanupPages retries after the drains. */ }
-  const contexts = browser?.contexts() ?? [];
+  const contexts = launched.flatMap(browser => browser.contexts());
   const failed = await cleanupPages({
     pages: contexts.flatMap(context => context.pages()), drain: drainExpecting, report, writeReport,
     closeAll: async () => {
       for (const context of contexts) await closeWithin(context, 'context');
-      await closeWithin(browser, 'browser'); server?.kill('SIGTERM');
+      for (const browser of launched) await closeWithin(browser, 'browser');
+      server?.kill('SIGTERM');
     },
   });
+  cleanupFailed = failed;
   if (failed) process.exitCode = 1;
+}
+
+// Only here — after a passing run, a persisted report and a confirmed cleanup — may the document be written.
+if (options.writeSpike) {
+  const permitted = canWriteSpikeDocument({ report, cleanupFailed, reportPersisted, exitCode: process.exitCode });
+  if (!permitted.ok) { console.error(`spike document not written: ${permitted.reason}`); process.exitCode = 1; }
+  else {
+    const runs = [{ label: 'this run', report }];
+    for (const path of options.includeRuns) runs.push({ label: path.replace(/^.*\//, ''), report: JSON.parse(await readFile(path, 'utf8')) });
+    const experiment = options.includeExperiment ? JSON.parse(await readFile(options.includeExperiment, 'utf8')) : null;
+    await mkdir(dirname(SPIKE_DOCUMENT_PATH), { recursive: true });
+    await writeFile(SPIKE_DOCUMENT_PATH, renderSpikeDocument(report, { generatedAt: new Date().toISOString(), commit: `${source.commit}${source.dirty === true ? ' (dirty)' : ''}`, runs, experiment }));
+    console.log(`spike document written to ${SPIKE_DOCUMENT_PATH} (${permitted.reason})`);
+  }
 }

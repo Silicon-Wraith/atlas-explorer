@@ -8,6 +8,35 @@ export const PROJECT0_LAUNCH_ARGS = Object.freeze([
   '--enable-gpu', '--use-angle=vulkan', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan', '--enable-webgpu-developer-features',
 ]);
 export const SPIKE_DOCUMENT_PATH = 'docs/reports/project1b/2026-10-21-coexistence-spike.md';
+export const DEVELOPER_FLAG = '--enable-webgpu-developer-features';
+// The manifest's requiredPasses for space-coexistence (a unit test keeps the two identical).
+export const COEXISTENCE_REQUIRED_PASSES = Object.freeze([
+  'WebGL 2 and WebGPU contexts coexist in one page',
+  'Adapter identity reports observed or unavailable fields truthfully',
+  'A representative pipeline set prepares within the bound with progress events',
+]);
+
+// A coexistence report is evidence only when it is a non-empty list with an environment entry, no
+// FAIL entry and every required pass (the gate's validateEvidence rule, applied to document inputs).
+export function validateCoexistenceReport(report, label = 'the suite report') {
+  if (!Array.isArray(report) || !report.length) throw new Error(`${label} is empty or not a list`);
+  if (report.some(entry => entry?.name === 'FAIL')) throw new Error(`${label} records a failure; the spike document is generated only from passing runs`);
+  if (!report.some(entry => entry?.name === 'environment')) throw new Error(`${label} has no environment entry`);
+  const names = new Set(report.map(entry => entry?.name));
+  const absent = COEXISTENCE_REQUIRED_PASSES.filter(name => !names.has(name));
+  if (absent.length) throw new Error(`${label}: missing passes: ${absent.join('; ')}`);
+  return { ok: true };
+}
+
+// The spike document may be written only after the run passed, its report was persisted and every
+// page, context and browser was drained and closed with cleanup confirmed.
+export function canWriteSpikeDocument({ report, cleanupFailed, reportPersisted, exitCode }) {
+  try { validateCoexistenceReport(report); } catch (error) { return { ok: false, reason: error.message }; }
+  if (!reportPersisted) return { ok: false, reason: 'the suite report was not persisted' };
+  if (cleanupFailed) return { ok: false, reason: 'cleanup (drain or close) failed or was unconfirmed' };
+  if (exitCode !== undefined && exitCode !== 0) return { ok: false, reason: `the suite is exiting with code ${exitCode}` };
+  return { ok: true, reason: 'run passed, report persisted, cleanup confirmed' };
+}
 
 // chrome://gpu renders into open shadow roots filled in asynchronously, so body.innerText is empty.
 // Self-contained: Playwright serialises it into the page.
@@ -66,18 +95,25 @@ export function activeGpuIdentity(text) {
 // The Graphics Feature Status line for one feature (e.g. 'WebGPU'; Chrome 155 renders
 // `*   WebGPU: Hardware accelerated`): the value on the feature's own line or on the next non-blank
 // line; a longer name (`WebGPU interop`) is a different feature; 'unavailable' when absent.
+// Parsing stays inside the section: it ends at the next section (`Driver Information`, a `[Section]`
+// heading, a `GPUn` record) and a following feature label (`* Name: …`, `Name:`) or boundary is never
+// read as a value.
+const SECTION_BOUNDARY = /^(Driver Information|GPU\d+\b.*|\[[^\]]*\]|[=-]{3,})$/;
+const FEATURE_LABEL = /^\*?\s*[A-Za-z][^:]*:(\s.*)?$/;
 export function graphicsFeatureStatus(text, feature) {
   const lines = String(text ?? '').split('\n').map(line => line.trim());
   const start = lines.indexOf('Graphics Feature Status');
   if (start < 0) return 'unavailable';
   for (let index = start + 1; index < lines.length; index++) {
-    if (lines[index] === 'Driver Information' || /^GPU\d+/.test(lines[index])) break;
+    if (SECTION_BOUNDARY.test(lines[index]) && !/^[=-]{3,}$/.test(lines[index])) break;
     const match = new RegExp(`^\\*?\\s*${feature}(?::\\s*(.*)|\\s*)$`).exec(lines[index]);
     if (!match) continue;
     if (match[1]) return match[1].trim();
     let next = index + 1;
     while (next < lines.length && !lines[next]) next++;
-    return next < lines.length && !/:\s*$/.test(lines[next]) ? lines[next] : 'unavailable';
+    if (next >= lines.length) return 'unavailable';
+    const candidate = lines[next];
+    return SECTION_BOUNDARY.test(candidate) || FEATURE_LABEL.test(candidate) ? 'unavailable' : candidate;
   }
   return 'unavailable';
 }
@@ -93,6 +129,7 @@ export function checkEffectiveArguments(commandLine, requested) {
     noSandbox: has('--no-sandbox'),
     headless: tokens.some(token => token === '--headless' || token.startsWith('--headless=')),
     gpuWatchdogDisabled: has('--disable-gpu-watchdog'),
+    developerFeatures: has(DEVELOPER_FLAG),
   };
 }
 
@@ -102,12 +139,21 @@ const identityCell = field => (field && typeof field === 'object' ? `\`${field.v
 const entryNamed = (report, name) => report.find(entry => entry?.name === name);
 
 // The spike document, generated from the suite report so that a rerun reproduces it. `runs` adds the
-// repeat runs' preparation timings (each `{ label, report }`); `report` is the run the tables describe.
-export function renderSpikeDocument(report, { generatedAt, commit, runs = [] } = {}) {
-  if (!Array.isArray(report) || !report.length) throw new Error('the suite report is empty');
-  if (report.some(entry => entry?.name === 'FAIL')) throw new Error('the suite report records a failure; the spike document is generated only from a passing run');
+// repeat runs (each `{ label, report }`); `experiment` is the developer-flag experiment's report;
+// `report` is the run the tables describe. Every input is validated as evidence first.
+const sourceCell = env => (env?.source?.commit ? `\`${env.source.commit}\` (${env.source.dirty ? 'dirty' : 'clean'})` : 'unavailable');
+const waitsCell = waits => Object.entries(waits ?? {}).map(([key, wait]) => `${key}: armed ${show(wait.armed)}, rearmed ${show(wait.rearmed)}, fired ${show(wait.fired)}`).join('; ') || 'none recorded';
+export function renderSpikeDocument(report, { generatedAt, commit, runs = [], experiment = null } = {}) {
+  validateCoexistenceReport(report, 'the suite report');
+  for (const run of runs) validateCoexistenceReport(run.report, `included run ${run.label}`);
+  if (experiment !== null) {
+    if (!Array.isArray(experiment) || !experiment.length) throw new Error('the experiment report is empty or not a list');
+    if (experiment.some(entry => entry?.name === 'FAIL')) throw new Error('the experiment report records a failure');
+    for (const launch of ['with-developer-flag', 'without-developer-flag']) {
+      if (!experiment.some(entry => entry?.name === 'environment' && entry.launch === launch) || !experiment.some(entry => entry?.launch === launch && entry.identity)) throw new Error(`the experiment report must carry both launches (${launch} missing)`);
+    }
+  }
   const env = entryNamed(report, 'environment');
-  if (!env) throw new Error('the suite report has no environment entry');
   const coexist = entryNamed(report, 'WebGL 2 and WebGPU contexts coexist in one page') ?? {};
   const identity = entryNamed(report, 'Adapter identity reports observed or unavailable fields truthfully') ?? {};
   const prepared = entryNamed(report, 'A representative pipeline set prepares within the bound with progress events') ?? {};
@@ -115,7 +161,7 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [] } =
   const lines = [];
   const push = (...items) => lines.push(...items);
   push('# Project 1b.1 B01 — WebGL 2 and WebGPU coexistence spike', '',
-    `Generated from the suite report of \`tests/space.mjs --group coexistence\` (plan B01; spec §18, §15, §7.4, §9.1). Generated ${generatedAt} from the working tree based on commit \`${commit}\` (the B01 commit itself contains this file). Headed only (Project 0 E7): a headless or software-device result never satisfies a Space requirement (§16.5).`, '',
+    `Generated from the suite report of \`tests/space.mjs --group coexistence\` (plan B01; spec §18, §15, §7.4, §9.1). Generated ${generatedAt} from the source checkout at commit \`${commit}\` (each run below names the commit it ran on; this document is committed separately from the code it describes). Headed only (Project 0 E7): a headless or software-device result never satisfies a Space requirement (§16.5).`, '',
     '## Conditions', '',
     '| Condition | Value |', '|---|---|',
     `| Browser | ${show(env.browser)} ${show(env.chromeVersion)} (headed: ${show(env.headed)}, chromiumSandbox: ${show(env.chromiumSandbox)}) |`,
@@ -124,16 +170,19 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [] } =
     `| Effective arguments present | ${(env.effectiveArguments?.present ?? []).map(flag => `\`${flag}\``).join(' ') || 'none'} |`,
     `| Effective arguments missing | ${(env.effectiveArguments?.missing ?? []).map(flag => `\`${flag}\``).join(' ') || 'none'} |`,
     `| Sandbox / headless / GPU watchdog | no-sandbox: ${show(env.effectiveArguments?.noSandbox)}; headless: ${show(env.effectiveArguments?.headless)}; watchdog disabled: ${show(env.effectiveArguments?.gpuWatchdogDisabled)} |`,
-    `| chrome://gpu active record | ${env.chromeGpu?.record ? `vendor 0x${env.chromeGpu.vendorId.toString(16)}, device 0x${env.chromeGpu.deviceId.toString(16)}, driver ${env.chromeGpu.driverVendor} ${env.chromeGpu.driverVersion}` : `unavailable (${show(env.chromeGpu?.reason)})`} |`,
+    `| chrome://gpu active record | ${env.chromeGpu?.record ? `vendor 0x${env.chromeGpu.vendorId.toString(16)}, device 0x${env.chromeGpu.deviceId.toString(16)}, driver ${env.chromeGpu.driverVendor} ${env.chromeGpu.driverVersion} (${show(env.chromeGpu.polls)} poll(s))` : `unavailable (${show(env.chromeGpu?.reason)})`} |`,
     `| chrome://gpu Graphics Feature Status: WebGPU | ${show(env.webgpuStatus)} |`,
+    `| GPU handoff (ATLAS_GPU_HANDOFF) | ${show(env.handoff)} |`,
+    `| Source | commit ${sourceCell(env)}; served from ${show(env.source?.servedUrl)}; served device.js matches the checkout: ${show(env.source?.servedModuleMatches)} |`,
     `| Suite started | ${show(env.startedAt)} |`,
     `| Viewport | ${show(env.viewport?.width)} × ${show(env.viewport?.height)}, device scale factor ${show(env.viewport?.deviceScaleFactor)} |`, '',
+    'Full effective command line (chrome://version):', '', '```', show(env.effectiveCommandLine), '```', '',
     '## 1. Both contexts live in one page', '',
     `WebGL 2 (Plane): renderer \`${show(coexist.webgl?.renderer)}\`, vendor \`${show(coexist.webgl?.vendor)}\`, ${show(coexist.webgl?.version)}.`, '',
     `WebGPU: device attempt \`${show(coexist.webgpu?.attemptId)}\`; a second canvas configured with the preferred format \`${show(coexist.webgpu?.canvasFormat)}\`; compute probe ${show(coexist.webgpu?.probe)}.`, '',
     `Plane after acquisition: wheel step zoom ${show(coexist.plane?.zoomBefore)} → ${show(coexist.plane?.zoomAfter)}, full resolution ${show(coexist.plane?.width)} × ${show(coexist.plane?.height)}.`, '',
     `WebGL drains (fence + readback) with the WebGPU device alive: after acquisition ${show(coexist.drains?.afterAcquire)}; after WebGPU work ${show(coexist.drains?.afterWebGpuWork)}.`, '',
-    `Destroying the WebGPU device: \`device.lost\` reason ${show(destroyed.lost?.reason)}; WebGL drain afterwards ${show(destroyed.webglAfterDestroy)}.`, '',
+    `Destroying the WebGPU device: \`device.lost\` reason ${show(destroyed.lost?.reason)}; WebGL drain afterwards ${show(destroyed.webglAfterDestroy)}; waits: ${waitsCell(destroyed.waits)}.`, '',
     '## 2. Adapter identity (as observed; nothing invented)', '',
     '| Field | Observation |', '|---|---|');
   for (const field of ['vendor', 'architecture', 'device', 'description']) push(`| ${field} | ${identityCell(identity.identity?.[field])} |`);
@@ -143,7 +192,8 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [] } =
     '| Limit | Value |', '|---|---|');
   for (const [key, value] of Object.entries(identity.limits ?? {})) push(`| ${key} | ${show(value)} |`);
   push('', '## 3. Representative pipeline preparation', '',
-    `Bound ${show(prepared.boundMs)} ms per attempt (plan default 60 s). Cold total ${ms(prepared.totalMs)}; progress events ${show(prepared.events?.length)}; warm re-preparation total ${ms(prepared.warm?.totalMs)}.`, '',
+    `Bound ${show(prepared.boundMs)} ms per attempt (plan default 60 s). First preparation in this fresh browser profile ${ms(prepared.totalMs)} (driver-cache state unmeasured); progress events ${show(prepared.events?.length)}; warm re-preparation of identical sources in the same device ${ms(prepared.warm?.totalMs)}.`, '',
+    `Timer: \`performance.now()\` resolution measured in page ${show(prepared.timer?.resolutionMs)} ms (smallest positive delta over ${show(prepared.timer?.samples)} samples, ${show(prepared.timer?.distinctDeltas)} distinct deltas); in-page times at or below that resolution are bounds, not measurements. Long tasks observed during preparation and dispatch (PerformanceObserver \`longtask\`): ${(prepared.longTasks ?? []).length} long task(s)${(prepared.longTasks ?? []).length ? ` — ${prepared.longTasks.map(task => `${show(task.name)} at ${ms(task.startTime)} for ${ms(task.duration)}`).join('; ')}` : ''}. Scheduled waits (armed / rearmed / fired): ${waitsCell(prepared.waits)}.`, '',
     '| Stage | Module | Pipeline (createComputePipelineAsync) | Total | Warm total | Compilation messages |', '|---|---|---|---|---|---|');
   for (const stage of prepared.stages ?? []) {
     const warm = (prepared.warm?.stages ?? []).find(item => item.id === stage.id);
@@ -155,12 +205,23 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [] } =
     push(`Representative trace dispatch (recorded, not a requirement): ${show(d.width)} × ${show(d.height)} rays, submission ${ms(d.submissionMs)}, queue completion ${ms(d.queueCompletionMs)} (labelled queue-completion; a fence includes preceding work), termination counts ${show(d.counts)}.`, '');
   }
   if (runs.length) {
-    push('## Repeat runs (ordered by start time)', '', '| Run | Started | Cold total | trace | normals | display | Warm total | Dispatch queue completion |', '|---|---|---|---|---|---|---|---|');
+    push('## Repeat runs (ordered by start time; fresh browser profile each; driver-cache state unmeasured)', '', '| Run | Started | Source | First preparation | trace | normals | display | Warm total | Dispatch queue completion | Long tasks |', '|---|---|---|---|---|---|---|---|---|---|');
     const started = run => entryNamed(run.report ?? [], 'environment')?.startedAt ?? '';
     for (const run of [...runs].sort((a, b) => started(a).localeCompare(started(b)))) {
       const e = entryNamed(run.report ?? [], 'environment') ?? {}, p = entryNamed(run.report ?? [], 'A representative pipeline set prepares within the bound with progress events') ?? {};
       const stage = id => ms((p.stages ?? []).find(item => item.id === id)?.totalMs);
-      push(`| ${run.label} | ${show(e.startedAt)} | ${ms(p.totalMs)} | ${stage('trace')} | ${stage('normals')} | ${stage('display')} | ${ms(p.warm?.totalMs)} | ${ms(p.dispatch?.queueCompletionMs)} |`);
+      push(`| ${run.label} | ${show(e.startedAt)} | ${sourceCell(e)} | ${ms(p.totalMs)} | ${stage('trace')} | ${stage('normals')} | ${stage('display')} | ${ms(p.warm?.totalMs)} | ${ms(p.dispatch?.queueCompletionMs)} | ${(p.longTasks ?? []).length} |`);
+    }
+    push('');
+  }
+  if (experiment) {
+    push('## Developer-flag experiment (two fresh-profile launches differing only in `--enable-webgpu-developer-features`)', '',
+      'The flag-absent launch is a **portability experiment**: it is never qualification and never replaces acceptance under the complete recorded profile.', '',
+      '| Launch | Developer flag effective | vendor | architecture | device | description | isFallbackAdapter | timestamp-query granted | Probe |', '|---|---|---|---|---|---|---|---|---|');
+    for (const launch of ['with-developer-flag', 'without-developer-flag']) {
+      const e = experiment.find(entry => entry?.name === 'environment' && entry.launch === launch) ?? {};
+      const r = experiment.find(entry => entry?.launch === launch && entry.identity) ?? {};
+      push(`| ${launch} | ${show(e.effectiveArguments?.developerFeatures)} | ${identityCell(r.identity?.vendor)} | ${identityCell(r.identity?.architecture)} | ${identityCell(r.identity?.device)} | ${identityCell(r.identity?.description)} | ${identityCell(r.isFallbackAdapter)} | ${show(r.features?.granted?.includes('timestamp-query'))} | ${show(r.probe)} |`);
     }
     push('');
   }
@@ -170,8 +231,7 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [] } =
     '- Coexistence is established for this page, profile and host only; the suite re-establishes it on every gated commit.',
     '- Identity fields are recorded as observed or `unavailable`; physical-GPU acceptance rests on the corroborating chrome://gpu record and the WebGL renderer string, never on an invented device string (§7.4, §9.1).',
     '- Preparation times are representative of the spike kernels, not of the product pipeline set; B11 verifies complete product prewarming (§15 first-use compilation).',
-    '- "Cold" means a fresh browser profile and a fresh device in a fresh page; the GPU driver keeps an on-disk shader cache across browser processes, so only the first run after a kernel change compiles from scratch. The first row of the repeat-run table shows that case; "warm" re-prepares identical sources in the same device.',
-    '- In-page times come from `performance.now()`, which this non-isolated page quantizes to 0.1 ms; sub-millisecond values are bounds, not measurements.',
-    '- Launches without the complete recorded profile are separately identified portability experiments and are not represented here.', '');
+    '- Each run uses a fresh browser profile and a fresh device in a fresh page; the GPU driver-cache state is unmeasured (no cache isolation, clearing or hit/miss observation was performed), so differences between runs are reported, not attributed.',
+    '- Launches without the complete recorded profile are separately identified portability experiments and are not represented here except in the labelled experiment section.', '');
   return lines.join('\n');
 }
