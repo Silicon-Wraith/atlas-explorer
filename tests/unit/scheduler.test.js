@@ -792,3 +792,228 @@ test('r1: Update on an unpaused view selects pending before running and returns 
   scheduler.resume('main'); scheduler.update('main'); assert.equal(viewState(scheduler).paused, true);
   assert.equal(viewState(scheduler).updating, null);
 });
+
+test('discard: refuses main, foreign and fabricated leases without changing state', async () => {
+  const { scheduler } = setup(); const owner = enqueue(scheduler, 'owner');
+  const auxiliary = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request, 'pick') });
+  const [main, pick] = scheduler.admit();
+  const foreign = setup(); foreign.scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request) });
+  const [foreignPick] = foreign.scheduler.admit();
+  const before = scheduler.snapshot(), events = []; scheduler.subscribe(event => events.push(event));
+  for (const admission of [main.admission, foreignPick.admission, undefined, null, {}, { ...pick.admission },
+    createAdmission({ epoch: 1, jobId: 'owner' }), createAdmission({ epoch: 2, jobId: 'owner' }),
+    createAdmission({ epoch: 1, jobId: 'wrong' })]) {
+    assert.equal(scheduler.discardAuxiliary(admission, { reason: 'rejected' }), false);
+  }
+  assert.deepEqual(scheduler.snapshot(), before); assert.deepEqual(events, []);
+  await pending(owner.job.done); await pending(auxiliary.done);
+  finish(scheduler, main); finish(scheduler, pick); finish(foreign.scheduler, foreignPick);
+});
+
+test('discard: ignores non-current epochs and old admissions after job ID reuse', async () => {
+  for (const nextEpoch of [0, 2]) {
+    const { scheduler } = setup(); const request = requestData('reused');
+    const old = scheduler.requestAuxiliary('main', { jobId: 'reused', priority: 'inspection', operation: operation(request) });
+    const [entry] = scheduler.admit(); scheduler.setEpoch(nextEpoch);
+    const before = scheduler.snapshot();
+    assert.equal(scheduler.discardAuxiliary(entry.admission, { reason: 'late rejection' }), false);
+    assert.deepEqual(scheduler.snapshot(), before); await pending(old.done);
+    scheduler.interrupted(1); assert.equal((await settled(old.done)).outcome, 'interrupted');
+    scheduler.setEpoch(2);
+    const current = scheduler.requestAuxiliary('main', { jobId: 'reused', priority: 'inspection', operation: operation(requestData('reused', 'main', 2)) });
+    const [replacement] = scheduler.admit(); const currentState = scheduler.snapshot();
+    assert.equal(scheduler.discardAuxiliary(entry.admission, { reason: 'old admission' }), false);
+    assert.deepEqual(scheduler.snapshot(), currentState); await pending(current.done);
+    finish(scheduler, replacement); assert.equal((await settled(current.done)).outcome, 'completed');
+  }
+});
+
+test('discard: settles one auxiliary without failing or closing its owner', async () => {
+  const { scheduler } = setup(); let advances = 0;
+  const owner = enqueue(scheduler, 'owner', { kind: 'settled', count: 2, serial: true, onAdvance: () => { advances++; } });
+  const pick = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request, 'pick') });
+  const [main, entry] = scheduler.admit();
+  assert.equal(scheduler.discardAuxiliary(entry.admission, { reason: 'pre-queue rejection' }), true);
+  const result = await settled(pick.done);
+  assert.deepEqual(result, { outcome: 'failed', reason: 'pre-queue rejection' }); assert.equal(Object.isFrozen(result), true);
+  assert.equal(scheduler.snapshot().outstanding, 1); assert.equal(advances, 0); await pending(owner.job.done);
+  const classify = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request, 'classify') });
+  const [classification] = scheduler.admit(); assert.equal(classification.operation.id, 'classify');
+  assert.equal(scheduler.discardAuxiliary(classification.admission, { reason: 'failure after queue fence' }), true);
+  assert.deepEqual(await settled(classify.done), { outcome: 'failed', reason: 'failure after queue fence' });
+  assert.equal(advances, 0); await pending(owner.job.done);
+  finish(scheduler, main); finish(scheduler, scheduler.admit()[0]);
+  assert.deepEqual(await settled(owner.job.done), { outcome: 'completed', reason: null });
+  assert.equal(advances, 2); assert.equal(scheduler.snapshot().outstanding, 0); assert.deepEqual(scheduler.snapshot().jobs, []);
+});
+
+test('discard: preserves a completed owner and leaves sibling auxiliaries usable', async () => {
+  for (const requestedAfterCompletion of [false, true]) {
+    const { scheduler } = setup(); const owner = enqueue(scheduler, 'owner', { kind: 'settled' });
+    const [main] = scheduler.admit();
+    if (requestedAfterCompletion) finish(scheduler, main);
+    const pick = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request, 'pick') });
+    const sibling = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request, 'sibling') });
+    if (!requestedAfterCompletion) finish(scheduler, main);
+    const ownerResult = await settled(owner.job.done), [first, second] = scheduler.admit();
+    assert.equal(scheduler.discardAuxiliary(first.admission, { reason: 'copy-out rejected' }), true);
+    assert.equal((await settled(pick.done)).outcome, 'failed'); await pending(sibling.done);
+    assert.equal(scheduler.snapshot().outstanding, 1); assert.equal(await owner.job.done, ownerResult);
+    const later = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request, 'later') });
+    const [last] = scheduler.admit(); finish(scheduler, second); finish(scheduler, last);
+    assert.equal((await settled(sibling.done)).outcome, 'completed'); assert.equal((await settled(later.done)).outcome, 'completed');
+    assert.deepEqual(await owner.job.done, { outcome: 'completed', reason: null });
+    assert.deepEqual(scheduler.snapshot().jobs, []);
+  }
+});
+
+test('discard: cancellation drains only after every lease has terminal evidence', async () => {
+  for (const discardFirst of [false, true]) {
+    const { scheduler } = setup(); const owner = enqueue(scheduler, 'owner', { count: 2, serial: true });
+    const aux = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request) });
+    const [main, auxiliary] = scheduler.admit(); const cancellation = scheduler.cancel('owner');
+    const discard = () => assert.equal(scheduler.discardAuxiliary(auxiliary.admission, { reason: 'rejected after cancel' }), true);
+    if (discardFirst) discard(); else finish(scheduler, main);
+    await pending(cancellation.done); await pending(owner.job.done); await pending(aux.done);
+    assert.equal(scheduler.snapshot().outstanding, 1); assert.deepEqual(scheduler.admit(), []);
+    if (discardFirst) finish(scheduler, main); else discard();
+    assert.deepEqual(await settled(cancellation.done), { outcome: 'cancelled', submitted: 'drained' });
+    for (const done of [owner.job.done, aux.done]) assert.deepEqual(await settled(done), { outcome: 'cancelled', reason: 'cancelled', submitted: 'drained' });
+    assert.equal(scheduler.snapshot().outstanding, 0); assert.deepEqual(scheduler.snapshot().jobs, []);
+  }
+});
+
+test('discard: evidence before cancellation remains failed and counts as submitted drain', async () => {
+  const { scheduler } = setup(); const owner = preparing(scheduler, 'owner');
+  const aux = scheduler.requestAuxiliary('main', { jobId: 'owner', priority: 'inspection', operation: operation(owner.request) });
+  const [entry] = scheduler.admit();
+  assert.equal(scheduler.discardAuxiliary(entry.admission, { reason: 'submission rejected' }), true);
+  const result = await settled(aux.done); await pending(owner.job.done);
+  const cancellation = scheduler.cancel('owner');
+  assert.deepEqual(await settled(cancellation.done), { outcome: 'cancelled', submitted: 'drained' });
+  assert.equal((await settled(owner.job.done)).outcome, 'cancelled'); assert.equal(await aux.done, result);
+  assert.deepEqual(result, { outcome: 'failed', reason: 'submission rejected' });
+});
+
+test('discard: auxiliary-only cancellation drains with discarded leases', async () => {
+  const { scheduler } = setup(); const request = requestData('auxiliary');
+  const jobs = ['pick', 'classify', 'unissued'].map(id => scheduler.requestAuxiliary('main', {
+    jobId: 'auxiliary', priority: 'inspection', operation: operation(request, id),
+  }));
+  const entries = scheduler.admit(); const cancellation = scheduler.cancel('auxiliary');
+  assert.equal((await settled(jobs[2].done)).submitted, 'none');
+  assert.equal(scheduler.discardAuxiliary(entries[0].admission, { reason: 'rejected' }), true);
+  await pending(cancellation.done); await pending(jobs[0].done);
+  assert.equal(scheduler.discardAuxiliary(entries[1].admission, { reason: 'rejected' }), true);
+  assert.deepEqual(await settled(cancellation.done), { outcome: 'cancelled', submitted: 'drained' });
+  for (const job of jobs.slice(0, 2)) assert.equal((await settled(job.done)).submitted, 'drained');
+  assert.deepEqual(scheduler.snapshot().jobs, []);
+});
+
+test('discard: observed loss takes precedence including a partially drained cancellation', async () => {
+  for (const cancelling of [false, true]) for (const discardBeforeLoss of [false, true]) {
+    const { scheduler } = setup(); const owner = enqueue(scheduler, 'owner', { priority: 'refinement', kind: 'settled' });
+    const auxiliaries = ['pick', 'classify'].map(id => scheduler.requestAuxiliary('main', {
+      jobId: 'owner', priority: 'inspection', operation: operation(owner.request, id),
+    }));
+    const entries = scheduler.admit(), cancellation = cancelling ? scheduler.cancel('owner') : null;
+    if (discardBeforeLoss) {
+      assert.equal(scheduler.discardAuxiliary(entries[0].admission, { reason: 'earlier rejection' }), true);
+      if (cancelling) await pending(cancellation.done);
+    }
+    scheduler.interrupted(1); const before = scheduler.snapshot(), events = []; scheduler.subscribe(event => events.push(event));
+    for (const entry of entries) assert.equal(scheduler.discardAuxiliary(entry.admission, { reason: 'late rejection' }), false);
+    assert.deepEqual(scheduler.snapshot(), before); assert.deepEqual(events, []);
+    if (cancelling) {
+      assert.deepEqual(await settled(cancellation.done), { outcome: 'cancelled', submitted: 'interrupted' });
+      for (const job of [owner.job, ...auxiliaries]) assert.deepEqual(await settled(job.done), { outcome: 'cancelled', reason: 'cancelled', submitted: 'interrupted' });
+    } else {
+      assert.deepEqual(await settled(owner.job.done), { outcome: 'interrupted', reason: 'device-lost' });
+      assert.deepEqual(await settled(auxiliaries[1].done), { outcome: 'interrupted', reason: 'device-lost' });
+      assert.equal((await settled(auxiliaries[0].done)).outcome, discardBeforeLoss ? 'failed' : 'interrupted');
+    }
+    assert.equal(scheduler.snapshot().outstanding, 0); assert.deepEqual(scheduler.admit(), []);
+  }
+});
+
+test('discard: requires a diagnostic reason but accepts unrecognized nonempty strings', async () => {
+  const { scheduler } = setup();
+  const aux = scheduler.requestAuxiliary('main', { jobId: 'aux', priority: 'inspection', operation: operation(requestData('aux')) });
+  const [entry] = scheduler.admit(); const before = scheduler.snapshot(), events = []; scheduler.subscribe(event => events.push(event));
+  for (const options of [undefined, null, {}, { reason: undefined }, { reason: null }, { reason: '' }, { reason: ' \n ' }, { reason: 7 }, { reason: new Error('rejected') }]) {
+    assert.throws(() => scheduler.discardAuxiliary(entry.admission, options), TypeError);
+    assert.deepEqual(scheduler.snapshot(), before); await pending(aux.done);
+  }
+  assert.deepEqual(events, []);
+  const reason = 'backend-specific diagnostic not in an enum';
+  assert.equal(scheduler.discardAuxiliary(entry.admission, { reason }), true);
+  assert.deepEqual(await settled(aux.done), { outcome: 'failed', reason });
+});
+
+test('discard: duplicate and already retired leases cannot release another slot or change outcomes', async () => {
+  for (const terminal of ['completed', 'failed', 'discarded']) {
+    const { scheduler } = setup();
+    const aux = scheduler.requestAuxiliary('main', { jobId: 'aux', priority: 'inspection', operation: operation(requestData('aux')) });
+    const [entry] = scheduler.admit();
+    if (terminal === 'completed') finish(scheduler, entry);
+    else if (terminal === 'failed') scheduler.failed(entry.admission, new Error('original failure'));
+    else assert.equal(scheduler.discardAuxiliary(entry.admission, { reason: 'original rejection' }), true);
+    const original = await settled(aux.done);
+    const current = enqueue(scheduler, 'current'); const [main] = scheduler.admit(); const before = scheduler.snapshot(), events = [];
+    scheduler.subscribe(event => events.push(event));
+    assert.equal(scheduler.discardAuxiliary(entry.admission, { reason: 'duplicate' }), false);
+    assert.equal(scheduler.discardAuxiliary(entry.admission), false, 'retired leases are refused before reason validation');
+    assert.equal(finish(scheduler, entry), false); assert.equal(scheduler.failed(entry.admission, new Error('late failure')), false);
+    assert.deepEqual(scheduler.snapshot(), before); assert.deepEqual(events, []); assert.equal(await aux.done, original);
+    finish(scheduler, main); assert.equal((await settled(current.job.done)).outcome, 'completed');
+  }
+});
+
+test('discard: watchdog outcomes stay settled and the stall clears only after all leases drain', async () => {
+  const { scheduler, clock } = setup(); const owner = preparing(scheduler, 'owner', { kind: 'settled' });
+  const auxiliaries = ['pick', 'classify'].map(id => scheduler.requestAuxiliary('main', {
+    jobId: 'owner', priority: 'inspection', operation: operation(owner.request, id),
+  }));
+  const [first, last] = scheduler.admit(); clock.advance(5000);
+  const result = { outcome: 'budget-exceeded', reason: 'watchdog', continuation: 'lower-cost' };
+  for (const job of [owner.job, ...auxiliaries]) assert.deepEqual(await settled(job.done), result);
+  const waiting = enqueue(scheduler, 'waiting');
+  assert.equal(scheduler.discardAuxiliary(first.admission, { reason: 'late fence failure' }), true);
+  assert.equal(scheduler.snapshot().stalled, true); assert.deepEqual(scheduler.admit(), []);
+  const cancellation = scheduler.cancel('owner'); await pending(cancellation.done);
+  assert.equal(scheduler.discardAuxiliary(last.admission, { reason: 'late fence failure' }), true);
+  assert.deepEqual(await settled(cancellation.done), { outcome: 'cancelled', submitted: 'drained' });
+  assert.equal(scheduler.snapshot().stalled, false);
+  for (const job of [owner.job, ...auxiliaries]) assert.deepEqual(await job.done, result);
+  finish(scheduler, scheduler.admit()[0]); assert.equal((await settled(waiting.job.done)).outcome, 'completed');
+  clock.advance(5000); assert.equal(scheduler.snapshot().stalled, false); assert.deepEqual(scheduler.snapshot().jobs, []);
+});
+
+test('discard: releases slots atomically for synchronous listeners at both lease limits', async () => {
+  for (const maxOutstanding of [1, 2]) {
+    const { scheduler } = setup({ maxOutstanding }); const owner = preparing(scheduler, 'owner', { count: 3, serial: true });
+    const auxiliaries = Array.from({ length: 5 }, (_, i) => scheduler.requestAuxiliary('main', {
+      jobId: 'owner', priority: 'inspection', operation: operation(owner.request, `aux${i}`),
+    }));
+    const active = [], issued = [], events = []; let previous;
+    const pump = () => { const entries = scheduler.admit(); active.push(...entries); issued.push(...entries); };
+    pump(); owner.prepare(); assert.equal(scheduler.ready('owner', { epoch: 1 }), true);
+    scheduler.subscribe(event => {
+      if (event.type !== 'discarded') return;
+      events.push({ event, duplicate: scheduler.discardAuxiliary(previous.admission, { reason: 'duplicate' }) }); pump();
+    });
+    for (let i = 0; active.length && i < 8; i++) {
+      previous = active.shift();
+      if (previous.operation.id.startsWith('aux')) {
+        assert.equal(scheduler.discardAuxiliary(previous.admission, { reason: 'rejected' }), true);
+        if (issued.length < 8) assert.ok(active.length > 0, 'discard notification lets a listener use the freed slot');
+      } else finish(scheduler, previous);
+      pump(); assert.ok(active.length <= maxOutstanding); assert.equal(scheduler.snapshot().outstanding, active.length);
+    }
+    assert.equal(events.length, 5); assert.ok(events.every(({ event, duplicate }) => Object.isFrozen(event) && duplicate === false));
+    assert.equal(issued.length, 8); assert.equal(new Set(issued.map(entry => entry.operation.id)).size, 8); assert.equal(active.length, 0);
+    assert.equal((await settled(owner.job.done)).outcome, 'completed');
+    for (const auxiliary of auxiliaries) assert.equal((await settled(auxiliary.done)).outcome, 'failed');
+    assert.deepEqual(scheduler.snapshot().jobs, []);
+  }
+});

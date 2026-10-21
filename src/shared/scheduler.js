@@ -38,6 +38,13 @@ const identifier = (value, name) => {
  * Elapsed work accrues only while a job holds a lease and its view is eligible;
  * requestedAt remains the origin for end-to-end latency. Auxiliaries share jobId
  * cancellation ownership but have separate promises and no elapsed-work budget.
+ * discardAuxiliary(admission, {reason}) accepts the same terminal evidence as
+ * failed(), but settles only that auxiliary as failed and never closes its owner.
+ * The caller supplies a nonempty diagnostic string, not an outcome enum. Main,
+ * foreign, retired and non-current leases return false without mutation. During
+ * cancellation it contributes drain evidence; promises await the whole group,
+ * with observed loss taking precedence over a partially proved drain. Existing
+ * terminal outcomes remain unchanged, including after watchdog expiry.
  * Budget continuations require fresh request/job IDs and a fresh plan. Settled
  * jobs never revive. Requests during a watchdog stall queue until terminal evidence
  * retires every outstanding lease; observed loss still requires a new epoch.
@@ -371,6 +378,18 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
         if (record.plan) reserve(record); else settle(record, 'completed', null);
       }
       cleanup(record); emit('completed', record); return true;
+    },
+    discardAuxiliary(admission, { reason } = {}) {
+      const item = leases.get(admission);
+      if (!item || item.record.plan || item.record.group.epoch !== epoch) return false;
+      identifier(reason, 'reason');
+      const { record } = item;
+      // The caller proves pre-queue rejection or failure after the queue fence.
+      // Reuse lease accounting without advancing the owner or closing its group.
+      releaseLease(admission, record);
+      if (record.group.cancellation) cancellationResult(record.group);
+      else settle(record, 'failed', reason);
+      cleanup(record); emit('discarded', record); return true;
     },
     failed(admission, error) {
       const item = leases.get(admission);
