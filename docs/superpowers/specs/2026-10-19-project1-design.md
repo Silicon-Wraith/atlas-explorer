@@ -5,14 +5,17 @@ affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera 
 from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
 compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
 (4) one Discoveries control, filtered per workspace and fed by discovery sources, with only the
-local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.2 (rev 2 was
+local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.3 (rev 2 was
 Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply Codex's co-author reviews;
 rev 4 adds Project 1c, Space deep zoom, by the user's decision "Yes, add deep zoom as 1c in Project 1."
 (2026-10-20) — §21; rev 4.2 applies the user's decisions of 2026-10-21: the §9.1 WebGPU backend annex
 adopted as normative, the anchored camera (§5.2/§10.1) approved for ordinary Space, §19.2 Q2, Q5
 and Q6 answered (§19.1) with gamepad exploration added to Space navigation (§13.3; supported controllers: Xbox-style standard
 layout, §19.1), and the §13.2
-precision-badge erratum. **§21 (1c) remains a draft amendment awaiting the user's review.**)
+precision-badge erratum; rev 4.3 applies the user's decision of 2026-10-21 "approve amending the
+adopted §9.1 annex to add allocate" (§9 method list, §9.1 Allocator and limits) together with the
+B00 contract clarifications agreed with Codex (run 20261021T060324Z-4e7f: pipeline descriptor
+ownership, epoch and ticket timing). **§21 (1c) remains a draft amendment awaiting the user's review.**)
 **Authors:** Claude and Codex, co-designed as peers. The verbatim exchange is archived in
 `docs/codesign/project1-log.md`, a project-specific log kept beside the protocol's
 `docs/codesign/conversation-log.md` (which holds the charter and Project 0 co-design).
@@ -456,6 +459,7 @@ inspector in 1b.2.
 ```text
 acquire()                      → identity (fields may be unavailable), limits, features
 prepare(pipelineSet)           → asynchronous, with progress events
+allocate({name, bytes, usage, data?}) → opaque buffer handle
 configureTargets(targetDesc)   → allocates through the tracked allocator
 submitBatch(batchDesc)         → ticket with completion identity (queue completion, labelled)
 readback(readbackDesc)         → asynchronous, banded staging
@@ -492,6 +496,8 @@ destroy()
 Project 0 recorded its configuration (E10, `webgpu-g5d-decision.json`, `launch-remediation.json`).
 This annex, proposed in the 1b.1 plan (rev 4.1) and adopted by the user on 2026-10-21, is normative
 for the WebGPU backend. Task identifiers (B00–B14) name the 1b.1 plan tasks that implement each part.
+Amended by user decision, 2026-10-21 ("approve amending the adopted §9.1 annex to add allocate"):
+the production `allocate` method and `maxUniformBufferBindingSize` (Allocator and Adapter bullets).
 
 - **Adapter and device.** `navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })`
   once per acquisition attempt; `adapter.info` is read on the retained adapter before
@@ -501,12 +507,17 @@ for the WebGPU backend. Task identifiers (B00–B14) name the 1b.1 plan tasks th
   software device and never satisfies a physical-GPU requirement; physical-GPU acceptance needs
   corroborating evidence (`chrome://gpu`, the gate's hardware suite) when identity fields are
   unavailable. Required features: none. Optional: `timestamp-query`. Limits recorded and checked:
-  `maxBufferSize`, `maxStorageBufferBindingSize`, `maxTextureDimension2D`,
+  `maxBufferSize`, `maxStorageBufferBindingSize`, `maxUniformBufferBindingSize`,
+  `maxTextureDimension2D`,
   `maxComputeWorkgroupsPerDimension`, `maxComputeInvocationsPerWorkgroup`, `maxBindGroups`,
   `maxStorageBuffersPerShaderStage`.
 - **Epochs and loss.** Every acquisition attempt receives a fresh identity; the epoch is an
   integer advanced on each successful acquisition, supplied to requests as
-  `generation.deviceEpoch` (no second editable epoch field). A `device.lost.then(...)` observer is
+  `generation.deviceEpoch` (no second editable epoch field). The epoch is zero if and only if the
+  backend is unavailable or destroyed; successful acquisitions receive increasing positive
+  epochs. Completed tickets carry observed completion timing; failed and interrupted tickets
+  have `queueCompletedAt: null`, `elapsedMs: null` and no timestamp duration, with the error
+  message (failed) or the loss reason (interrupted) as `reason`. A `device.lost.then(...)` observer is
   attached immediately after acquisition and never awaited before returning. Observed loss
   immediately makes the backend unavailable and invalidates its epoch before clients are notified
   (`onLoss({epoch, reason: 'destroyed' | 'unknown' | <reason>, message})`); late callbacks from
@@ -539,8 +550,9 @@ for the WebGPU backend. Task identifiers (B00–B14) name the 1b.1 plan tasks th
   pending mark): 72 bytes per pixel, 597,196,800 B at 3840 × 2160 before staging, uniforms, model
   buffers and overlapping generations. Each resource is counted at its actual dimensions. (Project
   0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.)
-- **Pipeline descriptors.** B00 freezes the pipeline descriptor schema, ids, binding slots and
-  uniform layouts; B06 validates preparation with executable self-check pipelines; B08, B10 and
+- **Pipeline descriptors.** B00 freezes the pipeline descriptor schema and binding/uniform
+  conventions. B06, B08, B10 and B11 freeze their concrete pipeline IDs, slots and layouts
+  alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and
   B11 add their descriptors and preparation assertions as their shaders come into existence; B11
   verifies complete product prewarming before B14 enables interaction.
 - **Batches.** The descriptor and ticket of B00 (`identity`, `pipelineId`, `pass`, `region`,
@@ -559,11 +571,22 @@ for the WebGPU backend. Task identifiers (B00–B14) name the 1b.1 plan tasks th
 - **Configuration.** `configureTargets` is transactional: bytes are reserved and accounted first,
   allocation and validation errors captured (`pushErrorScope`), and the old usable target set is
   retained if replacement fails.
-- **Allocator.** `allocate` checks `tracked + bytes ≤ 1 GiB` before creating a resource;
-  `release` marks a resource retiring, and bytes leave the total only when every ticket, mapping
-  and retained-owner reference has ended; uniform uploads, query and resolve storage, staging and
-  model buffers are counted; `diagnostics()` reports `{state, epoch, tracked, peak, retiring,
-  inventory}`. Plane's WebGL allocations are reported separately and never summed in.
+- **Allocator.** Every application-owned allocation passes through the tracked allocator, which
+  checks `tracked + bytes ≤ 1 GiB` before resource creation. The production method
+  `allocate({name, bytes, usage, data?}) → handle` creates a buffer in the current available device
+  epoch. `name` is nonempty; `bytes` is a positive safe integer divisible by four; `usage` is
+  `'storage'` or `'uniform'`; optional `data` is a `Uint8Array` whose byte length does not exceed
+  `bytes`. Initial data is defensively copied at creation and remaining bytes are zero. WebGPU
+  initializes supplied contents through `mappedAtCreation`, copies them into the mapped range, and
+  unmaps before returning; this performs no application queue submission and consumes no admission
+  lease. The backend derives native usage flags, including copy-source support for readback. There
+  is no production host-update method; admitted shader writes to storage buffers remain permitted.
+  `stage()` is a fake-only test control.
+
+  `release(handle)` marks a resource retiring; bytes leave accounting only when every ticket,
+  mapping and retained-owner reference has ended. Uniform uploads, query/resolve storage, staging
+  and model buffers are counted. `diagnostics()` reports `{state, epoch, tracked, peak, retiring,
+  inventory}` using actual allocation sizes. Plane allocations remain separate.
 - **Launch (tests).** The complete recorded Project 0 launch profile (`--enable-gpu --use-angle=vulkan
   --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan --enable-webgpu-developer-features`,
   installed Chrome, headed, §16.5); requested and effective arguments recorded in every report.
@@ -1120,6 +1143,10 @@ own spec (hosting, identity, moderation, privacy and trust of remote records) an
 - **Controller models** (rev 4.2 Q11; user decision, 2026-10-21): "Xbox style". Standard-layout
   gamepads (`mapping === "standard"`, which Xbox-style controllers report) are sufficient for 1b.1;
   non-standard joysticks and flight sticks, mapping profiles and remapping stay deferred (§17).
+- **Production `allocate`** (user decision, 2026-10-21: "approve amending the adopted §9.1 annex to
+  add allocate"): §9 gains `allocate({name, bytes, usage, data?}) → opaque buffer handle` and the
+  §9.1 Allocator bullet specifies it (rev 4.3), so B08/B09 model and points buffers have a
+  production route; proposed in the 1b.1 B00 review and agreed by Codex (run 20261021T060324Z-4e7f).
 
 ### 19.2 Open
 These affect only 1b and 1c; the architecture supports either answer to each.
