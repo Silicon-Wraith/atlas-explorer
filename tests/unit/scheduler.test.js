@@ -47,6 +47,15 @@ function enqueue(scheduler, jobId, options = {}) {
     plan: wrap ? wrap(plan) : plan });
   return { job, plan, request };
 }
+function preparing(scheduler, jobId, options = {}) {
+  let prepared = false, calls = 0;
+  const queued = enqueue(scheduler, jobId, { ...options, wrap: plan => ({ request: plan.request,
+    next() { calls++; return prepared ? plan.next() : null; },
+    exhausted() { calls++; return prepared && plan.exhausted(); },
+    advance(...args) { return plan.advance(...args); },
+  }) });
+  return { ...queued, prepare() { prepared = true; }, calls: () => calls };
+}
 const finish = (scheduler, entry, evidence = {}) => scheduler.completed(entry.admission,
   { epoch: entry.admission.epoch, elapsedMs: 8, ...evidence });
 async function pending(promise) {
@@ -141,6 +150,160 @@ test('update admits exactly one frozen snapshot and returns to paused', async ()
   scheduler.update('main'); const [next] = scheduler.admit(); assert.equal(next.admission.jobId, 'later');
   finish(scheduler, next); assert.equal((await later.job.done).outcome, 'completed');
   assert.deepEqual(scheduler.admit(), []);
+});
+
+test('readiness: a request registered before ready is admitted after ready and retains its Update selection', async () => {
+  const { scheduler, clock } = setup(); scheduler.pause('main');
+  const selected = preparing(scheduler, 'selected', { count: 2, serial: true });
+  scheduler.update('main'); const later = enqueue(scheduler, 'later');
+  assert.equal(viewState(scheduler).updating, 'selected');
+  assert.deepEqual(scheduler.admit(), []); await pending(selected.job.done);
+  clock.advance(100); assert.equal(jobState(scheduler, 'selected').elapsedWorkMs, 0);
+  await Promise.resolve(); selected.prepare();
+  assert.equal(scheduler.ready('selected', { epoch: 1 }), true);
+  assert.equal(scheduler.snapshot().outstanding, 0, 'readiness does not issue a lease');
+  for (let i = 0; i < 2; i++) {
+    const [entry] = scheduler.admit(); assert.ok(entry, 'prepared Update must become admissible');
+    assert.equal(entry.admission.jobId, 'selected'); finish(scheduler, entry);
+  }
+  assert.equal((await settled(selected.job.done)).outcome, 'completed');
+  assert.equal(viewState(scheduler).paused, true); assert.deepEqual(scheduler.admit(), []);
+  await pending(later.job.done);
+  scheduler.update('main'); finish(scheduler, scheduler.admit()[0]);
+  assert.equal((await settled(later.job.done)).outcome, 'completed');
+});
+
+test('readiness: stale-epoch notifications are ignored even when a job ID is reused', async () => {
+  const { scheduler } = setup(); const old = preparing(scheduler, 'reused');
+  scheduler.setEpoch(2); old.prepare(); const before = scheduler.snapshot(), calls = old.calls();
+  const events = []; scheduler.subscribe(event => events.push(event));
+  for (const epoch of [1, 2]) assert.equal(scheduler.ready('reused', { epoch }), false);
+  assert.deepEqual(scheduler.snapshot(), before); assert.equal(old.calls(), calls); assert.deepEqual(events, []);
+  scheduler.interrupted(1); assert.equal((await settled(old.job.done)).outcome, 'interrupted');
+  const current = preparing(scheduler, 'reused', { epoch: 2 }); current.prepare();
+  const currentCalls = current.calls(), eventCount = events.length;
+  assert.equal(scheduler.ready('reused', { epoch: 1 }), false);
+  assert.equal(current.calls(), currentCalls); assert.equal(events.length, eventCount);
+  assert.deepEqual(scheduler.admit(), []);
+  assert.equal(scheduler.ready('reused', { epoch: 2 }), true);
+  const [entry] = scheduler.admit(); assert.equal(entry.admission.epoch, 2); finish(scheduler, entry);
+  assert.equal((await settled(current.job.done)).outcome, 'completed');
+});
+
+test('readiness: duplicates neither double-admit operations nor repeat ready events', async () => {
+  const { scheduler } = setup(); const waiting = preparing(scheduler, 'waiting', { count: 2, serial: true });
+  const events = []; scheduler.subscribe(event => { if (event.type === 'ready') events.push(event); });
+  assert.equal(scheduler.ready('waiting', { epoch: 1 }), false); assert.deepEqual(events, []);
+  waiting.prepare(); assert.equal(scheduler.ready('waiting', { epoch: 1 }), true);
+  const calls = waiting.calls();
+  for (let i = 0; i < 10; i++) assert.equal(scheduler.ready('waiting', { epoch: 1 }), false);
+  assert.equal(waiting.calls(), calls, 'a reserved operation is never replaced by duplicate readiness');
+  assert.deepEqual(events, [{ type: 'ready', epoch: 1, jobId: 'waiting', viewId: 'main' }]);
+  const [first] = scheduler.admit(); assert.equal(first.operation.id, 'op0');
+  for (let i = 0; i < 10; i++) assert.equal(scheduler.ready('waiting', { epoch: 1 }), false);
+  assert.deepEqual(scheduler.admit(), []); assert.equal(scheduler.snapshot().outstanding, 1);
+  finish(scheduler, first); const [last] = scheduler.admit(); assert.equal(last.operation.id, 'op1');
+  finish(scheduler, last); assert.equal((await settled(waiting.job.done)).outcome, 'completed');
+  assert.equal(scheduler.ready('waiting', { epoch: 1 }), false); assert.equal(events.length, 1);
+});
+
+test('readiness: a notification inspects only its job regardless of backlog size', () => {
+  const { scheduler } = setup();
+  const waiting = Array.from({ length: 1000 }, (_, i) => preparing(scheduler, `waiting${i}`, { purpose: 'export' }));
+  const calls = waiting.map(job => job.calls()); waiting[500].prepare();
+  assert.equal(scheduler.ready('waiting500', { epoch: 1 }), true);
+  waiting.forEach((job, i) => assert.equal(job.calls() - calls[i], i === 500 ? 2 : 0));
+  assert.equal(scheduler.snapshot().outstanding, 0);
+  assert.equal(scheduler.ready('unknown', { epoch: 1 }), false);
+});
+
+test('readiness: a burst respects both lease limits with synchronous admission listeners and auxiliaries', async () => {
+  for (const maxOutstanding of [1, 2]) {
+    const { scheduler } = setup({ maxOutstanding }); const active = [], issued = [], jobs = [];
+    function pump() {
+      const entries = scheduler.admit(); active.push(...entries); issued.push(...entries);
+      assert.ok(active.length <= maxOutstanding, 'readiness burst must respect the shared lease limit');
+      assert.equal(scheduler.snapshot().outstanding, active.length);
+    }
+    const auxiliary = scheduler.requestAuxiliary('other', { jobId: 'auxiliary', priority: 'inspection',
+      operation: operation(requestData('auxiliary', 'other')) });
+    pump(); scheduler.subscribe(event => { if (event.type === 'ready') pump(); });
+    for (let i = 0; i < 20; i++) {
+      const job = preparing(scheduler, `burst${i}`, { purpose: 'export', count: 2 }); jobs.push(job);
+      job.prepare(); assert.equal(scheduler.ready(job.job.jobId, { epoch: 1 }), true);
+      for (let duplicate = 0; duplicate < 3; duplicate++) scheduler.ready(job.job.jobId, { epoch: 1 });
+      // Observer exceptions are isolated, so assert the limit outside the callback too.
+      assert.ok(active.length <= maxOutstanding); assert.equal(scheduler.snapshot().outstanding, active.length);
+    }
+    for (let i = 0; i < 41 && active.length; i++) { finish(scheduler, active.shift()); pump(); }
+    assert.equal(issued.length, 41); assert.equal(active.length, 0);
+    assert.equal(new Set(issued.map(entry => `${entry.admission.jobId}/${entry.operation.id}`)).size, 41);
+    assert.equal((await settled(auxiliary.done)).outcome, 'completed');
+    for (const job of jobs) assert.equal((await settled(job.job.done)).outcome, 'completed');
+  }
+});
+
+test('readiness: hidden and paused requests wait for eligibility including hidden Update', () => {
+  for (const mode of ['hidden', 'paused', 'hidden-update']) {
+    const { scheduler } = setup();
+    if (mode !== 'paused') scheduler.hidden('main', true);
+    if (mode !== 'hidden') scheduler.pause('main');
+    const waiting = preparing(scheduler, 'waiting');
+    if (mode === 'hidden-update') scheduler.update('main');
+    waiting.prepare(); assert.equal(scheduler.ready('waiting', { epoch: 1 }), true);
+    assert.deepEqual(scheduler.admit(), []);
+    if (mode !== 'paused') scheduler.hidden('main', false); else scheduler.resume('main');
+    const [entry] = scheduler.admit(); assert.equal(entry.admission.jobId, 'waiting'); finish(scheduler, entry);
+    if (mode === 'hidden-update') assert.equal(viewState(scheduler).paused, true);
+  }
+});
+
+test('readiness: terminal jobs are never rechecked or revived', async () => {
+  for (const outcome of ['cancelled', 'superseded', 'failed', 'budget-exceeded', 'watchdog', 'interrupted']) {
+    const { scheduler, clock } = setup(); const waiting = preparing(scheduler, 'waiting', { count: 3 });
+    if (outcome === 'cancelled') scheduler.cancel('waiting');
+    else if (outcome === 'superseded') enqueue(scheduler, 'newer');
+    else if (outcome === 'interrupted') scheduler.interrupted(1);
+    else {
+      waiting.prepare(); assert.equal(scheduler.ready('waiting', { epoch: 1 }), true);
+      const entries = scheduler.admit();
+      if (outcome === 'failed') scheduler.failed(entries[0].admission, new Error('failed'));
+      else if (outcome === 'watchdog') { scheduler.hidden('main', true); clock.advance(5000); }
+      else clock.advance(1000);
+    }
+    assert.equal((await settled(waiting.job.done)).outcome, outcome === 'watchdog' ? 'budget-exceeded' : outcome);
+    waiting.prepare(); const before = scheduler.snapshot(), calls = waiting.calls(), events = [];
+    scheduler.subscribe(event => events.push(event));
+    assert.equal(scheduler.ready('waiting', { epoch: 1 }), false);
+    assert.equal(waiting.calls(), calls); assert.deepEqual(scheduler.snapshot(), before); assert.deepEqual(events, []);
+  }
+});
+
+test('readiness: watchdog stalls and instrument cadence still gate prepared work', () => {
+  const { scheduler, clock } = setup();
+  enqueue(scheduler, 'stuck', { count: 2, kind: 'settled' }); const issued = scheduler.admit();
+  clock.advance(5000);
+  const waiting = preparing(scheduler, 'waiting', { viewId: 'other' }); waiting.prepare();
+  assert.equal(scheduler.ready('waiting', { epoch: 1 }), true); assert.deepEqual(scheduler.admit(), []);
+  finish(scheduler, issued[0]); assert.deepEqual(scheduler.admit(), []);
+  finish(scheduler, issued[1]); const [entry] = scheduler.admit(); assert.equal(entry.admission.jobId, 'waiting');
+  finish(scheduler, entry);
+  enqueue(scheduler, 'instrument1', { purpose: 'instrument', priority: 'inspection' });
+  finish(scheduler, scheduler.admit()[0]);
+  const instrument = preparing(scheduler, 'instrument2', { purpose: 'instrument', priority: 'inspection' });
+  instrument.prepare(); assert.equal(scheduler.ready('instrument2', { epoch: 1 }), true);
+  assert.deepEqual(scheduler.admit(), []); clock.advance(499); assert.deepEqual(scheduler.admit(), []);
+  clock.advance(1); assert.equal(scheduler.admit()[0].admission.jobId, 'instrument2');
+});
+
+test('readiness: an empty prepared plan settles without a lease', async () => {
+  const { scheduler } = setup(); const empty = preparing(scheduler, 'empty', { count: 0 });
+  await pending(empty.job.done); empty.prepare();
+  const events = []; scheduler.subscribe(event => events.push(event));
+  assert.equal(scheduler.ready('empty', { epoch: 1 }), true);
+  assert.deepEqual(await settled(empty.job.done), { outcome: 'completed', reason: null });
+  assert.deepEqual(scheduler.admit(), []); assert.equal(scheduler.snapshot().outstanding, 0);
+  assert.deepEqual(events, [{ type: 'settled', epoch: 1, jobId: 'empty', viewId: 'main' }]);
 });
 
 test('cancel reports none, drained or interrupted only on completion or loss evidence', async () => {
