@@ -108,7 +108,12 @@ test('target replacement is transactional and counts each actual internal dimens
   await assert.rejects(backend.configureTargets({ ...input, internalSize: { width: 4, height: 4 } }), code('allocation-failed'));
   const ticket = backend.present({ identity: identity(backend.currentEpoch()), display: targets.handles.display }, lease(backend));
   backend.complete(ticket, { elapsedMs: 2 }); assert.equal((await ticket.done).outcome, 'completed');
-  await backend.configureTargets(input); assert.equal(backend.diagnostics().tracked, 288);
+  // Target handles stay caller-owned: a replacement leaves the earlier set live until release.
+  const replacement = await backend.configureTargets(input); assert.equal(backend.diagnostics().tracked, 576);
+  const previous = backend.present({ identity: identity(backend.currentEpoch()), display: targets.handles.display }, lease(backend));
+  backend.complete(previous, { elapsedMs: 1 }); assert.equal((await previous.done).outcome, 'completed', 'the previous image can still be presented');
+  for (const handle of Object.values(targets.handles).flat()) backend.release(handle);
+  assert.equal(backend.diagnostics().tracked, 288); assert.ok(replacement.handles.display);
 });
 
 test('readback stages exact region bytes and keeps mapping ownership after queue completion', async () => {

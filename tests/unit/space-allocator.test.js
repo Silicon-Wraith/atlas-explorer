@@ -35,10 +35,16 @@ test('allocation is refused before creation when it would exceed the cap', () =>
   assert.equal(tracked.diagnostics().tracked, 100);
   assert.throws(() => tracked.allocate({ name: 'over', bytes: 4, usage: 'storage' }), code('allocation-failed'));
   assert.equal(factory.created.length, 2);
-  // An injected failure is also refused before creation, and the cap check comes first.
+  // The cap check comes first: an armed injection survives a cap refusal.
   tracked.failNextAllocation();
-  assert.throws(() => tracked.allocate({ name: 'injected', bytes: 4, usage: 'storage' }), code('allocation-failed'));
+  assert.throws(() => tracked.allocate({ name: 'over', bytes: 4, usage: 'storage' }), error => code('allocation-failed')(error) && /cap/.test(error.message));
   assert.equal(factory.created.length, 2);
+  // Isolated from the cap: with room left, the armed injection refuses one request that fits, before creation.
+  const { factory: roomy, allocator: spare } = allocator({ cap: 100 });
+  spare.failNextAllocation();
+  assert.throws(() => spare.allocate({ name: 'injected', bytes: 4, usage: 'storage' }), error => code('allocation-failed')(error) && /injected/.test(error.message));
+  assert.equal(roomy.created.length, 0);
+  spare.allocate({ name: 'next', bytes: 4, usage: 'storage' }); assert.equal(roomy.created.length, 1, 'the injection is one-shot');
   assert.throws(() => tracked.allocate({ name: 'bad', bytes: 0, usage: 'storage' }), code('invalid-descriptor'));
   assert.throws(() => tracked.allocate({ name: '', bytes: 4, usage: 'storage' }), code('invalid-descriptor'));
 });
@@ -129,10 +135,11 @@ test('a transaction reserves every byte first and rolls back completely when one
   // Within the cap but the third creation fails: the first two are destroyed and nothing stays accounted.
   assert.throws(() => tracked.transaction(descriptions.map(desc => ({ ...desc, width: 5, height: 5, bytes: desc.bytes / 4 }))), code('allocation-failed'));
   assert.equal(factory.created.length, 2); assert.equal(factory.destroyed.length, 2);
-  assert.deepEqual(tracked.diagnostics(), { tracked: 0, peak: 0, retiring: 0, inventory: [] });
+  // Rollback restores current tracking; the lifetime peak keeps the two resources that briefly existed.
+  assert.deepEqual(tracked.diagnostics(), { tracked: 0, peak: 200, retiring: 0, inventory: [] });
   const handles = tracked.transaction(descriptions.slice(0, 2));
   assert.equal(handles.length, 2); assert.equal(tracked.diagnostics().tracked, 800);
-  assert.equal(tracked.diagnostics().peak, 800, 'peak reflects only resources that were actually created');
+  assert.equal(tracked.diagnostics().peak, 800);
 });
 
 test('destroyAll destroys every native resource and zeroes tracking while peak persists', () => {

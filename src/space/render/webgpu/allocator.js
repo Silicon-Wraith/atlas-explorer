@@ -75,8 +75,11 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
       if (!Array.isArray(descs) || !descs.length) invalid('a transaction needs at least one description');
       const parsed = descs.map(describe);
       reserve(parsed.reduce((sum, item) => sum + item.description.bytes, 0));
+      // Each created resource counts toward the lifetime peak at once; a rollback restores current
+      // tracking but never erases the evidence of that temporary pressure.
       const natives = [];
-      try { for (const item of parsed) natives.push(create(item)); }
+      let created = 0;
+      try { for (const item of parsed) { natives.push(create(item)); created += item.description.bytes; peak = Math.max(peak, tracked + created); } }
       catch (error) { natives.forEach(destroyNative); throw error; }
       return Object.freeze(parsed.map((item, index) => record(item.description, natives[index])));
     },
@@ -104,6 +107,9 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
       for (const entry of entries) { entry.tickets.delete(token); entry.mappings.delete(token); reclaim(entry); }
     },
     lookup,
+    // An asynchronous creation failure (a captured error scope) is recorded on the resource and
+    // reported by diagnostics; the backend fails every ticket that consumes it.
+    markFailed(handle, message) { const entry = resources.get(handle); if (entry && entry.failure === undefined) entry.failure = String(message); },
     failNextAllocation() { failNext = true; },
     // Loss or teardown: every native resource is destroyed and tracking returns to zero; peak persists.
     destroyAll() {
@@ -121,7 +127,8 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
         if (entry.retiring) retiring += entry.description.bytes;
         const extra = Object.fromEntries(INVENTORY_KEYS.filter(key => entry.description[key] !== undefined).map(key => [key, entry.description[key]]));
         return Object.freeze({ id: entry.handle.id, epoch: entry.epoch, name: entry.description.name, bytes: entry.description.bytes, ...extra,
-          state: entry.retiring ? 'retiring' : 'live', tickets: entry.tickets.size, mappings: entry.mappings.size, owners: entry.owners.size, allocatedAt: entry.allocatedAt });
+          state: entry.retiring ? 'retiring' : 'live', tickets: entry.tickets.size, mappings: entry.mappings.size, owners: entry.owners.size, allocatedAt: entry.allocatedAt,
+          ...(entry.failure === undefined ? {} : { failure: entry.failure }) });
       });
       return Object.freeze({ tracked, peak, retiring, inventory: Object.freeze(inventory) });
     },

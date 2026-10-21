@@ -566,6 +566,8 @@ async function recoverySetupInPage() {
       }
       return mismatches;
     },
+    // Target handles are caller-owned until release (B06 r1 finding 5).
+    releaseSet(targets) { for (const handle of Object.values(targets.handles).flat()) backend.release(handle); },
     async drawDisplay(targets, jobId = 'present') {
       const { width, height } = targets.internalSize;
       const drawn = backend.submitBatch(b.batch('probe-display', 'display', targets.handles.display, { x: 0, y: 0, width, height }, jobId), b.lease(jobId));
@@ -601,6 +603,15 @@ async function bandedInPage() {
   const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
   const width = 1024, height = 600;
   const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width, height }, outputSize: { width, height } });
+  // F3 ruling (a): B06 owns resource initialization — both fresh accumulation textures and the flags
+  // texture read back as zero through admitted readback (B11 owns sample-0 initialization).
+  const zero = {};
+  for (const [name, handle, bpt] of [['accumulation-0', targets.handles.accumulation[0], 16], ['accumulation-1', targets.handles.accumulation[1], 16], ['accumulationFlags', targets.handles.accumulationFlags, 4]]) {
+    const { data } = await b.readBands(handle, width, height, bpt, 'zero');
+    const words = new Uint32Array(data.buffer, data.byteOffset, data.length / 4);
+    let nonzero = 0; for (let i = 0; i < words.length; i++) if (words[i] !== 0) nonzero++;
+    zero[name] = { bytes: data.length, nonzero };
+  }
   const ticket = backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width, height }), b.lease('probe'));
   const done = await ticket.done;
   const { data, bands } = await b.readBands(targets.handles.status, width, height, 4);
@@ -634,7 +645,8 @@ async function bandedInPage() {
   const depthEntry = backend.diagnostics().inventory.find(item => item.id === targets.handles.depth.id);
   const failedHolds = { depthTickets: depthEntry.tickets, lingeringUniforms: backend.diagnostics().inventory.filter(item => item.name.startsWith('uniforms:')).length, uncaptured: backend.testAdapter.uncapturedErrors().length };
   const afterFailure = await backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 8, height: 8 }), b.lease('probe')).done;
-  return { failed, failedHolds, afterFailure, epochAfterFailure: backend.currentEpoch(), epoch, done, bands, mismatches, pixels: width * height, narrow: { matches: narrowData.every((value, i) => value === narrowExpected[i]), length: narrowData.length }, modelBytes, refusals, trackedUnchanged };
+  b.releaseSet(targets);
+  return { zero, failed, failedHolds, afterFailure, epochAfterFailure: backend.currentEpoch(), epoch, done, bands, mismatches, pixels: width * height, narrow: { matches: narrowData.every((value, i) => value === narrowExpected[i]), length: narrowData.length }, modelBytes, refusals, trackedUnchanged };
 }
 
 async function presentInPage() {
@@ -643,6 +655,7 @@ async function presentInPage() {
   const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: internal, outputSize: output });
   const { pixels, ...drawn } = await b.drawDisplay(targets);
   const { data: display } = await b.readBands(targets.handles.display, internal.width, internal.height, 4);
+  b.releaseSet(targets);
   return { drawn, canvas: { width: b.canvas.width, height: b.canvas.height }, displayPattern: b.displayPatternMismatches(display, internal.width, internal.height), comparison: b.compareCanvas(pixels, display, internal, output) };
 }
 
@@ -696,6 +709,7 @@ async function configurationFailureInPage() {
   const { pixels, ...drawn } = await b.drawDisplay(targets);
   const { data: display } = await b.readBands(targets.handles.display, internal.width, internal.height, 4);
   const comparison = b.compareCanvas(pixels, display, internal, output);
+  b.releaseSet(targets);
   return { failures, before, afterCap, afterInjected, drawn, canvas: { width: b.canvas.width, height: b.canvas.height }, comparison, displayPattern: b.displayPatternMismatches(display, internal.width, internal.height) };
 }
 
@@ -712,9 +726,15 @@ async function fourKInPage() {
   const whileHeld = { tracked: backend.diagnostics().tracked, retiring: backend.diagnostics().retiring, status: inventory().find(item => item.name === 'status') };
   const done = await ticket.done;
   const afterTicket = { tracked: backend.diagnostics().tracked, retiring: backend.diagnostics().retiring, statusPresent: inventory().some(item => item.name === 'status') };
-  await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } });
+  const replacement = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } });
+  // Caller-owned: the earlier 4K set survives the replacement and its display can still be presented.
+  const keptAfterReplacement = inventory().length;
+  const previousPresented = await backend.present({ identity: b.identity('present'), display: targets.handles.display }, b.lease('present')).done;
+  const retained = { tracked: backend.diagnostics().tracked };
+  b.releaseSet(targets);
   const afterReplacement = { tracked: backend.diagnostics().tracked, remaining4K: inventory().length, peak: backend.diagnostics().peak };
-  return { allocated, targetBytes, trackedAtAllocation, whileHeld, done, afterTicket, afterReplacement };
+  b.releaseSet(replacement);
+  return { allocated, targetBytes, trackedAtAllocation, whileHeld, done, afterTicket, keptAfterReplacement, previousPresented, retained, afterReplacement };
 }
 
 async function recoveryFinishInPage() {
@@ -735,118 +755,130 @@ async function runRecovery({ page }) {
   await ev(page, recoverySetupInPage, undefined, 'recovery setup');
   const cap = 2 ** 30;
 
-  const selfCheck = await ev(page, selfCheckInPage, undefined, 'self-check preparation and probe', LIMITS.deep);
-  await ev(page, limits => { globalThis.__b06Limits = limits; }, selfCheck.acquired.limits, 'record limits');
-  const { acquired } = selfCheck;
-  assert.ok(acquired.epoch >= 1, `a successful acquisition has a positive epoch (${acquired.epoch})`);
-  assert.equal(typeof acquired.identity.attemptId, 'string');
-  assert.deepEqual(acquired.requestedLimits, {}, 'no blanket requiredLimits: B06 requests no increase');
-  for (const key of ['maxUniformBufferBindingSize', 'maxStorageTexturesPerShaderStage', 'maxStorageBuffersPerShaderStage', 'maxTextureDimension2D']) {
-    assert.ok(Number.isInteger(acquired.limits[key]) && Number.isInteger(acquired.adapterLimits[key]) && acquired.adapterLimits[key] >= acquired.limits[key], `${key}: granted ${acquired.limits[key]} / adapter ${acquired.adapterLimits[key]}`);
-  }
-  assert.ok(['bgra8unorm', 'rgba8unorm'].includes(acquired.canvasFormat));
-  assert.deepEqual(selfCheck.prepared.preparedPipelineIds, ['probe', 'probe-display', 'selfcheck-trace', 'present']);
-  assert.equal(selfCheck.prepared.epoch, acquired.epoch);
-  assert.equal(selfCheck.events[0].stage, 'preparing'); assert.equal(selfCheck.events[0].completed, 0);
-  assert.deepEqual(selfCheck.events.map(event => event.completed), [0, 1, 2, 3, 4], 'progress counts every pipeline once');
-  assert.ok(selfCheck.events.every(event => event.total === 4));
-  assert.ok(selfCheck.preparationMs < PREPARATION_BOUND_MS);
-  assert.deepEqual(selfCheck.refusals, { withoutLease: 'no-admission', reusedLease: 'no-admission' });
-  assert.equal(selfCheck.done.outcome, 'completed'); assert.equal(selfCheck.done.timing.method, 'queue-completion');
-  assert.ok(Number.isFinite(selfCheck.done.timing.elapsedMs) && selfCheck.done.queueCompletedAt !== null);
-  assert.equal(selfCheck.readDone.outcome, 'completed');
-  assert.equal(selfCheck.word, 0x41544c53, `the probe readback must be ATLS, got 0x${selfCheck.word.toString(16)}`);
-  assert.equal(selfCheck.dataLength, 4, 'row padding is stripped on copy-out');
-  assert.deepEqual(selfCheck.staging, [{ bytes: 256, bytesPerRow: 256, mappings: 0 }], 'one 256-byte-aligned staging row; mapping ended before the result');
-  assert.equal(selfCheck.targets.layoutId, 'space-targets-v1'); assert.equal(selfCheck.targets.accumulation.length, 2);
-  pass(RECOVERY_PASSES[0], { acquired, preparationMs: selfCheck.preparationMs, events: selfCheck.events, prepared: selfCheck.prepared, done: selfCheck.done, word: `0x${selfCheck.word.toString(16)}`, refusals: selfCheck.refusals, staging: selfCheck.staging });
+  try {
+    const selfCheck = await ev(page, selfCheckInPage, undefined, 'self-check preparation and probe', LIMITS.deep);
+    await ev(page, limits => { globalThis.__b06Limits = limits; }, selfCheck.acquired.limits, 'record limits');
+    const { acquired } = selfCheck;
+    assert.ok(acquired.epoch >= 1, `a successful acquisition has a positive epoch (${acquired.epoch})`);
+    assert.equal(typeof acquired.identity.attemptId, 'string');
+    assert.deepEqual(acquired.requestedLimits, {}, 'no blanket requiredLimits: B06 requests no increase');
+    for (const key of ['maxUniformBufferBindingSize', 'maxStorageTexturesPerShaderStage', 'maxStorageBuffersPerShaderStage', 'maxTextureDimension2D']) {
+      assert.ok(Number.isInteger(acquired.limits[key]) && Number.isInteger(acquired.adapterLimits[key]) && acquired.adapterLimits[key] >= acquired.limits[key], `${key}: granted ${acquired.limits[key]} / adapter ${acquired.adapterLimits[key]}`);
+    }
+    assert.ok(['bgra8unorm', 'rgba8unorm'].includes(acquired.canvasFormat));
+    assert.deepEqual(selfCheck.prepared.preparedPipelineIds, ['probe', 'probe-display', 'selfcheck-trace', 'present']);
+    assert.equal(selfCheck.prepared.epoch, acquired.epoch);
+    assert.equal(selfCheck.events[0].stage, 'preparing'); assert.equal(selfCheck.events[0].completed, 0);
+    assert.deepEqual(selfCheck.events.map(event => event.completed), [0, 1, 2, 3, 4], 'progress counts every pipeline once');
+    assert.ok(selfCheck.events.every(event => event.total === 4));
+    assert.ok(selfCheck.preparationMs < PREPARATION_BOUND_MS);
+    assert.deepEqual(selfCheck.refusals, { withoutLease: 'no-admission', reusedLease: 'no-admission' });
+    assert.equal(selfCheck.done.outcome, 'completed'); assert.equal(selfCheck.done.timing.method, 'queue-completion');
+    assert.ok(Number.isFinite(selfCheck.done.timing.elapsedMs) && selfCheck.done.queueCompletedAt !== null);
+    assert.equal(selfCheck.readDone.outcome, 'completed');
+    assert.equal(selfCheck.word, 0x41544c53, `the probe readback must be ATLS, got 0x${selfCheck.word.toString(16)}`);
+    assert.equal(selfCheck.dataLength, 4, 'row padding is stripped on copy-out');
+    assert.deepEqual(selfCheck.staging, [{ bytes: 256, bytesPerRow: 256, mappings: 0 }], 'one 256-byte-aligned staging row; mapping ended before the result');
+    assert.equal(selfCheck.targets.layoutId, 'space-targets-v1'); assert.equal(selfCheck.targets.accumulation.length, 2);
+    pass(RECOVERY_PASSES[0], { acquired, preparationMs: selfCheck.preparationMs, events: selfCheck.events, prepared: selfCheck.prepared, done: selfCheck.done, word: `0x${selfCheck.word.toString(16)}`, refusals: selfCheck.refusals, staging: selfCheck.staging });
 
-  const banded = await ev(page, bandedInPage, undefined, 'banded readback', LIMITS.deep);
-  assert.equal(banded.done.outcome, 'completed'); assert.equal(banded.done.timing.method, 'queue-completion'); assert.ok(Number.isFinite(banded.done.timing.elapsedMs));
-  assert.deepEqual(banded.bands.map(band => [band.y, band.rows]), [[0, 256], [256, 256], [512, 88]]);
-  for (const band of banded.bands) {
-    assert.equal(band.outcome, 'completed'); assert.equal(band.bytes, 1024 * 4 * band.rows);
-    assert.ok(band.staging.length <= 2 && band.staging.every(item => item.bytesPerRow % 256 === 0 && item.mappings === 0), JSON.stringify(band.staging));
-  }
-  assert.equal(banded.mismatches, 0, `${banded.mismatches} of ${banded.pixels} texels differ from the staged pattern`);
-  assert.deepEqual(banded.narrow, { matches: true, length: 6 });
-  assert.deepEqual(banded.modelBytes, [1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'allocate copies initial data at creation and zero-pads');
-  assert.deepEqual(banded.refusals, { 'texture-shaped': 'invalid-descriptor', 'not divisible by four': 'invalid-descriptor', 'unknown usage': 'invalid-descriptor', 'zero bytes': 'invalid-descriptor', uniformAboveBindingLimit: 'allocation-failed' });
-  assert.equal(banded.trackedUnchanged, true);
-  assert.equal(banded.failed.outcome, 'failed', JSON.stringify(banded.failed));
-  assert.equal(banded.failed.queueCompletedAt, null); assert.equal(banded.failed.timing.elapsedMs, null); assert.equal(banded.failed.timing.timestampMs, undefined);
-  assert.ok(typeof banded.failed.reason === 'string' && banded.failed.reason.length > 0, 'a failure carries the error message');
-  assert.deepEqual(banded.failedHolds, { depthTickets: 0, lingeringUniforms: 0, uncaptured: 0 }, 'a failed ticket is terminal: its holds are released and its scope captured the error');
-  assert.equal(banded.afterFailure.outcome, 'completed', 'a failed ticket is not a loss'); assert.equal(banded.epochAfterFailure, banded.epoch);
-  pass(RECOVERY_PASSES[1], { done: banded.done, bands: banded.bands, mismatches: banded.mismatches, narrow: banded.narrow, modelBytes: banded.modelBytes, refusals: banded.refusals, failed: banded.failed, failedHolds: banded.failedHolds, afterFailure: banded.afterFailure });
+    const banded = await ev(page, bandedInPage, undefined, 'banded readback', LIMITS.deep);
+    assert.equal(banded.done.outcome, 'completed'); assert.equal(banded.done.timing.method, 'queue-completion'); assert.ok(Number.isFinite(banded.done.timing.elapsedMs));
+    assert.deepEqual(banded.bands.map(band => [band.y, band.rows]), [[0, 256], [256, 256], [512, 88]]);
+    for (const band of banded.bands) {
+      assert.equal(band.outcome, 'completed'); assert.equal(band.bytes, 1024 * 4 * band.rows);
+      assert.ok(band.staging.length <= 2 && band.staging.every(item => item.bytesPerRow % 256 === 0 && item.mappings === 0), JSON.stringify(band.staging));
+    }
+    assert.equal(banded.mismatches, 0, `${banded.mismatches} of ${banded.pixels} texels differ from the staged pattern`);
+    assert.deepEqual(banded.narrow, { matches: true, length: 6 });
+    assert.deepEqual(banded.modelBytes, [1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'allocate copies initial data at creation and zero-pads');
+    assert.deepEqual(banded.refusals, { 'texture-shaped': 'invalid-descriptor', 'not divisible by four': 'invalid-descriptor', 'unknown usage': 'invalid-descriptor', 'zero bytes': 'invalid-descriptor', uniformAboveBindingLimit: 'allocation-failed' });
+    assert.equal(banded.trackedUnchanged, true);
+    assert.deepEqual(banded.zero, { 'accumulation-0': { bytes: 1024 * 600 * 16, nonzero: 0 }, 'accumulation-1': { bytes: 1024 * 600 * 16, nonzero: 0 }, accumulationFlags: { bytes: 1024 * 600 * 4, nonzero: 0 } }, 'fresh accumulation and flags targets read back zero');
+    assert.equal(banded.failed.outcome, 'failed', JSON.stringify(banded.failed));
+    assert.equal(banded.failed.queueCompletedAt, null); assert.equal(banded.failed.timing.elapsedMs, null); assert.equal(banded.failed.timing.timestampMs, undefined);
+    assert.ok(typeof banded.failed.reason === 'string' && banded.failed.reason.length > 0, 'a failure carries the error message');
+    assert.deepEqual(banded.failedHolds, { depthTickets: 0, lingeringUniforms: 0, uncaptured: 0 }, 'a failed ticket is terminal: its holds are released and its scope captured the error');
+    assert.equal(banded.afterFailure.outcome, 'completed', 'a failed ticket is not a loss'); assert.equal(banded.epochAfterFailure, banded.epoch);
+    pass(RECOVERY_PASSES[1], { done: banded.done, bands: banded.bands, mismatches: banded.mismatches, narrow: banded.narrow, modelBytes: banded.modelBytes, refusals: banded.refusals, zero: banded.zero, failed: banded.failed, failedHolds: banded.failedHolds, afterFailure: banded.afterFailure });
 
-  const presented = await ev(page, presentInPage, undefined, 'presentation', LIMITS.deep);
-  assert.equal(presented.drawn.drawn.outcome, 'completed'); assert.equal(presented.drawn.presented.outcome, 'completed');
-  assert.deepEqual(presented.canvas, { width: 640, height: 360 }, 'the canvas is at the output size');
-  assert.equal(presented.displayPattern, 0, 'the display texture holds the probe-display pattern');
-  assert.equal(presented.comparison.mismatches, 0, `canvas differs from the display bytes: ${JSON.stringify(presented.comparison.first)}`);
-  pass(RECOVERY_PASSES[2], { canvasFormat: acquired.canvasFormat, ...presented });
+    const presented = await ev(page, presentInPage, undefined, 'presentation', LIMITS.deep);
+    assert.equal(presented.drawn.drawn.outcome, 'completed'); assert.equal(presented.drawn.presented.outcome, 'completed');
+    assert.deepEqual(presented.canvas, { width: 640, height: 360 }, 'the canvas is at the output size');
+    assert.equal(presented.displayPattern, 0, 'the display texture holds the probe-display pattern');
+    assert.equal(presented.comparison.mismatches, 0, `canvas differs from the display bytes: ${JSON.stringify(presented.comparison.first)}`);
+    pass(RECOVERY_PASSES[2], { canvasFormat: acquired.canvasFormat, ...presented });
 
-  const loss = await ev(page, lossInPage, undefined, 'device loss and reacquisition', LIMITS.deep);
-  assert.equal(loss.observedLoss, true);
-  assert.equal(loss.seen.length, 2, 'one notification for the real loss and one for the injected loss');
-  assert.equal(loss.seen[0].event.epoch, loss.first.epoch); assert.equal(loss.seen[0].event.reason, 'destroyed');
-  assert.equal(loss.seen[0].epochInCallback, 0, 'the epoch is invalidated before clients are notified');
-  assert.equal(loss.seen[0].stateInCallback, 'unavailable', 'the backend is unavailable before clients are notified');
-  assert.equal(loss.seen[0].trackedInCallback, 0, 'resources are released before clients are notified');
-  for (const outcome of loss.outcomes) {
-    assert.equal(outcome.outcome, 'interrupted', JSON.stringify(outcome));
-    assert.equal(outcome.queueCompletedAt, null); assert.equal(outcome.timing.elapsedMs, null); assert.equal(outcome.timing.timestampMs, undefined);
-  }
-  assert.equal(loss.readResult, 'device-lost');
-  assert.deepEqual(loss.after, { state: 'unavailable', epoch: 0, tracked: 0, inventory: 0 });
-  assert.deepEqual(loss.refusals, { afterLoss: 'unavailable', staleEpoch: 'stale-epoch', oldHandle: 'invalid-descriptor' });
-  assert.ok(loss.second.epoch > loss.first.epoch, 'reacquisition yields a new, larger epoch');
-  assert.notEqual(loss.second.attemptId, acquired.identity.attemptId, 'reacquisition is a fresh attempt');
-  assert.equal(loss.probe.outcome, 'completed'); assert.equal(loss.word, 0x41544c53);
-  assert.equal(loss.injected, true);
-  assert.deepEqual({ epoch: loss.injectedState.epoch, state: loss.injectedState.state, outcome: loss.injectedState.outcome.outcome }, { epoch: 0, state: 'unavailable', outcome: 'interrupted' });
-  assert.equal(loss.seen[1].epochInCallback, 0); assert.equal(loss.seen[1].event.reason, 'unknown');
-  assert.ok(loss.third.epoch > loss.second.epoch); assert.notEqual(loss.third.attemptId, loss.second.attemptId);
-  pass(RECOVERY_PASSES[3], loss);
+    const loss = await ev(page, lossInPage, undefined, 'device loss and reacquisition', LIMITS.deep);
+    assert.equal(loss.observedLoss, true);
+    assert.equal(loss.seen.length, 2, 'one notification for the real loss and one for the injected loss');
+    assert.equal(loss.seen[0].event.epoch, loss.first.epoch); assert.equal(loss.seen[0].event.reason, 'destroyed');
+    assert.equal(loss.seen[0].epochInCallback, 0, 'the epoch is invalidated before clients are notified');
+    assert.equal(loss.seen[0].stateInCallback, 'unavailable', 'the backend is unavailable before clients are notified');
+    assert.equal(loss.seen[0].trackedInCallback, 0, 'resources are released before clients are notified');
+    for (const outcome of loss.outcomes) {
+      assert.equal(outcome.outcome, 'interrupted', JSON.stringify(outcome));
+      assert.equal(outcome.queueCompletedAt, null); assert.equal(outcome.timing.elapsedMs, null); assert.equal(outcome.timing.timestampMs, undefined);
+    }
+    assert.equal(loss.readResult, 'device-lost');
+    assert.deepEqual(loss.after, { state: 'unavailable', epoch: 0, tracked: 0, inventory: 0 });
+    assert.deepEqual(loss.refusals, { afterLoss: 'unavailable', staleEpoch: 'stale-epoch', oldHandle: 'invalid-descriptor' });
+    assert.ok(loss.second.epoch > loss.first.epoch, 'reacquisition yields a new, larger epoch');
+    assert.notEqual(loss.second.attemptId, acquired.identity.attemptId, 'reacquisition is a fresh attempt');
+    assert.equal(loss.probe.outcome, 'completed'); assert.equal(loss.word, 0x41544c53);
+    assert.equal(loss.injected, true);
+    assert.deepEqual({ epoch: loss.injectedState.epoch, state: loss.injectedState.state, outcome: loss.injectedState.outcome.outcome }, { epoch: 0, state: 'unavailable', outcome: 'interrupted' });
+    assert.equal(loss.seen[1].epochInCallback, 0); assert.equal(loss.seen[1].event.reason, 'unknown');
+    assert.ok(loss.third.epoch > loss.second.epoch); assert.notEqual(loss.third.attemptId, loss.second.attemptId);
+    pass(RECOVERY_PASSES[3], loss);
 
-  const configuration = await ev(page, configurationFailureInPage, undefined, 'configuration failure', LIMITS.deep);
-  assert.deepEqual(configuration.failures, { aboveCap: 'allocation-failed', injected: 'allocation-failed' });
-  assert.deepEqual(configuration.afterCap, configuration.before, 'a refused configuration leaves accounting and the live set unchanged');
-  assert.deepEqual(configuration.afterInjected, configuration.before, 'a failed creation rolls back completely');
-  assert.equal(configuration.drawn.presented.outcome, 'completed');
-  assert.deepEqual(configuration.canvas, { width: 640, height: 360 });
-  assert.equal(configuration.displayPattern, 0);
-  assert.equal(configuration.comparison.mismatches, 0, `the earlier set no longer presents: ${JSON.stringify(configuration.comparison.first)}`);
-  pass(RECOVERY_PASSES[4], configuration);
+    const configuration = await ev(page, configurationFailureInPage, undefined, 'configuration failure', LIMITS.deep);
+    assert.deepEqual(configuration.failures, { aboveCap: 'allocation-failed', injected: 'allocation-failed' });
+    assert.deepEqual(configuration.afterCap, configuration.before, 'a refused configuration leaves accounting and the live set unchanged');
+    assert.deepEqual(configuration.afterInjected, configuration.before, 'a failed creation rolls back completely');
+    assert.equal(configuration.drawn.presented.outcome, 'completed');
+    assert.deepEqual(configuration.canvas, { width: 640, height: 360 });
+    assert.equal(configuration.displayPattern, 0);
+    assert.equal(configuration.comparison.mismatches, 0, `the earlier set no longer presents: ${JSON.stringify(configuration.comparison.first)}`);
+    pass(RECOVERY_PASSES[4], configuration);
 
-  const fourK = await ev(page, fourKInPage, undefined, '4K target set', LIMITS.deep);
-  const bpp = { depth: 4, status: 4, normal: 8, sampleColor: 8, lightingStatus: 4, accumulationFlags: 4, 'accumulation-0': 16, 'accumulation-1': 16, display: 4, retained: 4 };
-  assert.deepEqual(fourK.allocated.map(item => item.name).sort(), Object.keys(bpp).sort());
-  for (const item of fourK.allocated) { assert.equal(item.bytes, 3840 * 2160 * bpp[item.name], item.name); assert.deepEqual([item.width, item.height, item.state], [3840, 2160, 'live']); }
-  assert.equal(fourK.targetBytes, 597_196_800, '72 bytes per pixel at 3840 × 2160'); assert.equal(3840 * 2160 * 72, 597_196_800);
-  assert.ok(fourK.trackedAtAllocation <= cap);
-  assert.equal(fourK.whileHeld.tracked, fourK.trackedAtAllocation + 16, 'released bytes stay tracked while the ticket holds them (plus its counted 16-byte uniform snapshot)');
-  assert.equal(fourK.whileHeld.retiring, 3840 * 2160 * 4 + 16, 'the released status target and the uniform snapshot are retiring'); assert.equal(fourK.whileHeld.status.state, 'retiring'); assert.equal(fourK.whileHeld.status.tickets, 1);
-  assert.equal(fourK.done.outcome, 'completed');
-  assert.deepEqual(fourK.afterTicket, { tracked: fourK.trackedAtAllocation - 3840 * 2160 * 4, retiring: 0, statusPresent: false }, 'reclaimed once the last ticket retires');
-  assert.equal(fourK.afterReplacement.remaining4K, 0, 'the replaced 4K set is reclaimed');
-  assert.equal(fourK.afterReplacement.tracked, fourK.trackedAtAllocation - fourK.targetBytes + 64 * 64 * 72);
-  pass(RECOVERY_PASSES[5], fourK);
+    const fourK = await ev(page, fourKInPage, undefined, '4K target set', LIMITS.deep);
+    const bpp = { depth: 4, status: 4, normal: 8, sampleColor: 8, lightingStatus: 4, accumulationFlags: 4, 'accumulation-0': 16, 'accumulation-1': 16, display: 4, retained: 4 };
+    assert.deepEqual(fourK.allocated.map(item => item.name).sort(), Object.keys(bpp).sort());
+    for (const item of fourK.allocated) { assert.equal(item.bytes, 3840 * 2160 * bpp[item.name], item.name); assert.deepEqual([item.width, item.height, item.state], [3840, 2160, 'live']); }
+    assert.equal(fourK.targetBytes, 597_196_800, '72 bytes per pixel at 3840 × 2160'); assert.equal(3840 * 2160 * 72, 597_196_800);
+    assert.ok(fourK.trackedAtAllocation <= cap);
+    assert.equal(fourK.whileHeld.tracked, fourK.trackedAtAllocation + 16, 'released bytes stay tracked while the ticket holds them (plus its counted 16-byte uniform snapshot)');
+    assert.equal(fourK.whileHeld.retiring, 3840 * 2160 * 4 + 16, 'the released status target and the uniform snapshot are retiring'); assert.equal(fourK.whileHeld.status.state, 'retiring'); assert.equal(fourK.whileHeld.status.tickets, 1);
+    assert.equal(fourK.done.outcome, 'completed');
+    assert.deepEqual(fourK.afterTicket, { tracked: fourK.trackedAtAllocation - 3840 * 2160 * 4, retiring: 0, statusPresent: false }, 'reclaimed once the last ticket retires');
+    assert.equal(fourK.keptAfterReplacement, 9, 'reconfiguration keeps the earlier set caller-owned (status was already released)');
+    assert.equal(fourK.previousPresented.outcome, 'completed', 'the previous image can still be presented after reconfiguration');
+    assert.equal(fourK.afterReplacement.remaining4K, 0, 'the earlier 4K set is reclaimed after its explicit release');
+    assert.equal(fourK.afterReplacement.tracked, fourK.trackedAtAllocation - fourK.targetBytes + 64 * 64 * 72);
+    pass(RECOVERY_PASSES[5], fourK);
+  } finally { await recordRecoveryLongTasks(page); }
 
   const finish = await ev(page, recoveryFinishInPage, undefined, 'recovery teardown');
   assert.deepEqual(finish.uncaptured, [], `no uncaptured WebGPU errors: ${JSON.stringify(finish.uncaptured)}`);
   assert.deepEqual(finish.final, { state: 'destroyed', epoch: 0, tracked: 0 }); assert.equal(finish.reacquire, 'unavailable', 'destroy() is terminal');
-  // Long tasks attributed to backend phases by interval overlap (B01 Q2); recorded, enforced by B15.
-  const phases = Object.fromEntries(finish.phases.map((entry, index) => [`${index}:${entry.phase}`, { start: entry.start, end: entry.end }]));
-  const attributed = finish.observerError ? null : longTasksByPhase(finish.longTasks, phases);
-  const byKind = {};
+}
+
+// Long tasks attributed to backend phases by interval overlap (B01 Q2; recorded, B15 enforces P3).
+// Collected in the group's finally, so failure exits keep their phase and observer evidence.
+async function recordRecoveryLongTasks(page) {
+  let evidence;
+  try { evidence = await ev(page, () => { const b = globalThis.__b06; return b ? { phases: b.phases, longTasks: b.longTasks, observerError: b.observerError } : null; }, undefined, 'long-task evidence'); }
+  catch (error) { report.push({ name: 'Long tasks attributed to backend phases (recorded; B15 enforces P3)', unavailable: String(error?.message ?? error) }); return; }
+  if (!evidence) return;
+  const phases = Object.fromEntries(evidence.phases.map((entry, index) => [`${index}:${entry.phase}`, { start: entry.start, end: entry.end }]));
+  const attributed = evidence.observerError ? null : longTasksByPhase(evidence.longTasks, phases);
+  const byKind = {}, spans = {}, failures = {};
   if (attributed) for (const [name, tasks] of Object.entries(attributed.byPhase)) if (tasks.length) { const kind = name.slice(name.indexOf(':') + 1); byKind[kind] = (byKind[kind] ?? 0) + tasks.length; }
-  const spans = {};
-  for (const entry of finish.phases) { const kind = entry.phase.startsWith('submit:') ? 'submit' : entry.phase; spans[kind] = Math.max(spans[kind] ?? 0, entry.end - entry.start); }
-  report.push({ name: 'Long tasks attributed to backend phases (recorded; B15 enforces P3)', observerError: finish.observerError, totalLongTasks: finish.longTasks.length,
-    overlappingBackendPhases: byKind, startup: attributed?.startup.length ?? null, outside: attributed?.outside.length ?? null, phaseCount: finish.phases.length, longestPhaseMs: spans, tasks: finish.longTasks });
-  console.log(`long tasks ${JSON.stringify({ total: finish.longTasks.length, overlappingBackendPhases: byKind, startup: attributed?.startup.length, outside: attributed?.outside.length, longestPhaseMs: spans })}`);
+  for (const entry of evidence.phases) { spans[entry.phase] = Math.max(spans[entry.phase] ?? 0, entry.end - entry.start); if (entry.failed) failures[entry.phase] = (failures[entry.phase] ?? 0) + 1; }
+  const summary = { observerError: evidence.observerError, totalLongTasks: evidence.longTasks.length, overlappingBackendPhases: byKind, startup: attributed?.startup.length ?? null, outside: attributed?.outside.length ?? null, phaseCount: evidence.phases.length, failureExits: failures, longestPhaseMs: spans };
+  report.push({ name: 'Long tasks attributed to backend phases (recorded; B15 enforces P3)', ...summary, tasks: evidence.longTasks });
+  console.log(`long tasks ${JSON.stringify(summary)}`);
 }
 
 // ---- harness ---------------------------------------------------------------------------------------

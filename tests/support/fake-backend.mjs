@@ -280,8 +280,9 @@ export function createFakeBackend({ clock, cap = TRACKED_ALLOCATION_CAP, limits 
       const handles = {};
       for (const [name, value] of Object.entries(descriptions)) handles[name] = Array.isArray(value) ? Object.freeze(value.map(desc => createResource(desc))) : createResource(value);
       const replacement = deepFreeze({ epoch, layoutId, internalSize: { ...internalSize }, outputSize: { ...outputSize }, handles, descriptions });
-      const previous = targets; targets = replacement;
-      if (previous) for (const value of Object.values(previous.handles)) for (const handle of Array.isArray(value) ? value : [value]) release(handle);
+      // Target handles are caller-owned until release() (B06 r1 finding 5): a replacement never releases
+      // the earlier set, so a published previous image can still be presented.
+      targets = replacement;
       return replacement;
     },
     submitBatch(input, options) {
