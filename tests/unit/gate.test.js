@@ -5,6 +5,7 @@ import { parseTapSummary, classifyUnit, classifyRed, validateEvidence, classifyS
 import { runBounded, cleanUpGroup, probeGroup } from '../../scripts/gate/supervise.mjs';
 import { runGate, GATE_PORT } from '../../scripts/plane-gate.mjs';
 import { parseArgs, selectFiles } from '../../scripts/run-unit.mjs';
+import { APPROVED_REFERENCE_IDENTITIES, REFERENCE_CHECKS } from '../../scripts/gate/reference-evidence.mjs';
 
 const TAP_OK = '# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n';
 
@@ -313,4 +314,50 @@ test('an unsuccessful suite keeps the tail of its output in the record', async (
   assert.equal(typeof record.results.browser.stderrTail, 'string');
   assert.equal(record.results.graphics.state, 'passed');
   assert.equal(record.results.graphics.stdoutTail, undefined, 'a passing suite carries no tail');
+});
+
+test('CPU suites run without a server or port probe even when the GPU is deferred', async () => {
+  const subject = gateDeps({ env: { ATLAS_GPU_DEFERRED: 'held elsewhere' }, portInUse: true });
+  const readJson = subject.deps.fs.readJson;
+  subject.deps.fs.readJson = async path => path === 'tests/suites.manifest.json' ? {
+    build: { requiredFiles: ['dist/index.html'] },
+    suites: [{ id: 'cpu', gpu: false, server: false, timeoutMs: 600000, command: ['tests/cpu.mjs'], report: 'cpu.json', evidence: 'workflow', requiredPasses: ['A'] }],
+  } : path === 'cpu.json' ? [{ name: 'A' }] : readJson(path);
+  subject.deps.probePort = async () => { assert.fail('CPU suite must not probe a server port'); };
+  const record = await runGate(subject.deps);
+  assert.equal(record.results.cpu.state, 'passed');
+  assert.equal(record.overall.state, 'passed');
+  assert.deepEqual(subject.spawned, ['scripts/run-unit.mjs', 'scripts/build.mjs', 'tests/cpu.mjs']);
+  assert.ok(subject.removed.includes('cpu.json'), 'stale evidence is removed before execution');
+});
+
+test('a failed CPU suite prevents browser work and cannot pass on a stale report', async () => {
+  const subject = gateDeps({ scripts: { 'tests/cpu.mjs': { exitCode: 124 } } });
+  const readJson = subject.deps.fs.readJson;
+  subject.deps.fs.readJson = async path => {
+    if (path === 'tests/suites.manifest.json') {
+      const manifest = await readJson(path);
+      return { ...manifest, suites: [{ id: 'cpu', gpu: false, server: false, timeoutMs: 600000, command: ['tests/cpu.mjs'], report: 'cpu.json', evidence: 'workflow', requiredPasses: ['A'] }, ...manifest.suites] };
+    }
+    return path === 'cpu.json' ? [{ name: 'A' }] : readJson(path);
+  };
+  const record = await runGate(subject.deps);
+  assert.equal(record.results.cpu.state, 'incomplete');
+  assert.equal(record.overall.state, 'failed');
+  assert.ok(!subject.spawned.some(command => command.startsWith('scripts/serve.mjs')));
+  assert.equal(record.results.browser, undefined);
+});
+
+test('the gate retains reference counts and artifact identities for the commit audit', async () => {
+  const identities = { ...APPROVED_REFERENCE_IDENTITIES };
+  const report = Object.entries(REFERENCE_CHECKS).map(([name, checked]) => ({ name, state: 'passed', checked, identities, durationMs: 1 }));
+  const subject = gateDeps();
+  subject.deps.fs.readJson = async path => path === 'tests/suites.manifest.json' ? {
+    build: { requiredFiles: ['dist/index.html'] },
+    suites: [{ id: 'reference', gpu: false, server: false, timeoutMs: 600000, command: ['tests/reference.mjs'], report: 'reference.json', evidence: 'reference', requiredPasses: Object.keys(REFERENCE_CHECKS) }],
+  } : report;
+  const record = await runGate(subject.deps);
+  assert.equal(record.results.reference.state, 'passed');
+  assert.deepEqual(record.results.reference.evidence, report);
+  assert.ok(record.requiredIds.includes('reference'));
 });

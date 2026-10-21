@@ -13,6 +13,10 @@
     "tests/unit/export.test.js",
     "tests/unit/gestures.test.js",
     "tests/unit/gpu-drain.test.js",
+    "tests/unit/completion.test.js",
+    "tests/unit/persistence.test.js",
+    "tests/unit/navigation.test.js",
+    "tests/unit/ledger.test.js",
     "tests/unit/space-contract.test.js",
     "tests/unit/fake-backend.test.js",
     "tests/unit/space-scene.test.js",
@@ -20,6 +24,13 @@
     "tests/unit/space-device.test.js",
     "tests/unit/space-suite-support.test.js",
     "tests/unit/space-derivative.test.js",
-    "tests/unit/space-models.test.js"
+    "tests/unit/space-models.test.js",
+    "tests/unit/scheduler.test.js",
+    "tests/unit/space-allocator.test.js",
+    "tests/unit/space-webgpu-backend.test.js",
+    "tests/unit/reference-points.test.js",
+    "tests/unit/reference-rays.test.js",
+    "tests/unit/reference-p3.test.js",
+    "tests/unit/reference-suite.test.js"
   ]
 }

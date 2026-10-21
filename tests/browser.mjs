@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { LIMITS, within, idleWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+// Every drain carries the backend the page was opened on (plan amendment H carry-forward, T08).
+import { expectBackend, drainExpecting } from './support/expected-backend.mjs';
 import { cleanupPages } from './support/workflow-cleanup.mjs';
 
 const { chromium } = await import('playwright');
@@ -18,7 +20,7 @@ let server, browser;
 const report = [];
 const writeReport = entries => writeFile(reportPath, JSON.stringify(entries, null, 2));
 async function closeDrained(resource, label, pages) {
-  const failed = await cleanupPages({ pages, drain: page => drainGpuWithin(page), report, writeReport,
+  const failed = await cleanupPages({ pages, drain: page => drainExpecting(page), report, writeReport,
     closeAll: () => closeWithin(resource, label) });
   if (failed) throw new Error(`${label}: GPU drain or report failed`);
 }
@@ -114,7 +116,7 @@ try {
   }
   browser = await chromium.launch({ headless: true, timeout: LIMITS.launch, args: ['--disable-dev-shm-usage', ...(hardware ? ['--enable-gpu', '--use-angle=vulkan'] : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])] });
   const context = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true }), LIMITS.launch, 'newContext'));
-  const page = boundContext(await within(context.newPage(), LIMITS.launch, 'newPage'));
+  const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl');
   watchErrors(page);
   await page.goto(url, { timeout: LIMITS.launch });
   await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
@@ -155,8 +157,10 @@ try {
   await page.getByRole('button', { name: /Your discoveries/ }).click();
   await page.waitForFunction(() => document.querySelector('#saved-count').textContent === '1', null, { timeout: LIMITS.operation });
   assert.equal(await page.locator('.saved-wrapper').count(), 1);
-  await drainGpuWithin(page); // Reload discards the old document's accessible GL context too.
+  await drainExpecting(page); // Reload discards the old document's accessible GL context too.
   await page.reload({ timeout: LIMITS.launch }); await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
+  // Discoveries load from IndexedDB independently of rendering: wait, bounded, for the count to settle (T12).
+  await page.waitForFunction(() => document.querySelector('#saved-count').textContent !== '…', null, { timeout: LIMITS.operation });
   assert.equal(await page.locator('#saved-count').textContent(), '1');
   pass('Bookmarks persist across reloads');
 
@@ -179,7 +183,7 @@ try {
   await page.getByRole('button', { name: /Share view/ }).click();
   assert.match(page.url(), /#scene=[A-Za-z0-9_-]+$/);
   const sharedScene = await ev(page, () => atlas.scene);
-  const sharedPage = boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')); watchErrors(sharedPage); await sharedPage.goto(page.url(), { timeout: LIMITS.launch });
+  const sharedPage = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl'); watchErrors(sharedPage); await sharedPage.goto(page.url(), { timeout: LIMITS.launch });
   await sharedPage.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
   assert.deepEqual(await ev(sharedPage, () => atlas.view), { re: '-2', im: '0', zoom: 40 });
   assert.deepEqual(await ev(sharedPage, () => atlas.scene), sharedScene, 'the generated link restores the complete scene');
@@ -228,7 +232,7 @@ try {
   await page.screenshot({ path: 'artifacts/atlas-laptop.png', animations: 'disabled' });
   pass('Laptop layout keeps exact-coordinate navigation accessible');
 
-  const precedingDrain = await drainGpuWithin(page);
+  const precedingDrain = await drainExpecting(page);
   assert.equal(precedingDrain.status, 'complete', 'GPU timing requires a live WebGL context');
   const response = await within((async () => {
     // Both elapsed observations use the host clock (including Playwright round trips). Prior
@@ -245,7 +249,7 @@ try {
       return { initial, final: atlas.view.zoom, width: atlas.renderer.canvas.width, height: atlas.renderer.canvas.height };
     }, undefined, 'repeated GPU navigation submission', LIMITS.deep);
     const submissionMs = performance.now() - start;
-    const completion = await drainGpuWithin(page, LIMITS.deep - submissionMs);
+    const completion = await drainExpecting(page, LIMITS.deep - submissionMs);
     return { ...result, submissionMs, completionMs: performance.now() - start, precedingDrain, completion };
   })(), LIMITS.deep, 'repeated GPU navigation');
   assert.equal(response.completion.status, 'complete', 'the final GPU draw must complete');
@@ -260,7 +264,7 @@ try {
   pass('Journey animates and manual navigation stops it');
 
   const mobileContext = boundContext(await within(browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 }), LIMITS.launch, 'newContext'));
-  const mobile = boundContext(await within(mobileContext.newPage(), LIMITS.launch, 'newPage')); watchErrors(mobile);
+  const mobile = expectBackend(boundContext(await within(mobileContext.newPage(), LIMITS.launch, 'newPage')), 'webgl'); watchErrors(mobile);
   await mobile.goto(url, { timeout: LIMITS.launch }); await idle(mobile);
   await mobile.screenshot({ path: 'artifacts/atlas-mobile.png', animations: 'disabled' });
   await checkLayout(mobile);
@@ -309,7 +313,7 @@ try {
         };
       }
     }, unavailable);
-    const cpu = boundContext(await within(cpuContext.newPage(), LIMITS.launch, 'newPage')); watchErrors(cpu);
+    const cpu = expectBackend(boundContext(await within(cpuContext.newPage(), LIMITS.launch, 'newPage')), 'cpu'); watchErrors(cpu);
     const started = performance.now();
     await cpu.goto(url, { timeout: LIMITS.launch }); await idle(cpu);
     const startupMs = performance.now() - started;
@@ -364,7 +368,7 @@ try {
   try { await writeReport(report); } catch { /* cleanupPages retries after the drains. */ }
   const contexts = browser?.contexts() ?? [];
   const failed = await cleanupPages({
-    pages: contexts.flatMap(context => context.pages()), drain: page => drainGpuWithin(page), report, writeReport,
+    pages: contexts.flatMap(context => context.pages()), drain: page => drainExpecting(page), report, writeReport,
     closeAll: async () => {
       for (const context of contexts) await closeWithin(context, 'context');
       await closeWithin(browser, 'browser'); server?.kill('SIGTERM');

@@ -1,0 +1,1617 @@
+{
+  "manifest": "docs/reports/project0/webgpu-g5d-manifest.json",
+  "manifestSha256": "bda14bdc620ef4aef20b83151a815d60991da6194c4a86abaef7311002e8983f",
+  "selection": {
+    "basis": "user decision E10",
+    "backend": "webgpu",
+    "mechanicalOutcome": "inconclusive",
+    "decisionFile": "docs/reports/project0/webgpu-g5d-decision.json",
+    "decisionSha256": "033fee787b411f180ac9a7803ea09aa8d62785ffc91efb9c8954a6d4c042c978",
+    "history": "docs/reports/project0/webgpu-g5d.md",
+    "historySha256": "584f90b2c8f07d12476af28bf52250f8116eb31d534841843199f4dd0f86e6fb",
+    "historyAppended": false,
+    "manifest": "docs/reports/project0/webgpu-g5d-manifest.json",
+    "manifestSha256": "bda14bdc620ef4aef20b83151a815d60991da6194c4a86abaef7311002e8983f",
+    "decisions": "docs/codesign/execution-decisions.md",
+    "decisionsSha256": "947200226e66d04bb3a9e91b33f8754dada8ad8e51a9993296e9fcf410c3979c",
+    "platform": "docs/reports/project0/platform-decision.md",
+    "platformSha256": "08002bd4988ff956d8b3a8ac2907920f79afbcaad218c0dffdd6dec052acfe4b"
+  },
+  "record": "precision-precision-20261020T175447161Z-precision-precision-headed",
+  "runDir": "20261020T175447161Z-precision-precision-headed",
+  "args": "remediation",
+  "requestedArgs": [
+    "--enable-gpu",
+    "--use-angle=vulkan",
+    "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan",
+    "--enable-webgpu-developer-features"
+  ],
+  "executionInvalidations": [],
+  "complete": true,
+  "environmentError": null,
+  "timingError": null,
+  "interpretationError": null,
+  "interpretable": true,
+  "validated": true,
+  "primitiveFailures": [],
+  "validation": {
+    "frozenFailures": [],
+    "supplementFailures": [],
+    "captures": {
+      "checked": {
+        "mul": 3072,
+        "addOrigin": 3072,
+        "addT": 960
+      },
+      "discriminating": {
+        "mul": 2880,
+        "addOrigin": 3072,
+        "addT": 788
+      },
+      "minimum": {
+        "addOrigin": 64,
+        "addT": 32,
+        "mul": 64
+      },
+      "failures": [],
+      "failureCount": 0,
+      "insufficient": []
+    }
+  },
+  "rows": [
+    {
+      "distance": 0.1,
+      "interpreted": true,
+      "baseline": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 4010,
+          "hits": 4010,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        },
+        "vsBaselineInput": {
+          "variant": "baselineInput",
+          "eligible": 4010,
+          "hits": 4010,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        }
+      },
+      "cost": {
+        "baseline": {
+          "workMs": {
+            "median": 3.8500001430511475,
+            "min": 3.799999713897705,
+            "max": 4,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 2.5,
+            "min": 0.40000009536743164,
+            "max": 2.6000003814697266,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096
+            ],
+            "maxOutstanding": 2
+          }
+        },
+        "compensated": {
+          "workMs": {
+            "median": 4.900000095367432,
+            "min": 4.900000095367432,
+            "max": 5.099999904632568,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 2.4000000953674316,
+            "min": 0.40000009536743164,
+            "max": 2.5,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096
+            ],
+            "maxOutstanding": 2
+          }
+        }
+      },
+      "extraBytes": -65888,
+      "bytes": {
+        "baselinePeak": 262544,
+        "compensatedPeak": 196656,
+        "extraBytes": -65888,
+        "baselineAllocations": [
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 16,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "compensatedAllocations": [
+          {
+            "size": 32,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "captureBytes": 16384
+      },
+      "compensated": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 4010,
+          "hits": 4010,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        },
+        "vsCompensatedInput": {
+          "variant": "compensatedInput",
+          "eligible": 4010,
+          "hits": 4010,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        }
+      }
+    },
+    {
+      "distance": 0.01,
+      "interpreted": true,
+      "baseline": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3957,
+          "hits": 3957,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 1,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        },
+        "vsBaselineInput": {
+          "variant": "baselineInput",
+          "eligible": 3958,
+          "hits": 3958,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 1,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        }
+      },
+      "cost": {
+        "baseline": {
+          "workMs": {
+            "median": 3.9000000953674316,
+            "min": 3.799999713897705,
+            "max": 11.400000095367432,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.5,
+            "min": 0.2999997138977051,
+            "max": 2.5999999046325684,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              2048,
+              2048,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096
+            ],
+            "maxOutstanding": 2
+          }
+        },
+        "compensated": {
+          "workMs": {
+            "median": 5,
+            "min": 4.800000190734863,
+            "max": 39.90000009536743,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.40000009536743164,
+            "min": 0.3000001907348633,
+            "max": 2.5999999046325684,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              512,
+              512,
+              1024,
+              2048,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096
+            ],
+            "maxOutstanding": 2
+          }
+        }
+      },
+      "extraBytes": -65888,
+      "bytes": {
+        "baselinePeak": 262544,
+        "compensatedPeak": 196656,
+        "extraBytes": -65888,
+        "baselineAllocations": [
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 16,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "compensatedAllocations": [
+          {
+            "size": 32,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "captureBytes": 16384
+      },
+      "compensated": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3957,
+          "hits": 3957,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 2,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        },
+        "vsCompensatedInput": {
+          "variant": "compensatedInput",
+          "eligible": 3957,
+          "hits": 3957,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 2,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        }
+      }
+    },
+    {
+      "distance": 0.001,
+      "interpreted": true,
+      "baseline": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3933,
+          "hits": 3933,
+          "statusDisagreements": 1,
+          "largeDepthErrors": 1,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        },
+        "vsBaselineInput": {
+          "variant": "baselineInput",
+          "eligible": 3931,
+          "hits": 3931,
+          "statusDisagreements": 1,
+          "largeDepthErrors": 1,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        }
+      },
+      "cost": {
+        "baseline": {
+          "workMs": {
+            "median": 5,
+            "min": 4.899999618530273,
+            "max": 6.300000190734863,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 2.450000047683716,
+            "min": 0.40000009536743164,
+            "max": 2.5,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096
+            ],
+            "maxOutstanding": 2
+          }
+        },
+        "compensated": {
+          "workMs": {
+            "median": 6,
+            "min": 5,
+            "max": 6.099999904632568,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 2.5,
+            "min": 0.5,
+            "max": 2.5999999046325684,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096
+            ],
+            "maxOutstanding": 2
+          }
+        }
+      },
+      "extraBytes": -65888,
+      "bytes": {
+        "baselinePeak": 262544,
+        "compensatedPeak": 196656,
+        "extraBytes": -65888,
+        "baselineAllocations": [
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 16,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "compensatedAllocations": [
+          {
+            "size": 32,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "captureBytes": 16384
+      },
+      "compensated": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3933,
+          "hits": 3933,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 2,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        },
+        "vsCompensatedInput": {
+          "variant": "compensatedInput",
+          "eligible": 3933,
+          "hits": 3933,
+          "statusDisagreements": 0,
+          "largeDepthErrors": 2,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        }
+      }
+    },
+    {
+      "distance": 0.0001,
+      "interpreted": true,
+      "baseline": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3937,
+          "hits": 3937,
+          "statusDisagreements": 6,
+          "largeDepthErrors": 20,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        },
+        "vsBaselineInput": {
+          "variant": "baselineInput",
+          "eligible": 3940,
+          "hits": 3940,
+          "statusDisagreements": 6,
+          "largeDepthErrors": 23,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        }
+      },
+      "cost": {
+        "baseline": {
+          "workMs": {
+            "median": 3.9000000953674316,
+            "min": 3.799999713897705,
+            "max": 159.2999997138977,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 1.4500000476837158,
+            "min": 0.2999997138977051,
+            "max": 2.700000286102295,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              256,
+              512
+            ],
+            "maxOutstanding": 2
+          }
+        },
+        "compensated": {
+          "workMs": {
+            "median": 6,
+            "min": 4.900000095367432,
+            "max": 13.699999809265137,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 2.450000047683716,
+            "min": 0.39999961853027344,
+            "max": 2.6999998092651367,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              1024,
+              2048,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096
+            ],
+            "maxOutstanding": 2
+          }
+        }
+      },
+      "extraBytes": -66272,
+      "bytes": {
+        "baselinePeak": 262928,
+        "compensatedPeak": 196656,
+        "extraBytes": -66272,
+        "baselineAllocations": [
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 16,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "compensatedAllocations": [
+          {
+            "size": 32,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "captureBytes": 16384
+      },
+      "compensated": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3937,
+          "hits": 3937,
+          "statusDisagreements": 3,
+          "largeDepthErrors": 23,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        },
+        "vsCompensatedInput": {
+          "variant": "compensatedInput",
+          "eligible": 3937,
+          "hits": 3937,
+          "statusDisagreements": 3,
+          "largeDepthErrors": 23,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": false
+        }
+      }
+    },
+    {
+      "distance": 0.00001,
+      "interpreted": true,
+      "baseline": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3683,
+          "hits": 3683,
+          "statusDisagreements": 415,
+          "largeDepthErrors": 1016,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        },
+        "vsBaselineInput": {
+          "variant": "baselineInput",
+          "eligible": 3676,
+          "hits": 3676,
+          "statusDisagreements": 412,
+          "largeDepthErrors": 936,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        }
+      },
+      "cost": {
+        "baseline": {
+          "workMs": {
+            "median": 11.450000047683716,
+            "min": 10.299999713897705,
+            "max": 38,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.40000009536743164,
+            "min": 0.3000001907348633,
+            "max": 0.6999998092651367,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              512,
+              1024,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048
+            ],
+            "maxOutstanding": 2
+          }
+        },
+        "compensated": {
+          "workMs": {
+            "median": 46.09999990463257,
+            "min": 43.30000019073486,
+            "max": 47.19999980926514,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.4500000476837158,
+            "min": 0.2999997138977051,
+            "max": 2.5,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512
+            ],
+            "maxOutstanding": 2
+          }
+        }
+      },
+      "extraBytes": -65888,
+      "bytes": {
+        "baselinePeak": 262544,
+        "compensatedPeak": 196656,
+        "extraBytes": -65888,
+        "baselineAllocations": [
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 16,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "compensatedAllocations": [
+          {
+            "size": 32,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "captureBytes": 16384
+      },
+      "compensated": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3683,
+          "hits": 3683,
+          "statusDisagreements": 164,
+          "largeDepthErrors": 978,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        },
+        "vsCompensatedInput": {
+          "variant": "compensatedInput",
+          "eligible": 3683,
+          "hits": 3683,
+          "statusDisagreements": 164,
+          "largeDepthErrors": 978,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        }
+      }
+    },
+    {
+      "distance": 0.000001,
+      "interpreted": true,
+      "baseline": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3858,
+          "hits": 3858,
+          "statusDisagreements": 2020,
+          "largeDepthErrors": 1657,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        },
+        "vsBaselineInput": {
+          "variant": "baselineInput",
+          "eligible": 3929,
+          "hits": 3929,
+          "statusDisagreements": 2046,
+          "largeDepthErrors": 1820,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        }
+      },
+      "cost": {
+        "baseline": {
+          "workMs": {
+            "median": 11.400000095367432,
+            "min": 10.400000095367432,
+            "max": 11.599999904632568,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.40000009536743164,
+            "min": 0.3000001907348633,
+            "max": 2.4000000953674316,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048
+            ],
+            "maxOutstanding": 2
+          }
+        },
+        "compensated": {
+          "workMs": {
+            "median": 48.450000047683716,
+            "min": 47.40000009536743,
+            "max": 49.40000009536743,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.4500000476837158,
+            "min": 0.40000009536743164,
+            "max": 2.5999999046325684,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512
+            ],
+            "maxOutstanding": 2
+          }
+        }
+      },
+      "extraBytes": -65888,
+      "bytes": {
+        "baselinePeak": 262544,
+        "compensatedPeak": 196656,
+        "extraBytes": -65888,
+        "baselineAllocations": [
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 16,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "compensatedAllocations": [
+          {
+            "size": 32,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "captureBytes": 16384
+      },
+      "compensated": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3858,
+          "hits": 3858,
+          "statusDisagreements": 1640,
+          "largeDepthErrors": 2056,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        },
+        "vsCompensatedInput": {
+          "variant": "compensatedInput",
+          "eligible": 3858,
+          "hits": 3858,
+          "statusDisagreements": 1640,
+          "largeDepthErrors": 2056,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        }
+      }
+    },
+    {
+      "distance": 1e-7,
+      "interpreted": true,
+      "baseline": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3956,
+          "hits": 3956,
+          "statusDisagreements": 3940,
+          "largeDepthErrors": 16,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        },
+        "vsBaselineInput": {
+          "variant": "baselineInput",
+          "eligible": 3839,
+          "hits": 3839,
+          "statusDisagreements": 3826,
+          "largeDepthErrors": 13,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        }
+      },
+      "cost": {
+        "baseline": {
+          "workMs": {
+            "median": 6,
+            "min": 5.899999618530273,
+            "max": 11.900000095367432,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 2.5,
+            "min": 0.3000001907348633,
+            "max": 2.5999999046325684,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096,
+              4096
+            ],
+            "maxOutstanding": 2
+          }
+        },
+        "compensated": {
+          "workMs": {
+            "median": 42.450000286102295,
+            "min": 41.69999980926514,
+            "max": 47.59999990463257,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.40000009536743164,
+            "min": 0.2999997138977051,
+            "max": 0.5999999046325684,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512
+            ],
+            "maxOutstanding": 2
+          }
+        }
+      },
+      "extraBytes": -65888,
+      "bytes": {
+        "baselinePeak": 262544,
+        "compensatedPeak": 196656,
+        "extraBytes": -65888,
+        "baselineAllocations": [
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 16,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "compensatedAllocations": [
+          {
+            "size": 32,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "captureBytes": 16384
+      },
+      "compensated": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3956,
+          "hits": 3956,
+          "statusDisagreements": 3956,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        },
+        "vsCompensatedInput": {
+          "variant": "compensatedInput",
+          "eligible": 3956,
+          "hits": 3956,
+          "statusDisagreements": 3956,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        }
+      }
+    },
+    {
+      "distance": 1e-8,
+      "interpreted": true,
+      "baseline": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3972,
+          "hits": 3972,
+          "statusDisagreements": 3972,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        },
+        "vsBaselineInput": {
+          "variant": "baselineInput",
+          "eligible": 3909,
+          "hits": 3909,
+          "statusDisagreements": 3909,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        }
+      },
+      "cost": {
+        "baseline": {
+          "workMs": {
+            "median": 49.84999990463257,
+            "min": 47.19999980926514,
+            "max": 50.60000038146973,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.5,
+            "min": 0.39999961853027344,
+            "max": 2.5999999046325684,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512,
+              512
+            ],
+            "maxOutstanding": 2
+          }
+        },
+        "compensated": {
+          "workMs": {
+            "median": 11.5,
+            "min": 11.399999618530273,
+            "max": 39.90000009536743,
+            "samples": 10
+          },
+          "readMs": {
+            "median": 0.40000009536743164,
+            "min": 0.3000001907348633,
+            "max": 2.5,
+            "samples": 10
+          },
+          "batch": {
+            "sizes": [
+              512,
+              1024,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048,
+              2048
+            ],
+            "maxOutstanding": 2
+          }
+        }
+      },
+      "extraBytes": -65888,
+      "bytes": {
+        "baselinePeak": 262544,
+        "compensatedPeak": 196656,
+        "extraBytes": -65888,
+        "baselineAllocations": [
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 16,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "compensatedAllocations": [
+          {
+            "size": 32,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 136
+          },
+          {
+            "size": 65536,
+            "usage": 132
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 48,
+            "usage": 72
+          },
+          {
+            "size": 65536,
+            "usage": 9
+          }
+        ],
+        "captureBytes": 16384
+      },
+      "compensated": {
+        "vsRequested": {
+          "variant": "requested",
+          "eligible": 3972,
+          "hits": 3972,
+          "statusDisagreements": 3972,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        },
+        "vsCompensatedInput": {
+          "variant": "compensatedInput",
+          "eligible": 3972,
+          "hits": 3972,
+          "statusDisagreements": 3972,
+          "largeDepthErrors": 0,
+          "depthAvailable": true,
+          "interpretable": true,
+          "stopReasons": [],
+          "thresholdExceeded": true
+        }
+      }
+    }
+  ],
+  "observedDisagreementThreshold": 0.00001,
+  "firstStop": null
+}
