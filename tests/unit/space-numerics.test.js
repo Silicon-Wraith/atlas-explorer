@@ -140,3 +140,18 @@ test('Validation records are registered only for passed mandatory strata', () =>
   assert.ok(!buildArithmeticRecords({ results: missing, implementationHashes: hashes }).records.some(r => r.recordId === 'mandelbulb@1/arithmetic/p3'), 'a missing stratum is never treated as passed');
   assert.throws(() => buildArithmeticRecords({ results: [{ ...allPassed()[0], role: 'diagnostic' }], implementationHashes: hashes }), /mandatory/);
 });
+
+test('the complex-power bulb map equals the spec formula, keeps the axis exact and survives underflowing normalization', async () => {
+  const { bulbMapTrig, bulbMapComplex } = await import('../support/space-numerics.mjs');
+  const grid = Array.from({ length: 7 }, (_, i) => -0.9 + 1.8 * (i + 0.5) / 7);
+  for (let p = 2; p <= 8; p++) {
+    for (const x of grid) for (const y of grid) for (const z of grid) {
+      const a = bulbMapComplex([x, y, z], p), b = bulbMapTrig([x, y, z], p), scale = Math.hypot(x, y, z) ** p;
+      a.forEach((v, k) => assert.ok(Math.abs(v - b[k]) <= 1e-12 * scale, `p${p} (${x}, ${y}, ${z}) component ${k}`));
+    }
+    for (const z of [0.5, -0.5, 1, -1]) assert.deepEqual(bulbMapComplex([0, 0, z], p), [0, 0, z ** p]);
+    const tiny = bulbMapComplex([2 ** -600, 2 ** -600, 0.5], p);
+    assert.ok(tiny.every(Number.isFinite));
+    assert.ok(Math.abs(tiny[0]) + Math.abs(tiny[1]) > 0 || p % 4 === 2, `p${p}: the transverse components are not lost to underflow`);
+  }
+});

@@ -2,10 +2,10 @@
 // assembled module (wgslConstants() + '\n' + sources joined by '\n'), as the backend executes it.
 export const KERNEL_HASHES = Object.freeze({
   sources: Object.freeze({
-    "fields": "b6234610d90d7e1b070d478c6613365f49b79078ac5df4ef2987c7ac57c8ef57",
+    "fields": "62f173a1b1031b486b0fc238b870ff539f2af69d452cf77ef19dbc12782ee3ff",
     "points": "43dbc2bd52398694fd96b8285f567fa472e34fd09f1cfcba570f830d1de69343"
   }),
   assembled: Object.freeze({
-    "fields+points": "ad8271b0131b5ec52fb6a41fdb8ac8670006a78eceb89e741cac42c0f623dd15"
+    "fields+points": "e0f2309f341b13b7ec89ec5199258329896db1fc8fb75f46b96ce1a95d1caea1"
   }),
 });

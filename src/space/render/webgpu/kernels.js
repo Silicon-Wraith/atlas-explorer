@@ -16,6 +16,10 @@ export const KERNEL_FORMULATION = deepFreeze({
   profile: 'project0-g5d-v1', form: 'g5d-plain-qsq-wrapper-prereg-v1',
   fragmentSha256: '290b4cc6ef4a608da0e44f3cdafb0ed52943e3c37aee9292167fb24a5a90a78c',
   record: 'docs/reports/project0/webgpu-g5d-decision.json',
+  // The bulb power map (B08 fix round 1; Claude/Codex ruling (b), codex-B08-consult-findings.md):
+  // (z + iρ)^p and ((x + iy)/ρ)^p by repeated complex multiplication, returning (B·U, B·V, A); it
+  // supersedes the acos/atan2/sin/cos evaluation of 6e99c4b, whose failed GPU evidence is retained.
+  bulb: { form: 'bulb-complex-power-v1', supersedes: '6e99c4b acos-atan2-trig' },
 });
 export const KERNEL_SOURCE_IDS = Object.freeze(['fields', 'points']);
 export const FIELD_IDS = Object.freeze(['sphere', 'box', 'menger', 'mandelbulb', 'quaternion-julia']);

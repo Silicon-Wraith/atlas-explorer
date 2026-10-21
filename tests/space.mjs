@@ -1079,6 +1079,25 @@ async function runNumerics({ page }) {
   advResults[adversarial.cases.findIndex(c => c.id === 'derivative-update-44')] = probes[43];
   results.set(adversarial.id, { row: adversarial, decoded: advResults });
 
+  // Bulb power-map probes (B08 fix round 1): two updates from z0 = 0 give z2 = P_p(c) + c, compared
+  // with binary64 references: identity against the spec formula (atan2 angles) under the component
+  // tolerance; polar axis exact; normalization against the scaled complex-power form (|x|, |y| down to 2^-100, where x² + y² underflows in binary32;
+  // the mapped transverse values stay above 2^-126, below which WGSL may flush to zero):
+  // relative 10^-4 with no absolute floor, so the transverse components are actually tested.
+  const { bulbMapTrig, bulbMapComplex } = await import('./support/space-numerics.mjs');
+  const mapReference = (c, p, kind) => (kind === 'identity' ? bulbMapTrig : bulbMapComplex)(c, p).map((v, k) => v + c[k]);
+  const grid = Array.from({ length: 7 }, (_, i) => Math.fround(-0.9 + 1.8 * (i + 0.5) / 7));
+  const mapProbes = {
+    identity: grid.flatMap(x => grid.flatMap(y => grid.map(z => [x, y, z]))).filter(([x, y]) => x !== 0 || y !== 0),
+    axis: [[0, 0, 0.5], [0, 0, -0.5], [0, 0, 1], [0, 0, -1], [0, 0, 0.25]],
+    normalization: [[2 ** -80, 2 ** -80, 0.5], [2 ** -80, -(2 ** -80), -0.5], [-(2 ** -100), 0, 0.75], [0, 2 ** -100, 0.25], [2 ** -70, 2 ** -71, 0.5], [-(2 ** -90), -(2 ** -90), -0.75]],
+  };
+  const mapBatches = [];
+  for (let power = 2; power <= 8; power++) for (const [kind, points] of Object.entries(mapProbes)) mapBatches.push({ kind, power, modelId: 'mandelbulb', effective: { power }, cap: 2, points });
+  const mapRun = await ev(page, pointsInPage, { label: 'power-map', pitch: 256, batches: mapBatches.map(({ kind, power, ...batch }) => batch) }, 'bulb power-map probes', LIMITS.deep);
+  assert.deepEqual(mapRun.outcomes, { completed: mapBatches.length });
+  const mapDecoded = decode(mapRun, mapBatches);
+
   // Per-stratum qualification table.
   const table = [];
   for (const row of strata) {
@@ -1094,6 +1113,23 @@ async function runNumerics({ page }) {
   const byState = rows => rows.reduce((acc, row) => ({ ...acc, [row.state]: (acc[row.state] ?? 0) + 1 }), {});
   const failing = rows => rows.filter(row => !row.passed).map(row => ({ id: row.id, state: row.state, failureCount: row.failureCount, numericalFailures: row.numericalFailures, first: row.failures.slice(0, 3), belowFloor: row.belowFloor }));
 
+  check('Bulb power map: identity, polar axis and normalization (fix round 1; recorded, not a manifest pass)', () => {
+    const worst = { identity: 0, normalization: 0 }, failures = [];
+    mapBatches.forEach((batch, b) => batch.points.forEach((c, i) => {
+      const actual = mapDecoded[b][i], expected = mapReference(c, batch.power, batch.kind);
+      if (actual.status === 'numerical failure' || actual.status === 'missing') return failures.push({ kind: batch.kind, power: batch.power, c, status: actual.status });
+      expected.forEach((v, k) => {
+        const a = actual.value[k];
+        if (batch.kind === 'axis') { if (a !== Math.fround(v)) failures.push({ kind: 'axis', power: batch.power, c, k, a, v }); return; }
+        const allow = batch.kind === 'identity' ? Math.max(tol.component0.floor, tol.component0.value * Math.abs(v)) : tol.component0.value * Math.abs(v);
+        const ratio = v === 0 ? (a === 0 ? 0 : Infinity) : Math.abs(a - v) / allow;
+        worst[batch.kind] = Math.max(worst[batch.kind], ratio);
+        if (!(ratio <= 1)) failures.push({ kind: batch.kind, power: batch.power, c, k, a, v, ratio });
+      });
+    }));
+    assert.deepEqual(failures.slice(0, 8), [], `${failures.length} power-map failures`);
+    return { probes: mapBatches.reduce((n, batch) => n + batch.points.length, 0), worst };
+  });
   check(NUMERICS_PASSES[0], () => {
     const rows = table.filter(row => row.kind.startsWith('bulb'));
     assert.equal(rows.length, 7 * 4 * 3);

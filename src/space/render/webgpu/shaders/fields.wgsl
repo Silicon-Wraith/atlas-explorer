@@ -23,12 +23,7 @@ const MAX_ITERATIONS: u32 = 512u;
 const BULB_ESCAPE_RADIUS: f32 = 2.0;
 // |x| <= 2^62 keeps every sum of squares of an admitted point below 2^126.
 const COORDINATE_LIMIT: f32 = 4611686018427387904.0;
-// 2π = TWO_PI_HI + TWO_PI_MID + TWO_PI_LO; TWO_PI_HI has 8 significant bits, so k·TWO_PI_HI is
-// exact for the |k| <= 4 that arguments up to ±8π need.
-const TWO_PI_HI: f32 = 6.28125;
-const TWO_PI_MID: f32 = 0.0019353071693331003;
-const TWO_PI_LO: f32 = 1.0253131677018246e-11;
-const INV_TWO_PI: f32 = 0.15915493667125702;
+const SMALLEST_NORMAL: f32 = 1.1754943508222875e-38; // 2^-126
 const BOX_COS: f32 = 0.8660254037844386; // cos(π/6) = √3/2
 const BOX_SIN: f32 = 0.5;
 const BOX_HALF: vec3<f32> = vec3<f32>(1.0, 0.5, 0.25);
@@ -81,36 +76,42 @@ fn escaped_eval(index: u32, value: vec4<f32>, r: f32, d: Deriv) -> PointEval {
   return PointEval(POINT_STATUS_ESCAPED, index, value, d, ESTIMATE_AVAILABLE, ln_r, log2_estimate(r, ln_r, d));
 }
 
-// Arguments reach ±8π; WGSL bounds sin and cos error only on [-π, π], so reduce by 2π first.
-fn reduce_angle(x: f32) -> f32 {
-  let k = round(x * INV_TWO_PI);
-  return ((x - k * TWO_PI_HI) - k * TWO_PI_MID) - k * TWO_PI_LO;
+fn complex_mul(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+  return vec2<f32>(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
 
-// P_p(z) in Z-polar coordinates (spec §11.1) and r^(p-1) in w, for |z| = r <= 2.
+// P_p(z) (spec §11.1) and r^(p-1) in w, for |z| = r <= 2, without transcendental functions. With
+// θ = acos(z/r), φ = atan2(y, x) and ρ = √(x² + y²) > 0: (z + iρ)^p = r^p(cos pθ + i sin pθ) = A + iB
+// and ((x + iy)/ρ)^p = cos pφ + i sin pφ = U + iV, so P_p(z) = (B·U, B·V, A) exactly in real
+// arithmetic; both powers are evaluated by repeated complex multiplication (B08 fix round 1,
+// Claude/Codex ruling (b), codex-B08-consult-findings.md).
 fn bulb_power_map(z: vec3<f32>, r: f32, p: u32) -> vec4<f32> {
   if (r == 0.0) { return vec4<f32>(0.0); } // the power map is zero at r = 0
   var rp1 = 1.0;
   for (var k = 1u; k < p; k++) { rp1 = rp1 * r; }
-  if (z.x == 0.0 && z.y == 0.0) {
-    // The polar axis: φ = 0, θ ∈ {0, π}, so sin(pθ) = 0 and cos(pθ) = (±1)^p exactly and
-    // P_p(z) = (0, 0, z^p); no trigonometric remnant enters the axis orbit.
+  let s = max(abs(z.x), abs(z.y));
+  // The polar axis, and transverse magnitudes below the smallest normal binary32 (which WGSL may flush
+  // to zero): φ = 0, θ ∈ {0, π}, P_p(z) = (0, 0, z^p) exactly.
+  if (s < SMALLEST_NORMAL) {
     var zp = 1.0;
     for (var k = 0u; k < p; k++) { zp = zp * z.z; }
     return vec4<f32>(0.0, 0.0, zp, rp1);
   }
-  let rp = rp1 * r;
-  // guard: r > 0 here (r == 0 returned above), and the quotient is clamped into acos's domain
-  let cos_theta = clamp(z.z / r, -1.0, 1.0);
-  // guard: the argument is in [-1, 1]
-  let theta = acos(cos_theta);
-  // guard: (x, y) != (0, 0) here (the axis returned above), so the azimuth is defined
-  let phi = atan2(z.y, z.x);
-  let pf = f32(p);
-  let pt = reduce_angle(pf * theta);
-  let pp = reduce_angle(pf * phi);
-  let st = sin(pt);
-  return vec4<f32>(rp * (st * cos(pp)), rp * (st * sin(pp)), rp * cos(pt), rp1);
+  // x² + y² can underflow in binary32, so (x, y) is scaled by s = max(|x|, |y|) before its norm.
+  // guard: s >= the smallest normal binary32 here, so the quotient is finite with |t| <= 1
+  let t = vec2<f32>(z.x, z.y) / s;
+  let rho_s = length(t); // in [1, √2]: the larger scaled component is ±1
+  let rho = s * rho_s;
+  // guard: rho_s >= 1
+  let unit = t / rho_s;
+  let base = vec2<f32>(z.z, rho);
+  var w = vec2<f32>(1.0, 0.0);
+  var q = vec2<f32>(1.0, 0.0);
+  for (var k = 0u; k < p; k++) {
+    w = complex_mul(w, base);
+    q = complex_mul(q, unit);
+  }
+  return vec4<f32>(w.y * q.x, w.y * q.y, w.x, rp1);
 }
 
 // mandelbulb@1 (spec §11.1): z0 = 0, d0 = 0; z' = P_p(z) + c, d' = p·|z|^(p-1)·d + 1; escape after

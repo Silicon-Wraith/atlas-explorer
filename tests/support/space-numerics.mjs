@@ -110,3 +110,22 @@ export function comparePointStratum(stratum, results, tolerances) {
     eligible: stratum.eligible, floor: stratum.floor, belowFloor, cases: stratum.cases.length, compared, worst, failureCount: failures.length,
     failures: failures.slice(0, 20), numericalFailures, diagnosticDisagreements, excluded: stratum.excluded?.length ?? 0, valid };
 }
+
+// Binary64 references for the bulb power map P_p(c) (spec §11.1), used by the fix-round-1 probes.
+// bulbMapTrig is the spec text (θ, φ from atan2); bulbMapComplex is the algebraically identical
+// (z + iρ)^p, ((x + iy)/ρ)^p form, scaled by max(|x|, |y|) so tiny transverse components survive.
+export function bulbMapTrig([x, y, z], p) {
+  const r = Math.hypot(x, y, z), rho = Math.hypot(x, y);
+  if (r === 0) return [0, 0, 0];
+  if (rho === 0) return [0, 0, z ** p];
+  const theta = Math.atan2(rho, z), phi = Math.atan2(y, x), rp = r ** p;
+  return [rp * Math.sin(p * theta) * Math.cos(p * phi), rp * Math.sin(p * theta) * Math.sin(p * phi), rp * Math.cos(p * theta)];
+}
+export function bulbMapComplex([x, y, z], p) {
+  if (x === 0 && y === 0) return [0, 0, z ** p];
+  const s = Math.max(Math.abs(x), Math.abs(y)), xs = x / s, ys = y / s, rhoS = Math.hypot(xs, ys), rho = s * rhoS;
+  const mul = ([a, b], [c, d]) => [a * c - b * d, a * d + b * c];
+  let w = [1, 0], q = [1, 0];
+  for (let k = 0; k < p; k++) { w = mul(w, [z, rho]); q = mul(q, [xs / rhoS, ys / rhoS]); }
+  return [w[1] * q[0], w[1] * q[1], w[0]];
+}

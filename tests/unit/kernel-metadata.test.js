@@ -127,3 +127,14 @@ test('Menger boxes share bit-identical lattice faces and derivative probes encod
   assert.throws(() => encodeDerivativeProbes([{ grow: 8, add: 2, updates: 44 }]), RangeError);
   assert.throws(() => encodeDerivativeProbes([{ grow: 8, add: 1, updates: 513 }]), RangeError);
 });
+
+test('the bulb power map is the exact complex-power formulation with no transcendental or azimuth call', () => {
+  const fields = readFileSync(shaderPath('fields'), 'utf8');
+  const body = fields.slice(fields.indexOf('fn bulb_power_map('), fields.indexOf('\n}\n', fields.indexOf('fn bulb_power_map(')));
+  assert.ok(body.length > 0);
+  assert.doesNotMatch(body.replace(/\/\/.*$/gm, ''), /\b(acos|asin|atan|atan2|sin|cos|tan|pow|exp|log)\s*\(/, 'no transcendental in the bulb map');
+  // (z + iρ)^p and ((x + iy)/ρ)^p by repeated complex multiplication, scaled against underflow.
+  assert.match(body, /complex_mul\(/);
+  assert.match(fields, /fn complex_mul\(a: vec2<f32>, b: vec2<f32>\) -> vec2<f32>/);
+  assert.match(body, /max\(abs\(z\.x\), abs\(z\.y\)\)/, 'the azimuth normalization is scaled by max(|x|, |y|)');
+});
