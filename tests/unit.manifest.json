@@ -31,6 +31,7 @@
     "tests/unit/reference-points.test.js",
     "tests/unit/reference-rays.test.js",
     "tests/unit/reference-p3.test.js",
-    "tests/unit/reference-suite.test.js"
+    "tests/unit/reference-suite.test.js",
+    "tests/unit/space-camera.test.js"
   ]
 }
