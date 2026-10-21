@@ -115,9 +115,11 @@ function decodeKey(encoded) {
   if (!Array.isArray(encoded) || encoded.length !== 2) invalid();
   const [tag, body] = encoded;
   const number = () => { const value = typeof body === 'string' ? Number(body) : NaN; if (Number.isNaN(value) || String(value) !== body) invalid(); return value; };
+  // A date body is an exact time value: an integer within the Date range (±8.64e15 ms).
+  const time = () => { const value = number(); const date = new Date(value); if (!Number.isInteger(value) || date.getTime() !== value) invalid(); return date; };
   switch (tag) {
     case 'n': return number();
-    case 'd': return new Date(number());
+    case 'd': return time();
     case 's': return typeof body === 'string' ? body : invalid();
     case 'b': return typeof body === 'string' && /^(?:[0-9a-f]{2})*$/.test(body) ? new Uint8Array(body.match(/../g)?.map(pair => parseInt(pair, 16)) ?? []).buffer : invalid();
     case 'a': return Array.isArray(body) ? body.map(decodeKey) : invalid();
@@ -153,9 +155,13 @@ export const afterAnchor = (anchor, createdAt, id, compare = compareKeys) => {
 };
 
 function createStore(db, compare) {
-  // Every index key of one workspace: [workspace] sorts before, and [workspace, []] after, any
-  // [workspace, createdAt] (arrays sort after strings).
-  const workspaceRange = (workspace, upperCreatedAt) => IDBKeyRange.bound([workspace], upperCreatedAt === undefined ? [workspace, []] : [workspace, upperCreatedAt]);
+  // Every index key [workspace, createdAt] of one workspace, whatever createdAt's type: [workspace]
+  // sorts before all of them, and [workspace + '\u0000'] (excluded) after all of them and before
+  // every other workspace, since no string lies between workspace and workspace + '\u0000'.
+  // A continuation stops at the anchor's createdAt (included).
+  const workspaceRange = (workspace, upperCreatedAt) => (upperCreatedAt === undefined
+    ? IDBKeyRange.bound([workspace], [`${workspace}\u0000`], false, true)
+    : IDBKeyRange.bound([workspace], [workspace, upperCreatedAt]));
   function readPage({ workspace, limit, cursor }) {
     if (!Number.isInteger(limit) || limit < 1) throw new RangeError(`limit must be a positive integer: ${limit}`);
     const anchor = decodePageCursor(cursor, workspace);

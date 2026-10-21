@@ -109,17 +109,31 @@ const UNSUPPORTED_ROWS = () => [
   { id: 'v3', createdAt: '2026-10-20T00:00:05.000Z' }, { id: 7, createdAt: '2026-10-20T00:00:04.000Z' },
   { id: 'L'.padEnd(5000, 'x'), createdAt: '2026-10-20T00:00:04.000Z' }, { id: 'v2', createdAt: '2026-10-20T00:00:04.000Z' },
   { id: 'vd', createdAt: new Date(Date.UTC(2026, 9, 20)) }, { id: 'vn', createdAt: 5 }, { id: 'v1', createdAt: '2026-10-20T00:00:01.000Z' },
+  // Fix round 3 (Codex r3): nonempty and nested array timestamps sort after strings and stay in range.
+  { id: 'aa', createdAt: [[]] }, { id: 'ab', createdAt: [1, 'a'] }, { id: 'ac', createdAt: [1] },
 ].map(row => ({ ...row, workspace: 'plane' }));
+// Neighbouring workspaces whose keys sort next to Plane's; none of them is ever listed or counted.
+const NEIGHBOUR_ROWS = () => ['plan', 'plane\u0000', 'plane\u0000x', 'planeA', 'planf'].flatMap((workspace, i) => [{ id: `n${i}a`, workspace, createdAt: [9] }, { id: `n${i}s`, workspace, createdAt: '2026-10-20T00:00:03.000Z' }]);
+const WALK = ['aa', 'ab', 'ac', 'v3', 'v2', 'long5000', 7, 'v1', 'vd', 'vn'];
 const shortId = id => (typeof id === 'string' && id.length > 20 ? `long${id.length}` : id);
 
 test('unsupported rows at page boundaries neither break nor hide the pages around them', async () => {
   const store = createFakePersistence();
-  await store.commit({ puts: UNSUPPORTED_ROWS().map(value => ({ store: 'discoveries', value })), deletes: [] });
+  await store.commit({ puts: [...UNSUPPORTED_ROWS(), ...NEIGHBOUR_ROWS()].map(value => ({ store: 'discoveries', value })), deletes: [] });
   for (const limit of [1, 2, 3]) {
     const walked = [];
     try { for (let cursor = null, page; (page = await store.listDiscoveries({ workspace: 'plane', limit, cursor })), walked.push(...page.items.map(item => shortId(item.id))), page.nextCursor; cursor = page.nextCursor); }
     catch (error) { walked.push(`${error.name}: ${error.message}`); }
-    assert.deepEqual(walked, ['v3', 'v2', 'long5000', 7, 'v1', 'vd', 'vn'], `limit ${limit}`);
+    assert.deepEqual(walked, WALK, `limit ${limit}`);
   }
-  assert.equal(await store.countDiscoveries({ workspace: 'plane' }), 7);
+  assert.equal(await store.countDiscoveries({ workspace: 'plane' }), 10);
+});
+
+// Fix round 3 (Codex r3 minor): a date anchor must be an exact time value, also inside an array key.
+test('a cursor whose date anchor is not an exact time value is refused', () => {
+  const cursor = (createdAt, id = ['s', 'x']) => `after:${JSON.stringify(['plane', createdAt, id])}`;
+  assert.equal(decodePageCursor(cursor(['d', '0'], ['d', '-8640000000000000']), 'plane').id.getTime(), -8640000000000000);
+  for (const body of ['Infinity', '-Infinity', '8640000000000001', '0.5', 'NaN', '1e3', ''])
+    for (const encoded of [cursor(['d', body]), cursor(['a', [['s', 'x'], ['d', body]]]), cursor(['s', 'x'], ['a', [['a', [['d', body]]]]])])
+      assert.throws(() => decodePageCursor(encoded, 'plane'), RangeError, encoded);
 });

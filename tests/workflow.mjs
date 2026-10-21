@@ -174,8 +174,12 @@ function checkIndexedDb(page) {
       { id: 'v3', createdAt: '2026-10-20T00:00:05.000Z' }, { id: 7, createdAt: '2026-10-20T00:00:04.000Z' },
       { id: 'L'.padEnd(5000, 'x'), createdAt: '2026-10-20T00:00:04.000Z' }, { id: 'v2', createdAt: '2026-10-20T00:00:04.000Z' },
       { id: 'vd', createdAt: new Date(Date.UTC(2026, 9, 20)) }, { id: 'vn', createdAt: 5 }, { id: 'v1', createdAt: '2026-10-20T00:00:01.000Z' },
+      // Fix round 3: nonempty and nested array timestamps (they sort after strings) stay in range.
+      { id: 'aa', createdAt: [[]] }, { id: 'ab', createdAt: [1, 'a'] }, { id: 'ac', createdAt: [1] },
     ];
-    await u.commit({ puts: rows.map(row => ({ store: 'discoveries', value: { ...row, workspace: 'plane' } })) });
+    // Neighbouring workspaces whose index keys sort next to Plane's are never listed or counted.
+    const neighbours = ['plan', 'plane\u0000', 'plane\u0000x', 'planeA', 'planf'].flatMap((workspace, i) => [{ id: `n${i}a`, workspace, createdAt: [9] }, { id: `n${i}s`, workspace, createdAt: '2026-10-20T00:00:03.000Z' }]);
+    await u.commit({ puts: [...rows.map(row => ({ ...row, workspace: 'plane' })), ...neighbours].map(value => ({ store: 'discoveries', value })) });
     const shortId = id => (typeof id === 'string' && id.length > 20 ? `long${id.length}` : id);
     results.unsupportedWalks = [];
     for (const limit of [1, 2, 3]) {
@@ -654,7 +658,7 @@ try {
     wholeOldRecord: true, reports: ['r1'], versionAfterUnblock: 1, storesAfterUnblock: ['discoveries', 'reports', 'writes'], deleted: 'deleted',
     paging: { first: ['e', 'd', 'c'], second: ['ba', 'b', 'a'], secondNext: null, single: ['e', 'c', 'ba', 'b', 'a'] },
     badCursor: 'RangeError', foreignCursor: 'RangeError', pagingDeleted: 'deleted',
-    unsupportedWalks: [1, 2, 3].map(() => ['v3', 'v2', 'long5000', 7, 'v1', 'vd', 'vn']), unsupportedCount: 7, unsupportedDeleted: 'deleted', keyOrderDisagreements: 0,
+    unsupportedWalks: [1, 2, 3].map(() => ['aa', 'ab', 'ac', 'v3', 'v2', 'long5000', 7, 'v1', 'vd', 'vn']), unsupportedCount: 10, unsupportedDeleted: 'deleted', keyOrderDisagreements: 0,
   });
   pass('IndexedDB commits whole batches, rolls back, cancels and reopens');
 
