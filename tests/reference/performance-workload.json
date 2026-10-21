@@ -1,0 +1,367 @@
+{
+  "protocol": "P3",
+  "version": 1,
+  "source": {
+    "plan": "docs/superpowers/plans/2026-10-20-project1b1-render-and-recover-plan.md",
+    "planRevision": "4.2",
+    "spec": "docs/superpowers/specs/2026-10-19-project1-design.md",
+    "specRevision": "4.2",
+    "sections": [
+      "Frozen verification protocols / P3",
+      "16.4"
+    ]
+  },
+  "readyForAcceptance": false,
+  "output": {
+    "width": 1280,
+    "height": 720
+  },
+  "scenes": [
+    {
+      "id": "bulb",
+      "model": "mandelbulb@1",
+      "view": "overview",
+      "parameters": {
+        "power": "8"
+      },
+      "maxIterations": 128,
+      "lightingQuality": "full",
+      "targetSamples": 8,
+      "scene": null,
+      "maxSteps": 512,
+      "sampling": {
+        "seed": 1,
+        "sequence": "atlas-aa-v1"
+      }
+    },
+    {
+      "id": "quaternion",
+      "model": "quaternion-julia@1",
+      "view": "overview",
+      "lightingQuality": "full",
+      "targetSamples": 8,
+      "scene": null,
+      "parameters": {
+        "C": [
+          "-0.2",
+          "0.8",
+          "0",
+          "0"
+        ],
+        "kappa": "0"
+      },
+      "maxIterations": 128,
+      "maxSteps": 512,
+      "sampling": {
+        "seed": 1,
+        "sequence": "atlas-aa-v1"
+      }
+    },
+    {
+      "id": "menger",
+      "model": "menger@1",
+      "parameters": {
+        "depth": 2
+      },
+      "lightingQuality": "full",
+      "targetSamples": 8,
+      "scene": null,
+      "maxIterations": 128,
+      "maxSteps": 512,
+      "sampling": {
+        "seed": 1,
+        "sequence": "atlas-aa-v1"
+      },
+      "view": "overview"
+    }
+  ],
+  "workloads": {
+    "phaseOrder": [
+      "orbit",
+      "settled-after-orbit",
+      "interaction",
+      "stress",
+      "coverage-replay"
+    ],
+    "phaseBoundary": "Do not start interaction until the post-orbit full-quality render completes. Drain all submissions between phases under existing operation/suite bounds. Phase-local issuance uses absolute targets; waiting never restarts a request latency clock.",
+    "orbit": {
+      "durationMs": 30000,
+      "radiansPerSecond": 0.5,
+      "axis": "world-Z",
+      "focusLocal": [
+        0,
+        0,
+        0
+      ],
+      "upright": true,
+      "startPose": "overview",
+      "requestRule": {
+        "firstIndex": 0,
+        "lastIndex": 1874,
+        "spacingMs": 16
+      },
+      "yawRule": "0.5 * (16 * k) / 1000 radians from overview",
+      "cameraPoses": null
+    },
+    "interaction": {
+      "cameraRequests": 400,
+      "requestRule": {
+        "firstIndex": 1,
+        "lastIndex": 400,
+        "spacingMs": 60
+      },
+      "startPose": "last-issued-orbit-pose",
+      "startYawRadians": 14.992,
+      "yawRule": "14.992 + 0.5 * (60 * j) / 1000 radians from overview",
+      "cameraPoses": null
+    },
+    "stress": {
+      "durationMs": 10000,
+      "cameraPose": "last-issued-interaction-pose",
+      "editRule": {
+        "count": 40,
+        "firstTimeMs": 0,
+        "spacingMs": 250,
+        "firstValue": "alternate"
+      },
+      "alternations": {
+        "bulb": {
+          "path": "parameters.power",
+          "base": "8",
+          "alternate": "7"
+        },
+        "quaternion": {
+          "path": "parameters.kappa",
+          "base": "0",
+          "alternate": "0.5"
+        },
+        "menger": {
+          "path": "parameters.depth",
+          "base": 2,
+          "alternate": 1
+        }
+      },
+      "valueRule": "even edit indices use alternate; odd indices use base; final edit restores base"
+    },
+    "settled": {
+      "trigger": "automatic settle after the final issued orbit pose",
+      "start": "creation of that settled request, observed in the page",
+      "stop": "first complete full-resolution geometry, normals and direct-light publication",
+      "fullQuality": "record separately and finish before interaction"
+    }
+  },
+  "seeds": {
+    "sampling": 1,
+    "harnessRandomness": false
+  },
+  "warmup": {
+    "firstTrial": "cold-after-fresh-page-load",
+    "subsequentTrials": "same-page-without-reload",
+    "procedure": "Prepare, then run and record the complete workload. No discarded warm-up trial. Before each later attempt restore the frozen base scene and overview pose and drain outstanding work outside the timed phases; never reload the page."
+  },
+  "coverageCheckpoints": {
+    "orbitIndices": [
+      0,
+      625,
+      1250,
+      1874
+    ],
+    "includeSettledImage": true,
+    "execution": "replay-outside-timed-workload",
+    "orbitQuality": {
+      "scale": 0.5,
+      "maxIterations": 64,
+      "maxSteps": 256,
+      "lightingQuality": "direct",
+      "targetSamples": 1,
+      "seed": 1,
+      "sampleIndex": 0
+    },
+    "settledQuality": {
+      "scale": 1,
+      "maxIterations": 128,
+      "maxSteps": 512,
+      "lightingQuality": "direct",
+      "targetSamples": 1,
+      "seed": 1,
+      "sampleIndex": 0
+    },
+    "comparison": "rayTermination counts at the frozen poses versus B04 predictions; timed checkpoint requests may be superseded",
+    "missingOrFailed": "non-accepting",
+    "materialized": null,
+    "timedPublications": "Every counted timed publication must match its request identity and quality and contain the complete internal pixel count; selected timed requests may be superseded.",
+    "settledMeaning": "Replay of the first settled direct-light image, sample 0. The timed request remains full lighting with targetSamples 8; its full-quality milestone is recorded separately."
+  },
+  "predictionArtifact": {
+    "path": "tests/reference/performance-predictions.json",
+    "owner": "B04",
+    "sha256": null,
+    "contents": [
+      "checkpoint termination distributions",
+      "acceptance tolerances"
+    ]
+  },
+  "trials": {
+    "suitePerScene": true,
+    "suiteTimeoutMs": 600000,
+    "requiredPassing": 3,
+    "maxAttempts": 5,
+    "recordEveryAttempt": true,
+    "silentRetry": false
+  },
+  "targets": {
+    "completedDraftsPerSecondMin": 30,
+    "consecutiveDraftIntervalP95Ms": 50,
+    "interactionP95Ms": 100,
+    "stressReplacementMs": 250,
+    "applicationMainThreadTaskMaxMs": 50,
+    "firstSettledImageMs": 2000
+  },
+  "timing": {
+    "start": "request-creation",
+    "stop": "first-complete-publication",
+    "firstSettledImage": "full-resolution geometry, normals and direct light at settled iteration and tracing settings",
+    "restartOnAdmission": false,
+    "fullQualityMilestoneSeparate": true,
+    "measurementsSeparate": [
+      "completed-work",
+      "publication",
+      "readback",
+      "presenter-queue-completion"
+    ],
+    "onPresent": {
+      "fields": [
+        "identity",
+        "queueCompletedAt",
+        "evidence"
+      ],
+      "evidence": "presenter-queue-completion"
+    },
+    "compositorTime": "unavailable-unless-independently-observed",
+    "visibleOutput": "Headed screenshots of the settled-first replay at each scene, outside the timed workload.",
+    "lateIssuanceThresholdMs": 4,
+    "roundPositiveWaitsUpToWholeMs": true,
+    "absoluteTargets": true,
+    "record": [
+      "rearm-count",
+      "late-issuance",
+      "long-task-entries"
+    ],
+    "singleAverageFpsIsAcceptanceEvidence": false
+  },
+  "classification": {
+    "precedence": [
+      "established-application-target-failure",
+      "demonstrated-harness-failure",
+      "unexplained-timing-anomaly",
+      "valid-passing-trial"
+    ],
+    "applicationFailure": "failed regardless of timing anomalies; any established application target failure prevents scene acceptance",
+    "harnessFailure": "excluded only with demonstrated harness failure and no established application target failure",
+    "unexplainedAnomaly": "inconclusive and non-accepting",
+    "insufficientPassingTrials": "inconclusive and non-accepting",
+    "coverage": "failed or missing coverage cannot satisfy a target"
+  },
+  "inspection": {
+    "commands": [
+      "atlas.space.requestCamera(pose)",
+      "atlas.space.editParameter(path, value)"
+    ],
+    "subscriptions": [
+      "atlas.space.onPublish(listener)",
+      "atlas.space.onPresent(listener)"
+    ]
+  },
+  "unresolved": [
+    {
+      "field": "scenes.bulb.scene",
+      "reason": "B04 materializes schema-valid independent scene JSON and its overview pose.",
+      "owner": "B04"
+    },
+    {
+      "field": "scenes.quaternion.scene",
+      "reason": "B04 materializes schema-valid independent scene JSON and its overview pose.",
+      "owner": "B04"
+    },
+    {
+      "field": "scenes.menger.scene",
+      "reason": "B04 materializes schema-valid independent scene JSON and its overview pose.",
+      "owner": "B04"
+    },
+    {
+      "field": "workloads.orbit.cameraPoses",
+      "reason": "B04 materializes all 1875 camera poses from the frozen yaw rule.",
+      "owner": "B04"
+    },
+    {
+      "field": "workloads.interaction.cameraPoses",
+      "reason": "B04 materializes all 400 camera poses continuing from yaw 14.992.",
+      "owner": "B04"
+    },
+    {
+      "field": "coverageCheckpoints.materialized",
+      "reason": "B04 records per-scene replay poses and prediction references for the frozen checkpoints.",
+      "owner": "B04"
+    },
+    {
+      "field": "predictionArtifact.sha256",
+      "reason": "B04 generates the independent prediction artifact, records its hash here and the final workload hash externally.",
+      "owner": "B04"
+    }
+  ],
+  "schema": "atlas.performance-workload",
+  "materialization": {
+    "owner": "B04",
+    "codecValidationOwner": "B09",
+    "consumer": "B15",
+    "independentOfSrc": true,
+    "overviewRule": "2.5 times the enclosing radius along normalized Project 0 A.6 direction; upright, focusLocal [0,0,0]",
+    "workloadHash": "SHA-256 of final manifest bytes recorded externally in the B04 handoff and B15 report; never self-embedded",
+    "predictionHash": "SHA-256 of prediction artifact bytes stored in predictionArtifact.sha256; predictions do not embed the manifest hash",
+    "formats": {
+      "scenes.scene": "atlas.scene v1, Space anchored-perspective-v1 camera",
+      "workloads.orbit.cameraPoses": {
+        "keys": [
+          "bulb",
+          "quaternion",
+          "menger"
+        ],
+        "entriesPerScene": 1875,
+        "entryFields": [
+          "requestIndex",
+          "requestTimeMs",
+          "camera"
+        ]
+      },
+      "workloads.interaction.cameraPoses": {
+        "keys": [
+          "bulb",
+          "quaternion",
+          "menger"
+        ],
+        "entriesPerScene": 400,
+        "entryFields": [
+          "requestIndex",
+          "requestTimeMs",
+          "camera"
+        ]
+      },
+      "coverageCheckpoints.materialized": {
+        "entriesPerScene": 5,
+        "entryFields": [
+          "id",
+          "sceneId",
+          "kind",
+          "orbitIndex",
+          "camera",
+          "quality",
+          "predictionId"
+        ],
+        "settledOrbitIndex": null
+      }
+    }
+  },
+  "screenshotCheckpoints": [
+    "settled-image-per-scene"
+  ]
+}

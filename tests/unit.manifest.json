@@ -12,6 +12,8 @@
     "tests/unit/discoveries-control.test.js",
     "tests/unit/export.test.js",
     "tests/unit/gestures.test.js",
-    "tests/unit/gpu-drain.test.js"
+    "tests/unit/gpu-drain.test.js",
+    "tests/unit/space-contract.test.js",
+    "tests/unit/fake-backend.test.js"
   ]
 }
