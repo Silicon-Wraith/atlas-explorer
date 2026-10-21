@@ -50,10 +50,12 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4 — joint draft (Claude drafting; Codex co-author from Round 0: runs
-20261020T211454Z-d306 and 20261020T212435Z-94a5; the reviews 20261020T214114Z-aba8 (fifteen
-findings), 20261021T010758Z-8a0a (nine) and 20261021T011813Z-1807 (three blocking, one editorial)
-are applied here). **Authors:** Claude and Codex as peers
+**Revision:** 4.1 — **Codex READY** (run 20261021T012346Z-8408, verified at commit 5914fc9) after
+five rounds: joint decomposition 20261020T211454Z-d306 and reconciliation 20261020T212435Z-94a5,
+then the co-author reviews 20261020T214114Z-aba8 (fifteen findings), 20261021T010758Z-8a0a (nine)
+and 20261021T011813Z-1807 (three blocking, one editorial), all applied. Claude drafted; both peers
+agreed the structure and reviewed the whole. Awaiting the user's approval and the four items under
+*Items for the user*. **Authors:** Claude and Codex as peers
 (AGENTS.md/CLAUDE.md protocol). The verbatim record is
 `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md` ("PLAN 1b.1" entries), archived to
 `docs/codesign/project1-log.md` at the milestone.
