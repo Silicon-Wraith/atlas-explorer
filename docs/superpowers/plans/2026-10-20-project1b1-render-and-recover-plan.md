@@ -50,9 +50,10 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 3 — joint draft (Claude drafting; Codex co-author from Round 0: runs
-20261020T211454Z-d306 and 20261020T212435Z-94a5; the rev 1 review 20261020T214114Z-aba8 (fifteen
-findings) and the rev 2 review 20261021T010758Z-8a0a (nine findings) are applied here). **Authors:** Claude and Codex as peers
+**Revision:** 4 — joint draft (Claude drafting; Codex co-author from Round 0: runs
+20261020T211454Z-d306 and 20261020T212435Z-94a5; the reviews 20261020T214114Z-aba8 (fifteen
+findings), 20261021T010758Z-8a0a (nine) and 20261021T011813Z-1807 (three blocking, one editorial)
+are applied here). **Authors:** Claude and Codex as peers
 (AGENTS.md/CLAUDE.md protocol). The verbatim record is
 `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md` ("PLAN 1b.1" entries), archived to
 `docs/codesign/project1-log.md` at the milestone.
@@ -404,7 +405,7 @@ per class of B04's binary64 prediction (160 × 90 rays, 128 iterations, 512 step
 **P3 — Performance workload** (B15): B00 freezes a workload manifest
 (`tests/reference/performance-workload.json`) containing the complete scenes, motion trajectories
 (camera poses per request time), request times, edit values, seeds, warm-up rules and coverage
-checkpoints; B04 supplies `tests/reference/performance-predictions.json` (hashed; each
+checkpoints (the three P3 scenes are the `lightingQuality: 'full'`, eight-sample settled scenes); B04 supplies `tests/reference/performance-predictions.json` (hashed; each
 checkpoint's termination distribution and its acceptance tolerance); B15 consumes both files by
 hash. Content:
 1280 × 720; scenes: the bulb overview (power 8, 128 iterations), the quaternion default view,
@@ -420,11 +421,15 @@ evidence: 'presenter-queue-completion'}`; actual compositor presentation time is
 unavailable unless independently observed; headed screenshot checks at frozen checkpoints verify
 visible canvas output separately, outside the timed workload); coverage checks at
 the manifest's checkpoints against B04's prediction, and failed or missing coverage cannot satisfy
-a target; harness-invalidity rule: a request issued more than 4 ms late invalidates the trial,
-which is reported as invalid, never as passed or failed — harness invalidity is recorded
-independently of application failures, so an observed application task over 50 ms or another
-established target failure remains a failure even when issuance was late, and only a demonstrated
-harness failure excludes an attempt; Project 0 timer rules; no single
+a target; attempt classification: a request issued more than 4 ms late records a timing
+anomaly, which does not by itself establish a harness failure; an established application target
+failure makes the attempt `failed` regardless of timing anomalies; an attempt may be excluded only
+for a demonstrated harness failure without an established application failure; an unexplained
+timing anomaly makes the attempt `inconclusive`, which cannot support acceptance; a scene suite
+accepts only with at least three valid passing trials within five attempts and no established
+application target failure in any attempt; every attempt and its classification evidence stays
+in the report; the timing helper records anomalies and the trial classifier determines their
+disposition; Project 0 timer rules; no single
 average-FPS figure. Targets: ≥ 30 completed drafts/s with consecutive-interval p95 ≤ 50 ms;
 interaction p95 ≤ 100 ms; stress replacement ≤ 250 ms; no application main-thread task over 50 ms;
 first settled full-resolution geometry, normals and direct-light image ≤ 2 s from the settled
@@ -450,10 +455,13 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   {none: 0, pointBudget: 1, estimateUnavailable: 2, rayStepBudget: 3, stagnation: 4}`,
   `STAGNATION = {none: 0, rayParameter: 1, fieldCoordinate: 2}`, `NORMAL_STATUS = {available: 0,
   unavailable: 1}`, `LIGHTING_FAILURE_FLAGS = {shadow: 1, ao: 2}` (zero means no recorded failure, not
-  "lit"), `packLightingStatus({shadow: {failed, reason, subreason}, ao: {failed, reason,
-  subreason}}) → u32` (frozen layout: bits 0–1 flags, 2–5 shadow reason, 6–9 shadow subreason,
-  10–13 AO reason, 14–17 AO subreason; both failures preserved together),
-  `unpackLightingStatus(u32)`,
+  "lit"), `packLightingStatus({shadow: null | Failure, ao: null | Failure}) → u32` where `Failure =
+  {status, reason, subreason}` and `status` is `RAY_STATUS.unresolved` or
+  `RAY_STATUS.numericalFailure` (`null` means no recorded failure; frozen layout: bits 0–1 failure
+  flags, 2–3 shadow status, 4–7 shadow reason, 8–11 shadow subreason, 12–13 AO status, 14–17 AO
+  reason, 18–21 AO subreason, remaining bits zero; multiple AO failures reduce deterministically
+  with numerical failure taking precedence), `unpackLightingStatus(u32)` (reconstructs both
+  failures),
   `ESTIMATOR_CATEGORIES = ['exact-distance', 'heuristic']`, `packStatus({status, reason,
   subreason, steps}) → u32` (bits 0–3, 4–7, 8–11, 12–31), `unpackStatus(u32)`, `LEGEND =
   {unresolved: [1, 0, 1], numericalFailure: [1, 0, 0], unavailableNormal: [0.5, 0.5, 0.5]}`,
@@ -469,12 +477,15 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   (validates every field; `pixels === width × height`; bounds within the spec limits),
   `createPickRequest({identity, pixel, dimensions, geometryRevision, sampleIndex}) → frozen`,
   `createAdmission({epoch, jobId}) → lease` (single-use: `consume()` returns true once),
-  `createJobPlan({request, steps: [{pass, regions, sampleIndex, bounds}], onAdvance}) → JobPlan`
-  with `next() → {kind: 'batch' | 'readback' | 'presentation', ...} | null` (the next bounded
-  operation), `advance(operation, completion)` (tracks dependencies, marks the operation done and
-  may subdivide the following step from completion evidence) and `exhausted()` (true when every
-  operation is done; the scheduler, which owns elapsed-work budgets, then settles the job
-  `completed`, or `budget-exceeded` when its budget is spent first),
+  `createJobPlan({request, operations, onAdvance}) → JobPlan` (each operation has `id`,
+  `dependsOn: string[]` and one payload — `{kind: 'batch', batch}`, `{kind: 'readback',
+  descriptor}` or `{kind: 'presentation', descriptor}` — whose descriptors match the first
+  arguments of the corresponding backend methods; B09 constructs the operations with complete
+  resource bindings) with `next() → operation | null` (reserves one ready operation so repeated
+  calls cannot issue it twice; `null` means none is ready now, not necessarily exhaustion),
+  `advance(operation, completion)` (resolves dependencies; adaptive subdivision from completion
+  evidence preserves dependency ordering) and `exhausted()` (true only after every operation has
+  completed; the scheduler alone owns elapsed-work budgets and job outcomes),
   `validatePipelineDescriptor(descriptor)` and `createPipelineSet({id, descriptors}) → frozen`
   (the descriptor schema names `pipelineId`, `kind: 'compute' | 'render'`, `sourceIds`,
   `entryPoint`, `constants`, `bindings: [{slot, type, access}]` and `uniformLayout`),
@@ -525,8 +536,9 @@ P1–P3 become binding at this task's commit.
   rejects an implementation missing release or onLoss`; `wgslConstants emits one const per enum
   member`; `sample jitter is deterministic, centred for sample 0, within half a pixel, and mix(42) is
   4147330502`; `a pipeline set validates its descriptors and rejects an unknown binding type`; `a job
-  plan yields bounded operations in order and settles budget-exceeded before exhaustion when its
-  budget is spent`. `tests/unit/fake-backend.test.js`: `allocation beyond the cap fails before any resource
+  plan reserves ready operations once and remains unexhausted while dependencies are outstanding`;
+  `lighting status round-trips simultaneous unresolved and numerical failures without conflating
+  them`. `tests/unit/fake-backend.test.js`: `allocation beyond the cap fails before any resource
   exists and leaves accounting unchanged`; `released bytes stay tracked while a ticket references
   the resource and leave when it settles`; `a loss settles every outstanding ticket interrupted and
   a new acquisition advances the epoch`; `submission without a lease is refused`; `completion
@@ -874,7 +886,7 @@ from here on.
 spec §11, not B03's code.
 
 **Files:**
-- Create: `tests/reference/f32.js`, `tests/reference/complex.js`,
+- Create: `tests/reference/tolerance-analysis.md`, `tests/reference/f32.js`, `tests/reference/complex.js`,
   `tests/reference/quaternion.js`, `tests/reference/bulb.js`, `tests/reference/analytic.js`,
   `tests/reference/menger.js`, `tests/reference/camera.js`, `tests/reference/trace.js`,
   `tests/reference/anchors.mjs`, `tests/reference/matrix.mjs` (generator),
@@ -1001,8 +1013,8 @@ picking (B10/B12).
   never crosses the focus`; `flight is upright: yaw about world Z, pitch clamped, no roll`;
   `overview places the camera at 2.5 radii`; `setOrientation with a locked axis changes only the
   other two`; `reconstructHit's error is bounded by origin transport, direction rounding and depth
-  quantization together` (the test bounds each term and their sum; depth spacing alone bounds
-  nothing).
+  quantization together` (the test bounds each term and their sum; depth spacing alone does not
+  bound the total reconstruction error).
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "anchor arithmetic preserves the represented point within the recentre bound"`.
 - [ ] **Step 3: Implement** (`BigInt` is Space-owned and never in `shared/`; the orientation is a
   unit quaternion `[w, x, y, z]`; the double–double split uses Dekker's exact two-sum on the
