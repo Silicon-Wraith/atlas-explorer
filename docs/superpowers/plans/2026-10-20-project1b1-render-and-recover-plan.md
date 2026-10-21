@@ -57,12 +57,12 @@ camera approved for ordinary Space, §19.2 Q2/Q5/Q6 confirmed, the §13.2 erratu
 well."): new task B12b and B14 wiring, co-designed with Codex — **Codex READY** for the
 standard-layout scope (runs 20261021T033701Z-268a and 20261021T034408Z-2f95, resuming the plan
 session 20261021T012346Z-8408; an earlier attempt 20261021T033535Z-8c31 failed on service capacity
-with no reply). Spec §19.2 Q11 (supported controller models) is open. **Rev 4.1** — **Codex READY** (run 20261021T012346Z-8408, verified at commit 5914fc9) after
+with no reply). Spec rev 4.2 Q11 (supported controller models) is answered: "Xbox style" (standard layout; §19.1). **Rev 4.1** — **Codex READY** (run 20261021T012346Z-8408, verified at commit 5914fc9) after
 five rounds: joint decomposition 20261020T211454Z-d306 and reconciliation 20261020T212435Z-94a5,
 then the co-author reviews 20261020T214114Z-aba8 (fifteen findings), 20261021T010758Z-8a0a (nine)
 and 20261021T011813Z-1807 (three blocking, one editorial), all applied. Claude drafted; both peers
 agreed the structure and reviewed the whole. The four items under *Items for the user* were decided
-on 2026-10-21; the plan awaits the user's approval and the answer to spec §19.2 Q11. **Authors:** Claude and Codex as peers
+on 2026-10-21; the user approved starting 1b.1 on 2026-10-21 and answered Q11 ("Xbox style"). **Authors:** Claude and Codex as peers
 (AGENTS.md/CLAUDE.md protocol). The verbatim record is
 `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md` ("PLAN 1b.1" entries), archived to
 `docs/codesign/project1-log.md` at the milestone.
@@ -1543,9 +1543,8 @@ action away). Excludes DOM layout (B14).
 ### Task B12b: Controller (gamepad) exploration — decoding, input state machine, history (spec §13.3, §6, §15; user decision 2026-10-21)
 
 **Owner:** Codex. **Reviewer:** Claude. **Depends on:** B12. **Scope:** standard-layout controllers
-(`mapping === 'standard'`); spec §19.2 Q11 is open — if the user requires non-standard joysticks or
-flight sticks, a recorded plan amendment adds an explicit mapping profile here and a configure/select
-control to B14 **before this task starts**. Co-designed with Codex (runs 20261021T033701Z-268a,
+(`mapping === 'standard'`); the user's controller is Xbox style (spec §19.1, answer to rev 4.2 Q11), which reports the
+standard layout; non-standard joysticks and flight sticks stay deferred (§17). Co-designed with Codex (runs 20261021T033701Z-268a,
 20261021T034408Z-2f95; READY for this scope).
 
 **Files:**
@@ -1926,9 +1925,8 @@ All other files are single-owner.
 
 **Decided by the user on 2026-10-21** (applied in spec rev 4.2 and this revision): (a) ADOPT;
 (b) APPROVE; (c) confirmed, with Q5 extended by "We should support joystick for exploration as
-well." (B12b, B14); (d) applied. **Open:** spec §19.2 Q11 — which controller model(s) the user
-intends to use, and whether standard-gamepad support suffices for 1b.1 or a non-standard
-joystick/flight stick must work (if so, a recorded amendment extends B12b/B14 before B12b starts).
+well." (B12b, B14); (d) applied. **Answered (2026-10-21):** spec rev 4.2 Q11 — "Xbox style": standard-gamepad
+support suffices for 1b.1 (§19.1).
 The original items, for the record:
 - (a) adopt the §9.1 WebGPU backend annex (above) into the spec by reference;
 - (b) approve rev 4 §5.2/§10.1's `anchored-perspective-v1` camera representation for ordinary

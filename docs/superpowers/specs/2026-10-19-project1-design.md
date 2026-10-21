@@ -10,8 +10,8 @@ Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply C
 rev 4 adds Project 1c, Space deep zoom, by the user's decision "Yes, add deep zoom as 1c in Project 1."
 (2026-10-20) — §21; rev 4.2 applies the user's decisions of 2026-10-21: the §9.1 WebGPU backend annex
 adopted as normative, the anchored camera (§5.2/§10.1) approved for ordinary Space, §19.2 Q2, Q5
-and Q6 answered (§19.1) with gamepad exploration added to Space navigation (§13.3; supported controller models open as
-§19.2 Q11), and the §13.2
+and Q6 answered (§19.1) with gamepad exploration added to Space navigation (§13.3; supported controllers: Xbox-style standard
+layout, §19.1), and the §13.2
 precision-badge erratum. **§21 (1c) remains a draft amendment awaiting the user's review.**)
 **Authors:** Claude and Codex, co-designed as peers. The verbatim exchange is archived in
 `docs/codesign/project1-log.md`, a project-specific log kept beside the protocol's
@@ -811,8 +811,8 @@ arrive in 1b.3, §13.7).
   alternatives.
   - *Supported layouts in 1b.1:* browser Gamepad API devices reporting `mapping === "standard"`. A
     connected device with another mapping is reported as connected with an unsupported layout and
-    drives nothing; its axes are never guessed. Whether non-standard joysticks or flight sticks must
-    work is open (§19.2 Q11). Physical devices are unqualified until one has been exercised.
+    drives nothing; its axes are never guessed. Non-standard joysticks and flight sticks are
+    deferred (§17; user answer to rev 4.2 Q11, §19.1: "Xbox style"). Physical devices are unqualified until one has been exercised.
   - *Input:* the controller is polled once per workspace animation frame, before the flight tick,
     with no second loop or timer; polling continues while input is eligible even when rendering is
     idle, and elapsed time is clamped as for flight. A poll produces at most one camera preview,
@@ -835,7 +835,7 @@ arrive in 1b.3, §13.7).
     expose a controller only after it is used: the interface invites "Press a controller button to
     connect", and that interaction performs no navigation.
   - Controller selection, button state and mapping preferences are runtime input settings, never part
-    of `atlas.scene`. Remapping is deferred (§17), subject to the §19.2 Q11 answer.
+    of `atlas.scene`. Remapping is deferred (§17).
 - **Camera exterior status.** The CPU double evaluator classifies the camera position on each
   committed camera. Either an unresolved CPU classification or an unresolved evaluation under the
   renderer's effective inputs shows "camera exterior status unresolved" with overview and reset.
@@ -1062,8 +1062,8 @@ admitted depth; estimator-scaled flight assist (unless it proves useful); inerti
 queues; tiled giant stills; parameter maps, variations and publication animation. User decisions of 2026-10-21:
 touch and mobile Space navigation (Plane's mobile behaviour is preserved); Space share URLs (scene
 files from 1b.1 and discovery cards from 1b.3 carry Space scenes). Also deferred: controller
-navigation in Plane; controller remapping and invert options, and non-standard controller layouts,
-unless the §19.2 Q11 answer requires them in 1b.1; controller focus picking.
+navigation in Plane; controller remapping and invert options, and non-standard controller layouts
+(the user's controller is Xbox style, §19.1); controller focus picking.
 
 **User-stated future direction (2026-10-20), outside Project 1:** a landing page that presents the
 project, its goals and what others are doing; and shared discoveries served from a centrally hosted
@@ -1117,6 +1117,9 @@ own spec (hosting, identity, moderation, privacy and trust of remote records) an
 - **Backend annex and anchored camera** (user decisions, 2026-10-21): the §9.1 WebGPU backend annex is
   adopted as normative text, and the anchored camera (§5.2, §10.1) is approved for ordinary Space;
   the §13.2 precision-badge erratum ("(1b.2)") is applied.
+- **Controller models** (rev 4.2 Q11; user decision, 2026-10-21): "Xbox style". Standard-layout
+  gamepads (`mapping === "standard"`, which Xbox-style controllers report) are sufficient for 1b.1;
+  non-standard joysticks and flight sticks, mapping profiles and remapping stay deferred (§17).
 
 ### 19.2 Open
 These affect only 1b and 1c; the architecture supports either answer to each.
@@ -1134,12 +1137,7 @@ These affect only 1b and 1c; the architecture supports either answer to each.
     - **Q10:** the 1c spike proposes the reference-preparation pause budgets (typical and deepest)
       for the user's approval before acceptance. The user's stated expectation is that pauses are
       "way lower than a second".
-11. **Controller models (rev 4.2, from the 2026-10-21 joystick decision):** which controller
-    model(s) do you intend to use? Is standard-gamepad support sufficient for 1b.1, or must a
-    joystick/flight stick with a non-standard layout work? 1b.1 currently supports
-    `mapping === "standard"` devices (§13.3). If non-standard sticks are required, a recorded plan
-    amendment adds an explicit mapping profile and a configure/select control before the controller
-    task starts, and remapping leaves §17.
+
 
 ## 20. Revision triggers
 None of these affects 1a.
