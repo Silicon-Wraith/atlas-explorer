@@ -15,7 +15,8 @@
     "test:graphics": "node scripts/run-unit.mjs && node tests/graphics.mjs --chrome --headed --compositor --benchmark",
     "thumbnails": "node scripts/thumbnails.mjs",
     "gate": "node scripts/plane-gate.mjs",
-    "test:workflow": "node scripts/run-unit.mjs && node tests/workflow.mjs"
+    "test:workflow": "node scripts/run-unit.mjs && node tests/workflow.mjs",
+    "test:space": "node scripts/run-unit.mjs && node tests/space.mjs"
   },
   "devDependencies": {
     "playwright": "1.59.1"

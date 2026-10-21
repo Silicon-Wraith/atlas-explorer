@@ -16,6 +16,8 @@
     "tests/unit/space-contract.test.js",
     "tests/unit/fake-backend.test.js",
     "tests/unit/space-scene.test.js",
-    "tests/unit/space-parameters.test.js"
+    "tests/unit/space-parameters.test.js",
+    "tests/unit/space-device.test.js",
+    "tests/unit/space-suite-support.test.js"
   ]
 }
