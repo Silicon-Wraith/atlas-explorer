@@ -405,9 +405,10 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   // or geometry still rendering (plan amendment I(2)); that check and the capture are synchronous, so
   // a later edit cannot pair live settings with older pixels. The thumbnail must encode within
   // THUMBNAIL_ENCODE_MS. The record, its thumbnail, the publication's report and the write marker are
-  // committed together by the local source; the toast claims only what the write observed.
+  // committed together by the local source; the toast claims only what the write observed. An open
+  // gesture (a held drag, a tour, the palette animation) is never settled here: saving changes no
+  // scene and records no history entry (spec §4.3, §6).
   async function saveDiscovery() {
-    gestures.settle();
     const scene = sceneHistory.snapshot().scene;
     const publication = adapter.publication;
     const settled = rendered && !busy && !dirty && !adapter.reserved && !adapter.unavailable && !adapter.retired && publication && sceneCodec.equal(publication.request.sceneSnapshot, scene);

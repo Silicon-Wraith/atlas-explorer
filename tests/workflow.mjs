@@ -33,11 +33,13 @@ async function open(context, hash = '', backend = 'webgl') {
   return page;
 }
 const state = page => ev(page, () => ({ scene: atlas.scene, history: atlas.history, rendered: atlas.rendered }));
-// An early close of a context: every page is drained through the expected-backend wrapper first; a
-// failed drain is persisted in the report and fails the suite (T00b, plan amendment H).
+// An early close of a registered context: every page is drained through the expected-backend wrapper
+// first; a failed drain is persisted in the report and fails the suite (T00b, plan amendment H). The
+// context leaves `contexts` once closed; until then a failure anywhere drains it in the finalizer.
 async function closeDrained(resource, label, pages) {
   const failed = await cleanupWorkflow({ pages, drain: page => drainExpecting(page), report, writeReport: entries => writeFile(reportPath, JSON.stringify(entries, null, 2)),
     closeAll: () => closeWithin(resource, label) });
+  const index = contexts.indexOf(resource); if (index >= 0) contexts.splice(index, 1);
   if (failed) throw new Error(`${label}: GPU drain or report failed`);
 }
 // The Discoveries count once its first load has settled ('…' while loading; T12).
@@ -358,6 +360,38 @@ async function checkSaveDuringExport(page) {
   const accepted = await ev(page, () => document.querySelector('#toast').textContent);
   assert.match(accepted, /Discovery saved/, `once the live scene is rendered a save is accepted: ${accepted}`);
   await page.waitForFunction(expected => document.querySelector('#saved-count').textContent === expected, String(countBefore + 1), { timeout: LIMITS.operation });
+}
+
+// A save pressed while a gesture is open — a held drag, a running tour — must not settle that gesture:
+// a refused save leaves the open gesture, the undo depth and the camera history exactly as they were
+// (spec §4.3, §6; fix round 1, Codex r1 finding 2). The render is held on its reference-orbit worker
+// message so the refusal (the view is still rendering) is deterministic.
+async function checkRefusedSaveKeepsGesture(page) {
+  await goToIdle(page, VIEW_B);
+  const histories = () => ev(page, () => { const { camera, ...rest } = atlas.history; return { ...rest, cameraLength: camera.length, cameraIndex: camera.index, tour: !document.querySelector('#tour-status').hidden }; });
+  await ev(page, () => { window.__holdWorkers = true; });
+  await within(page.mouse.move(700, 500), LIMITS.operation, 'mouse.move'); await within(page.mouse.down(), LIMITS.operation, 'mouse.down');
+  await within(page.mouse.move(740, 520, { steps: 4 }), LIMITS.operation, 'mouse.move');
+  await page.waitForFunction(() => window.__heldWorkerMessages.length > 0, null, { timeout: LIMITS.operation });
+  const dragging = await histories();
+  assert.equal(dragging.gesture, 'navigation-drag', 'the drag is an open gesture');
+  await press(page, 'b');
+  assert.match(await page.locator('#toast').textContent(), /finish/, 'the save is refused while the view renders');
+  assert.deepEqual(await histories(), dragging, 'a refused save during a drag settles nothing');
+  await within(page.mouse.up(), LIMITS.operation, 'mouse.up');
+  await ev(page, () => window.__releaseWorkers());
+  await idleWithin(page, LIMITS.deep);
+  await ev(page, () => { window.__holdWorkers = true; document.querySelector('#tour-button').click(); });
+  await page.waitForFunction(() => window.__heldWorkerMessages.length > 0 && atlas.history.gesture === 'tour', null, { timeout: LIMITS.operation });
+  const touring = await histories();
+  assert.equal(touring.tour, true);
+  await press(page, 'b');
+  assert.match(await page.locator('#toast').textContent(), /finish/);
+  assert.deepEqual(await histories(), touring, 'a refused save during a tour settles nothing: the tour gesture stays open and no entry is added');
+  await press(page, 'Escape');
+  await ev(page, () => window.__releaseWorkers());
+  await idleWithin(page, LIMITS.deep);
+  assert.equal((await histories()).tour, false);
 }
 
 // A context loss while encoding is held, in both orders of restoration and lease release. The
@@ -688,6 +722,8 @@ try {
   await checkWhenDrawn(page, 'webgl');
   await checkSaveDuringExport(page);
   pass('Saving a discovery during an export is refused');
+  await checkRefusedSaveKeepsGesture(page);
+  pass('A refused save leaves the open gesture and both histories unchanged');
   await checkContextLossDuringExport(page, true);
   await checkContextLossDuringExport(page, false);
   pass('A context loss during an export interrupts it and live rendering resumes');
@@ -716,17 +752,24 @@ try {
   // T12: the Discoveries control over real IndexedDB (spec §12, §13.10, §14). Each check has a
   // fresh browser context, so its database starts empty.
   const discoveryContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(discoveryContext);
   const library = await open(discoveryContext);
   assert.equal(await settledCount(library), '0');
+  // A scene that is not the fresh-start one (camera and appearance), so that opening it after the
+  // reload is observable (fix round 1, Codex r1 finding 4).
+  await library.getByRole('button', { name: 'Aurora palette', exact: true }).click();
+  await goToIdle(library, VIEW_B);
   await press(library, 'b');
   await library.waitForFunction(() => document.querySelector('#saved-count').textContent === '1', null, { timeout: LIMITS.operation });
   assert.match(await library.locator('#toast').textContent(), /Discovery saved/);
   const savedScene = await ev(library, () => atlas.scene);
+  assert.deepEqual([savedScene.camera, savedScene.appearance.palette], [VIEW_B, 'aurora']);
   await goToIdle(library, VIEW_C);
   await drainExpecting(library); // Reload discards the old document's accessible GL context too.
   await library.reload({ timeout: LIMITS.launch });
   await library.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
   assert.equal(await settledCount(library), '1', 'the discovery survives a reload');
+  assert.notDeepEqual(await ev(library, () => atlas.scene), savedScene, 'the reload opened fresh-start Plane, not the saved scene');
   await library.getByRole('button', { name: /Your discoveries/ }).click();
   await library.locator('.saved-wrapper .destination-card').first().click();
   await library.waitForFunction(scene => JSON.stringify(atlas.scene.camera) === JSON.stringify(scene.camera), savedScene, { timeout: LIMITS.operation });
@@ -743,6 +786,7 @@ try {
   pass('Discoveries save, survive reload, open and delete');
 
   const pagingContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(pagingContext);
   const paging = await open(pagingContext);
   await within(paging.evaluate(async () => {
     const { openPersistence } = await import('/src/shared/persistence.js');
@@ -779,6 +823,7 @@ try {
 
   // Back during a captured drag releases the drag (bindPlaneNavigation.reset, plan amendment G(1)).
   const dragContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(dragContext);
   const drag = await open(dragContext);
   await drag.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await idleWithin(drag);
@@ -796,6 +841,7 @@ try {
 
   const legacy = JSON.stringify([{ id: 'old-1', name: 'Old bookmark', view: { re: '-0.5', im: '0', zoom: 0 }, settings: {} }]);
   const legacyContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(legacyContext);
   await legacyContext.addInitScript(value => { if (!localStorage.getItem('atlas.discoveries')) localStorage.setItem('atlas.discoveries', value); }, legacy);
   const legacyPage = await open(legacyContext);
   assert.equal(await settledCount(legacyPage), '0', 'earlier bookmarks are not read');
@@ -806,6 +852,7 @@ try {
   pass('The earlier discoveries key is neither read nor modified');
 
   const offlineContext = boundContext(await within(browser.newContext({ viewport: { width: 1440, height: 1000 } }), LIMITS.launch, 'newContext'));
+  contexts.push(offlineContext);
   await offlineContext.addInitScript(() => { Object.defineProperty(window, 'indexedDB', { configurable: true, get: () => undefined }); });
   const offline = await open(offlineContext);
   await press(offline, 'b');

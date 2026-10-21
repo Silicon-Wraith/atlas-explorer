@@ -214,12 +214,16 @@ export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs
       // No retry, outcome rewrite, or claim of deletion on failure (including a non-definite
       // reply). Atomicity/cancellation before commit belong to the source's prune contract.
       const controller = new AbortController();
+      let invoked = false;
       const cleanupFailed = error => { try { onCleanupError(error, Object.freeze({ ...write })); } catch { /* a diagnostic never escalates */ } };
       race(Promise.resolve().then(() => {
-        // An eviction notification can synchronously destroy the controller.
-        if (!destroyed) return source.prune([write.writeId], { signal: controller.signal });
+        // An eviction notification can synchronously destroy the controller: cleanup is then never
+        // invoked, which is not a failure. A cleanup that was invoked and did not reply `committed` is.
+        if (destroyed) return undefined;
+        invoked = true;
+        return source.prune([write.writeId], { signal: controller.signal });
       }), readTimeoutMs, controller).then(
-        result => { if (result !== undefined && result?.status !== 'committed') cleanupFailed(new Error(`the cleanup replied ${result?.status ? `${result.status}${result.reason ? ` (${result.reason})` : ''}` : 'without a status'}`)); },
+        result => { if (invoked && result?.status !== 'committed') cleanupFailed(new Error(`the cleanup replied ${result?.status ? `${result.status}${result.reason ? ` (${result.reason})` : ''}` : 'without a status'}`)); },
         error => cleanupFailed(error instanceof Error ? error : new Error(String(error))),
       );
     }, 0);

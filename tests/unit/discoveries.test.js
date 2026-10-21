@@ -1035,6 +1035,10 @@ test('T12 cleanup failures reach the diagnostic hook without changing the write 
     ['times out', () => new Promise(() => {}), /timed out/],
     ['replies failed', async () => ({ status: 'failed', reason: 'QuotaExceededError' }), /QuotaExceededError/],
     ['replies without a status', async () => ({}), /status/],
+    // Fix round 1 (Codex r1 finding 3): a cleanup that ran and returned nothing is a cleanup that
+    // ran and did not commit — distinct from one skipped after teardown, which stays silent.
+    ['returns undefined synchronously', () => undefined, /status/],
+    ['returns undefined asynchronously', async () => undefined, /status/],
   ];
   for (const [label, prune, expected] of cases) {
     const failures = [], attempts = [];
