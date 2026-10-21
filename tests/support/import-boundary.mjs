@@ -22,7 +22,7 @@ const REGEX_PRECEDING_KEYWORDS = new Set(['return', 'typeof', 'case', 'in', 'of'
 // block-closing "}", a backslash outside a literal (identifier escapes), and
 // unterminated literals. String and template contents are decoded (cooked).
 const NAME_START = /[\p{ID_Start}$_]/u, NAME_PART = /[\p{ID_Continue}$‌‍]/u;
-const CONTROL_KEYWORDS = new Set(['if', 'while', 'for', 'with']);
+const CONTROL_KEYWORDS = new Set(['if', 'while', 'for', 'with']), AWAIT = new Set(['await']), FOR = new Set(['for']);
 const SIMPLE_ESCAPES = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v' };
 
 // text[i] is a backslash inside a string or template; returns [decoded, next index].
@@ -52,10 +52,19 @@ export function tokenize(text) {
   const tokens = [], templateDepths = [], parens = [];
   let i = 0, braceDepth = 0;
   const previous = () => tokens[tokens.length - 1];
+  const keyword = (token, names) => token?.type === 'name' && !token.member && names.has(token.value);
+  // A "(" opens a control condition only after a non-member if/while/for/with, or after
+  // "for await". Anything else (calls, member calls such as obj.if(…), await (…)) is an expression.
+  const controlCondition = () => {
+    const before = previous();
+    if (keyword(before, CONTROL_KEYWORDS)) return true;
+    return keyword(before, AWAIT) && keyword(tokens[tokens.length - 2], FOR);
+  };
   const regexAllowed = () => {
     const token = previous();
     if (!token) return true;
-    if (token.type === 'name') return REGEX_PRECEDING_KEYWORDS.has(token.value);
+    // A member or private name spelled like a keyword (obj.return, obj?.do) is an operand.
+    if (token.type === 'name') return !token.member && REGEX_PRECEDING_KEYWORDS.has(token.value);
     if (token.type !== 'punct') return false;
     if (token.value === ')') return token.control === true;
     if (token.value === '}') throw new SyntaxError('a "/" after "}" is ambiguous (block or expression)');
@@ -112,7 +121,9 @@ export function tokenize(text) {
     if (NAME_START.test(char)) {
       let value = '';
       while (i < text.length && NAME_PART.test(text[i])) value += text[i++];
-      tokens.push({ type: 'name', value }); continue;
+      // After "." (including "?.") or "#", a name is a property or private name, never a keyword.
+      const before = previous();
+      tokens.push({ type: 'name', value, member: before?.type === 'punct' && (before.value === '.' || before.value === '#') }); continue;
     }
     if (/[0-9]/.test(char) || (char === '.' && /[0-9]/.test(text[i + 1] || ''))) {
       let value = '';
@@ -122,10 +133,11 @@ export function tokenize(text) {
       }
       tokens.push({ type: 'number', value }); continue;
     }
+    if (char === '.' && text[i + 1] === '.' && text[i + 2] === '.') { tokens.push({ type: 'punct', value: '...' }); i += 3; continue; }
     if ((char === '+' || char === '-') && text[i + 1] === char) { tokens.push({ type: 'punct', value: char + char }); i += 2; continue; }
     if (char === '{') braceDepth++;
     if (char === '}') braceDepth--;
-    if (char === '(') { const before = previous(); parens.push(before?.type === 'name' && CONTROL_KEYWORDS.has(before.value)); }
+    if (char === '(') parens.push(controlCondition());
     if (char === ')') { tokens.push({ type: 'punct', value: ')', control: parens.pop() === true }); i++; continue; }
     tokens.push({ type: 'punct', value: char }); i++;
   }

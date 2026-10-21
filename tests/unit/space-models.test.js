@@ -333,3 +333,34 @@ test('camera classification derives exterior from the full predicate and rejects
   assert.equal(classifyCamera(escaped(-3), {}, [0, 0, 0], 8).status, 'exterior');
   assert.equal(classifyCamera(fake({ kind: 'other' }), {}, [0, 0, 0], 8).detail.reason, 'inconsistent-result');
 });
+
+// --- Fix round 2 (Codex B03 r2) ------------------------------------------------
+
+test('member names spelled like keywords never open a regex or a control condition', () => {
+  const tail = " / 2; document.body; import './after.js'; import(name); const r = /foo/;";
+  const expectDetected = (source, label) => {
+    let scan = null;
+    try { scan = scanSource(source); } catch { /* reported below as an assertion */ }
+    assert.ok(scan, `${label}: ordinary static syntax must be scanned, not rejected`);
+    assert.deepEqual(scan.globals, ['document'], `${label}: globals`);
+    assert.deepEqual(scan.static, ['./after.js'], `${label}: static imports`);
+    assert.equal(scan.dynamic, 1, `${label}: dynamic imports`);
+  };
+  for (const keyword of ['if', 'while', 'for', 'with']) {
+    for (const access of ['obj.', 'obj?.', 'this.#']) expectDetected(`${access}${keyword}(ok)${tail}`, `${access}${keyword}(…)`);
+  }
+  for (const keyword of ['return', 'typeof', 'case', 'in', 'of', 'new', 'delete', 'void', 'throw', 'instanceof', 'yield', 'await', 'else', 'do']) {
+    for (const access of ['obj.', 'obj?.']) expectDetected(`${access}${keyword}${tail}`, `${access}${keyword}`);
+  }
+});
+
+test('control-statement keywords still allow a regex after their condition', () => {
+  for (const statement of ['if (ok)', 'while (ok)', 'for (;;)', 'for (const x of y)', 'with (o)', 'for await (const x of y)']) {
+    let scan = null;
+    try { scan = scanSource(`${statement} /'/.test(s); import './after.js'; document.body;`); } catch { /* asserted below */ }
+    assert.ok(scan, `${statement}: scanned`);
+    assert.deepEqual(scan.static, ['./after.js'], statement); assert.deepEqual(scan.globals, ['document'], statement);
+  }
+  assert.deepEqual(scanSource("const v = await (p) / 2; import './after.js';").static, ['./after.js'], 'await (…) outside for-await is division');
+  assert.deepEqual(scanSource("f(...void /'/); import './after.js';").static, ['./after.js'], 'a keyword after a spread is still a keyword');
+});
