@@ -46,6 +46,11 @@ const identifier = (value, name) => {
  * in admit()/completed(). Plan methods and listeners are injected synchronous work
  * and must themselves be bounded. subscribe receives small change events, not a
  * full snapshot; snapshot() explicitly copies the current live state on demand.
+ * A preparing plan returns null from next() and false from exhausted(). Register
+ * it before preparation so Update can select its frozen request, then call
+ * ready(jobId, {epoch}) when its resources become ready. This rechecks only that
+ * job, never issues a lease, and returns true only for newly reserved work or
+ * exhaustion. Stale, terminal and duplicate notifications have no effect.
  */
 export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
   maxOutstanding = SCHEDULER_DEFAULTS.maxOutstanding,
@@ -288,6 +293,16 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       reserve(record);
       if (record.instrument) refreshInstruments(view);
       emit('request', record); return record.public;
+    },
+    ready(jobId, { epoch: readyEpoch } = {}) {
+      const record = groups.get(jobId)?.main;
+      if (!record || !epoch || readyEpoch !== epoch || record.group.epoch !== epoch || epochs.get(epoch).lost ||
+        record.result || record.group.cancellation || record.group.closed || record.next) return false;
+      // Reuse reservation and eligibility; admission alone owns the lease limit.
+      // A cached operation makes duplicates a no-op, including from a listener.
+      reserve(record);
+      if (!record.next && !record.result) return false;
+      emit(record.result ? 'settled' : 'ready', record); return true;
     },
     requestAuxiliary(viewId, { jobId, priority, operation }) {
       const view = viewFor(viewId), rank = priorityIndex(priority);
