@@ -607,7 +607,7 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   bytesPerTexel, bytes}` at actual internal dimensions; `layoutId` is the exported
   `TARGET_LAYOUT_ID = 'space-targets-v1'`; `handles.accumulation` and `descriptions.accumulation`
   are two-element arrays: for sample index `s`, read `handles.accumulation[s & 1]` and write
-  `handles.accumulation[(s + 1) & 1]`; the first read side is initialized to zero); `submitBatch(batch, {admission})
+  `handles.accumulation[(s + 1) & 1]`; the read side is zero at sample 0 of every accumulation identity, not only at allocation, so an appearance reset never reads stale sums (B00 review r2)); `submitBatch(batch, {admission})
   → Ticket`; `readback({identity, source, region, fields}, {admission}) → ReadbackTicket`;
   `present({identity, display}, {admission}) → Ticket`; `release(handle)`; `onLoss(callback) →
   unsubscribe`; `currentEpoch() → integer`; `diagnostics() → {state, epoch, tracked, peak,
@@ -646,7 +646,8 @@ P1–P3 become binding at this task's commit.
   bounds above the spec limits`; `an admission lease is consumed exactly once`; `assertBackend
   rejects an implementation missing release or onLoss`; `wgslConstants emits one const per enum
   member`; `sample jitter is deterministic, centred for sample 0, within half a pixel, and mix(42) is
-  4147330502`; `a pipeline set validates its descriptors and rejects an unknown binding type`; `a job
+  4147330502`; `a pipeline set validates its descriptors and rejects an unknown binding type`;
+  `a model buffer allocated with initial data reads back its bytes and is counted` (rev 4.3, §9.1 allocate); `a job
   plan reserves ready operations once and remains unexhausted while dependencies are outstanding`;
   `lighting status round-trips simultaneous unresolved and numerical failures without conflating
   them`. `tests/unit/fake-backend.test.js`: `allocation beyond the cap fails before any resource
