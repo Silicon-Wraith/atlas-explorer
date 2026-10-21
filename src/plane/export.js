@@ -16,15 +16,18 @@ function within(promise, ms, stage) {
 }
 
 // hooks (tests and diagnostics only): stage(name) is called synchronously as each stage
-// begins; its exceptions are isolated from the job. hold(name) may return a promise the
-// stage waits for (bounded by that stage's limit).
-// → { request, done: Promise<{ outcome, reason, blob?, report, renderReport?, request, deferredScene }> }
+// begins; its exceptions are isolated from the job and the lease, and collected as diagnostics in
+// the result's `hookErrors` so a broken observer never passes unnoticed (plan amendment F,
+// finalized in T08 fix round 1). hold(name) may return a promise the stage waits for (bounded by
+// that stage's limit).
+// → { request, done: Promise<{ outcome, reason, blob?, report, renderReport?, request, deferredScene, hookErrors }> }
 export function startExport({ adapter, request, encode, limits = EXPORT_LIMITS, hooks = {} }) {
   const lease = adapter.reserveExclusive(request);
   const job = lease.jobReport;
+  const hookErrors = [];
   const stage = name => {
     try { hooks.stage?.(name); }
-    catch { /* Diagnostic observers cannot interrupt the job or strand its lease. */ }
+    catch (error) { hookErrors.push(Object.freeze({ stage: name, message: error?.message || String(error) })); }
   };
   stage('reserved');
   const done = (async () => {
@@ -69,7 +72,7 @@ export function startExport({ adapter, request, encode, limits = EXPORT_LIMITS, 
       result = !timedOut && lease.lost() ? finish('interrupted', LOST, { renderReport }) : finish(timedOut ? 'interrupted' : 'failed', error?.message || String(error), { renderReport });
     }
     stage('finished');
-    return { ...result, request, deferredScene: lease.release() };
+    return { ...result, request, deferredScene: lease.release(), hookErrors: Object.freeze([...hookErrors]) };
   })();
   return { request, done };
 }

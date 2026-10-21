@@ -1,0 +1,295 @@
+{
+  "fixture": {
+    "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+    "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+    "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645"
+  },
+  "campaign": "webgpu-1",
+  "args": "attempt1",
+  "requestedArgs": [
+    "--enable-gpu",
+    "--use-angle=vulkan",
+    "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan"
+  ],
+  "runDirs": [
+    "20261019T235716360Z-webgpu-1-g1-headed",
+    "20261019T235719304Z-webgpu-1-g1-headless",
+    "20261019T235722495Z-webgpu-1-g4-headed",
+    "20261019T235725379Z-webgpu-1-g5-headed",
+    "20261019T235728294Z-webgpu-1-g3-headed",
+    "20261019T235731353Z-webgpu-1-g11-headed",
+    "20261019T235734546Z-webgpu-1-g13-headed"
+  ],
+  "trials": {
+    "G1/headed": {
+      "id": "G1-headed-20261019T235716360Z-webgpu-1-g1-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G1/headless": {
+      "id": "G1-headless-20261019T235719304Z-webgpu-1-g1-headless",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "6eb07199fcd85c4b96c655f408f3621807446803b190df077cd58590cf79f22b",
+        "mode": "headless",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G4/bulb-samples": {
+      "id": "G4-bulb-samples-20261019T235722495Z-webgpu-1-g4-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G5/qjulia-plane": {
+      "id": "G5-qjulia-plane-20261019T235725379Z-webgpu-1-g5-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G5/qjulia-offplane": {
+      "id": "G5-qjulia-offplane-20261019T235725379Z-webgpu-1-g5-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G3/box": {
+      "id": "G3-box-20261019T235728294Z-webgpu-1-g3-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G3/menger-1": {
+      "id": "G3-menger-1-20261019T235728294Z-webgpu-1-g3-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G3/menger-2": {
+      "id": "G3-menger-2-20261019T235728294Z-webgpu-1-g3-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G3/sphere": {
+      "id": "G3-sphere-20261019T235728294Z-webgpu-1-g3-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G11/4k": {
+      "id": "G11-4k-20261019T235731353Z-webgpu-1-g11-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G13/intentional": {
+      "id": "G13-intentional-20261019T235734546Z-webgpu-1-g13-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G13/injected": {
+      "id": "G13-injected-20261019T235734546Z-webgpu-1-g13-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    },
+    "G13/repeated": {
+      "id": "G13-repeated-20261019T235734546Z-webgpu-1-g13-headed",
+      "identity": {
+        "backend": "webgpu",
+        "fixtureHash": "ab15af0e527e60168b9cffc6328dadfd0846430da416ba06334fe041907ba0d1",
+        "fixtureCommit": "5638678f5752ce4c6a40f36b280e1ce13ed52480",
+        "specHash": "64d82abf00e50c97c72347d7f4fa2d7b9dfd86240e73441b099a31afc8b1c645",
+        "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+        "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb",
+        "launchHash": "125a92c269569eabcc42a6d7d872561e108c96c047ab474278e2d232f43876ad",
+        "mode": "headed",
+        "browserVersion": "Google Chrome 151.0.7922.108",
+        "browserExecutable": "/opt/google/chrome/chrome",
+        "driver": "NVIDIA 580.173.2.0",
+        "session": "x11"
+      }
+    }
+  },
+  "notRun": {
+    "G2": {
+      "status": "not run",
+      "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive"
+    },
+    "G6": {
+      "status": "not run",
+      "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive"
+    },
+    "G7": {
+      "status": "not run",
+      "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive"
+    },
+    "G8": {
+      "status": "not run",
+      "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive"
+    },
+    "G9": {
+      "status": "not run",
+      "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive"
+    },
+    "G10": {
+      "status": "not run",
+      "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive"
+    },
+    "G12": {
+      "status": "not run",
+      "reason": "campaign stopped: correctness gate G1 is invalid/inconclusive"
+    }
+  },
+  "reuse": [],
+  "preflight": {
+    "runDir": "20261019T235713894Z-dev-integrity-preflight-headed",
+    "implementationCommit": "bd978e6bf12202119522c3c517418b22a705fecf",
+    "implementationHash": "8f8dd25e5852c7ad0f125f84a405f27d60cee69068a238ee068fbb08454a9bdb"
+  },
+  "attempts": {},
+  "bindings": {
+    "20261019T235713894Z-dev-integrity-preflight-headed/integrity-preflight.json": "d9d109ad68a707a3349b93e92dc8eada9e1ce061a775e82aa49f059010b1c4a3",
+    "20261019T235716360Z-webgpu-1-g1-headed/supervision.json": "7dedbcc87a987e51fa3dbd3591ed69a0ef91df2cc31a444063cdf707b7bda890",
+    "20261019T235719304Z-webgpu-1-g1-headless/supervision.json": "7dedbcc87a987e51fa3dbd3591ed69a0ef91df2cc31a444063cdf707b7bda890",
+    "20261019T235722495Z-webgpu-1-g4-headed/supervision.json": "7dedbcc87a987e51fa3dbd3591ed69a0ef91df2cc31a444063cdf707b7bda890",
+    "20261019T235725379Z-webgpu-1-g5-headed/supervision.json": "7dedbcc87a987e51fa3dbd3591ed69a0ef91df2cc31a444063cdf707b7bda890",
+    "20261019T235728294Z-webgpu-1-g3-headed/supervision.json": "7dedbcc87a987e51fa3dbd3591ed69a0ef91df2cc31a444063cdf707b7bda890",
+    "20261019T235731353Z-webgpu-1-g11-headed/supervision.json": "7dedbcc87a987e51fa3dbd3591ed69a0ef91df2cc31a444063cdf707b7bda890",
+    "20261019T235734546Z-webgpu-1-g13-headed/supervision.json": "7dedbcc87a987e51fa3dbd3591ed69a0ef91df2cc31a444063cdf707b7bda890"
+  },
+  "stopped": "correctness gate G1 is invalid/inconclusive",
+  "verificationErrors": []
+}

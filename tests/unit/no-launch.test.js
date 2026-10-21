@@ -133,3 +133,38 @@ test('a report that cannot be written is a failure, and the closes still run', a
   assert.equal(await cleanupWorkflow(options), true);
   assert.deepEqual(calls, ['drain first', 'drain second', 'write', 'close']);
 });
+
+// T12 fix round 1 (Codex r1 finding 1): every browser context the workflow suite creates must be
+// registered in `contexts` right after it is created, so that a failure before its early close still
+// drains its pages in the finalizer (plan amendments G and H). Like T00's bounded-call checker, this
+// pins the suite's source shape; the finalizer execution below shows that registration is what
+// delivers the failure-path drain.
+test('every workflow browser context is registered for failure-path draining as soon as it exists', () => {
+  const source = readFileSync(new URL('../workflow.mjs', import.meta.url), 'utf8');
+  const unregistered = [];
+  for (const site of source.matchAll(/(?:(?:const\s+)?(\w+)\s*=\s*)?boundContext\(await within\(browser\.newContext\(/g)) {
+    const name = site[1];
+    const following = source.slice(site.index + site[0].length).split('\n').slice(1, 3).join('\n');
+    if (!name || !new RegExp(`^\\s*contexts\\.push\\(${name}\\);`, 'm').test(following)) unregistered.push(`${name ?? '(anonymous)'} at offset ${site.index}`);
+  }
+  assert.ok(source.match(/browser\.newContext\(/g).length >= 8, 'the suite creates several contexts');
+  assert.deepEqual(unregistered, [], 'a context used before it is registered escapes the failure-path drain');
+});
+
+test('the workflow finalizer drains every registered context on a failure path, including after a successful early close', async () => {
+  const { runInNewContext } = await import('node:vm');
+  const source = readFileSync(new URL('../workflow.mjs', import.meta.url), 'utf8');
+  const body = source.slice(source.lastIndexOf('} finally {') + '} finally {'.length, source.lastIndexOf('}'));
+  const calls = [], written = [], report = [{ name: 'FAIL', error: 'assertion before the early close' }], processState = { exitCode: 0 };
+  const page = {}, open = { pages: () => [page] }, closedEarlier = { pages: () => [] };
+  await runInNewContext(`(async () => { ${body} })()`, {
+    contexts: [closedEarlier, open], browser: {}, server: { kill: () => calls.push('kill') }, report, reportPath: 'unused', process: processState,
+    JSON, writeFile: async (path, data) => { calls.push('write'); written.push(JSON.parse(data)); },
+    drainExpecting: async target => { assert.equal(target, page); calls.push('drain'); throw new Error('injected drain failure'); },
+    cleanupWorkflow: options => cleanupWorkflow({ ...options, log: () => {} }),
+    closeWithin: async (target, label) => { calls.push(`close ${label}`); },
+  });
+  assert.equal(processState.exitCode, 1);
+  assert.deepEqual(calls, ['drain', 'write', 'close context', 'close context', 'close browser', 'kill'], 'the open context is drained before every bounded close');
+  assert.match(written.at(-1).at(-1).error, /injected drain failure/);
+});

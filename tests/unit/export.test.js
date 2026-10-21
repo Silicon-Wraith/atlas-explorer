@@ -44,6 +44,7 @@ function assertExportedA(renderer, result, request) {
   assert.equal(result.report.renderReportId, result.renderReport.reportId);
   assert.equal(result.report.outcome, result.outcome);
   assert.equal(result.deferredScene, B, 'the latest live edit is handed back on release');
+  assert.deepEqual(result.hookErrors, [], 'healthy observers leave no diagnostic errors');
 }
 
 test('export freezes before admission', async () => {
@@ -430,6 +431,8 @@ for (const throwingStage of EXPORT_STAGES) {
     assert.equal(error, undefined, 'diagnostic hooks cannot reject done');
     assert.equal(result.outcome, 'completed', 'diagnostic hooks cannot change the export outcome');
     assert.deepEqual(stages, EXPORT_STAGES);
+    assert.deepEqual(result.hookErrors, [{ stage: throwingStage, message: `diagnostic ${throwingStage} failed` }], 'the observer error is collected as a diagnostic (plan amendment F, finalized)');
+    assert.ok(Object.isFrozen(result.hookErrors));
     let next;
     assert.doesNotThrow(() => {
       next = adapter.render(createPlaneRequest({ scene: A, purpose: 'interactive', width: 10, height: 10, generation }), interactive);

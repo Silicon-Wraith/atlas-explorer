@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { LIMITS, within, idleWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+// Every drain carries the backend the page was opened on (plan amendment H carry-forward, T08).
+import { expectBackend, drainExpecting } from './support/expected-backend.mjs';
 import { cleanupPages } from './support/workflow-cleanup.mjs';
 
 const { chromium } = await import('playwright');
@@ -17,7 +19,7 @@ const report = [];
 const reportPath = `artifacts/navigation-${record ? 'before' : 'report'}.json`;
 const writeReport = entries => writeFile(reportPath, JSON.stringify(entries, null, 2));
 async function closeDrained(page) {
-  const failed = await cleanupPages({ pages: [page], drain: open => drainGpuWithin(open), report, writeReport,
+  const failed = await cleanupPages({ pages: [page], drain: open => drainExpecting(open), report, writeReport,
     closeAll: () => closeWithin(page, 'page') });
   if (failed) throw new Error('page: GPU drain or report failed');
 }
@@ -33,7 +35,7 @@ try {
   }
   browser = await chromium.launch({ headless: true, timeout: LIMITS.launch, args: ['--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   for (const backend of ['gpu', 'cpu']) {
-    const page = boundContext(await within(browser.newPage({ viewport: { width: 1280, height: 720 } }), LIMITS.launch, 'newPage'));
+    const page = expectBackend(boundContext(await within(browser.newPage({ viewport: { width: 1280, height: 720 } }), LIMITS.launch, 'newPage')), backend === 'cpu' ? 'cpu' : 'webgl');
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(kind => {
@@ -120,7 +122,7 @@ try {
   try { await writeReport(report); } catch { /* cleanupPages retries after the drains. */ }
   const contexts = browser?.contexts() ?? [];
   const failed = await cleanupPages({
-    pages: contexts.flatMap(context => context.pages()), drain: page => drainGpuWithin(page), report, writeReport,
+    pages: contexts.flatMap(context => context.pages()), drain: page => drainExpecting(page), report, writeReport,
     closeAll: async () => {
       for (const context of contexts) await closeWithin(context, 'context');
       await closeWithin(browser, 'browser'); server?.kill('SIGTERM');

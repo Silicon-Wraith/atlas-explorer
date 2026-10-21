@@ -31,3 +31,18 @@ test('CpuRenderer checks isCurrent before it adopts or paints a frame', () => {
     assert.ok(render.indexOf(write) > guard, `${write} happens after the guard`);
   }
 });
+
+// T08 fix round 1 (Codex finding 4): objects invalidated by a context loss are never passed back to
+// the restored context (that raises INVALID_OPERATION, which the suites' GPU drain rejects).
+test('GpuRenderer disposes loss-aware: no GL deletion for a renderer whose context was lost', () => {
+  const start = source.indexOf('export class GpuRenderer');
+  const body = source.slice(start, source.indexOf('\nexport class', start + 1));
+  const at = body.indexOf('  destroy()');
+  const destroy = body.slice(at, body.indexOf('\n  }\n', at));
+  const guard = destroy.indexOf('if (this.lost) return;');
+  assert.ok(guard > 0, 'destroy stops before the GL deletions once the context was lost');
+  assert.ok(destroy.indexOf('this.worker.terminate();') < guard, 'the worker is stopped whatever the context state');
+  assert.ok(destroy.indexOf('this.reject?.(') < guard, 'pending work is settled whatever the context state');
+  for (const call of ['gl.deleteProgram(', 'gl.deleteTexture(', 'gl.deleteFramebuffer(']) assert.ok(destroy.indexOf(call) > guard, `${call} happens after the guard`);
+  assert.match(body, /canvas\.addEventListener\('webglcontextlost', \(\) => \{ this\.lost = true; \}, \{ once: true \}\);/, 'the loss is recorded on the renderer itself');
+});

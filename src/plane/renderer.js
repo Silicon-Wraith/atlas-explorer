@@ -52,6 +52,9 @@ export class GpuRenderer {
     this.setPalette('ember');
     this.engine = this.diagnostics.acceleration === 'hardware' ? 'GPU' : this.diagnostics.acceleration === 'software' ? 'SOFTWARE WEBGL' : 'WEBGL';
     this.mode = this.engine;
+    // A context loss invalidates every GL object above; destroy() then leaves them alone.
+    this.lost = false;
+    canvas.addEventListener('webglcontextlost', () => { this.lost = true; }, { once: true });
   }
   texture(filter) {
     const gl = this.gl, texture = gl.createTexture();
@@ -156,6 +159,9 @@ export class GpuRenderer {
   destroy() {
     this.worker.terminate();
     this.reject?.(new Error('Renderer stopped.'));
+    // Loss-aware disposal (T08): objects invalidated by a context loss are never handed back to the
+    // restored context, where deleting them raises INVALID_OPERATION.
+    if (this.lost) return;
     const gl = this.gl;
     for (const p of [...this.programs, this.colorProgram]) gl.deleteProgram(p);
     for (const t of [this.field, this.reference, this.palette]) gl.deleteTexture(t);

@@ -1,0 +1,196 @@
+# Project 0 execution decisions
+
+These decisions were made during execution of
+`docs/superpowers/plans/2026-10-18-project0-space-qualification-plan.md` (rev 6). Each one
+changes or supplements the plan text. The full ledger, with the cost if wrong, is reported to
+the user at handoff. Every exchange with Codex is in `docs/codesign/plan-log.md`.
+
+## E1 — T5 probe collection rerun (joint: Claude + Codex, Codex run 20261019T170554Z-7a37)
+
+The first probe run (`artifacts/project0/20261019T170209070Z-probe`) produced two incomplete
+records. The cause was a harness defect: the plan's `chrome://gpu` capture read
+`body.innerText`, which misses Chrome 151's `<info-view>` shadow roots, and Chrome 151 reports
+the driver on a `GPU0 … *ACTIVE*` line rather than in separate rows.
+
+Exception: **after the reviewed capture repair, the probe is rerun exactly once**, under these
+conditions:
+- the attempt-1 flags, fixtures, workload and browser are unchanged;
+- the first run's evidence is preserved;
+- the rerun does not consume the per-backend remediation of spec §6, because it repairs only the
+  collection of diagnostics for a probe that is excluded from qualification evidence
+  (`gate: 'probe'`).
+
+The headless `requestAdapter() → null` result is not addressed by this rerun. It stays open for
+T10's single remediation decision.
+
+## E2 — G5 off-plane failure under FMA contraction (joint: Claude + Codex, Codex run 20261019T175943Z-a363)
+
+The headed development check of G5 at ce798d2 (`artifacts/project0/20261019T175713064Z-dev-g5-headed`)
+reports an off-plane componentRatio of **2.75**, against a limit of 1. The plane set passes at 0.274.
+
+Two independent reproductions agree on the cause. With multiply-adds fused at the contraction sites
+(`fma(x, x, -y²)`, `fma(2x, y|z|w, C)`), an f32 model matches the GPU on 32 of 32 components;
+Codex's model used exact BigInt FMA. Unfused f32 matches only 11 of 32, with a maximum ratio of 0.650.
+The error comes from cancellation in iterate 7's x component (ratio 2.47), carried into iterate 8's y
+component (ratio 2.75). The double-precision reference matches the frozen reference exactly.
+
+**Classification: a true G5 failure of the current implementation on this backend.**
+- WGSL permits fusion and has no portable way to prevent it in compute shaders. Splitting the
+  expression into temporaries is not a legitimate fix.
+- The approved spec does not say that G5 measures only unfused arithmetic, so the tolerance,
+  reference, orbit and exclusions remain binding and are not edited.
+- The WGSL stays unchanged for the rerun, and no search over expression variants is made. The
+  failure goes to T10's decision procedure.
+- Diagnosis consumes no remediation. Any shader, compiler or launch workaround aimed at this
+  failure would be the backend's single remediation under spec §6, even under the `dev` label.
+- G3, G4 and the G5 plane set remain valid comparisons, because each is within its threshold.
+- Relaxing the tolerance, changing the reference or orbit, adding an exclusion, or excusing
+  contraction would be a user decision. Neither author recommends any of them.
+
+## E3 — Accidental RED-test browser runs during T9 fix round 3 (Codex run 20261019T211158Z-ed18)
+
+While stubbed failing tests were being run, the old `integrity-preflight.mjs` ignored its injected
+fakes. It started the real harness server and a real headed Chrome. The page never touches
+`navigator.gpu`, so no GPU adapter or device was requested, and no process or port was left behind.
+
+The runs left two records, `artifacts/project0/20261019T2103*-dev-integrity-preflight-headed`.
+
+**Disposition:** these were accidental RED-test browser runs, and the records are failed
+development diagnostics. They are excluded from the passing-preflight evidence and from T10's
+qualification inputs, and are kept unchanged. No fixture reset or remediation follows from them.
+
+## E4 — T9 development campaign dispositions (joint: Claude + Codex, Codex run 20261019T220140Z-2319)
+
+1. **Timing invocation `20261019T214231975Z`.** G7/0 request 141 was issued 7.90 ms late, against
+   the 4 ms limit. Earlier callbacks ran a steady ~3.3–3.5 ms late, so timer scheduling (the
+   early-callback rearm path) is the diagnostic target. The cause is recorded as **unknown**.
+   - The run is accepted as incomplete development evidence. There is no ad hoc rerun: any rerun
+     goes through T10's remediation rules.
+   - The limit is not relaxed, and the late request is not reclassified as external interference.
+   - G7/1, G7/2 and G9 remain outstanding.
+2. **G6 records.** The nine G6 records keep the invocation-level invalidation, as `finalise`
+   propagates it by design. They are described as "completed observations carrying a later
+   invocation failure", and they are not qualifying evidence in any case.
+3. **G12 `bindGroups`.** The count is cumulative bind-group creations (alloc.js increments it on
+   creation and never decrements it), so its growth is not a leak. The only claim made is that the
+   tracked bytes, textures and buffers returned to baseline.
+4. **G1.** Headed remains inconclusive (E-T9 ruling). The headless run is a `requestDevice` failure
+   ("A valid external Instance reference no longer exists"), recorded as "no usable device/probe"
+   with the exact error. Both limitations carry into T10.
+5. **G2 `preparationVisible`.** The sensor is defective: it uses `offsetParent` on the
+   fixed-position `#status` element. It must be repaired and reviewed before the qualifying GPU
+   campaign. The existing G2 development evidence is kept unchanged.
+
+## E5 — User decisions on platform and remediation (user, 2026-10-19)
+
+1. **Browser requirement.** "Runs in the browser is a firm requirement until it can't be." It stays
+   the requirement until keeping it would compromise the design or lose features. At that point it
+   is escalated to the user again. Native or workstation rendering is not pursued while the browser
+   path remains viable.
+2. **Approved WebGPU remediation plan:**
+   - **G5-A:** compensated evaluation of the cancellation-prone quaternion sums of products. The form
+     is chosen by error analysis that is preregistered before any GPU result for it exists, and it is
+     validated independently.
+   - **G1-A:** headed G1 identity is corroborated through a Dawn/Vulkan diagnostic bound to the same
+     browser process and run.
+   - **G1-C:** the headless `requestDevice` failure is diagnosed, capped at half a day.
+
+   Together these form WebGPU's single documented remediation cycle (spec §6), run through T10
+   Step 7 after the `webgpu-1` campaign. Diagnosis consumes no remediation.
+
+Source: Codex open consult, run 20261019T230539Z-9cfe (`codex-T10-consult-r1-findings.md`).
+
+## E6 — Provisional backend assumption for Project 1 design (user, 2026-10-19)
+
+**The user's decision:** Project 1 design may start now, in parallel, assuming WebGPU. Project 1
+must not block the completion of Project 0.
+
+**How this sits with Project 0:** the assumption is provisional. Project 0's recorded decision,
+`webgpu-remediation`, confirms or revises it. Nothing in Project 1 may change Project 0's frozen
+inputs, gates or evidence.
+
+## E7 — Headless execution dropped from qualification (G1-D) (user, 2026-10-20)
+
+**The user's decision:** qualification requires headed execution only.
+
+**What happens to headless:**
+- On this host, Chrome 151's GPU process crashes in headless mode before any WebGPU request
+  (`docs/reports/project0/webgpu-g1c-diagnosis.md`; G1-C).
+- That crash is recorded as a known limitation of the platform on this host. It is not hidden, and
+  it is not converted into a pass.
+- Headless evidence stays recorded where it is collected.
+
+**Why:** Projects 1a and 1b never need headless WebGPU, and every interactive use is headed.
+
+**How it is implemented:** the change must not modify the 24 frozen sources, the fixtures or their
+provenance. The mechanism is agreed with Codex, then implemented, reviewed and committed before
+`webgpu-remediation` runs. This is a spec amendment, approved by the user.
+
+## E8 — G5-D authorized: G5 re-specified to operational orbits (user, 2026-10-20)
+
+**Context:** after `webgpu-remediation` (G5-A invalid; off-plane frozen ratio 4.7449; the cycle was
+closed as inconclusive in `webgpu-decision.json` at e0a4ed5), the user authorized Codex's G5-D
+(joint position, run 20261020T051335Z-a45a).
+
+**The re-specification:**
+- G5 validates quaternion orbits up to first escape or the iteration budget, which is how the
+  renderer uses them.
+- The cases come from a fresh matrix with nonzero j/k parameters, preregistered and chosen by a
+  deterministic generator fixed before any GPU run.
+- The tolerances and the plane gate are unchanged.
+
+**What stays on record:** the 8-iterate forced-continuation failure is kept as a diagnostic. G5-A
+remains recorded as invalid/inconclusive.
+
+**The §6 exception:** one extra qualifying attempt, every gate rerun.
+
+**How it is implemented:** without modifying the 24 frozen sources or `fixtures.json`, with the
+amendment text peer-reviewed by both authors and preregistered before the run.
+
+## E9 — G5-D coverage: S3 (long escape) is a diagnostic band (user, 2026-10-20)
+
+**Why the band can't qualify:** Codex (run 20261020T055042Z-0097) could not construct any S3 case
+that passes the unchanged input-sensitivity screen. It tried a uniform stream of 20M draws and a
+targeted near-neutral sampler that produced 19,694 S3 orbits. An 80-digit recurrence confirms
+that this is genuine sensitivity of the mathematics at f32 input precision, independent of the
+backend.
+
+**The user's decision:**
+- **Qualifying bands:** S0, S1, S2 and SB qualify G5-D.
+- **S3:** measured and reported as a non-gating diagnostic. The decision record and T13 disclose
+  that no validated long-escape band exists at f32 input precision.
+- **Unchanged:** the tolerances, the sensitivity screen and the plane gate.
+- **Rendering depth:** Space's deep zoom is addressed by perturbation (as in ATLAS 2D), not by
+  qualification.
+
+## E10 — WebGPU selected by user decision (user, 2026-10-20)
+
+**The user's decision, verbatim:** "Select WebGPU now. That is my decision."
+
+**The evidence it rests on:** `webgpu-g5d` (the E8 attempt, at f754534; evidence committed at ae0871d).
+- **Pass:** G1, G2, G3, G4, G5 (as amended by E8 and E9: operational 223/223, worst componentRatio
+  0.192; plane 0.2745), G8, G10, G11, G12 (60 cycles, 0 deadline misses) and G13.
+- **G6, G7 and G9 are invalid/inconclusive.**
+  - G7/1 request 160 was issued 4.30 ms late, against the harness's 4 ms issuance limit; the cause
+    is not established. That ended the timing invocation, so G7/2 and G9 were never produced.
+  - Every G6 metric lay within its limit (intervalP95 8.6–9.4 ms), but G6 shares the invalidated
+    invocation.
+
+**How the tooling's output relates to this decision:**
+- The frozen decision procedure, applied mechanically, yields "inconclusive". That computed result
+  is recorded unchanged and is not overwritten.
+- The selection is the user's decision. It is recorded as such and is never described as a
+  mechanical qualification.
+
+**Carried limitations, disclosed in T13:**
+- G6, G7 and G9 are not qualified (a harness timer-issuance problem).
+- Headless execution is not required (E7); the Chrome 151 headless GPU-process crash remains a
+  known limitation.
+- G5 passes only as amended (E8, E9). S3 long-escape orbits are not validated at f32 input
+  precision. The 2.7498 (webgpu-1) and 4.7449 (G5-A) failures stand.
+- G5-A compensation was defeated by compiler reassociation.
+
+**Consequences:**
+- Project 1's provisional WebGPU assumption (E6) is confirmed.
+- Project 0 proceeds to T12 (the precision experiment) and T13 (the report).
+- Space deep zoom is Project 1c.
