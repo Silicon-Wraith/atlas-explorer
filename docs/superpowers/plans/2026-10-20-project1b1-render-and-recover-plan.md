@@ -35,7 +35,8 @@ presentation) for Space, WebGL 2 for Plane (unchanged), the Node 20 built-in tes
 Playwright 1.59.1 with installed Chrome headed on the physical NVIDIA GPU. No new dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-10-19-project1-design.md`. The governing baseline is the
-approved rev 3.2 as amended by rev 4.2's user decisions of 2026-10-21: rev 4 §5.2/§10.1's anchored
+approved rev 3.2 as amended by rev 4.2's and rev 4.3's user decisions of 2026-10-21 (rev 4.3: the
+§9.1 annex gains production `allocate`): rev 4 §5.2/§10.1's anchored
 camera representation is approved for ordinary Space, the §9.1 WebGPU backend annex (below) is
 adopted as normative spec text, the §19.2 Q2/Q5/Q6 defaults are confirmed with gamepad exploration
 added (§13.3; task B12b), and the §13.2 erratum is applied; other §21 work is outside 1b.1. Governed by
@@ -51,18 +52,31 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4.2 — applies the user's decisions of 2026-10-21 (the §9.1 annex adopted, the anchored
+**Revision:** 4.3 — applies the B00 contract rulings agreed between Claude's B00 review (r1) and
+Codex (run 20261021T060324Z-4e7f), and the user's decision of 2026-10-21 "approve amending the
+adopted §9.1 annex to add allocate" (spec rev 4.3). Final rulings: (1) pipeline ABI — binding
+order, access sets, uniform layouts, override constants, split render entry points, `layout:
+'auto'`, one generated uniform binding per nonempty layout; concrete IDs/slots belong to B06, B08,
+B10, B11; (2) `advance` takes evidence only, `{epoch, elapsedMs, timestampMs?, targetMs?}`;
+`onAdvance` adapts pending batches, and B07 supplies `targetMs = batchTargetMs`; (3) AO reduction —
+numerical failure wins, else the lexicographic minimum unresolved `(reason, subreason)`
+(`reduceLightingFailures`); (4) epoch 0 iff unavailable/destroyed; null timing for failed and
+interrupted tickets; (5) target-set shape, `TARGET_LAYOUT_ID`, accumulation parity; (6)
+`LIGHTING_BOUNDS_DEFAULT` is defaults and ceilings; (7) P3 — B00 freezes schema and rules, B04
+materializes and hashes, B09 validates decoding, B15 consumes; (8) production `allocate` (spec
+§9/§9.1); (9) `retain`/`retire` stay fake-only, with B09 resolving retained-image ownership before
+B06 review. **Rev 4.2** — applies the user's decisions of 2026-10-21 (the §9.1 annex adopted, the anchored
 camera approved for ordinary Space, §19.2 Q2/Q5/Q6 confirmed, the §13.2 erratum) and adds controller
 (gamepad) exploration of Space at the user's request ("We should support joystick for exploration as
 well."): new task B12b and B14 wiring, co-designed with Codex — **Codex READY** for the
 standard-layout scope (runs 20261021T033701Z-268a and 20261021T034408Z-2f95, resuming the plan
 session 20261021T012346Z-8408; an earlier attempt 20261021T033535Z-8c31 failed on service capacity
-with no reply). Spec §19.2 Q11 (supported controller models) is open. **Rev 4.1** — **Codex READY** (run 20261021T012346Z-8408, verified at commit 5914fc9) after
+with no reply). Spec rev 4.2 Q11 (supported controller models) is answered: "Xbox style" (standard layout; §19.1). **Rev 4.1** — **Codex READY** (run 20261021T012346Z-8408, verified at commit 5914fc9) after
 five rounds: joint decomposition 20261020T211454Z-d306 and reconciliation 20261020T212435Z-94a5,
 then the co-author reviews 20261020T214114Z-aba8 (fifteen findings), 20261021T010758Z-8a0a (nine)
 and 20261021T011813Z-1807 (three blocking, one editorial), all applied. Claude drafted; both peers
 agreed the structure and reviewed the whole. The four items under *Items for the user* were decided
-on 2026-10-21; the plan awaits the user's approval and the answer to spec §19.2 Q11. **Authors:** Claude and Codex as peers
+on 2026-10-21; the user approved starting 1b.1 on 2026-10-21 and answered Q11 ("Xbox style"). **Authors:** Claude and Codex as peers
 (AGENTS.md/CLAUDE.md protocol). The verbatim record is
 `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md` ("PLAN 1b.1" entries), archived to
 `docs/codesign/project1-log.md` at the milestone.
@@ -273,12 +287,17 @@ cites from Global Constraints); any later amendment changes both together.
   software device and never satisfies a physical-GPU requirement; physical-GPU acceptance needs
   corroborating evidence (`chrome://gpu`, the gate's hardware suite) when identity fields are
   unavailable. Required features: none. Optional: `timestamp-query`. Limits recorded and checked:
-  `maxBufferSize`, `maxStorageBufferBindingSize`, `maxTextureDimension2D`,
+  `maxBufferSize`, `maxStorageBufferBindingSize`, `maxUniformBufferBindingSize`,
+  `maxTextureDimension2D`,
   `maxComputeWorkgroupsPerDimension`, `maxComputeInvocationsPerWorkgroup`, `maxBindGroups`,
   `maxStorageBuffersPerShaderStage`.
 - **Epochs and loss.** Every acquisition attempt receives a fresh identity; the epoch is an
   integer advanced on each successful acquisition, supplied to requests as
-  `generation.deviceEpoch` (no second editable epoch field). A `device.lost.then(...)` observer is
+  `generation.deviceEpoch` (no second editable epoch field). The epoch is zero if and only if the
+  backend is unavailable or destroyed; successful acquisitions receive increasing positive
+  epochs. Completed tickets carry observed completion timing; failed and interrupted tickets
+  have `queueCompletedAt: null`, `elapsedMs: null` and no timestamp duration, with the error
+  message (failed) or the loss reason (interrupted) as `reason`. A `device.lost.then(...)` observer is
   attached immediately after acquisition and never awaited before returning. Observed loss
   immediately makes the backend unavailable and invalidates its epoch before clients are notified
   (`onLoss({epoch, reason: 'destroyed' | 'unknown' | <reason>, message})`); late callbacks from
@@ -311,8 +330,9 @@ cites from Global Constraints); any later amendment changes both together.
   pending mark): 72 bytes per pixel, 597,196,800 B at 3840 × 2160 before staging, uniforms, model
   buffers and overlapping generations. Each resource is counted at its actual dimensions. (Project
   0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.)
-- **Pipeline descriptors.** B00 freezes the pipeline descriptor schema, ids, binding slots and
-  uniform layouts; B06 validates preparation with executable self-check pipelines; B08, B10 and
+- **Pipeline descriptors.** B00 freezes the pipeline descriptor schema and binding/uniform
+  conventions. B06, B08, B10 and B11 freeze their concrete pipeline IDs, slots and layouts
+  alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and
   B11 add their descriptors and preparation assertions as their shaders come into existence; B11
   verifies complete product prewarming before B14 enables interaction.
 - **Batches.** The descriptor and ticket of B00 (`identity`, `pipelineId`, `pass`, `region`,
@@ -331,11 +351,22 @@ cites from Global Constraints); any later amendment changes both together.
 - **Configuration.** `configureTargets` is transactional: bytes are reserved and accounted first,
   allocation and validation errors captured (`pushErrorScope`), and the old usable target set is
   retained if replacement fails.
-- **Allocator.** `allocate` checks `tracked + bytes ≤ 1 GiB` before creating a resource;
-  `release` marks a resource retiring, and bytes leave the total only when every ticket, mapping
-  and retained-owner reference has ended; uniform uploads, query and resolve storage, staging and
-  model buffers are counted; `diagnostics()` reports `{state, epoch, tracked, peak, retiring,
-  inventory}`. Plane's WebGL allocations are reported separately and never summed in.
+- **Allocator.** Every application-owned allocation passes through the tracked allocator, which
+  checks `tracked + bytes ≤ 1 GiB` before resource creation. The production method
+  `allocate({name, bytes, usage, data?}) → handle` creates a buffer in the current available device
+  epoch. `name` is nonempty; `bytes` is a positive safe integer divisible by four; `usage` is
+  `'storage'` or `'uniform'`; optional `data` is a `Uint8Array` whose byte length does not exceed
+  `bytes`. Initial data is defensively copied at creation and remaining bytes are zero. WebGPU
+  initializes supplied contents through `mappedAtCreation`, copies them into the mapped range, and
+  unmaps before returning; this performs no application queue submission and consumes no admission
+  lease. The backend derives native usage flags, including copy-source support for readback. There
+  is no production host-update method; admitted shader writes to storage buffers remain permitted.
+  `stage()` is a fake-only test control.
+
+  `release(handle)` marks a resource retiring; bytes leave accounting only when every ticket,
+  mapping and retained-owner reference has ended. Uniform uploads, query/resolve storage, staging
+  and model buffers are counted. `diagnostics()` reports `{state, epoch, tracked, peak, retiring,
+  inventory}` using actual allocation sizes. Plane allocations remain separate.
 - **Launch (tests).** The complete Project 0 profile (Global Constraints); requested and effective
   arguments recorded in every report.
 
@@ -419,16 +450,47 @@ sphere's hit mask equals the analytic disc except within one pixel of the edge; 
 usability experiment — the default view's termination distribution within ±5 percentage points
 per class of B04's binary64 prediction (160 × 90 rays, 128 iterations, 512 steps).
 
-**P3 — Performance workload** (B15): B00 freezes a workload manifest
-(`tests/reference/performance-workload.json`) containing the complete scenes, motion trajectories
-(camera poses per request time), request times, edit values, seeds, warm-up rules and coverage
-checkpoints (the three P3 scenes are the `lightingQuality: 'full'`, eight-sample settled scenes); B04 supplies `tests/reference/performance-predictions.json` (hashed; each
-checkpoint's termination distribution and its acceptance tolerance); B15 consumes both files by
-hash. Content:
-1280 × 720; scenes: the bulb overview (power 8, 128 iterations), the quaternion default view,
-`menger` depth 2, all at `lightingQuality: 'full'`; per scene: a 30 s orbit at 0.5 rad/s (draft rate and intervals), a burst of 400
-camera requests at 60 ms spacing (interaction latency), a parameter edit every 250 ms for 10 s
-(stress replacement); one cold trial after a fresh page load, then warm trials; **one
+**P3 — Performance workload** (B15): B00 freezes `performance-workload.json`'s schema and
+workload rules (`tests/reference/performance-workload.json`). B04 independently materializes the
+scenes, request poses and checkpoint records without importing `src/`, generates
+`performance-predictions.json`, and records both SHA-256 hashes. The prediction hash is stored in
+the manifest; the final manifest hash is recorded externally, never embedded in the bytes it
+hashes. B04 empties `unresolved` and sets `readyForAcceptance` when materialization is complete.
+B09 verifies decoding through the Space codec and validates all cameras. B15 consumes both
+artifacts by hash.
+
+Output is 1280 × 720. Scenes are bulb power `"8"`; quaternion `C = ["-0.2","0.8","0","0"]`,
+`kappa = "0"`; and Menger depth 2. All use 128 iterations, 512 steps, full lighting, eight samples
+and `atlas-aa-v1` seed 1. The harness uses no randomness.
+
+Each scene starts at an upright overview camera, focus `[0,0,0]`, distance 2.5 times its enclosing
+radius along normalized Project 0 A.6 direction. Orbit yaw is about world Z at 0.5 rad/s for 30
+seconds. Requests occur at `16k` ms for `k = 0…1874`. The last issued pose is therefore at 29,984
+ms and yaw 14.992 radians.
+
+Record the automatic settled request after that last pose, timing from request creation. Record
+first direct-light publication and full quality separately; complete full quality before starting
+interaction. The interaction phase issues 400 requests at `60j` ms for `j = 1…400`, with yaw
+`14.992 + 0.5 × 60j / 1000`, continuing from the last issued orbit pose.
+
+At the final interaction pose, issue 40 stress edits at `250j` ms, `j = 0…39`, over a ten-second
+window. Even indices use the alternate value and odd indices restore the base: bulb `"7"`/`"8"`;
+quaternion kappa `"0.5"`/`"0"`; Menger 1/2. Every edit changes state; the final edit restores the
+base.
+
+Every counted timed publication must match its request identity and quality and cover the
+complete internal pixel count. Replay orbit checkpoint poses `k ∈ {0,625,1250,1874}` outside the
+timed workload at draft settings, plus the first settled direct-light image at sample zero.
+Compare their `rayTermination` counts with B04 predictions. Selected timed requests may be
+superseded. Take each scene's settled-first replay screenshot outside timed work. Missing or
+failed coverage remains non-accepting.
+
+Trial one follows a fresh page load, preparation and the complete recorded workload. Subsequent
+trials use the same page without reload. Restore the frozen base scene and overview pose and drain
+outstanding work outside timed phases. Discard no warm-up trial. Preserve the existing trial
+counts, targets, timing rules and classification precedence.
+
+Trials, timing and targets: **one
 performance suite per scene**, each with the existing ten-minute bound, requiring three valid
 trials and allowing at most five recorded attempts; insufficient valid trials are reported as
 inconclusive and non-accepting; invalid trials are never retried silently. Timing boundaries:
@@ -478,7 +540,9 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   flags, 2–3 shadow status, 4–7 shadow reason, 8–11 shadow subreason, 12–13 AO status, 14–17 AO
   reason, 18–21 AO subreason, remaining bits zero; multiple AO failures reduce deterministically
   with numerical failure taking precedence), `unpackLightingStatus(u32)` (reconstructs both
-  failures),
+  failures), `reduceLightingFailures(failures) → Failure | null` (any numerical failure reduces to
+  `{status: numericalFailure, reason: none, subreason: none}`; otherwise the lexicographic minimum
+  unresolved `(reason, subreason)`; no failures returns `null`),
   `ESTIMATOR_CATEGORIES = ['exact-distance', 'heuristic']`, `packStatus({status, reason,
   subreason, steps}) → u32` (bits 0–3, 4–7, 8–11, 12–31), `unpackStatus(u32)`, `LEGEND =
   {unresolved: [1, 0, 1], numericalFailure: [1, 0, 0], unavailableNormal: [0.5, 0.5, 0.5]}`,
@@ -487,7 +551,9 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
 - Produces (`backend.js`): `PASSES = ['probe', 'trace', 'normals', 'shade', 'accumulate',
   'display']`, `TARGET_LAYOUT_V1` (the annex table: name → `{format, bytesPerTexel, count}`),
   `TRACKED_ALLOCATION_CAP = 2 ** 30`, `LIGHTING_BOUNDS_DEFAULT = {normalFieldSamples: 6,
-  shadowRays: 1, shadowSteps: 64, aoSamples: 5}`, `createBatch({identity: {requestId, jobId,
+  shadowRays: 1, shadowSteps: 64, aoSamples: 5}` (both the settled defaults and the 1b.1 ceilings;
+  direct lighting retains `normalFieldSamples: 6`, and only `shadowRays`, `shadowSteps` and
+  `aoSamples` become zero; raising a ceiling requires a recorded plan amendment), `createBatch({identity: {requestId, jobId,
   viewId, generation}, pipelineId, pass, region: {x, y, width, height}, sample: {sequence, seed,
   index}, bounds: {pixels, raySteps, iterations, normalFieldSamples, shadowRays, shadowSteps,
   aoSamples}, inputs: {slot: handle}, outputs: {slot: handle}, uniforms}) → frozen Batch`
@@ -500,12 +566,27 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   arguments of the corresponding backend methods; B09 constructs the operations with complete
   resource bindings) with `next() → operation | null` (reserves one ready operation so repeated
   calls cannot issue it twice; `null` means none is ready now, not necessarily exhaustion),
-  `advance(operation, completion)` (resolves dependencies; adaptive subdivision from completion
-  evidence preserves dependency ordering) and `exhausted()` (true only after every operation has
+  `advance(operation, {epoch, elapsedMs, timestampMs?, targetMs?})` (requires current-epoch
+  successful completion evidence; durations finite and nonnegative, a supplied `targetMs` positive.
+  Failed/interrupted work never advances. `onAdvance(operation, completion, pendingOperations)`
+  returns replacement pending operations or `undefined`. Reserved/completed operations cannot
+  change; every pending ID and its dependency barriers must survive replacement. New operations may
+  depend on reserved operations.) and `exhausted()` (true only after every operation has
   completed; the scheduler alone owns elapsed-work budgets and job outcomes),
   `validatePipelineDescriptor(descriptor)` and `createPipelineSet({id, descriptors}) → frozen`
   (the descriptor schema names `pipelineId`, `kind: 'compute' | 'render'`, `sourceIds`,
-  `entryPoint`, `constants`, `bindings: [{slot, type, access}]` and `uniformLayout`),
+  `entryPoint` for `kind: 'compute'`; `vertexEntryPoint` and `fragmentEntryPoint` instead for
+  `kind: 'render'`; `constants`, `bindings: [{slot, type, access}]` and `uniformLayout`;
+  `bindings[i]` denotes `@group(0) @binding(i)`; `slot` is the WGSL variable name. Access sets are:
+  uniform-buffer/read; storage-buffer/read or read-write; texture/read; storage-texture/read, write
+  or read-write; sampler/read. Read-write bindings use the same handle in both maps.
+  `uniformLayout` is `{byteLength, fields: [{name,type,offset}]}`; byte length is divisible by 16.
+  Supported size/alignment pairs are scalar 4/4, vec2 8/8, vec3 12/16, vec4 16/16 and
+  mat4x4<f32> 64/16. Arrays and mat3x3 are unsupported in 1b.1. Matrices use column-major field
+  order. A nonempty layout requires exactly one generated uniform-buffer binding supplied from the
+  exact `uniforms` field record, without a handle slot. Empty layouts permit explicitly allocated
+  uniform input handles. Constants name WGSL overrides. B06 uses `layout: 'auto'` and creates bind
+  groups from each prepared pipeline's layout),
   `sampleJitter({seed, sampleIndex, pixel: [x, y]}) → {dx, dy}` (the frozen `atlas-aa-v1`
   algorithm: a 32-bit integer hash `h = mix(seed ⊕ mix(sampleIndex ⊕ mix(x ⊕ mix(y))))` with
   `mix(v) { v >>>= 0; for (let i = 0; i < 2; i++) v = Math.imul(v ^ (v >>> 16), 0x045d9f3b) >>> 0;
@@ -513,19 +594,30 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   arithmetic, and the frozen cross-language test vectors include `mix(42) === 4147330502`; `dx =
   ((h & 0xffff) + 0.5) / 65536 − 0.5`, `dy = (((h >>> 16) & 0xffff) + 0.5) / 65536 − 0.5`; sample
   0 is the pixel centre with `{dx: 0, dy: 0}`), `BACKEND_METHODS =
-  ['acquire', 'prepare', 'configureTargets', 'submitBatch', 'readback', 'present', 'release',
+  ['acquire', 'prepare', 'allocate', 'configureTargets', 'submitBatch', 'readback', 'present', 'release',
   'onLoss', 'currentEpoch', 'diagnostics', 'destroy']`, `assertBackend(impl)`, `BackendError
   {code: 'allocation-failed' | 'device-lost' | 'preparation-failed' | 'invalid-descriptor' |
   'stale-epoch' | 'no-admission' | 'unavailable'}`. Signatures (the annex): `acquire() →
   Promise<{epoch, identity, limits, features}>`; `prepare({epoch, pipelineSet, onProgress}) →
-  Promise<{epoch, pipelineSetId, preparedPipelineIds}>`; `configureTargets({epoch, layoutId, internalSize, outputSize})
-  → Promise<TargetSet>` (opaque handles plus logical descriptions); `submitBatch(batch, {admission})
+  Promise<{epoch, pipelineSetId, preparedPipelineIds}>`; `allocate({name, bytes, usage: 'storage' |
+  'uniform', data?: Uint8Array}) → handle`, with the allocation semantics in the amended §9.1
+  Allocator bullet; `configureTargets({epoch, layoutId, internalSize, outputSize})
+  → Promise<TargetSet>` (`{epoch, layoutId, internalSize, outputSize, handles, descriptions}`;
+  `handles[name]` an opaque handle and `descriptions[name]` `{name, width, height, format,
+  bytesPerTexel, bytes}` at actual internal dimensions; `layoutId` is the exported
+  `TARGET_LAYOUT_ID = 'space-targets-v1'`; `handles.accumulation` and `descriptions.accumulation`
+  are two-element arrays: for sample index `s`, read `handles.accumulation[s & 1]` and write
+  `handles.accumulation[(s + 1) & 1]`; the read side is zero at sample 0 of every accumulation identity, not only at allocation, so an appearance reset never reads stale sums (B00 review r2)); `submitBatch(batch, {admission})
   → Ticket`; `readback({identity, source, region, fields}, {admission}) → ReadbackTicket`;
   `present({identity, display}, {admission}) → Ticket`; `release(handle)`; `onLoss(callback) →
   unsubscribe`; `currentEpoch() → integer`; `diagnostics() → {state, epoch, tracked, peak,
   retiring, inventory}`; `destroy()`. `Ticket = {id, identity, submittedAt, done: Promise<{outcome:
   'completed' | 'interrupted' | 'failed', reason, queueCompletedAt, timing: {method:
-  'queue-completion', elapsedMs, timestampMs?}}>}`; `ReadbackTicket` adds `result:
+  'queue-completion', elapsedMs, timestampMs?}}>}` (`currentEpoch()` is zero iff the backend is
+  unavailable or destroyed; successful acquisitions receive increasing positive epochs; completed
+  tickets carry observed completion timing; failed/interrupted tickets have `queueCompletedAt:
+  null`, `elapsedMs: null` and no timestamp duration; a failure's `reason` is the error message,
+  an interruption's the loss reason); `ReadbackTicket` adds `result:
   Promise<{identity, region, fields, data}>`.
 - Produces (`fake-backend.mjs`): `createFakeBackend({clock, cap = TRACKED_ALLOCATION_CAP,
   limits, failPrepareAt = null}) → backend` implementing every method deterministically:
@@ -536,6 +628,8 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   bytes staged with `backend.stage(handle, bytes)`; every submitting method throws
   `BackendError('no-admission')` without a consumable lease; `allocate` enforces the cap and
   records `{tracked, peak, retiring, inventory}`; `backend.log` records every call in order;
+  `retain`/`retire` remain fake-only test controls (B09 resolves retained-image ownership before
+  B06 review if production methods are needed);
   `backend.testAdapter = {destroyDevice(), injectLoss({reason}), failNextAllocation()}` (declared
   separately from the production interface; the WebGPU backend's adapter has the same shape).
 - Produces (`fake-clock.mjs`): `createFakeClock(start = 0) → {now(), advance(ms), schedule(fn,
@@ -552,7 +646,8 @@ P1–P3 become binding at this task's commit.
   bounds above the spec limits`; `an admission lease is consumed exactly once`; `assertBackend
   rejects an implementation missing release or onLoss`; `wgslConstants emits one const per enum
   member`; `sample jitter is deterministic, centred for sample 0, within half a pixel, and mix(42) is
-  4147330502`; `a pipeline set validates its descriptors and rejects an unknown binding type`; `a job
+  4147330502`; `a pipeline set validates its descriptors and rejects an unknown binding type`;
+  `a model buffer allocated with initial data reads back its bytes and is counted` (rev 4.3, §9.1 allocate); `a job
   plan reserves ready operations once and remains unexhausted while dependencies are outstanding`;
   `lighting status round-trips simultaneous unresolved and numerical failures without conflating
   them`. `tests/unit/fake-backend.test.js`: `allocation beyond the cap fails before any resource
@@ -911,6 +1006,8 @@ spec §11, not B03's code.
   `tests/reference/quaternion-usability.json` (generated, committed),
   `tests/reference/performance-predictions.json` (generated, committed; each P3 checkpoint's
   termination distribution and acceptance tolerance, with its sha256 recorded)
+- Modify: `tests/reference/performance-workload.json` — materialize B00's frozen rules, clear owned
+  unresolved fields, and record the prediction hash.
 - Test: `tests/unit/reference.test.js`
 
 **Interfaces:**
@@ -955,6 +1052,9 @@ detail ladder's exceedances are evidence, not passes.
   tests/reference/matrix.mjs --preflight` prints per-stratum eligible counts against P1's floors;
   B04 stops before any GPU comparison if a mandatory floor is not substantiated, and the floor is
   revised only by a recorded plan amendment. Then generate and commit the files with their hashes.
+  Independently generate all scene JSON, 1,875 orbit poses and 400 interaction poses per scene, and
+  five coverage checkpoints per scene. Verify deterministic materialization and record the final
+  workload and prediction SHA-256 hashes.
 - [ ] **Step 4: GREEN**, `npm test`.
 - [ ] **Step 5: Commit** — `"Add independent Space references and freeze the validation matrix (1b.1 B04)"`, then the gate.
 
@@ -1063,7 +1163,8 @@ picking (B10/B12).
   `TARGET_LAYOUT_V1`, the ticket shape (B00).
 - Produces: `createWebGPUBackend({canvas, clock, acquire = acquireDevice, enableTimestamps =
   false}) → backend` (every annex method and semantics; `onLoss` observers attached at
-  acquisition; `destroy()` terminal), `createTrackedAllocator({factory, cap, clock}) →
+  acquisition; `destroy()` terminal; `allocate({name, bytes, usage: 'storage' | 'uniform', data?:
+  Uint8Array}) → handle`, with the allocation semantics in the amended §9.1 Allocator bullet), `createTrackedAllocator({factory, cap, clock}) →
   {allocate(desc) → handle, release(handle), retain(handle, owner), retire(owner),
   diagnostics()}`, `preparePipelines({device, pipelineSet, onProgress, boundMs}) →
   Promise<{preparedPipelineIds, pipelines}>` (`pipelines` stays inside the backend) (`createComputePipelineAsync` per variant; progress `{stage, completed,
@@ -1131,9 +1232,9 @@ report (B11 records the complete product set's preparation time once it exists).
   only cancelled), `admit() → [{operation, admission}]` (at most `maxOutstanding` leases outstanding
   across all views and jobs per epoch; priority order; hidden and paused views never admitted;
   auxiliary submissions — probes, readbacks, presentation — take leases from the same pool through
-  `requestAuxiliary(viewId, {jobId, priority, operation}) → {done}`), `completed(admission, {epoch, elapsedMs})` (advances the plan;
-  adapts the next batch's bounds toward `batchTargetMs` from completion evidence, never above the
-  hard bounds), `failed(admission, error)`, `interrupted(epoch)` (observed loss: every lease of
+  `requestAuxiliary(viewId, {jobId, priority, operation}) → {done}`), `completed(admission, {epoch, elapsedMs, timestampMs?})` (advances the plan with `{epoch,
+  elapsedMs, timestampMs?, targetMs: batchTargetMs}`; the plan's `onAdvance` adapts pending
+  batches; `createBatch` enforces hard bounds), `failed(admission, error)`, `interrupted(epoch)` (observed loss: every lease of
   that epoch settles `interrupted`), `pause(viewId)`, `resume(viewId)`, `update(viewId)` (admits
   exactly one frozen current snapshot's job, then returns the view to paused), `hidden(viewId,
   bool)`, `cancel(jobId) → {accepted: boolean, done: Promise<{outcome: 'cancelled', submitted:
@@ -1332,7 +1433,8 @@ the pending mark); §8.2 (diagnostic modes bypass lighting). Excludes: WGSL (B08
   each request`; `a direct-only one-sample settled request completes at its first image without
   secondary-light submissions`; `classifyEffectiveCamera rejects a stale identity`; `the preparing and prepared
   events are optional and Plane reports omit them`; `every shared timing mark survives a
-  workspace-field extension`.
+  workspace-field extension`; `the P3 scenes decode through the Space codec and the poses are valid
+  cameras`.
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "a draft replaces the published image only when complete and the retained image is marked pending meanwhile"`.
 - [ ] **Step 3: Implement** the pass walk over the fake backend: the integration this task closes
   is request → `JobPlan` → scheduler leases → backend tickets → publication and report.
@@ -1543,9 +1645,8 @@ action away). Excludes DOM layout (B14).
 ### Task B12b: Controller (gamepad) exploration — decoding, input state machine, history (spec §13.3, §6, §15; user decision 2026-10-21)
 
 **Owner:** Codex. **Reviewer:** Claude. **Depends on:** B12. **Scope:** standard-layout controllers
-(`mapping === 'standard'`); spec §19.2 Q11 is open — if the user requires non-standard joysticks or
-flight sticks, a recorded plan amendment adds an explicit mapping profile here and a configure/select
-control to B14 **before this task starts**. Co-designed with Codex (runs 20261021T033701Z-268a,
+(`mapping === 'standard'`); the user's controller is Xbox style (spec §19.1, answer to rev 4.2 Q11), which reports the
+standard layout; non-standard joysticks and flight sticks stay deferred (§17). Co-designed with Codex (runs 20261021T033701Z-268a,
 20261021T034408Z-2f95; READY for this scope).
 
 **Files:**
@@ -1926,9 +2027,8 @@ All other files are single-owner.
 
 **Decided by the user on 2026-10-21** (applied in spec rev 4.2 and this revision): (a) ADOPT;
 (b) APPROVE; (c) confirmed, with Q5 extended by "We should support joystick for exploration as
-well." (B12b, B14); (d) applied. **Open:** spec §19.2 Q11 — which controller model(s) the user
-intends to use, and whether standard-gamepad support suffices for 1b.1 or a non-standard
-joystick/flight stick must work (if so, a recorded amendment extends B12b/B14 before B12b starts).
+well." (B12b, B14); (d) applied. **Answered (2026-10-21):** spec rev 4.2 Q11 — "Xbox style": standard-gamepad
+support suffices for 1b.1 (§19.1).
 The original items, for the record:
 - (a) adopt the §9.1 WebGPU backend annex (above) into the spec by reference;
 - (b) approve rev 4 §5.2/§10.1's `anchored-perspective-v1` camera representation for ordinary
