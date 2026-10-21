@@ -5,7 +5,7 @@ affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera 
 from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
 compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
 (4) one Discoveries control, filtered per workspace and fed by discovery sources, with only the
-local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.6 (rev 4.6 records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. Rev 4.5 applies three Claude/Codex corrections with no new user decision: (1) §11 model-record shape — records carry no `validation`, which lives in the §16.2 registry (Codex B03 r1 I4, run 20261021T110320Z-1652; analytic `derivationVersion` values are populated strings, only recurrence, initialization and escape metadata are null); (2) the §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) the B01 served-source provenance wording in the 1b.1 plan (Codex B01 r3, run 20261021T110827Z-86bb). Rev 2 was
+local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 4.7 (rev 4.7 applies the B05 camera rulings (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee) and the B06 §9.1 annex changes PC1–PC8 (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca) with no new user decision; rev 4.6 records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. Rev 4.5 applies three Claude/Codex corrections with no new user decision: (1) §11 model-record shape — records carry no `validation`, which lives in the §16.2 registry (Codex B03 r1 I4, run 20261021T110320Z-1652; analytic `derivationVersion` values are populated strings, only recurrence, initialization and escape metadata are null); (2) the §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) the B01 served-source provenance wording in the 1b.1 plan (Codex B01 r3, run 20261021T110827Z-86bb). Rev 2 was
 Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply Codex's co-author reviews;
 rev 4 adds Project 1c, Space deep zoom, by the user's decision "Yes, add deep zoom as 1c in Project 1."
 (2026-10-20) — §21; rev 4.2 applies the user's decisions of 2026-10-21: the §9.1 WebGPU backend annex
@@ -263,7 +263,7 @@ A scene describes an experiment. Runtime state describes its execution and is no
   exponent } (a normalized finite mantissa and a bounded integer binary exponent), positionLocal,
   focusLocal: three CPU doubles each, orientationWxyz, verticalFovDegrees }`. The represented world
   position is `anchor + scale × positionLocal`. CPU navigation performs the anchor arithmetic at
-  controlled high precision; recentring preserves represented positions to a declared bound and never
+  controlled high precision; recentring admits only candidates whose exact aggregate L1 position-plus-focus error is at most `scale × 2⁻⁴⁰`, and refuses collapse of a previously distinct position and focus and never
   reconstructs a world position through a single `Number`. Ordinary Space (1b) uses the same
   representation at modest scales while its field evaluator stays binary32. The representation is
   defined before 1b implementation, so introducing 1c does not require a camera-format migration. World Z defines up. Orbit and basic flight use upright navigation without a
@@ -318,7 +318,7 @@ A scene describes an experiment. Runtime state describes its execution and is no
 - **Synchronization of the two histories:** camera history is seeded with the workspace's initial
   accepted camera, and its current entry always matches the committed camera. Every committed
   camera change outside Back/Forward, including undo or redo of a whole-scene restoration, appends
-  the resulting pose, suppresses consecutive identical poses, and truncates any forward branch.
+  the resulting pose, suppresses consecutive identical poses, and truncates any forward branch. For Space history, identity uses semantic camera equality: exact represented position/focus and FOV, with normalized rotations compared modulo quaternion sign within eight binary64 epsilons per component. This comparison does not define scene-file identity or cache/request keys.
   Content-only undo and redo leave camera history unchanged. (Start at A, open discovery B, undo:
   the camera returns to A and camera history reads A, B, A with the cursor on the last A, so Back
   goes to B.)
@@ -550,7 +550,7 @@ the production `allocate` method and `maxUniformBufferBindingSize` (Allocator an
   attached immediately after acquisition and never awaited before returning. Observed loss
   immediately makes the backend unavailable and invalidates its epoch before clients are notified
   (`onLoss({epoch, reason: 'destroyed' | 'unknown' | <reason>, message})`); late callbacks from
-  retired attempts cannot replace current state; outstanding tickets settle `interrupted`; a
+  retired attempts cannot replace current state; a loss observed before an acquisition is published refuses that acquisition (`device-lost`); outstanding tickets settle `interrupted`; a
   resolved queue fence after loss does not establish successful work. `Backend.destroy()` is
   terminal teardown and suppresses recovery; the test adapter destroys the underlying device
   without terminal teardown to exercise real loss recovery, and injected notifications exercise
@@ -583,23 +583,23 @@ the production `allocate` method and `maxUniformBufferBindingSize` (Allocator an
   conventions. B06, B08, B10 and B11 freeze their concrete pipeline IDs, slots and layouts
   alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and
   B11 add their descriptors and preparation assertions as their shaders come into existence; B11
-  verifies complete product prewarming before B14 enables interaction.
+  verifies complete product prewarming before B14 enables interaction. Compute dispatch geometry is frozen ABI: every compute entry point declares `@workgroup_size(8, 8, 1)`; the backend dispatches `ceil(region.width / 8) × ceil(region.height / 8)` workgroups and injects nothing; each pass carries its region (origin, size) in its own uniform layout and bounds-checks invocations.
 - **Batches.** The descriptor and ticket of B00 (`identity`, `pipelineId`, `pass`, `region`,
   `sample`, `bounds`, named `inputs`/`outputs` slots, `uniforms`); one command buffer per batch;
   uniform data snapshotted before submission; storage owned by an outstanding ticket is never
-  overwritten; horizontal subdivision allowed; completion is `device.queue.onSubmittedWorkDone()`
+  overwritten; horizontal subdivision is the caller's (one lease per region); completion is `device.queue.onSubmittedWorkDone()`
   labelled `queue-completion` (a fence includes preceding queued work and is not isolated shader
   time); GPU timestamps are a separate measurement recorded only when granted, never a substitute
   for completion. A watchdog timeout stops admission but neither settles the fence nor releases its
   resources; loss retires the epoch; ordinary cancellation drains it.
-- **Readback.** One bounded region per call, at most 256 rows, horizontally split if required,
+- **Readback.** One bounded region per call, at most 256 rows; a region whose staging (`alignUp(width × bytesPerTexel, 256) × rows`) would exceed `maxBufferSize` is refused `allocation-failed` before its lease is consumed, and the caller subdivides horizontally with one lease per region;
   into a lazily allocated pool of at most two staging buffers sized
   `alignUp(width × bytesPerTexel, 256) × rows`; `mapAsync(READ)`, copy out, `unmap`; the result
   resolves after copy-out and unmap; mapping ownership survives queue completion; every readback
   carries its epoch and identity.
 - **Configuration.** `configureTargets` is transactional: bytes are reserved and accounted first,
   allocation and validation errors captured (`pushErrorScope`), and the old usable target set is
-  retained if replacement fails.
+  retained if replacement fails. Successful target handles are caller-owned until `release(handle)`: a replacement never releases the earlier set, so a published image can be presented while its replacement is pending; B09 releases obsolete working targets and retains its published display until the replacement is published. Failed configurations roll back their own new resources; loss and `destroy()` invalidate everything.
 - **Allocator.** Every application-owned allocation passes through the tracked allocator, which
   checks `tracked + bytes ≤ 1 GiB` before resource creation. The production method
   `allocate({name, bytes, usage, data?}) → handle` creates a buffer in the current available device
@@ -610,7 +610,7 @@ the production `allocate` method and `maxUniformBufferBindingSize` (Allocator an
   unmaps before returning; this performs no application queue submission and consumes no admission
   lease. The backend derives native usage flags, including copy-source support for readback. There
   is no production host-update method; admitted shader writes to storage buffers remain permitted.
-  `stage()` is a fake-only test control.
+  `stage()` is a fake-only test control. `allocate` stays synchronous. Every native creation runs inside validation and out-of-memory error scopes, and a resource whose initialization throws is destroyed before the call fails. A creation error captured asynchronously marks the resource failed (`diagnostics().inventory[i].failure`). Every ticket that consumes a resource awaits that resource's creation scopes as well as its own scopes and fence, and settles `failed` with the creation message if any creation scope captured an error. Precedence: loss first (an outstanding ticket settles `interrupted` whatever its scopes report, and nothing settles while a loss is pending); then pre-queue failure (work that threw before `queue.submit` settles `failed` at once); then captured creation or submission errors (`failed` after scopes and fence); otherwise `completed` with timing observed at the fence.
 
   `release(handle)` marks a resource retiring; bytes leave accounting only when every ticket,
   mapping and retained-owner reference has ended. Uniform uploads, query/resolve storage, staging
@@ -626,7 +626,7 @@ the production `allocate` method and `maxUniformBufferBindingSize` (Allocator an
 Space cameras use the anchored representation in §5.2 (approved for ordinary Space by the user,
 2026-10-21). Anchor arithmetic uses controlled high
 precision; local camera coordinates, orientation and field of view use CPU doubles. Ordinary Space
-evaluates fields in binary32. Qualified 1c profiles use the reference, perturbation and range
+evaluates fields in binary32. Camera transport: `high = RN32(exact represented coordinate)` and `low = RN32(exact − high)`, in that order, using nearest rounding with ties to even and range checks before use; the reported bound is the absolute L1 world-space error. Zero error is reported as a null logarithmic bound with `exact: true`; otherwise the bound is its integer ceiling logarithm with `exact: false`. The `2⁻⁴⁶` relative property holds when high and low are binary32-normal; it is not an underflow guarantee. Qualified 1c profiles use the reference, perturbation and range
 representations specified by §21; their use of binary32 components does not require collapsing a
 represented point into one binary32 value.
 
@@ -856,8 +856,8 @@ arrive in 1b.3, §13.7).
 
 ### 13.3 Navigation (1b.1)
 - Orbit, pan and dolly; focus on a point (asynchronous depth readback of the picked pixel); overview;
-  orientation reset; a Bryce-style orientation control with axis constraints and reset (§5.2).
-- Basic flight: look plus move and strafe, explicit speed. Escape releases input; blur or visibility
+  orientation reset; a Bryce-style orientation control with axis constraints and reset (§5.2). Navigation safety: navigation must refuse coincident results; recentre must also refuse a result that collapses a previously distinct position and focus; `dolly(0)` returns the input camera and positive factors that round onto the focus are likewise refused; externally supplied coincident cameras retain the documented no-op behavior for orbit, dolly, reset, flight, and a coincident `lookAt` target. Axis locking uses `Rz(z) Ry(y) Rx(x)`: canonical angles are extracted from the current and requested orientations, the requested locked coordinate is replaced with the current one, and the orientation is reconstructed; at gimbal lock `x = 0` and `z` is solved; labels are tilt/X, roll/Y, heading/Z; for upright cameras `x = 90° + forward elevation`, `y = 0`, and `z` is the right-vector heading, or forward azimuth minus 90° (modulo 360°); off upright these coordinates are coupled, and at `y = ±90°` X/Z are not independent physical locks. A pick whose reconstruction is unavailable (`{unavailable: true, reason: 'precision-limit'}`) is an unresolved pick: it starts no gesture and does not change the camera.
+- Basic flight: look plus move and strafe, with explicit speed in camera-local units per second; world speed is that value multiplied by camera scale. Escape releases input; blur or visibility
   loss stops movement immediately. No inertia, collision avoidance or vehicle model. Estimator-scaled
   slow-down is deferred unless it proves useful, and is never collision protection.
 - **Controller (gamepad) exploration (user decision, 2026-10-21: "We should support joystick for

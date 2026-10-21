@@ -52,7 +52,7 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4.6 — rev 4.6 records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
+**Revision:** 4.7 — rev 4.7 applies agreed Claude/Codex corrections with no new user decision: (1) B05 — camera interface and rulings (a)–(h) as converged, and the notes for B10, B11, B12 and B14 (B14's initial bulb scene uses `overview(bulb)`; B11 drops the palette allowlist entry) (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee), including the axis-lock heading “forward azimuth minus 90° (modulo 360°)” and the Menger overview radius rule, which supersede rev 4.6's statement that these were not yet in the plan text; (2) B06 — backend plan changes PC1–PC8 (F3 sample-0 initialization owned by B11 with a B06 zero-readback test; F2 probe and `preparation-failed` owned by B09; encode-only presenter; F8 asynchronous creation errors fail their tickets; F9 caller subdivides horizontally with one lease per region; target handles caller-owned until `release()`; frozen 8×8 dispatch ABI; `destroyDevice()` loss semantics) (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca). **Rev 4.6** records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
 rev 4.4). **B02 rulings 1–10** (Claude's B02 reviews r1/r2 and Codex run 20261021T072056Z-9083):
 (1) decimal grammar with lexical significant-digit counting, explicit exponent bound, signed zero;
 (2) `toDouble`/`toBinary32` reject non-finite results; (3) **AMENDED by Codex, accepted by Claude**
@@ -330,7 +330,7 @@ cites from Global Constraints); any later amendment changes both together.
   attached immediately after acquisition and never awaited before returning. Observed loss
   immediately makes the backend unavailable and invalidates its epoch before clients are notified
   (`onLoss({epoch, reason: 'destroyed' | 'unknown' | <reason>, message})`); late callbacks from
-  retired attempts cannot replace current state; outstanding tickets settle `interrupted`; a
+  retired attempts cannot replace current state; a loss observed before an acquisition is published refuses that acquisition (`device-lost`); outstanding tickets settle `interrupted`; a
   resolved queue fence after loss does not establish successful work. `Backend.destroy()` is
   terminal teardown and suppresses recovery; the test adapter destroys the underlying device
   without terminal teardown to exercise real loss recovery, and injected notifications exercise
@@ -363,23 +363,23 @@ cites from Global Constraints); any later amendment changes both together.
   conventions. B06, B08, B10 and B11 freeze their concrete pipeline IDs, slots and layouts
   alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and
   B11 add their descriptors and preparation assertions as their shaders come into existence; B11
-  verifies complete product prewarming before B14 enables interaction.
+  verifies complete product prewarming before B14 enables interaction. Compute dispatch geometry is frozen ABI: every compute entry point declares `@workgroup_size(8, 8, 1)`; the backend dispatches `ceil(region.width / 8) × ceil(region.height / 8)` workgroups and injects nothing; each pass carries its region (origin, size) in its own uniform layout and bounds-checks invocations.
 - **Batches.** The descriptor and ticket of B00 (`identity`, `pipelineId`, `pass`, `region`,
   `sample`, `bounds`, named `inputs`/`outputs` slots, `uniforms`); one command buffer per batch;
   uniform data snapshotted before submission; storage owned by an outstanding ticket is never
-  overwritten; horizontal subdivision allowed; completion is `device.queue.onSubmittedWorkDone()`
+  overwritten; horizontal subdivision is the caller's (one lease per region); completion is `device.queue.onSubmittedWorkDone()`
   labelled `queue-completion` (a fence includes preceding queued work and is not isolated shader
   time); GPU timestamps are a separate measurement recorded only when granted, never a substitute
   for completion. A watchdog timeout stops admission but neither settles the fence nor releases its
   resources; loss retires the epoch; ordinary cancellation drains it.
-- **Readback.** One bounded region per call, at most 256 rows, horizontally split if required,
+- **Readback.** One bounded region per call, at most 256 rows; a region whose staging (`alignUp(width × bytesPerTexel, 256) × rows`) would exceed `maxBufferSize` is refused `allocation-failed` before its lease is consumed, and the caller subdivides horizontally with one lease per region;
   into a lazily allocated pool of at most two staging buffers sized
   `alignUp(width × bytesPerTexel, 256) × rows`; `mapAsync(READ)`, copy out, `unmap`; the result
   resolves after copy-out and unmap; mapping ownership survives queue completion; every readback
   carries its epoch and identity.
 - **Configuration.** `configureTargets` is transactional: bytes are reserved and accounted first,
   allocation and validation errors captured (`pushErrorScope`), and the old usable target set is
-  retained if replacement fails.
+  retained if replacement fails. Successful target handles are caller-owned until `release(handle)`: a replacement never releases the earlier set, so a published image can be presented while its replacement is pending; B09 releases obsolete working targets and retains its published display until the replacement is published. Failed configurations roll back their own new resources; loss and `destroy()` invalidate everything.
 - **Allocator.** Every application-owned allocation passes through the tracked allocator, which
   checks `tracked + bytes ≤ 1 GiB` before resource creation. The production method
   `allocate({name, bytes, usage, data?}) → handle` creates a buffer in the current available device
@@ -390,7 +390,7 @@ cites from Global Constraints); any later amendment changes both together.
   unmaps before returning; this performs no application queue submission and consumes no admission
   lease. The backend derives native usage flags, including copy-source support for readback. There
   is no production host-update method; admitted shader writes to storage buffers remain permitted.
-  `stage()` is a fake-only test control.
+  `stage()` is a fake-only test control. `allocate` stays synchronous. Every native creation runs inside validation and out-of-memory error scopes, and a resource whose initialization throws is destroyed before the call fails. A creation error captured asynchronously marks the resource failed (`diagnostics().inventory[i].failure`). Every ticket that consumes a resource awaits that resource's creation scopes as well as its own scopes and fence, and settles `failed` with the creation message if any creation scope captured an error. Precedence: loss first (an outstanding ticket settles `interrupted` whatever its scopes report, and nothing settles while a loss is pending); then pre-queue failure (work that threw before `queue.submit` settles `failed` at once); then captured creation or submission errors (`failed` after scopes and fence); otherwise `completed` with timing observed at the fence.
 
   `release(handle)` marks a resource retiring; bytes leave accounting only when every ticket,
   mapping and retained-owner reference has ended. Uniform uploads, query/resolve storage, staging
@@ -653,7 +653,7 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   bytesPerTexel, bytes}` at actual internal dimensions; `layoutId` is the exported
   `TARGET_LAYOUT_ID = 'space-targets-v1'`; `handles.accumulation` and `descriptions.accumulation`
   are two-element arrays: for sample index `s`, read `handles.accumulation[s & 1]` and write
-  `handles.accumulation[(s + 1) & 1]`; the read side is zero at sample 0 of every accumulation identity, not only at allocation, so an appearance reset never reads stale sums (B00 review r2)); `submitBatch(batch, {admission})
+  `handles.accumulation[(s + 1) & 1]`; for every accumulation identity, sample 0 initializes the accumulated sum, count and diagnostic propagation from the current sample, without reading previous accumulation values or previous-identity diagnostic flags; physical clearing of the previous accumulation texture is unnecessary; samples after zero use the ping-pong parity above. B09 owns identity changes, sample indices and dependencies; B11 owns this initialization in its shaders (including stale `accumulationFlags` across an appearance reset); B06 owns resource initialization (fresh targets read zero) and lifetime); `submitBatch(batch, {admission})
   → Ticket`; `readback({identity, source, region, fields}, {admission}) → ReadbackTicket`;
   `present({identity, display}, {admission}) → Ticket`; `release(handle)`; `onLoss(callback) →
   unsubscribe`; `currentEpoch() → integer`; `diagnostics() → {state, epoch, tracked, peak,
@@ -673,7 +673,7 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   outstanding ticket `interrupted`, and the next `acquire()` advances the epoch; `readback` returns
   bytes staged with `backend.stage(handle, bytes)`; every submitting method throws
   `BackendError('no-admission')` without a consumable lease; `allocate` enforces the cap and
-  records `{tracked, peak, retiring, inventory}`; `backend.log` records every call in order;
+  records `{tracked, peak, retiring, inventory}`; `configureTargets` never releases earlier sets (target handles stay caller-owned until `release()`); `backend.log` records every call in order;
   `retain`/`retire` remain fake-only test controls (B09 resolves retained-image ownership before
   B06 review if production methods are needed);
   `backend.testAdapter = {destroyDevice(), injectLoss({reason}), failNextAllocation()}` (declared
@@ -1171,19 +1171,12 @@ table in the task report.
   log form; it is never materialized as a possibly underflowing double), `anchorAdd(anchor, scale,
   local) → anchor' | {unchanged: true, reason: 'precision-limit'}` uses exact decimal arithmetic on
   BigInt-scaled integers. Return an anchor only if it satisfies B02’s shared parser; otherwise
-  return the precision-limit outcome without changing the input anchor. `recentre(camera) →
-  {camera, driftBoundLog2} | {camera, unchanged: true, reason: 'precision-limit'}` (moves the
+  return the precision-limit outcome without changing the input anchor. `recentre(camera) → {camera, recentred, driftBoundLog2, exact} | {camera, recentred: false, unchanged: true, reason: 'precision-limit', detail}` (moves the
   local part into the anchor when `‖positionLocal‖ > 1024` or `< 2⁻¹⁰`, re-expressing `focusLocal`
   consistently; when the bound cannot be met within both the digit and anchor-exponent limits, the camera is
-  returned unchanged with an explicit precision-limit result. A decimal tail may be discarded only
-  after bounding the total resulting world-space error, including focus re-expression, by
-  `2⁻⁴⁰ × scale`; individual digit magnitudes alone are insufficient. B05 derives its
-  working-integer budget separately: anchor exponents alone do not bound exact scale/local
-  multiplication.), `encodeOrdinaryOrigin(camera) → {highF32:
-  [3], lowF32: [3], errorBoundLog2} | {unavailable: true, reason}` (the ordinary binary32
-  transport: `high` is the binary32 rounding of the double–double value, `low` the binary32
-  rounding of the exact remainder, computed in that order from the exact anchor, after
-  representability of both the high and the residual component has been checked; the GPU field
+  returned unchanged with an explicit precision-limit result. A decimal tail may be discarded only after the exact L1 sum of all six represented position and focus component errors is shown to be no greater than `scale × 2⁻⁴⁰`. A candidate that collapses a previously distinct position and focus is refused even if its error fits that bound. Refusal detail is `anchor-digits`, `anchor-exponent`, `focus-re-expression`, `local-range`, or `working-budget`. Focus re-expression refusal does not establish a fractal depth limit. B05 derives its
+  working-integer budget separately: anchor exponents alone do not bound exact scale/local multiplication. Successful rebasing returns `recentred: true`; a no-op returns false. Zero measured error is reported as `driftBoundLog2: null, exact: true`. Nonzero error uses its integer ceiling logarithm and `exact: false`. This reporting bound can be up to one bit looser than the admission threshold and is never used for admission.), `encodeOrdinaryOrigin(camera) → {highF32: [3], lowF32: [3], errorBoundLog2, exact} | {unavailable: true, reason}` (the ordinary binary32
+  transport: `high = RN32(exact represented coordinate)` and `low = RN32(exact − high)`, in that order, using nearest rounding with ties to even and range checks before use. `errorBoundLog2` bounds the absolute L1 world-space error. Zero error uses `null` with `exact: true`; otherwise the bound is its integer ceiling logarithm with `exact: false`. The `2⁻⁴⁶` relative property holds when high and low are binary32-normal; it is not an underflow guarantee; the GPU field
   coordinate's source expression is `(high + t·d) + low` — a source expression, not an arithmetic
   barrier: §10.2's analysis and guards cover permitted fusion and reassociation, and the coordinate
   probes record the effective GPU input bits for the transport and stagnation cases; a represented
@@ -1192,18 +1185,16 @@ table in the task report.
   {forward, right, up}` (rotates the canonical right (1, 0, 0), up (0, 1, 0) and forward (0, 0, −1)
   by `orientationWxyz`; a serialized orientation is reconstructed exactly, roll included; upright
   constraints apply to navigation operations, not to reconstruction), `rayDirection(camera, i, j,
-  width, height, jitter = {dx: 0, dy: 0})` (A.1 pixel centres with `h = tan(fov/2)` plus the
-  sample jitter), `angularPixelSize(camera, height)`, `orbit(camera, dYaw, dPitch)` (about
-  `focusLocal`; upright; pitch clamped to ±89°), `pan(camera, dx, dy)`, `dolly(camera, factor)`
-  (toward `focusLocal`, never crossing it), `lookAt(camera, focusLocal)` (upright),
-  `setOrientation(camera, wxyz, {lockAxis: null | 'x' | 'y' | 'z'})`, `resetOrientation(camera)`
-  (upright, looking at `focusLocal`), `overview(model, effective) → camera` (2.5 × the enclosing
-  radius along Project 0 A.6's direction), `equalCameras(a, b)`, `flightStep(camera, {forward,
-  strafe, rise, yaw, pitch}, speed, dtSeconds)` (upright: yaw about world Z, no roll),
-  `reconstructHit(camera, pixel, jitter, depth, width, height) → anchoredPoint` (the pick result's
+  width, height, jitter = {dx: 0, dy: 0})` (A.1 pixel centres with `h = tan(fov/2)` plus the sample jitter at (i + 0.5 + dx, j + 0.5 + dy), with j and dy positive downward), `angularPixelSize(camera, height)`, `orbit(camera, dYaw, dPitch)` (about
+  `focusLocal`; upright; pitch clamped to ±89°; at an exact pole, retain the current right vector’s horizontal heading before applying requested yaw and the pitch clamp), `pan(camera, dx, dy)`, `dolly(camera, factor)`
+  (multiplies the distance to `focusLocal`, never reaching or crossing it; factor zero and positive factors that round onto the focus return the original camera; negative factors are invalid), `lookAt(camera, focusLocal)` (upright),
+  `setOrientation(camera, wxyz, {lockAxis: null | 'x' | 'y' | 'z'})` (axis locking uses `Rz(z) Ry(y) Rx(x)`: extract canonical angles from the current and requested orientations, replace the requested locked coordinate with the current coordinate, then reconstruct; at gimbal lock, canonicalize `x = 0` and solve `z`; labels are tilt/X, roll/Y, heading/Z; for upright cameras, `x = 90° + forward elevation`, `y = 0`, and `z` is the right-vector heading, or forward azimuth minus 90° (modulo 360°); off upright, these coordinates are coupled, and at `y = ±90°`, X/Z are not independent physical locks), `resetOrientation(camera)`
+  (upright, looking at `focusLocal`), `overview(model, effective) → camera` (let `direction = [1.92, −1.44, 0.7]` and `directionLength = Math.hypot(...direction)`. Use the enclosing sphere’s radius unchanged; for a box, compute its centre and half-extents, then advance `Math.hypot(...halfExtents)` by one binary64 step toward positive infinity. Compute each position component as `centre[i] + (direction[i] / directionLength) * 2.5 * radius`, evaluating the multiplications left to right. Look upright toward the centre.), `equalCameras(a, b)` (compares represented position and focus exactly, FOV exactly, and normalized quaternion components modulo sign within eight binary64 epsilons; it serves history de-duplication and change detection, never cache/request keys or stored-scene identity), `flightStep(camera, {forward,
+  strafe, rise, yaw, pitch}, speed, dtSeconds)` (upright: yaw about world Z, no roll; speed is camera-local units per second; yaw and pitch are radians per second; translation uses updated forward/right and world Z rise; focus distance is preserved; B12 owns the elapsed-time clamp),
+  `reconstructHit(camera, pixel, jitter, depth, width, height) → anchoredPoint | {unavailable: true, reason: 'precision-limit'}` (the pick result's
   anchored world position, from the sample's own camera, pixel and jitter — never three binary32
-  values), `toLocal(camera, anchoredPoint) → [3]` (the point expressed in the camera's anchor and
-  scale, for `lookAt`).
+  values), `toLocal(camera, anchoredPoint) → [3] | {unavailable: true, reason: 'precision-limit'}` (the point expressed in the camera's anchor and
+  scale, for `lookAt`). An anchored point is `{anchor, scale, positionLocal}`; pixel is B00’s `[x,y]`, and depth is world ray distance. Invalid inputs throw. Representational failure returns unavailable. **Navigation safety:** navigation must refuse coincident results. Recentre must also refuse a result that collapses a previously distinct position and focus. `dolly(0)` returns the input camera; positive factors that round onto the focus are likewise refused. Externally supplied coincident cameras retain the documented no-op behavior for orbit, dolly, reset, flight, and a coincident `lookAt` target.
 
 **Design assertions:** §5.2 (represented position; recentring preserves positions to a declared
 bound; never one `Number` world position; world Z up; upright navigation; orientation preserved
@@ -1218,22 +1209,20 @@ picking (B10/B12).
   `‖positionLocal‖ ≤ 1024`); `recentring beyond the anchor digit limit returns the camera unchanged
   with a precision-limit result` (a 400-digit anchor and a scale of 2⁻¹⁰⁰⁰); `the ordinary origin
   is encoded as binary32 high and low parts in the declared order` (a 30-digit anchor: `lowF32 ≠
-  0`, and `highF32 + lowF32` in double equals the double–double value within 2⁻⁴⁶ relative); `an
+  0`, and `highF32 + lowF32` in double equals the exact represented coordinate within 2⁻⁴⁶ relative); `an
   origin whose remainder is out of binary32 range is unavailable and the camera unchanged`; `a
   serialized orientation with roll is reconstructed exactly by basis`; `the basis matches Project 0
   A.1 for the bulb overview` (`forward` ≈ (−0.768, 0.576, −0.28) within 10⁻³); `ray directions use
   pixel centres, the vertical field of view and the sample jitter` (the centre of 1280 × 720 with
   zero jitter is `forward`; the corner matches A.1's formula; jitter `{dx: 0.5, dy: 0}` moves the
-  direction by one half pixel); `orbit keeps the focus and the distance and stays upright`; `dolly
-  never crosses the focus`; `flight is upright: yaw about world Z, pitch clamped, no roll`;
+  direction by one half pixel); `orbit keeps the focus and the distance and stays upright`; `dolly approaches but never reaches the focus`; `flight is upright: yaw about world Z, pitch clamped, no roll`;
   `overview places the camera at 2.5 radii`; `setOrientation with a locked axis changes only the
   other two`; `reconstructHit's error is bounded by origin transport, direction rounding and depth
   quantization together` (the test bounds each term and their sum; depth spacing alone does not
   bound the total reconstruction error).
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "anchor arithmetic preserves the represented point within the recentre bound"`.
 - [ ] **Step 3: Implement** (`BigInt` is Space-owned and never in `shared/`; the orientation is a
-  unit quaternion `[w, x, y, z]`; the double–double split uses Dekker's exact two-sum on the
-  anchor's truncated decimal expansion).
+  unit quaternion `[w, x, y, z]`; transport rounds the exact represented coordinate and then its exact residual directly to binary32).
 - [ ] **Step 4: GREEN**, `npm test`.
 - [ ] **Step 5: Commit** — `"Add the anchored Space camera and perspective arithmetic (1b.1 B05)"`, then the gate.
 
@@ -1266,15 +1255,11 @@ picking (B10/B12).
   {allocate(desc) → handle, release(handle), retain(handle, owner), retire(owner),
   diagnostics()}`, `preparePipelines({device, pipelineSet, onProgress, boundMs}) →
   Promise<{preparedPipelineIds, pipelines}>` (`pipelines` stays inside the backend) (`createComputePipelineAsync` per variant; progress `{stage, completed,
-  total}`; timeout invalidates the attempt), `createPresenter({device, canvas}) → {present(
-  displayTexture, {admission})}` (the fullscreen render pipeline to the preferred canvas format
+  total}`; timeout invalidates the attempt), `createPresenter({device, canvas, format}) → {format, resize({width, height}), size(), encode(encoder, {pipeline, display, uniforms}), unconfigure()}` (encode-only; admission, the uniform snapshot, submission and the ticket stay in `backend.present`) (the fullscreen render pipeline to the preferred canvas format
   with scaling and no further transfer function); the probe pass writes `0x41544c53` ("ATLS")
-  into a 1 × 1 r32uint target, read back through ordinary admission; a mismatch is
-  `preparation-failed`. `backend.testAdapter = {destroyDevice(), injectLoss({reason}),
-  failNextAllocation()}` (declared separately from the production interface; `destroyDevice` is a
-  real loss without terminal teardown). `pipelineDescriptors.js` is **not** created here: B00 froze
-  the descriptor schema; B06 prepares executable self-check pipelines (`probe`, `present`, and a
-  `selfcheck-trace` that runs a fixed 64-step loop) and B08, B10 and B11 register their own
+  into a 1 × 1 r32uint target, B06 supplies the executable probe; B09's renderer preparation submits it and reads it back through ordinary admission, compares it with ATLS, and rejects with `preparation-failed` on mismatch (B13 and B14 consume that result); compilation alone is not successful product preparation. `backend.testAdapter = {destroyDevice(), injectLoss({reason}),
+  failNextAllocation()}` (declared separately from the production interface; `destroyDevice()` is a real loss without terminal teardown. From the call until the loss is observed, nothing is admitted (`unavailable`), and only the loss path settles work. Outstanding tickets settle `interrupted`; an in-flight `prepare()` or `configureTargets()`, whether its own work succeeded or was rejected, waits for the loss and rejects `device-lost`; readback mappings end through the loss path. It resolves once the loss is observed. `uncapturedErrors()` observes uncaptured and creation errors). `pipelineDescriptors.js` is **not** created here: B00 froze
+  the descriptor schema; B06 prepares executable self-check pipelines (`probe`, `present`, and a `selfcheck-trace` loop of at most 64 steps with early exit) and B08, B10 and B11 register their own
   descriptors with preparation assertions as their shaders come into existence.
 
 **Design assertions:** §9 (the backend owns resources, encoding, submission, completion,
@@ -1305,7 +1290,7 @@ against the eventual shaders.
   backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a
   new epoch`; `Configuration failure keeps the previous target set usable` (request a target set
   above the cap; the earlier set still presents); `A 4K target set allocates within the cap at
-  72 bytes per pixel and is reclaimed after the last ticket retires`.
+  72 bytes per pixel and is reclaimed after the last ticket retires`. **F3 zero-readback assertion (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480, 20261021T170126Z-88ca):** a fresh target set reads back as zero in both accumulation textures and `accumulationFlags` at 1024 × 600 with correct byte lengths; B06 owns resource initialization (fresh targets read zero), while per-identity sample-0 initialization belongs to B11's accumulate shader.
 - [ ] **Step 3: Implement.** - [ ] **Step 4: GREEN** — Node first, then `flock … npm run test:space -- --group recovery`.
 - [ ] **Step 5: Commit** — `"Add the WebGPU backend with tracked allocation, admission and loss mapping (1b.1 B06)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
@@ -1572,7 +1557,7 @@ backend.
   (central differences at ε = 0.5·τ(t); writes `normal` with availability), `pick_readback` (one
   pinned geometry sample's depth and packed status; the CPU reconstructs the anchored hit with
   `reconstructHit` from that sample's camera, pixel and jitter — no absolute world hit is collapsed
-  to binary32); `passes.js`: `TRACING_VERSION = 'surface-v1/space-trace-v1'`, `TRACING_HASHES`,
+  to binary32) **B05 note (Codex run 20261021T123602Z-6e35 and 20261021T170807Z-a7ee):** `reconstructHit` and `toLocal` may return `{unavailable: true, reason: 'precision-limit'}`; B10 preserves that outcome as an unresolved pick and does not assume every call returns an anchored point. Use downward-positive `dy` (j and dy increase downward).; `passes.js`: `TRACING_VERSION = 'surface-v1/space-trace-v1'`, `TRACING_HASHES`,
   `tracePipelineDescriptors()`, `traceUniforms(request, camera, effective, jitter)` (origin
   `highF32` and `lowF32`, basis, α, the τ floor, step multiplier, caps, enclosing-interval
   parameters; the field coordinate's source expression is `(high + t·d) + low`, per B05),
@@ -1623,7 +1608,7 @@ per family with their domains.
   its exports and byte results stay identical
 - Modify (mechanical): `src/space/scene-adapter.js` — import `PALETTES` from
   `src/shared/palettes.js`. Add an assertion that no `src/space/**` module imports `src/plane/**`
-  (rev 4.4, B02 ruling 10).
+  (rev 4.4, B02 ruling 10). **B05 note (Codex run 20261021T123602Z-6e35 and 20261021T170807Z-a7ee):** when the palette dependency moves, remove `/^src\/plane\/palettes\.js$/` from that assertion’s allowlist.
 - Modify: `tests/space.mjs` (`rendering` group), `tests/suites.manifest.json`
 - Test: `tests/unit/shared-palettes.test.js`; headed checks.
 
@@ -1664,7 +1649,7 @@ samples); §13.9 (no fog); §4.1 (palette definitions and interpolation shared; 
   `Diagnostic modes show the legend colours exactly for the status words`; `Secondary-ray
   failures remain visibly diagnostic and are counted`, including a simultaneous shadow and AO
   failure; `Diagnostic outcomes survive accumulation`; `The complete product pipeline set prewarms
-  within the bound and its preparation time is recorded`.
+  within the bound and its preparation time is recorded`. Node/headed addition (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480, 20261021T170126Z-88ca): `sample 0 after an appearance reset on poisoned accumulation and flag targets equals a fresh allocation, for subdivided regions and the following samples`.
 - [ ] **Step 2: Implement** the three shaders, `appearance.js` and the shared palette extraction
   (the integration this task closes: a settled job runs to full quality on the real device).
 - [ ] **Step 3: GREEN** (`npm test`, the Plane gate suites, then `--group rendering` under the lock).
@@ -1702,7 +1687,7 @@ existing Plane assertion unchanged and green.
   and settle navigation; a tick after a gesture closed cannot update it. Nothing imports
   `src/plane/gestures.js`.
 - Produces (`flight.js`): `createFlight({getCamera, setCamera, clock, onStart, onStop}) →
-  {start(), toggle(), keyDown(code), keyUp(code), pointerLook(dx, dy), setSpeed(unitsPerSecond),
+  {start(), toggle(), keyDown(code), keyUp(code), pointerLook(dx, dy), setSpeed(localUnitsPerSecond),
   speed, tick(now), stop(reason: 'escape' | 'blur' | 'hidden' | 'stop-key' | 'deactivate' |
   'history'), active}` (`onStart`/`onStop` notify the gesture owner, which opens and commits the
   `flight` gesture; no inertia; `stop` zeroes every velocity immediately; `tick` applies
@@ -1724,7 +1709,7 @@ navigation; camera-only jumps add one entry; undo never moves the camera); §13.
 dolly, focus by asynchronous depth readback, overview, orientation reset and control with axis
 constraints; flight with explicit speed; Escape releases; blur or visibility loss stops
 immediately; no inertia; camera exterior status); §15 (lost input: overview, reset and history one
-action away). Excludes DOM layout (B14). **B05 note (Codex run 20261021T123602Z-6e35):** B12's "identical camera" check, under which an identical returned camera starts no gesture, uses `equalCameras` (equal values), never `===`: a stalled dolly at the representation floor returns a new object with equal values.
+action away). Excludes DOM layout (B14). **B05 note (Codex run 20261021T123602Z-6e35):** B12's "identical camera" check, under which an identical returned camera starts no gesture, uses `equalCameras` (equal values), never `===`: a stalled dolly at the representation floor returns a new object with equal values. **B05 note (Codex run 20261021T123602Z-6e35 and 20261021T170807Z-a7ee):** rename the parameter description to `setSpeed(localUnitsPerSecond)` (camera-local units per second). Check both the `reconstructHit` and `toLocal` outcomes before `lookAt`; an unavailable outcome is an unresolved pick that starts no focus gesture and leaves the camera unchanged. An identical returned camera starts no focus gesture. Offer Overview, not reset, for loaded coincident scenes. Use the tilt/roll/heading labels with the stated coordinate convention (heading is forward azimuth minus 90°, modulo 360°). Do not label a `focus-re-expression` refusal “precision limit reached.”
 
 - [ ] **Step 1: Write the failing tests** (fake DOM as in 1a's `navigation.test.js`): `an orbit
   drag is one camera-history entry and undo does not move the camera`; `a wheel burst groups within
@@ -1979,7 +1964,7 @@ transitively T05, T07, T08, T09b, T10, T11); the dependency table reconciled aga
 scene, camera, undo and camera history; hidden work pauses; captured input released; a fresh start
 opens Plane without acquiring a Space device); §13.2 (viewport, parameter panel, indicators); §14
 (Space scene files); §15 (first-use compilation visible; lost input one action from overview, reset
-and history); §4.3 (every existing Plane assertion survives).
+and history); §4.3 (every existing Plane assertion survives). **B05 note (Codex run 20261021T123602Z-6e35 and 20261021T170807Z-a7ee):** a fresh Space investigation and its history are seeded from `overview(bulb)`; any corresponding B02 default/test changes belong to this integration change.
 
 - [ ] **Step 1: Node tests** (fake DOM, fake backend): `a fresh start activates Plane and never
   calls the Space backend factory`; `switching deactivates the current workspace before activating
