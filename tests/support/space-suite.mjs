@@ -9,6 +9,47 @@ export const PROJECT0_LAUNCH_ARGS = Object.freeze([
 ]);
 export const SPIKE_DOCUMENT_PATH = 'docs/reports/project1b/2026-10-21-coexistence-spike.md';
 export const DEVELOPER_FLAG = '--enable-webgpu-developer-features';
+
+// Long tasks attributed by interval overlap with recorded phases ({start, end} in performance.now()
+// time). A task before the first phase is page startup; a task after every phase is `outside`; a task
+// that starts inside a phase and ends after it (terminal synchronous work) belongs to that phase.
+export function longTasksByPhase(entries, phases) {
+  const names = Object.keys(phases);
+  for (const name of names) { const { start, end } = phases[name]; if (!(Number.isFinite(start) && Number.isFinite(end) && end >= start)) throw new RangeError(`phase ${name} needs finite start ≤ end`); }
+  const firstStart = Math.min(...names.map(name => phases[name].start));
+  const byPhase = Object.fromEntries(names.map(name => [name, []]));
+  const startup = [], outside = [];
+  for (const entry of entries ?? []) {
+    const taskStart = entry.startTime, taskEnd = entry.startTime + entry.duration;
+    const task = { name: entry.name, startTime: entry.startTime, duration: entry.duration };
+    const overlapping = names.filter(name => taskStart < phases[name].end && taskEnd > phases[name].start);
+    if (overlapping.length) for (const name of overlapping) byPhase[name].push(task);
+    else if (taskEnd <= firstStart) startup.push(task);
+    else outside.push(task);
+  }
+  return { phases, byPhase, startup, outside, total: (entries ?? []).length };
+}
+
+// The served source set, file by file, against the checkout (injected IO so the unit runner can
+// exercise it). `files` are the tracked application files; a mismatch or a missing file refuses.
+export async function verifyServedSource({ files, readLocal, fetchServed }) {
+  if (!Array.isArray(files) || !files.length) throw new Error('verifyServedSource: no files to verify');
+  const mismatched = [], missing = [];
+  let matched = 0;
+  for (const path of files) {
+    const local = Buffer.from(await readLocal(path)), served = await fetchServed(path);
+    if (served === null || served === undefined) { missing.push(path); continue; }
+    if (Buffer.compare(local, Buffer.from(served)) === 0) matched++; else mismatched.push(path);
+  }
+  return { files: files.length, matched, mismatched, missing, matches: mismatched.length === 0 && missing.length === 0 };
+}
+
+// Server readiness first, then the served source: a probe taken while nothing listens is never kept.
+export async function startupSequence({ ensureServer, identifySource }) {
+  const serverOwnership = await ensureServer();
+  const source = await identifySource();
+  return { serverOwnership, source };
+}
 // The manifest's requiredPasses for space-coexistence (a unit test keeps the two identical).
 export const COEXISTENCE_REQUIRED_PASSES = Object.freeze([
   'WebGL 2 and WebGPU contexts coexist in one page',
@@ -98,22 +139,26 @@ export function activeGpuIdentity(text) {
 // Parsing stays inside the section: it ends at the next section (`Driver Information`, a `[Section]`
 // heading, a `GPUn` record) and a following feature label (`* Name: …`, `Name:`) or boundary is never
 // read as a value.
-const SECTION_BOUNDARY = /^(Driver Information|GPU\d+\b.*|\[[^\]]*\]|[=-]{3,})$/;
+// A section boundary is a named section, a `[Section]` heading, a `GPUn` record, or any plain line
+// underlined by `===`/`---` on the next line (chrome://gpu's `Version Information` and the like).
+const SECTION_BOUNDARY = /^(Driver Information|GPU\d+\b.*|\[[^\]]*\])$/;
+const UNDERLINE = /^[=-]{3,}$/;
 const FEATURE_LABEL = /^\*?\s*[A-Za-z][^:]*:(\s.*)?$/;
 export function graphicsFeatureStatus(text, feature) {
   const lines = String(text ?? '').split('\n').map(line => line.trim());
   const start = lines.indexOf('Graphics Feature Status');
   if (start < 0) return 'unavailable';
+  const boundary = index => SECTION_BOUNDARY.test(lines[index]) || (lines[index] !== '' && !UNDERLINE.test(lines[index]) && UNDERLINE.test(lines[index + 1] ?? ''));
   for (let index = start + 1; index < lines.length; index++) {
-    if (SECTION_BOUNDARY.test(lines[index]) && !/^[=-]{3,}$/.test(lines[index])) break;
+    if (UNDERLINE.test(lines[index])) continue; // the section's own underline
+    if (boundary(index)) break;
     const match = new RegExp(`^\\*?\\s*${feature}(?::\\s*(.*)|\\s*)$`).exec(lines[index]);
     if (!match) continue;
     if (match[1]) return match[1].trim();
     let next = index + 1;
     while (next < lines.length && !lines[next]) next++;
     if (next >= lines.length) return 'unavailable';
-    const candidate = lines[next];
-    return SECTION_BOUNDARY.test(candidate) || FEATURE_LABEL.test(candidate) ? 'unavailable' : candidate;
+    return boundary(next) || UNDERLINE.test(lines[next]) || FEATURE_LABEL.test(lines[next]) ? 'unavailable' : lines[next];
   }
   return 'unavailable';
 }
@@ -142,6 +187,14 @@ const entryNamed = (report, name) => report.find(entry => entry?.name === name);
 // repeat runs (each `{ label, report }`); `experiment` is the developer-flag experiment's report;
 // `report` is the run the tables describe. Every input is validated as evidence first.
 const sourceCell = env => (env?.source?.commit ? `\`${env.source.commit}\` (${env.source.dirty ? 'dirty' : 'clean'})` : 'unavailable');
+const taskList = tasks => (tasks.length ? ` (${tasks.map(task => `${show(task.name)} at ${ms(task.startTime)} for ${ms(task.duration)}`).join('; ')})` : '');
+// Long tasks per recorded phase (PerformanceObserver `longtask`, filtered by interval overlap).
+const longTasksCell = longTasks => {
+  if (!longTasks?.byPhase) return 'Long tasks: not recorded.';
+  const phase = name => `${(longTasks.byPhase[name] ?? []).length}${taskList(longTasks.byPhase[name] ?? [])}`;
+  const phaseSpan = name => (longTasks.phases?.[name] ? `${ms(longTasks.phases[name].start)}–${ms(longTasks.phases[name].end)}` : 'unavailable');
+  return `Long tasks (PerformanceObserver \`longtask\`, attributed by interval overlap, collected through the terminal task): overlapping the preparation phase: ${phase('preparation')} [${phaseSpan('preparation')}]; overlapping the dispatch phase: ${phase('dispatch')} [${phaseSpan('dispatch')}]; page startup tasks before preparation (recorded separately, not attributed to preparation or dispatch): ${longTasks.startup?.length ?? 0}${taskList(longTasks.startup ?? [])}; after every phase: ${longTasks.outside?.length ?? 0}${taskList(longTasks.outside ?? [])}.`;
+};
 const waitsCell = waits => Object.entries(waits ?? {}).map(([key, wait]) => `${key}: armed ${show(wait.armed)}, rearmed ${show(wait.rearmed)}, fired ${show(wait.fired)}`).join('; ') || 'none recorded';
 export function renderSpikeDocument(report, { generatedAt, commit, runs = [], experiment = null } = {}) {
   validateCoexistenceReport(report, 'the suite report');
@@ -173,7 +226,7 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [], ex
     `| chrome://gpu active record | ${env.chromeGpu?.record ? `vendor 0x${env.chromeGpu.vendorId.toString(16)}, device 0x${env.chromeGpu.deviceId.toString(16)}, driver ${env.chromeGpu.driverVendor} ${env.chromeGpu.driverVersion} (${show(env.chromeGpu.polls)} poll(s))` : `unavailable (${show(env.chromeGpu?.reason)})`} |`,
     `| chrome://gpu Graphics Feature Status: WebGPU | ${show(env.webgpuStatus)} |`,
     `| GPU handoff (ATLAS_GPU_HANDOFF) | ${show(env.handoff)} |`,
-    `| Source | commit ${sourceCell(env)}; served from ${show(env.source?.servedUrl)}; served device.js matches the checkout: ${show(env.source?.servedModuleMatches)} |`,
+    `| Source | commit ${sourceCell(env)}; served from ${show(env.source?.servedUrl)} (server ${show(env.serverOwnership)} by the suite); served source set verified against the checkout: ${show(env.source?.servedSource?.matched)} of ${show(env.source?.servedSource?.files)} tracked application files match${env.source?.servedSource?.matches ? '' : ` — MISMATCH ${show(env.source?.servedSource)}`} |`,
     `| Suite started | ${show(env.startedAt)} |`,
     `| Viewport | ${show(env.viewport?.width)} × ${show(env.viewport?.height)}, device scale factor ${show(env.viewport?.deviceScaleFactor)} |`, '',
     'Full effective command line (chrome://version):', '', '```', show(env.effectiveCommandLine), '```', '',
@@ -193,7 +246,7 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [], ex
   for (const [key, value] of Object.entries(identity.limits ?? {})) push(`| ${key} | ${show(value)} |`);
   push('', '## 3. Representative pipeline preparation', '',
     `Bound ${show(prepared.boundMs)} ms per attempt (plan default 60 s). First preparation in this fresh browser profile ${ms(prepared.totalMs)} (driver-cache state unmeasured); progress events ${show(prepared.events?.length)}; warm re-preparation of identical sources in the same device ${ms(prepared.warm?.totalMs)}.`, '',
-    `Timer: \`performance.now()\` resolution measured in page ${show(prepared.timer?.resolutionMs)} ms (smallest positive delta over ${show(prepared.timer?.samples)} samples, ${show(prepared.timer?.distinctDeltas)} distinct deltas); in-page times at or below that resolution are bounds, not measurements. Long tasks observed during preparation and dispatch (PerformanceObserver \`longtask\`): ${(prepared.longTasks ?? []).length} long task(s)${(prepared.longTasks ?? []).length ? ` — ${prepared.longTasks.map(task => `${show(task.name)} at ${ms(task.startTime)} for ${ms(task.duration)}`).join('; ')}` : ''}. Scheduled waits (armed / rearmed / fired): ${waitsCell(prepared.waits)}.`, '',
+    `Timer: \`performance.now()\` resolution measured in page ${show(prepared.timer?.resolutionMs)} ms (smallest positive delta over ${show(prepared.timer?.samples)} samples, ${show(prepared.timer?.distinctDeltas)} distinct deltas); in-page times at or below that resolution are bounds, not measurements. ${longTasksCell(prepared.longTasks)} Scheduled waits (armed / rearmed / fired): ${waitsCell(prepared.waits)}.`, '',
     '| Stage | Module | Pipeline (createComputePipelineAsync) | Total | Warm total | Compilation messages |', '|---|---|---|---|---|---|');
   for (const stage of prepared.stages ?? []) {
     const warm = (prepared.warm?.stages ?? []).find(item => item.id === stage.id);
@@ -205,12 +258,13 @@ export function renderSpikeDocument(report, { generatedAt, commit, runs = [], ex
     push(`Representative trace dispatch (recorded, not a requirement): ${show(d.width)} × ${show(d.height)} rays, submission ${ms(d.submissionMs)}, queue completion ${ms(d.queueCompletionMs)} (labelled queue-completion; a fence includes preceding work), termination counts ${show(d.counts)}.`, '');
   }
   if (runs.length) {
-    push('## Repeat runs (ordered by start time; fresh browser profile each; driver-cache state unmeasured)', '', '| Run | Started | Source | First preparation | trace | normals | display | Warm total | Dispatch queue completion | Long tasks |', '|---|---|---|---|---|---|---|---|---|---|');
+    push('## Repeat runs (ordered by start time; fresh browser profile each; driver-cache state unmeasured)', '', '| Run | Started | Source | First preparation | trace | normals | display | Warm total | Dispatch queue completion | Long tasks preparation / dispatch |', '|---|---|---|---|---|---|---|---|---|---|');
     const started = run => entryNamed(run.report ?? [], 'environment')?.startedAt ?? '';
     for (const run of [...runs].sort((a, b) => started(a).localeCompare(started(b)))) {
       const e = entryNamed(run.report ?? [], 'environment') ?? {}, p = entryNamed(run.report ?? [], 'A representative pipeline set prepares within the bound with progress events') ?? {};
       const stage = id => ms((p.stages ?? []).find(item => item.id === id)?.totalMs);
-      push(`| ${run.label} | ${show(e.startedAt)} | ${sourceCell(e)} | ${ms(p.totalMs)} | ${stage('trace')} | ${stage('normals')} | ${stage('display')} | ${ms(p.warm?.totalMs)} | ${ms(p.dispatch?.queueCompletionMs)} | ${(p.longTasks ?? []).length} |`);
+      const tasks = p.longTasks?.byPhase ? `${p.longTasks.byPhase.preparation?.length ?? 0} / ${p.longTasks.byPhase.dispatch?.length ?? 0} (startup ${p.longTasks.startup?.length ?? 0})` : 'not recorded';
+      push(`| ${run.label} | ${show(e.startedAt)} | ${sourceCell(e)} | ${ms(p.totalMs)} | ${stage('trace')} | ${stage('normals')} | ${stage('display')} | ${ms(p.warm?.totalMs)} | ${ms(p.dispatch?.queueCompletionMs)} | ${tasks} |`);
     }
     push('');
   }

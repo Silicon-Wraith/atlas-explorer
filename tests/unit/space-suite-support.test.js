@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, COEXISTENCE_REQUIRED_PASSES, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments,
-  validateCoexistenceReport, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH } from '../support/space-suite.mjs';
+  validateCoexistenceReport, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from '../support/space-suite.mjs';
 
 // chrome://gpu visible text as Chrome renders it: GPUn records on their own lines, the active one
 // marked *ACTIVE*, fields comma-separated and DEVICE= full of commas inside its bracketed name.
@@ -54,6 +54,66 @@ test('a missing feature value never consumes the next feature label or a section
   assert.equal(graphicsFeatureStatus('Graphics Feature Status\n=====\n*   WebGL: Hardware accelerated\nDriver Information\n=====\n*   WebGPU: Hardware accelerated\n', 'WebGPU'), 'unavailable', 'parsing stays inside the feature-status section');
 });
 
+test('an underlined heading is a section boundary, never a value and never inside the section', () => {
+  assert.equal(graphicsFeatureStatus('Graphics Feature Status\nWebGPU:\nVersion Information\n===================\n', 'WebGPU'), 'unavailable', 'an underlined heading is not a value');
+  assert.equal(graphicsFeatureStatus('Graphics Feature Status\n=======================\n*   WebGL: Hardware accelerated\nVersion Information\n===================\n*   WebGPU: Hardware accelerated\n', 'WebGPU'), 'unavailable', 'a WebGPU line beyond an underlined heading is outside the section');
+  assert.equal(graphicsFeatureStatus('Graphics Feature Status\n=======================\n*   WebGPU:\n\nHardware accelerated\nVersion Information\n---\n', 'WebGPU'), 'Hardware accelerated', 'a value before the next heading is still read');
+  assert.equal(graphicsFeatureStatus('Graphics Feature Status\nWebGPU:\n\nVersion Information\n---------\n*   WebGPU: Software only\n', 'WebGPU'), 'unavailable');
+});
+
+// Long tasks are attributed by interval overlap with a recorded phase; tasks before the first phase
+// are page startup (labelled separately); a task that starts inside a phase and ends after it (the
+// terminal synchronous work) belongs to that phase.
+test('longTasksByPhase keeps only tasks overlapping each phase, labels earlier tasks as startup and captures a terminal task', () => {
+  const phases = { preparation: { start: 1000, end: 1100 }, dispatch: { start: 1100, end: 1120 } };
+  const entries = [
+    { name: 'self', startTime: 53, duration: 101 },        // page startup, before any phase
+    { name: 'self', startTime: 990, duration: 15 },        // overlaps the start of preparation
+    { name: 'self', startTime: 1010, duration: 60 },       // inside preparation
+    { name: 'self', startTime: 1115, duration: 80 },       // terminal: starts in dispatch, ends after it
+    { name: 'self', startTime: 1300, duration: 70 },       // after every phase
+    { name: 'self', startTime: 940, duration: 60 },        // ends exactly at the phase start: no overlap
+  ];
+  const result = longTasksByPhase(entries, phases);
+  assert.deepEqual(result.phases, phases);
+  assert.deepEqual(result.byPhase.preparation.map(task => task.startTime), [990, 1010]);
+  assert.deepEqual(result.byPhase.dispatch.map(task => task.startTime), [1115]);
+  assert.deepEqual(result.startup.map(task => task.startTime), [53, 940]);
+  assert.deepEqual(result.outside.map(task => task.startTime), [1300]);
+  assert.equal(result.total, 6);
+  assert.deepEqual(longTasksByPhase([], phases).byPhase, { preparation: [], dispatch: [] });
+  assert.throws(() => longTasksByPhase(entries, { bad: { start: 5, end: 1 } }), /phase bad/);
+});
+
+// The served source set is verified file by file against the checkout; one matching module never
+// stands for the application.
+test('verifyServedSource compares every tracked application file with the checkout and reports mismatches and missing files', async () => {
+  const local = { 'index.html': 'A', 'src/app.js': 'B', 'src/space/render/webgpu/device.js': 'C' };
+  const served = { ...local };
+  const io = { readLocal: async path => Buffer.from(local[path]), fetchServed: async path => (path in served ? Buffer.from(served[path]) : null) };
+  const ok = await verifyServedSource({ files: Object.keys(local), ...io });
+  assert.deepEqual(ok, { files: 3, matched: 3, mismatched: [], missing: [], matches: true });
+  served['src/app.js'] = 'B2';
+  delete served['index.html'];
+  const bad = await verifyServedSource({ files: Object.keys(local), ...io });
+  assert.deepEqual(bad, { files: 3, matched: 1, mismatched: ['src/app.js'], missing: ['index.html'], matches: false });
+  await assert.rejects(verifyServedSource({ files: [], ...io }), /no files/);
+});
+
+// The server must be ready before the served source is identified: a probe taken while nothing is
+// listening is never kept.
+test('startupSequence identifies the served source only after the server is ready', async () => {
+  const log = [];
+  let ready = false;
+  const result = await startupSequence({
+    ensureServer: async () => { log.push('server'); ready = true; return 'owned'; },
+    identifySource: async () => { log.push('identify'); return { matches: ready }; },
+  });
+  assert.deepEqual(log, ['server', 'identify']);
+  assert.deepEqual(result, { serverOwnership: 'owned', source: { matches: true } });
+  await assert.rejects(startupSequence({ ensureServer: async () => { throw new Error('port busy'); }, identifySource: async () => ({ matches: true }) }), /port busy/);
+});
+
 test('checkEffectiveArguments compares the recorded profile with the effective command line and refuses an unsandboxed or headless launch', () => {
   assert.deepEqual([...PROJECT0_LAUNCH_ARGS], ['--enable-gpu', '--use-angle=vulkan', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan', '--enable-webgpu-developer-features']);
   assert.equal(DEVELOPER_FLAG, '--enable-webgpu-developer-features');
@@ -75,7 +135,8 @@ const environment = (patch = {}) => ({
   requestedArgs: [...PROJECT0_LAUNCH_ARGS], effectiveArguments: { present: [...PROJECT0_LAUNCH_ARGS], missing: [], noSandbox: false, headless: false, gpuWatchdogDisabled: false, developerFeatures: true },
   effectiveCommandLine: '/opt/google/chrome/chrome --enable-gpu --user-data-dir=/tmp/pw-profile-1 about:blank',
   chromeGpu: { vendorId: 0x10de, deviceId: 0x26b1, driverVendor: 'Nvidia', driverVersion: '580.173.02', record: 'VENDOR= 0x10de …', polls: 2 }, webgpuStatus: 'Hardware accelerated (sample)',
-  handoff: 'B01 implementer (Fable), 2026-10-21, granted by controller', source: { commit: 'abc1234', dirty: false, servedUrl: 'http://127.0.0.1:5197', servedModuleMatches: true },
+  handoff: 'B01 implementer (Fable), 2026-10-21, granted by controller', serverOwnership: 'adopted',
+  source: { commit: 'abc1234', dirty: false, servedUrl: 'http://127.0.0.1:5197', servedSource: { files: 32, matched: 32, mismatched: [], missing: [], matches: true } },
   startedAt: '2026-10-21T00:00:00.000Z', ...patch,
 });
 const sampleReport = () => [
@@ -90,7 +151,9 @@ const sampleReport = () => [
     stages: [{ id: 'trace', moduleMs: 1.2, pipelineMs: 80.1, totalMs: 81.3, messages: [] }, { id: 'normals', moduleMs: 0.8, pipelineMs: 20.2, totalMs: 21, messages: [] }, { id: 'display', moduleMs: 0.5, pipelineMs: 10.3, totalMs: 10.8, messages: [] }],
     events: [{ stage: 'trace', index: 1, total: 3, elapsedMs: 81.3 }, { stage: 'normals', index: 2, total: 3, elapsedMs: 102.3 }, { stage: 'display', index: 3, total: 3, elapsedMs: 113.1 }],
     warm: { totalMs: 5.5, stages: [{ id: 'trace', totalMs: 2 }, { id: 'normals', totalMs: 2 }, { id: 'display', totalMs: 1.5 }] },
-    timer: { resolutionMs: 0.005, samples: 4096, distinctDeltas: 3 }, longTasks: [{ name: 'self', startTime: 12.5, duration: 61 }], waits: { preparationBound: { armed: 1, rearmed: 0, fired: false } },
+    timer: { resolutionMs: 0.005, samples: 4096, distinctDeltas: 3 },
+    longTasks: { phases: { preparation: { start: 1000, end: 1123.4 }, dispatch: { start: 1123.4, end: 1133.3 } }, byPhase: { preparation: [], dispatch: [{ name: 'self', startTime: 1130, duration: 61 }] }, startup: [{ name: 'self', startTime: 53, duration: 101 }], outside: [], total: 2 },
+    waits: { preparationBound: { armed: 1, rearmed: 0, fired: false } },
     dispatch: { width: 128, height: 128, submissionMs: 0.4, queueCompletionMs: 9.9, counts: { hit: 5000, miss: 11000, unresolved: 384, numericalFailure: 0 } } },
   { name: 'WebGPU device destroyed without disturbing WebGL', lost: { reason: 'destroyed' }, webglAfterDestroy: { status: 'complete' }, waits: { lossObservation: { armed: 1, rearmed: 0, fired: false } } },
   { name: 'No browser runtime errors' },
@@ -138,11 +201,15 @@ test('renderSpikeDocument records conditions and every measured value from the r
   for (const needle of ['155.0.8059.84', '--enable-webgpu-developer-features', '0x10de', '0x26b1', '580.173.02', 'space-device-1-x', 'bgra8unorm',
     '1280 × 720', 'nvidia', 'unavailable', 'timestamp-query', '2147483648', '80.1', '20.2', '10.3', '123.4', '60000', '5.5', 'destroyed', 'abc1234', '2026-10-21T12:00:00.000Z', '5000', '11000', '384', 'Hardware accelerated (sample)',
     // fix round 1: measured timer resolution, long tasks, wait rearms, the full command line, the handoff, per-run source and the unmeasured cache state
-    '0.005 ms', '4096', 'long task', '61 ms', 'rearm', '/opt/google/chrome/chrome --enable-gpu --user-data-dir=/tmp/pw-profile-1 about:blank', 'B01 implementer (Fable), 2026-10-21, granted by controller',
-    'driver-cache state unmeasured', 'http://127.0.0.1:5197']) {
+    '0.005 ms', '4096', 'Long tasks (', '61 ms', 'rearm', '/opt/google/chrome/chrome --enable-gpu --user-data-dir=/tmp/pw-profile-1 about:blank', 'B01 implementer (Fable), 2026-10-21, granted by controller',
+    'driver-cache state unmeasured', 'http://127.0.0.1:5197',
+    // fix round 2: per-phase long tasks with startup tasks separate, the served source set and server ownership
+    'preparation phase: 0', 'dispatch phase: 1', 'page startup', '101 ms', '32 of 32', 'adopted']) {
     assert.ok(text.includes(needle), `document must record ${needle}`);
   }
   assert.doesNotMatch(text, /shader cache persists|compiles from scratch/, 'no cache state is claimed that was not measured');
+  assert.doesNotMatch(text, /served device\.js matches/, 'a single module never stands for the checkout');
+  assert.match(text, /startup[^\n]*not attributed to preparation or dispatch/i);
   assert.match(text, /^# /m);
   assert.match(text, /Generated from the suite report/);
   assert.match(text, /headed/i);

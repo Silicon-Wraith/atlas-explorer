@@ -4,8 +4,8 @@
 // Every group launches installed Chrome headed with the complete recorded Project 0 profile on the
 // physical GPU (E7: headed only), tests the gate-owned committed source checkout (the unchanged gate
 // serves the repository root on its own port; a standalone run must identify the served checkout,
-// which the environment entry does by commit, dirty state and a byte comparison of the served
-// device.js), records {name, details} passes to its own report with the requested and effective
+// which the environment entry does by commit, dirty state, server ownership and a byte comparison of
+// every tracked application file the server serves), records {name, details} passes to its own report with the requested and effective
 // launch arguments, the chrome://gpu identity, the GPU handoff and the source, and is bounded by
 // installSuiteDeadline. B01 registers `coexistence` (gated) and `developer-flag-experiment` (a
 // separately reported portability experiment, never gated); later tasks add numerics, rendering,
@@ -19,7 +19,7 @@ import { dirname, resolve } from 'node:path';
 import { spawn, execFileSync } from 'node:child_process';
 import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev, CHROME_TMPDIR, chromeLaunchEnv } from './support/bounded.mjs';
 import { cleanupPages } from './support/workflow-cleanup.mjs';
-import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH } from './support/space-suite.mjs';
+import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
 export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment']);
@@ -146,12 +146,19 @@ async function prepareInPage({ boundMs, dispatch }) {
     for (let i = 0; i < samples; i++) { const now = performance.now(); const delta = now - last; if (delta > 0) { deltas.add(delta); if (delta < resolutionMs) resolutionMs = delta; } last = now; }
     return { resolutionMs: Number.isFinite(resolutionMs) ? resolutionMs : null, samples, distinctDeltas: deltas.size };
   })();
-  // Long tasks and scheduled waits are recorded whatever the outcome (plan timer rules).
-  const longTasks = [], waits = { preparationBound: { armed: 0, rearmed: 0, fired: false } };
-  let observer = null;
-  try { observer = new PerformanceObserver(list => { for (const entry of list.getEntries()) longTasks.push({ name: entry.name, startTime: entry.startTime, duration: entry.duration }); }); observer.observe({ type: 'longtask', buffered: true }); }
-  catch (error) { longTasks.push({ name: 'observer-unavailable', error: String(error?.message ?? error) }); }
-  const diagnostics = () => { observer?.takeRecords?.().forEach(entry => longTasks.push({ name: entry.name, startTime: entry.startTime, duration: entry.duration })); return { timer, longTasks, waits }; };
+  // Long tasks and scheduled waits are recorded whatever the outcome (plan timer rules). Every
+  // long-task entry the page has seen (buffered startup tasks included) is collected; attribution is
+  // by interval overlap with the recorded phase boundaries, so startup tasks are labelled separately.
+  const entries = [], phases = {}, waits = { preparationBound: { armed: 0, rearmed: 0, fired: false } };
+  let observer = null, observerError = null;
+  const collect = list => { for (const entry of list.getEntries()) entries.push({ name: entry.name, startTime: entry.startTime, duration: entry.duration }); };
+  try { observer = new PerformanceObserver(list => collect(list)); observer.observe({ type: 'longtask', buffered: true }); }
+  catch (error) { observerError = String(error?.message ?? error); }
+  // A long task is reported only after it ends, so the terminal synchronous work of a phase is captured
+  // by yielding to a fresh task before the records are taken.
+  const settleTasks = async () => { await new Promise(resolve => setTimeout(resolve, 0)); if (observer) collect({ getEntries: () => observer.takeRecords() }); };
+  // Raw entries and phase boundaries leave the page; the suite attributes them (longTasksByPhase).
+  const diagnostics = () => ({ timer, longTaskEntries: entries, phases, observerError, waits });
   const STATUS = `
     const RAY_HIT: u32 = 0u; const RAY_MISS: u32 = 1u; const RAY_UNRESOLVED: u32 = 2u; const RAY_NUMERICAL_FAILURE: u32 = 3u;
     const REASON_NONE: u32 = 0u; const REASON_POINT_BUDGET: u32 = 1u; const REASON_RAY_STEP_BUDGET: u32 = 3u;
@@ -304,19 +311,27 @@ async function prepareInPage({ boundMs, dispatch }) {
   const timeout = new Promise((_, reject) => { waits.preparationBound.armed++; boundTimer = setTimeout(() => { waits.preparationBound.fired = true; invalidated = true; reject(new Error(`preparation did not finish within ${boundMs} ms`)); }, boundMs); });
   timeout.catch(() => {}); // the race surfaces the rejection; nothing is left unhandled
   let cold, warm;
-  try { cold = await Promise.race([prepareSet('cold'), timeout]); warm = await Promise.race([prepareSet('warm'), timeout]); }
-  catch (error) {
-    // Available progress is preserved on failure: the error carries every event and diagnostic so far.
-    throw new Error(`${error.message}; progress ${JSON.stringify({ events, ...diagnostics() })}`);
-  } finally { clearTimeout(boundTimer); }
-  const result = { boundMs, totalMs: cold.totalMs, stages: cold.stages, events, warm: { totalMs: warm.totalMs, stages: warm.stages.map(({ id, totalMs }) => ({ id, totalMs })) } };
-  if (dispatch) {
-    try { result.dispatch = await dispatchInPage(device, cold.pipelines, dispatch); }
-    catch (error) { throw new Error(`dispatch failed: ${error.message}; progress ${JSON.stringify({ events, stages: cold.stages, ...diagnostics() })}`); }
-  }
-  Object.assign(result, diagnostics());
-  observer?.disconnect();
-  return result;
+  try {
+    phases.preparation = { start: performance.now(), end: null };
+    try { cold = await Promise.race([prepareSet('cold'), timeout]); warm = await Promise.race([prepareSet('warm'), timeout]); }
+    catch (error) {
+      phases.preparation.end = performance.now(); await settleTasks();
+      // Available progress is preserved on failure: the error carries every event and diagnostic so far.
+      throw new Error(`${error.message}; progress ${JSON.stringify({ events, ...diagnostics() })}`);
+    } finally { clearTimeout(boundTimer); }
+    phases.preparation.end = performance.now();
+    await settleTasks();
+    const result = { boundMs, totalMs: cold.totalMs, stages: cold.stages, events, warm: { totalMs: warm.totalMs, stages: warm.stages.map(({ id, totalMs }) => ({ id, totalMs })) } };
+    if (dispatch) {
+      phases.dispatch = { start: performance.now(), end: null };
+      try { result.dispatch = await dispatchInPage(device, cold.pipelines, dispatch); }
+      catch (error) { phases.dispatch.end = performance.now(); await settleTasks(); throw new Error(`dispatch failed: ${error.message}; progress ${JSON.stringify({ events, stages: cold.stages, ...diagnostics() })}`); }
+      phases.dispatch.end = performance.now();
+      await settleTasks();
+    }
+    Object.assign(result, diagnostics());
+    return result;
+  } finally { observer?.disconnect(); }
 
   // A representative draft-sized dispatch of the prepared set (recorded, never a requirement):
   // the overview camera of the power-8 bulb, 128 iterations, 512 steps.
@@ -426,6 +441,8 @@ async function runCoexistence({ context, page, environment }) {
   pass(PASS_IDENTITY, { identity, isFallbackAdapter, features, limits, observedFields, corroboration: corroborated });
 
   const prepared = await ev(page, prepareInPage, { boundMs: PREPARATION_BOUND_MS, dispatch: { width: 128, height: 128 } }, 'pipeline preparation', LIMITS.deep);
+  prepared.longTasks = { ...longTasksByPhase(prepared.longTaskEntries, prepared.phases), observerError: prepared.observerError };
+  delete prepared.longTaskEntries; delete prepared.phases; delete prepared.observerError;
   assert.equal(prepared.stages.length, 3);
   assert.ok(prepared.events.filter(event => event.set === 'cold').length >= 3, 'at least three progress events');
   assert.ok(prepared.totalMs < PREPARATION_BOUND_MS, `preparation ${prepared.totalMs} ms exceeds the ${PREPARATION_BOUND_MS} ms bound`);
@@ -505,24 +522,37 @@ async function readEffectiveEnvironment(context) {
 }
 
 // The served checkout is identified, never assumed: the commit and dirty state of this checkout, and a
-// byte comparison between the served device.js and the checkout's file.
+// byte comparison of every tracked application file (index.html, src/, assets/ — what build.mjs
+// copies) with what the server serves. Called only after server readiness (startupSequence).
 async function sourceIdentity() {
   const git = args => { try { return execFileSync('git', args, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return null; } };
   const commit = git(['rev-parse', '--short', 'HEAD']) ?? 'unknown';
   const porcelain = git(['status', '--porcelain']);
-  const modulePath = 'src/space/render/webgpu/device.js';
+  const files = (git(['ls-files', '--', 'index.html', 'src', 'assets']) ?? '').split('\n').filter(Boolean);
+  const servedSource = await within(verifyServedSource({
+    files, readLocal: path => readFile(path),
+    fetchServed: async path => { const response = await fetch(`${url}/${path}`, { signal: AbortSignal.timeout(LIMITS.launch) }); return response.ok ? Buffer.from(await response.arrayBuffer()) : null; },
+  }), LIMITS.operation, 'served source verification');
   const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
-  const local = sha256(await readFile(modulePath));
-  let served = null;
-  try { served = sha256(Buffer.from(await (await fetch(`${url}/${modulePath}`, { signal: AbortSignal.timeout(LIMITS.launch) })).arrayBuffer())); } catch { served = null; }
-  return { commit, dirty: porcelain === null ? 'unknown' : porcelain.length > 0, servedUrl: url, servedModule: modulePath, localSha256: local, servedSha256: served, servedModuleMatches: served === local };
+  return { commit, dirty: porcelain === null ? 'unknown' : porcelain.length > 0, servedUrl: url, servedSource, treeSha256: sha256(await Promise.all(files.map(path => readFile(path))).then(buffers => Buffer.concat(buffers))) };
+}
+
+// The server: adopt a listener that already answers at ATLAS_URL (the gate's owned server), else
+// start one from this checkout on the URL's port and own it.
+async function ensureServer() {
+  try { await fetch(url, { signal: AbortSignal.timeout(LIMITS.launch) }); return 'adopted'; } catch { /* nothing listens yet */ }
+  const port = new URL(url).port || '80';
+  server = spawn(process.execPath, ['scripts/serve.mjs', '--port', port], { cwd: process.cwd(), env: { ...process.env, PORT: port }, stdio: 'pipe' });
+  server.stderr.on('data', data => process.stderr.write(data));
+  await within(new Promise((resolveReady, reject) => { server.stdout.once('data', resolveReady); server.once('error', reject); server.once('exit', code => reject(new Error(`Preview server exited: ${code}`))); }), LIMITS.launch, 'preview server readiness');
+  return 'owned';
 }
 
 let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
 const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment };
-const source = await sourceIdentity();
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
+let source = null, serverOwnership = null;
 
 // Launch installed Chrome headed with `args` in a fresh profile, read its effective environment and
 // record it. Every launch in a run is recorded with its label; the gated coexistence group launches once.
@@ -539,26 +569,24 @@ async function launchProfile({ label, args }) {
     name: 'environment', group: options.group, launch: label, startedAt, browser: 'installed Chrome', browserVersion: browser.version(), chromeVersion: effective.chromeVersion,
     userAgent: effective.userAgent,
     headed: true, chromiumSandbox: true, viewport, requestedArgs, effectiveCommandLine: effective.effectiveCommandLine, effectiveArguments,
-    chromeGpu: effective.chromeGpu, webgpuStatus: effective.webgpuStatus, display: process.env.DISPLAY ?? null, url, handoff, source,
+    chromeGpu: effective.chromeGpu, webgpuStatus: effective.webgpuStatus, display: process.env.DISPLAY ?? null, url, handoff, serverOwnership, source,
   };
   report.push(environment);
   assert.deepEqual(effectiveArguments.missing, [], `the requested profile did not reach Chrome: missing ${effectiveArguments.missing.join(' ')}`);
   assert.equal(effectiveArguments.noSandbox, false, 'Chrome launched without its sandbox');
   assert.equal(effectiveArguments.headless, false, 'Chrome launched headless (E7: headed only)');
   assert.equal(effectiveArguments.gpuWatchdogDisabled, false, 'Chrome launched with the GPU watchdog disabled');
-  assert.equal(source.servedModuleMatches, true, `the served device.js does not match this checkout (${JSON.stringify(source)})`);
+  assert.equal(source?.servedSource?.matches, true, `the served source set does not match this checkout (${JSON.stringify(source)})`);
   console.log(`environment ${JSON.stringify({ launch: label, chromeVersion: environment.chromeVersion, effectiveArguments, chromeGpu: environment.chromeGpu, webgpuStatus: environment.webgpuStatus, handoff, source })}`);
   return { browser, context, environment };
 }
 
 let cleanupFailed = true, reportPersisted = false;
 try {
-  try { await fetch(url, { signal: AbortSignal.timeout(LIMITS.launch) }); } catch {
-    const port = new URL(url).port || '80';
-    server = spawn(process.execPath, ['scripts/serve.mjs', '--port', port], { cwd: process.cwd(), env: { ...process.env, PORT: port }, stdio: 'pipe' });
-    server.stderr.on('data', data => process.stderr.write(data));
-    await within(new Promise((resolveReady, reject) => { server.stdout.once('data', resolveReady); server.once('error', reject); server.once('exit', code => reject(new Error(`Preview server exited: ${code}`))); }), LIMITS.launch, 'preview server readiness');
-  }
+  // Server readiness first, then the served source, both before any browser launches.
+  ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
+  console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
+  assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
   if (options.group === 'coexistence') {
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });
     const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl');
@@ -598,7 +626,7 @@ if (options.writeSpike) {
     for (const path of options.includeRuns) runs.push({ label: path.replace(/^.*\//, ''), report: JSON.parse(await readFile(path, 'utf8')) });
     const experiment = options.includeExperiment ? JSON.parse(await readFile(options.includeExperiment, 'utf8')) : null;
     await mkdir(dirname(SPIKE_DOCUMENT_PATH), { recursive: true });
-    await writeFile(SPIKE_DOCUMENT_PATH, renderSpikeDocument(report, { generatedAt: new Date().toISOString(), commit: `${source.commit}${source.dirty === true ? ' (dirty)' : ''}`, runs, experiment }));
+    await writeFile(SPIKE_DOCUMENT_PATH, renderSpikeDocument(report, { generatedAt: new Date().toISOString(), commit: `${source?.commit ?? 'unknown'}${source?.dirty === true ? ' (dirty)' : ''}`, runs, experiment }));
     console.log(`spike document written to ${SPIKE_DOCUMENT_PATH} (${permitted.reason})`);
   }
 }
