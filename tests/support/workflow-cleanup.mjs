@@ -1,11 +1,9 @@
-// Cleanup for tests/workflow.mjs (T05 fix round 1, Codex finding 3). Under SwiftShader the GPU draws
-// are queued, so each page's backlog is drained before the bounded closes; a drain that fails is
-// evidence of unfinished work and fails the suite, even when every close then succeeds. The report
+// Shared page cleanup (originally T05's workflow-only fix). Each page's backlog is drained before
+// the bounded closes; a drain that fails fails the suite, even when every close succeeds. The report
 // is written, carrying that failure, before any close can end the process (a close that cannot be
-// confirmed exits 125 at once and stays terminal; see bounded.mjs). Workflow-local by ruling: the
-// shared synchronization helper belongs to T00b.
+// confirmed exits 125 at once and stays terminal; see bounded.mjs).
 //   → true when the suite must fail (a drain or the report write failed), else false.
-export async function cleanupWorkflow({ pages, drain, report, writeReport, closeAll, log = message => console.error(message) }) {
+export async function cleanupPages({ pages, drain, report, writeReport, closeAll, log = message => console.error(message) }) {
   let failed = false;
   for (const page of pages) {
     try { await drain(page); }
@@ -16,7 +14,10 @@ export async function cleanupWorkflow({ pages, drain, report, writeReport, close
     }
   }
   try { await writeReport(report); }
-  catch (error) { failed = true; log(`workflow report: ${error.message}`); }
+  catch (error) { failed = true; log(`suite report: ${error.message}`); }
   await closeAll();
   return failed;
 }
+
+// Keep T05's API stable; workflow.mjs can adopt the shared drain independently.
+export { cleanupPages as cleanupWorkflow };

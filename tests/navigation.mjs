@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { LIMITS, within, idleWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev } from './support/bounded.mjs';
+import { cleanupPages } from './support/workflow-cleanup.mjs';
 
 const { chromium } = await import('playwright');
 installSuiteDeadline('navigation');
@@ -13,6 +14,13 @@ process.env.TMPDIR = resolve('artifacts/runtime');
 const record = process.argv.includes('--record');
 const url = process.env.ATLAS_URL || 'http://127.0.0.1:5173';
 const report = [];
+const reportPath = `artifacts/navigation-${record ? 'before' : 'report'}.json`;
+const writeReport = entries => writeFile(reportPath, JSON.stringify(entries, null, 2));
+async function closeDrained(page) {
+  const failed = await cleanupPages({ pages: [page], drain: open => drainGpuWithin(open), report, writeReport,
+    closeAll: () => closeWithin(page, 'page') });
+  if (failed) throw new Error('page: GPU drain or report failed');
+}
 let server, browser;
 try {
   try { await fetch(url, { signal: AbortSignal.timeout(LIMITS.launch) }); } catch {
@@ -102,9 +110,21 @@ try {
       assert.deepEqual(errors, []);
     }
     await page.screenshot({ path: `artifacts/navigation-${record ? 'before' : 'after'}-${backend}.png` });
-    await closeWithin(page, 'page');
+    await closeDrained(page);
   }
+} catch (error) {
+  report.push({ name: 'FAIL', error: error.stack });
+  throw error;
 } finally {
-  await writeFile(`artifacts/navigation-${record ? 'before' : 'report'}.json`, JSON.stringify(report, null, 2));
-  await closeWithin(browser, 'browser'); server?.kill('SIGTERM');
+  // Preserve the original failure if the suite deadline fires while pages are draining.
+  try { await writeReport(report); } catch { /* cleanupPages retries after the drains. */ }
+  const contexts = browser?.contexts() ?? [];
+  const failed = await cleanupPages({
+    pages: contexts.flatMap(context => context.pages()), drain: page => drainGpuWithin(page), report, writeReport,
+    closeAll: async () => {
+      for (const context of contexts) await closeWithin(context, 'context');
+      await closeWithin(browser, 'browser'); server?.kill('SIGTERM');
+    },
+  });
+  if (failed) process.exitCode = 1;
 }
