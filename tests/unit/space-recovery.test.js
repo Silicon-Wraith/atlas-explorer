@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createFakeBackend } from '../support/fake-backend.mjs';
 import { createFakeClock } from '../support/fake-clock.mjs';
 import { createScheduler } from '../../src/shared/scheduler.js';
-import { BackendError, createAdmission, createPipelineSet } from '../../src/space/render/backend.js';
+import { createAdmission, createPipelineSet } from '../../src/space/render/backend.js';
 import { createSpaceRenderer } from '../../src/space/render/renderer.js';
 import { createSpaceScene } from '../../src/space/scene-adapter.js';
 import { createSpaceRequest } from '../../src/space/render-adapter.js';
@@ -13,6 +13,10 @@ const versions = { kernelVersion: 'recovery-fixture-v1', tracingVersion: 'recove
 const generation = epoch => ({ deviceEpoch: epoch, viewRevision: 1, geometryRevision: 1, appearanceRevision: 1 });
 const makeRequest = (epoch, scene = createSpaceScene({ model: 'sphere' }), size = { width: 8, height: 8 }, purpose = 'interactive') =>
   createSpaceRequest({ scene, ...size, profile: 'settled', generation: generation(epoch), viewId: 'space', purpose, versions });
+const directScene = () => {
+  const scene = createSpaceScene({ model: 'sphere' });
+  return { ...scene, appearance: { ...scene.appearance, lightingQuality: 'direct' }, sampling: { ...scene.sampling, targetSamples: 1 } };
+};
 const read = slot => ({ slot, type: 'texture', access: 'read' });
 const write = slot => ({ slot, type: 'storage-texture', access: 'write' });
 const compute = (entryPoint, bindings) => ({ pipelineId: entryPoint, entryPoint, kind: 'compute', sourceIds: ['fake-only'],
@@ -28,7 +32,7 @@ const pipelines = createPipelineSet({ id: 'b13-fixture', descriptors: [
 ] });
 const flush = async () => { for (let i = 0; i < 24; i++) await Promise.resolve(); };
 
-async function rig({ cold = false, releaseObsolete, onNotice, budgets, resultErrorCode } = {}) {
+async function rig({ cold = false, onNotice, budgets } = {}) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock });
   const hooks = {}, tickets = [], targets = [], notices = [], publications = [], reports = [], transitions = [], submitted = [];
   const backend = { ...fake,
@@ -57,14 +61,9 @@ async function rig({ cold = false, releaseObsolete, onNotice, budgets, resultErr
   actual.onPublish(value => publications.push(value)); actual.onReport(value => reports.push(value));
   const renderer = { ...actual,
     render(request, options) {
-      const actualJob = actual.render(request, options);
-      // The optional field models the second proposed B09 seam, explicitly.
-      const job = resultErrorCode ? { ...actualJob, done: actualJob.done.then(result => ({ ...result, errorCode: resultErrorCode })) } : actualJob;
+      const job = actual.render(request, options);
       submitted.push(job); return job;
     },
-    // Proposed B09 extension, supplied only by the allocation-policy test. The
-    // merged renderer has no cache-retirement entry point; see the B13 report.
-    ...(releaseObsolete ? { releaseObsolete: args => releaseObsolete({ ...args, fake }) } : {}),
   };
   const recovery = createRecovery({ backend, renderer, scheduler, clock, onNotice: notice => { notices.push(notice); onNotice?.(notice); } });
   const pump = async () => {
@@ -165,17 +164,30 @@ test('late callbacks from the lost epoch are ignored after recovery', async () =
   assert.ok(h.publications.every(value => value.requestId !== request.requestId)); h.destroy();
 });
 
-test('allocation failure releases obsolete generations before offering a lower-cost choice and never changes the request', async () => {
-  let obsolete, atNotice;
-  const h = await rig({ releaseObsolete: ({ fake }) => fake.release(obsolete), onNotice: notice => {
+test('allocation failure releases obsolete generations before offering a lower-cost choice and never changes the request', async t => {
+  let atNotice;
+  const h = await rig({ onNotice: notice => {
     if (notice.type === 'allocation-failed') atNotice = h.fake.diagnostics();
   } });
-  obsolete = h.fake.allocate({ name: 'obsolete-generation', bytes: 64, usage: 'storage' });
-  const request = makeRequest(1), before = structuredClone(request), tracked = h.fake.diagnostics().tracked;
-  const result = h.recovery.onAllocationFailure({ request, failed: new BackendError('allocation-failed') });
-  assert.deepEqual(result.choices, ['release-and-retry', 'lower-resolution', 'fewer-samples']);
-  assert.equal(result.released, 64); assert.equal(atNotice.tracked, tracked - 64);
-  assert.deepEqual(request, before); assert.equal(h.submitted.length, 0); h.destroy();
+  t.after(h.destroy);
+  const viewport = makeRequest(1, directScene()); let live = viewport.generation;
+  await h.finish(h.recovery.render(viewport, { currentGeneration: () => live }).done);
+  const normal = h.targets.at(-1).handles.normal, published = h.publications.at(-1);
+  live = { ...live, geometryRevision: 2 }; // The edit has not yet been submitted.
+  const request = makeRequest(1, viewport.sceneSnapshot, { width: 16, height: 16 }, 'export');
+  const before = structuredClone(request), tracked = h.fake.diagnostics().tracked;
+  h.fake.testAdapter.failNextAllocation();
+  const result = await h.finish(h.recovery.render(request).done);
+  assert.equal(result.outcome, 'failed'); assert.equal(result.errorCode, 'allocation-failed');
+  const notices = h.notices.filter(value => value.type === 'allocation-failed'); assert.equal(notices.length, 1);
+  const notice = notices[0];
+  assert.deepEqual(notice.choices, ['release-and-retry', 'lower-resolution', 'fewer-samples']);
+  assert.equal(notice.request, request); assert.equal(notice.released, 8 * 8 * 8); assert.equal(notice.retiring, 0);
+  assert.ok(!Object.hasOwn(notice, 'releaseUnavailable')); assert.ok(Object.isFrozen(notice));
+  assert.equal(atNotice.tracked, tracked - notice.released, 'release precedes the choice notification');
+  assert.ok(!atNotice.inventory.some(value => value.id === normal.id));
+  assert.equal(h.publications.at(-1), published);
+  assert.deepEqual(request, before); assert.equal(h.submitted.length, 2, 'no silent retry or lower-cost render');
 });
 
 test('a failed configuration keeps the previous target set and the previous publication', async () => {
@@ -183,7 +195,6 @@ test('a failed configuration keeps the previous target set and the previous publ
   const previous = h.targets.at(-1), published = h.publications.at(-1), before = h.publications.length;
   h.fake.testAdapter.failNextAllocation(); const request = makeRequest(1, undefined, { width: 16, height: 16 });
   assert.equal((await h.finish(h.recovery.render(request).done)).outcome, 'failed');
-  h.recovery.onAllocationFailure({ request, failed: new BackendError('allocation-failed') });
   assert.equal(h.targets.at(-1), previous); assert.equal(h.publications.length, before); assert.equal(h.publications.at(-1), published);
   assert.ok(h.fake.diagnostics().inventory.some(value => value.id === previous.handles.display.id));
   assert.ok(!h.fake.log.some(value => value.method === 'release' && value.args[0] === previous.handles.display)); h.destroy();
@@ -226,7 +237,9 @@ test('recovery never modifies the scene or either history', async () => {
   const before = structuredClone(investigation), request = makeRequest(1, scene), original = structuredClone(request);
   const job = h.recovery.render(request); await flush(); h.fake.lose(); await job.done;
   await h.until(() => h.recovery.state().phase === 'ready'); await h.finish(h.submitted.at(-1).done);
-  h.recovery.onAllocationFailure({ request, failed: new BackendError('allocation-failed') });
+  h.fake.testAdapter.failNextAllocation();
+  const exporting = makeRequest(2, scene, { width: 16, height: 16 }, 'export');
+  assert.equal((await h.finish(h.recovery.render(exporting).done)).errorCode, 'allocation-failed');
   h.fake.lose(); await h.finish(h.recovery.retry()); await h.finish(h.submitted.at(-1).done);
   assert.deepEqual(investigation, before); assert.equal(investigation.scene, scene);
   assert.deepEqual(request, original); assert.deepEqual(h.submitted.at(-1).request.sceneSnapshot, scene); h.destroy();
@@ -251,6 +264,25 @@ test('a probe mismatch stops recovery as preparation-failed and retains the cons
   await assert.rejects(h.recovery.prepare(), { code: 'unavailable' });
   h.hooks.probe = 0x41544c53;
   await h.finish(h.recovery.retry()); assert.equal(h.recovery.state().automaticRecoveries, 0); h.destroy();
+});
+
+test('a render internal probe failure reports preparation-failed and stops recovery until explicit retry', async t => {
+  const h = await rig({ cold: true }); t.after(h.destroy);
+  h.hooks.probe = 0;
+  const request = makeRequest(1), job = h.recovery.render(request);
+  const result = await h.finish(job.done);
+  assert.equal(result.outcome, 'failed'); assert.equal(result.errorCode, 'preparation-failed');
+  assert.equal(h.recovery.state().phase, 'stopped'); assert.equal(h.recovery.state().automaticRecoveries, 0);
+  const notice = h.notices.find(value => value.type === 'failed');
+  assert.equal(notice.request, request); assert.equal(notice.result, result); assert.equal(notice.state.phase, 'stopped');
+  assert.ok(!h.notices.some(value => value.type === 'allocation-failed'));
+  assert.equal(h.publications.length, 0);
+  assert.throws(() => h.recovery.render(makeRequest(1)), { code: 'unavailable' });
+  h.hooks.probe = 0x41544c53;
+  await h.finish(h.recovery.retry());
+  assert.equal(h.recovery.state().phase, 'ready');
+  assert.equal((await h.finish(h.submitted.at(-1).done)).outcome, 'completed');
+  assert.equal((await job.done).errorCode, 'preparation-failed', 'retry does not revive the failed job');
 });
 
 test('preparation failure remains visible and an explicit retry performs the probe again', async () => {
@@ -331,21 +363,69 @@ test('a resumed plan preserves the live generation guard against subsequent came
   assert.ok(!h.publications.some(value => value.requestId === next.requestId)); h.destroy();
 });
 
-test('the merged renderer reports unavailable cache retirement instead of claiming released bytes', async () => {
-  const h = await rig(); await h.finish(h.recovery.render(makeRequest(1)).done);
-  const before = h.fake.diagnostics().tracked;
-  const result = h.recovery.onAllocationFailure({ request: makeRequest(1), failed: new BackendError('allocation-failed') });
-  assert.equal(result.releaseUnavailable, true); assert.equal(result.released, 0);
-  assert.equal(h.fake.diagnostics().tracked, before); h.destroy();
+test('a real failed export preserves compatible live viewport geometry and reports zero released and retiring bytes', async t => {
+  const h = await rig(); t.after(h.destroy);
+  const viewport = makeRequest(1, directScene()); let live = viewport.generation;
+  await h.finish(h.recovery.render(viewport, { currentGeneration: () => live }).done);
+  live = { ...live, viewRevision: 2, appearanceRevision: 2 };
+  const before = h.fake.diagnostics(), published = h.publications.at(-1);
+  const releases = h.fake.log.filter(value => value.method === 'release').length;
+  const exporting = makeRequest(1, createSpaceScene({ model: 'box' }), { width: 16, height: 16 }, 'export');
+  const original = structuredClone(exporting);
+  h.fake.testAdapter.failNextAllocation();
+  const result = await h.finish(h.recovery.render(exporting).done);
+  assert.equal(result.outcome, 'failed'); assert.equal(result.errorCode, 'allocation-failed');
+  const notices = h.notices.filter(value => value.type === 'allocation-failed'); assert.equal(notices.length, 1);
+  assert.equal(notices[0].request, exporting); assert.equal(notices[0].released, 0); assert.equal(notices[0].retiring, 0);
+  assert.ok(!Object.hasOwn(notices[0], 'releaseUnavailable'));
+  assert.deepEqual(h.fake.diagnostics().inventory, before.inventory);
+  assert.equal(h.fake.diagnostics().tracked, before.tracked);
+  assert.equal(h.fake.log.filter(value => value.method === 'release').length, releases);
+  assert.equal(h.publications.at(-1), published); assert.deepEqual(exporting, original);
 });
 
-test('allocation error codes from the proposed renderer result seam reach the workspace choices', async () => {
-  const h = await rig({ resultErrorCode: 'allocation-failed' });
-  h.fake.testAdapter.failNextAllocation(); const request = makeRequest(1);
-  assert.equal((await h.finish(h.recovery.render(request).done)).outcome, 'failed');
-  const notice = h.notices.find(value => value.type === 'allocation-failed');
-  assert.deepEqual(notice.choices, ['release-and-retry', 'lower-resolution', 'fewer-samples']);
-  assert.equal(notice.request, request); assert.equal(notice.releaseUnavailable, true); h.destroy();
+test('real allocation failures report freed cache bytes separately from bytes held by tickets and mappings', async t => {
+  for (const stage of ['shade', 'readback']) {
+    const h = await rig(); t.after(h.destroy);
+    const viewport = makeRequest(1, directScene()); let live = viewport.generation;
+    const job = h.recovery.render(viewport, { currentGeneration: () => live });
+    const pending = () => h.tickets.find(entry => entry.pending && entry.desc.identity.jobId === job.jobId &&
+      (stage === 'shade' ? entry.desc.pass === 'shade' : entry.method === 'readback' && entry.desc.fields[0] === 'status'));
+    await h.until(() => pending()); const ticket = pending();
+    h.scheduler.pause('space'); h.clock.advance(5000); await flush();
+    assert.equal((await job.done).reason, 'watchdog');
+    live = { ...live, geometryRevision: 2 };
+    const before = h.fake.diagnostics(), outstanding = h.scheduler.snapshot().outstanding;
+    const handles = ['depth', 'status', 'normal'].map(name => h.targets.at(-1).handles[name]);
+    const inventory = handle => h.fake.diagnostics().inventory.find(value => value.id === handle.id && value.epoch === handle.epoch);
+    if (stage === 'shade') assert.ok(before.retiring > 0, 'unrelated resources already retire before the cache release');
+    const exporting = makeRequest(1, viewport.sceneSnapshot, { width: 16, height: 16 }, 'export');
+    const original = structuredClone(exporting);
+    h.fake.testAdapter.failNextAllocation();
+    const result = await h.recovery.render(exporting).done; await flush(); // Keep the old ticket outstanding.
+    assert.equal(result.outcome, 'failed'); assert.equal(result.errorCode, 'allocation-failed');
+    const notices = h.notices.filter(value => value.type === 'allocation-failed'); assert.equal(notices.length, 1);
+    const notice = notices[0], freed = stage === 'shade' ? 0 : 8 * 8 * 12, retiring = stage === 'shade' ? 8 * 8 * 16 : 8 * 8 * 4;
+    assert.equal(notice.request, exporting); assert.equal(notice.released, freed, stage); assert.equal(notice.retiring, retiring, stage);
+    assert.ok(!Object.hasOwn(notice, 'releaseUnavailable'));
+    assert.equal(h.fake.diagnostics().tracked, before.tracked - freed);
+    assert.equal(h.fake.diagnostics().retiring, before.retiring + retiring);
+    assert.equal(h.scheduler.snapshot().outstanding, outstanding);
+    assert.equal(inventory(handles[1]).state, 'retiring'); assert.deepEqual(exporting, original);
+    // A second real failure cannot count the same retiring cache ownership again.
+    h.fake.testAdapter.failNextAllocation();
+    assert.equal((await h.recovery.render(makeRequest(1, viewport.sceneSnapshot, exporting.output, 'export')).done).errorCode, 'allocation-failed');
+    await flush();
+    assert.equal(h.notices.at(-1).released, 0); assert.equal(h.notices.at(-1).retiring, 0);
+    h.fake.complete(ticket.ticket, { elapsedMs: 1 });
+    if (stage === 'readback') {
+      assert.equal(inventory(handles[1]).tickets, 0); assert.equal(inventory(handles[1]).mappings, 1);
+      assert.equal(inventory(handles[1]).state, 'retiring', 'the completed fence does not end copy-out ownership');
+    }
+    await flush();
+    for (const handle of handles) assert.equal(inventory(handle), undefined);
+    assert.equal(h.scheduler.snapshot().outstanding, 0); assert.equal((await job.done).outcome, 'budget-exceeded');
+  }
 });
 
 test('cancel forwards both scheduler variants unchanged and device loss settles an outstanding drain interrupted', async () => {

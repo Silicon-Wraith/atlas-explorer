@@ -15,10 +15,9 @@ let nextExecution = 0;
  * allocation choices are offered to the workspace, which constructs any cheaper
  * request itself. Neither choice edits a scene or silently reduces requested work.
  *
- * Integration gap in merged B09: B09b must judge obsolete cache ownership against
- * the live request, preserve publication/leases, and report freed/retiring bytes.
- * Until that hook exists, allocation notices explicitly report releaseUnavailable,
- * with zero released bytes. Diagnostics are accounting evidence, never handles.
+ * The renderer judges obsolete cache ownership against the live request and
+ * preserves publication/leases. Allocation notices forward its per-call receipt:
+ * released bytes were freed; retiring bytes remain tracked until their leases end.
  */
 export function createRecovery({ backend, renderer, scheduler, clock, policy = RECOVERY_POLICY, onNotice = () => {} }) {
   const now = typeof clock === 'function' ? clock : clock?.now;
@@ -63,8 +62,7 @@ export function createRecovery({ backend, renderer, scheduler, clock, policy = R
       if (destroyed) return;
       if (result.outcome === 'budget-exceeded') onBudgetExceeded({ ...job, ...result });
       else if (result.outcome === 'failed') {
-        // B09 currently omits errorCode. Consume the proposed structured result
-        // seam when supplied; never classify failures by parsing message text.
+        // Classify failures only by the renderer's structured code, never message text.
         if (result.errorCode === 'allocation-failed') {
           onAllocationFailure({ request: job.request, failed: new BackendError(result.errorCode, result.reason) });
         } else {
@@ -139,11 +137,8 @@ export function createRecovery({ backend, renderer, scheduler, clock, policy = R
   function onAllocationFailure({ request, failed }) {
     if (destroyed) throw new BackendError('unavailable', 'recovery destroyed');
     if (failed?.code !== 'allocation-failed') throw new TypeError('allocation recovery requires allocation-failed evidence');
-    const before = backend.diagnostics().tracked;
-    const releaseUnavailable = typeof renderer.releaseObsolete !== 'function';
-    if (!releaseUnavailable) renderer.releaseObsolete({ request });
-    const after = backend.diagnostics();
-    const result = Object.freeze({ choices: ALLOCATION_CHOICES, released: Math.max(0, before - after.tracked), releaseUnavailable });
+    const { freed, retiring } = renderer.releaseObsolete();
+    const result = Object.freeze({ choices: ALLOCATION_CHOICES, released: freed, retiring });
     notice({ type: 'allocation-failed', request, reason: failed.message, ...result });
     return result;
   }
