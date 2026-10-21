@@ -1258,7 +1258,8 @@ with the evidence; tolerances and floors are never relaxed.
   `keys.js`); `spaceWorkspaceFields(reportInputs)` (the Space report fields below).
 - Produces (`renderer.js`): `createSpaceRenderer({backend, scheduler, clock, viewId, versions,
   pipelineSet})` (the pipeline set is passed explicitly; Node tests inject a fixture set)
-  → {prepare() → Promise, render(request, {currentGeneration}) → job, pick(pickRequest) →
+  → {prepare() → Promise<{epoch, pipelineSetId, preparedPipelineIds}> (the backend's receipt,
+  forwarded for B14's `verifyPrewarm`), render(request, {currentGeneration}) → job, pick(pickRequest) →
   Promise<{identity, status, depth, sample: {camera, pixel, jitter, dimensions}} | {stale: true}>,
   classifyEffectiveCamera(request) → Promise<{identity, status: 'exterior' | 'unresolved',
   detail} | {stale: true}>` (through the backend's `evaluate_points` pipeline; stale identities
@@ -1273,10 +1274,13 @@ with the evidence; tolerances and floors are never relaxed.
   normals, shading and picking use the same sample geometry; accumulation consumes completed
   samples in ascending sample-index order per pixel, so batch reordering changes scheduling, never
   floating-point summation order. **Settled sequence:** a settled request first produces
-  full-resolution geometry, normals and direct lighting at the settled caps; that complete image
-  publishes as `settled-first` without completing the job; shadow and AO refinement then proceeds
-  under a distinct appearance and accumulation identity to the requested sample target; direct-light
-  samples are never mixed into the full-light accumulation. Completed geometry is bound to a newer
+  full-resolution geometry, normals and direct lighting at the settled caps and publishes that
+  complete image as `settled-first`. For `lightingQuality: 'full'`, refinement with shadows and AO
+  then proceeds under a distinct appearance and accumulation identity to the requested sample
+  target, and direct-light samples are never mixed into the full-light accumulation. For
+  `'direct'`, accumulation continues under the direct-light identity without secondary-light
+  submissions. If the requested sample target is one, the first settled publication also completes
+  the job and both milestone times coincide. Completed geometry is bound to a newer
   request only after key, epoch and resource-lifetime checks; a publication requires request and
   view identity to match beyond `isPublishable`; partial tiles and mixed generations are never
   published; a pick is answered only for the current epoch, request, geometry revision, dimensions
@@ -1308,7 +1312,8 @@ the pending mark); §8.2 (diagnostic modes bypass lighting). Excludes: WGSL (B08
   `accumulation order is ascending sample index whatever the completion order` (two completion
   orders; bit-identical accumulations); `every submission carries a consumed admission lease`; `a
   pick for an older geometry revision or other dimensions is stale`; `the model is resolved from
-  each request`; `classifyEffectiveCamera rejects a stale identity`; `the preparing and prepared
+  each request`; `a direct-only one-sample settled request completes at its first image without
+  secondary-light submissions`; `classifyEffectiveCamera rejects a stale identity`; `the preparing and prepared
   events are optional and Plane reports omit them`; `every shared timing mark survives a
   workspace-field extension`.
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "a draft replaces the published image only when complete and the retained image is marked pending meanwhile"`.
@@ -1380,8 +1385,8 @@ protocol.
 - [ ] **Step 3: GREEN** — `npm test`, then under the lock (`--group rendering`).
 - [ ] **Step 4: Commit** — `"Add Space tracing, normals and picking with geometric validation (1b.1 B10)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
-**Expected outputs:** seven headed passes; tracing and geometric validation records registered per
-family with their domains.
+**Expected outputs:** eight headed passes; tracing and geometric validation records registered
+per family with their domains.
 
 ---
 
@@ -1391,7 +1396,7 @@ family with their domains.
 
 **Files:**
 - Create: `src/space/render/webgpu/shaders/shade.wgsl`, `.../accumulate.wgsl`,
-  `.../display.wgsl`, `src/shared/palettes.js`
+  `.../display.wgsl`, `src/space/render/webgpu/appearance.js`, `src/shared/palettes.js`
 - Modify (mechanical): `src/plane/palettes.js` — imports `PALETTES`, `paletteBytes` and the
   interpolation from `src/shared/palettes.js` and re-exports them; keeps `colorPixel` unchanged;
   its exports and byte results stay identical
@@ -1687,11 +1692,13 @@ unchanged assertions.
   B10 suite reports (stratum results keyed by matrix hash and stratum id).
 - Produces (`timing.mjs`): `scheduleAbsolute({clock, setTimer}, targets, callback) →
   {rearms, lateByMs[], longTasks[], invalidated}` (rounds every positive wait up to a whole
-  millisecond; re-arms against absolute targets; a request issued more than 4 ms late marks the
-  trial harness-invalid and is recorded, never retried silently; harness invalidity is recorded
-  independently of application failures — an observed task over 50 ms or another target failure
-  remains a failure even when issuance was late, and only a demonstrated harness failure excludes
-  an attempt; long tasks from a `PerformanceObserver` in the page). `scripts/audit-gates-1b1.mjs`
+  millisecond; re-arms against absolute targets; a request issued more than 4 ms late is
+  recorded as a timing anomaly, never retried silently; long tasks from a `PerformanceObserver` in
+  the page). The timing helper records anomalies only; `classifyAttempt(attempt) → {state:
+  'passed' | 'failed' | 'inconclusive' | 'excluded', reason}` in `tests/space-performance.mjs`
+  applies P3's precedence: an established application target failure is `failed` regardless of
+  timing anomalies; an attempt is `excluded` only for a demonstrated harness failure without an
+  established application failure; an unexplained anomaly is `inconclusive`. `scripts/audit-gates-1b1.mjs`
   also performs the **evidence join**: it joins the B08 and B10 stratum results by matrix hash and
   stratum id and requires passing evidence for every mandatory stratum; missing,
   duplicate-conflicting, failed or inconclusive results block acceptance, and diagnostic records
@@ -1701,13 +1708,16 @@ unchanged assertions.
 1b.1 commit accepted by its own gate record); §3 (the 1b.1 release row demonstrated end to end).
 
 - [ ] **Step 1: Tests** — Node: `waits are rounded up and scheduled against absolute targets`;
-  `a late issuance marks the trial harness-invalid and keeps an observed application failure`;
-  `the audit wrapper writes the 1b.1 ledger path and judges every commit in the range`; `the
-  evidence join blocks on a missing, conflicting or inconclusive mandatory stratum`. Headed (each scene suite's
-  `requiredPasses`, one per P3 target, asserting its threshold on every valid trial, at least
-  three valid trials from at most five attempts, completed work, publication, readback and canvas
-  presentation reported separately, and coverage at the manifest's checkpoints within B04's
-  prediction; insufficient valid trials are `inconclusive` and do not accept).
+  `a late issuance is recorded as a timing anomaly and an established application failure stays
+  failed`; `three passing trials cannot rescue an earlier application failure accompanied by late
+  issuance`; `the audit wrapper writes the 1b.1 ledger path and judges every commit in the range`;
+  `the evidence join blocks on a missing, conflicting or inconclusive mandatory stratum`. Headed
+  (each scene suite's `requiredPasses`, one per P3 target, asserting its threshold on every valid
+  passing trial, at least three within five attempts and no established application target
+  failure in any attempt, with completed work, publication, readback, presenter queue completion
+  and the independent visible-output checks reported separately, and coverage at the manifest's
+  checkpoints within B04's prediction; every attempt and its classification stays in the report;
+  insufficient valid trials are `inconclusive` and do not accept).
 - [ ] **Step 2: The recorded investigation** — headed, on the physical GPU, scripted by `node
   tests/space.mjs --group shell --investigation` and written to `1b1-investigation.md` with report
   ids and termination counts: open Plane; switch to Space; explore each calibration object, the
