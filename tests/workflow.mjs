@@ -163,6 +163,34 @@ function checkIndexedDb(page) {
     results.foreignCursor = await a.listDiscoveries({ workspace: 'space', limit: 3, cursor: first.nextCursor }).then(() => 'resolved', error => error.name);
     a.close(); b.close();
     results.pagingDeleted = await deleted(pagingName);
+
+    // Fix round 2: rows IndexedDB holds but ATLAS does not accept (a numeric id, an oversized id, a
+    // Date or numeric createdAt) end pages without breaking or hiding the rows around them; anchors
+    // are the rows' own keys. The fake's key order (compareKeys) agrees with the browser's indexedDB.cmp.
+    const { compareKeys } = await import('/src/shared/persistence.js');
+    const unsupportedName = `${name}-unsupported`;
+    const u = await openPersistence({ databaseName: unsupportedName });
+    const rows = [
+      { id: 'v3', createdAt: '2026-10-20T00:00:05.000Z' }, { id: 7, createdAt: '2026-10-20T00:00:04.000Z' },
+      { id: 'L'.padEnd(5000, 'x'), createdAt: '2026-10-20T00:00:04.000Z' }, { id: 'v2', createdAt: '2026-10-20T00:00:04.000Z' },
+      { id: 'vd', createdAt: new Date(Date.UTC(2026, 9, 20)) }, { id: 'vn', createdAt: 5 }, { id: 'v1', createdAt: '2026-10-20T00:00:01.000Z' },
+    ];
+    await u.commit({ puts: rows.map(row => ({ store: 'discoveries', value: { ...row, workspace: 'plane' } })) });
+    const shortId = id => (typeof id === 'string' && id.length > 20 ? `long${id.length}` : id);
+    results.unsupportedWalks = [];
+    for (const limit of [1, 2, 3]) {
+      const walked = [];
+      try { for (let cursor = null, page; (page = await u.listDiscoveries({ workspace: 'plane', limit, cursor })), walked.push(...page.items.map(item => shortId(item.id))), page.nextCursor; cursor = page.nextCursor); }
+      catch (error) { walked.push(`${error.name}: ${error.message}`); }
+      results.unsupportedWalks.push(walked);
+    }
+    results.unsupportedCount = await u.countDiscoveries({ workspace: 'plane' });
+    u.close();
+    results.unsupportedDeleted = await deleted(unsupportedName);
+    const keys = [-Infinity, -1, 0, 7, Infinity, new Date(0), new Date(5), '', '7', 'L', 'a', 'x'.repeat(5000), '\uffff', new Uint8Array([]).buffer, new Uint8Array([0]).buffer, new Uint8Array([1, 2]).buffer, [], [1], [1, 'a'], ['a'], [[]]];
+    let disagreements = 0;
+    for (const x of keys) for (const y of keys) if (compareKeys(x, y) !== indexedDB.cmp(x, y)) disagreements++;
+    results.keyOrderDisagreements = disagreements;
     return results;
   }), LIMITS.operation, 'IndexedDB checks');
 }
@@ -626,6 +654,7 @@ try {
     wholeOldRecord: true, reports: ['r1'], versionAfterUnblock: 1, storesAfterUnblock: ['discoveries', 'reports', 'writes'], deleted: 'deleted',
     paging: { first: ['e', 'd', 'c'], second: ['ba', 'b', 'a'], secondNext: null, single: ['e', 'c', 'ba', 'b', 'a'] },
     badCursor: 'RangeError', foreignCursor: 'RangeError', pagingDeleted: 'deleted',
+    unsupportedWalks: [1, 2, 3].map(() => ['v3', 'v2', 'long5000', 7, 'v1', 'vd', 'vn']), unsupportedCount: 7, unsupportedDeleted: 'deleted', keyOrderDisagreements: 0,
   });
   pass('IndexedDB commits whole batches, rolls back, cancels and reopens');
 

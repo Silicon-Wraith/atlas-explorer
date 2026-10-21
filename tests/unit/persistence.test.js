@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openPersistence, PersistenceError, DATABASE_NAME, DATABASE_VERSION, encodePageCursor, decodePageCursor } from '../../src/shared/persistence.js';
+import { openPersistence, PersistenceError, DATABASE_NAME, DATABASE_VERSION, encodePageCursor, decodePageCursor, compareKeys } from '../../src/shared/persistence.js';
 import { createFakePersistence } from '../support/fake-persistence.mjs';
 
 // Node has no IndexedDB: these tests drive the open protocol with a scripted request.
@@ -84,4 +84,42 @@ test('paging continues after its anchor through concurrent inserts, deletes and 
   for (let cursor = null, page; (page = await listed(store, cursor, 1)), pages.push(...page.ids), page.nextCursor; cursor = page.nextCursor);
   assert.deepEqual(pages, ['f', 'e', 'c', 'ba', 'b', 'a'], 'one record per page reaches every record exactly once');
   await assert.rejects(store.listDiscoveries({ workspace: 'plane', limit: 3, cursor: '4294967296' }), RangeError);
+});
+
+// Fix round 2 (Codex r2 finding 4): anchors are the actual IndexedDB ordering keys (index key
+// createdAt, primary key id) of whatever row ends a page, valid for ATLAS or not, and every cursor
+// the store emits decodes. Unsupported rows still reach T09's validator and hide nothing around them.
+const ORDERED_KEYS = () => [-Infinity, -1, 0, 7, Infinity, new Date(0), new Date(5), '', '7', 'L', 'a', 'x'.repeat(5000), '\uffff', new Uint8Array([]).buffer, new Uint8Array([0]).buffer, new Uint8Array([1, 2]).buffer, [], [1], [1, 'a'], ['a'], [[]]];
+
+test('keys order as IndexedDB orders them, and every emitted cursor decodes to its anchor', () => {
+  const keys = ORDERED_KEYS();
+  for (let i = 0; i < keys.length; i++) for (let j = 0; j < keys.length; j++) assert.equal(compareKeys(keys[i], keys[j]), Math.sign(i - j), `${i} vs ${j}`);
+  for (const bad of [NaN, new Date(NaN), null, undefined, true, {}, [NaN]]) assert.throws(() => compareKeys(bad, 0), RangeError);
+  for (const createdAt of keys) for (const id of [7, 'x'.repeat(5000), new Date(3), new Uint8Array([9]).buffer, ['a', 1]]) {
+    const anchor = decodePageCursor(encodePageCursor('plane', { createdAt, id }), 'plane');
+    assert.equal(compareKeys(anchor.createdAt, createdAt), 0);
+    assert.equal(compareKeys(anchor.id, id), 0);
+  }
+  assert.throws(() => encodePageCursor('plane', { createdAt: '2026-10-20T00:00:00.000Z', id: {} }), RangeError, 'only valid keys are anchors');
+});
+
+// Rows that are valid IndexedDB rows but not valid ATLAS discoveries (a numeric id, an oversized
+// id, a Date or numeric createdAt), at page boundaries between valid rows.
+const UNSUPPORTED_ROWS = () => [
+  { id: 'v3', createdAt: '2026-10-20T00:00:05.000Z' }, { id: 7, createdAt: '2026-10-20T00:00:04.000Z' },
+  { id: 'L'.padEnd(5000, 'x'), createdAt: '2026-10-20T00:00:04.000Z' }, { id: 'v2', createdAt: '2026-10-20T00:00:04.000Z' },
+  { id: 'vd', createdAt: new Date(Date.UTC(2026, 9, 20)) }, { id: 'vn', createdAt: 5 }, { id: 'v1', createdAt: '2026-10-20T00:00:01.000Z' },
+].map(row => ({ ...row, workspace: 'plane' }));
+const shortId = id => (typeof id === 'string' && id.length > 20 ? `long${id.length}` : id);
+
+test('unsupported rows at page boundaries neither break nor hide the pages around them', async () => {
+  const store = createFakePersistence();
+  await store.commit({ puts: UNSUPPORTED_ROWS().map(value => ({ store: 'discoveries', value })), deletes: [] });
+  for (const limit of [1, 2, 3]) {
+    const walked = [];
+    try { for (let cursor = null, page; (page = await store.listDiscoveries({ workspace: 'plane', limit, cursor })), walked.push(...page.items.map(item => shortId(item.id))), page.nextCursor; cursor = page.nextCursor); }
+    catch (error) { walked.push(`${error.name}: ${error.message}`); }
+    assert.deepEqual(walked, ['v3', 'v2', 'long5000', 7, 'v1', 'vd', 'vn'], `limit ${limit}`);
+  }
+  assert.equal(await store.countDiscoveries({ workspace: 'plane' }), 7);
 });

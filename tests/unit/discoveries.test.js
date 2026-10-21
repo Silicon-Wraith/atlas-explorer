@@ -627,3 +627,21 @@ test('a deletion by another source never hides a surviving discovery from the ne
   const view = controller.snapshot().sources.local;
   assert.deepEqual([view.items.length, view.items.at(-1).id, view.nextCursor], [51, 'd00', null], 'the oldest discovery is reachable');
 });
+
+// T10 fix round 2 (Codex r2 finding 4, reproduced through this controller): an unsupported row that
+// ends a page (here a numeric id, valid for IndexedDB) is listed as unsupported, and the next page
+// continues after it.
+test('an unsupported record at a page boundary is listed as unsupported and the next page continues', async () => {
+  const { store, local, controller } = setup({ readTimeoutMs: 1000 });
+  for (let i = 0; i < 51; i++) {
+    const createdAt = new Date(Date.UTC(2026, 9, 20, 0, 0, 50 - i)).toISOString();
+    if (i === 49) store.stores.discoveries.set(7, { id: 7, workspace: 'plane', createdAt, schema: 'atlas.discovery', schemaVersion: 1 });
+    else await local.save(createDiscoveryRecord({ scene: createPlaneScene({ view: { re: '-0.5', im: '0', zoom: i / 10 } }), name: `D${i}`, thumbnail: thumbnail(), id: `d${String(i).padStart(2, '0')}`, createdAt, sceneCodec }), { writeId: `w${i}` });
+  }
+  await controller.setWorkspace('plane');
+  let view = controller.snapshot().sources.local;
+  assert.deepEqual([view.status, view.items.length, view.items.filter(item => item.unsupported).length, view.items.at(-1)?.unsupported !== undefined], ['ready', 50, 1, true]);
+  await controller.nextPage('local');
+  view = controller.snapshot().sources.local;
+  assert.deepEqual([view.status, view.items.length, view.items.at(-1)?.id, view.nextCursor], ['ready', 51, 'd50', null], 'the valid record after the unsupported one is reachable');
+});
