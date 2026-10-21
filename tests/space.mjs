@@ -8,8 +8,8 @@
 // every tracked application file the server serves), records {name, details} passes to its own report with the requested and effective
 // launch arguments, the chrome://gpu identity, the GPU handoff and the source, and is bounded by
 // installSuiteDeadline. B01 registers `coexistence` (gated) and `developer-flag-experiment` (a
-// separately reported portability experiment, never gated); B06 registers `recovery`; later tasks add
-// numerics, rendering and shell. The spike document is written only after the run passed, its report was
+// separately reported portability experiment, never gated); B06 registers `recovery`; B08 registers
+// `numerics` (the field kernels against B04's frozen matrix); later tasks add rendering and shell. The spike document is written only after the run passed, its report was
 // persisted and every page, context and browser was drained and closed.
 import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
@@ -22,7 +22,7 @@ import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
@@ -881,6 +881,443 @@ async function recordRecoveryLongTasks(page) {
   console.log(`long tasks ${JSON.stringify(summary)}`);
 }
 
+// ---- the numerics group (plan B08: the WGSL field kernels against B04's frozen matrix, P1) ----------
+// Point strata only (B10 owns the ray strata and anchors). The point shards load through the pinned
+// index (index, logical matrix, generator and reference hashes pinned; each loaded shard's byte length,
+// SHA-256 and declared IDs verified by assembleMatrix) — a partial view, never whole-matrix
+// qualification. Every point batch runs through the production backend (B00 contract, B06 ABI): model
+// and point buffers from allocate(), one admission lease per submission and readback, results
+// prefilled with a sentinel so an unwritten result is a failure. Comparisons are Node-side
+// (tests/support/space-numerics.mjs) with the frozen tolerances; nothing is compared bit for bit
+// against B03.
+export const NUMERICS_PASSES = Object.freeze([
+  'Bulb kernels match the frozen references for every power, mandatory stratum and budget',
+  'Quaternion kernels match the frozen references across off-plane C, nonzero κ and the boundary strata including every component',
+  'κ = ±4 strata report empty slices and initialization escapes exactly',
+  'The 20 adversarial point cases give their expected statuses on the GPU',
+  'Derivative range safety holds on the GPU beyond update 44',
+  'Validation records are registered only for passed mandatory strata',
+]);
+const NUMERICS_PITCH = { 'bulb-origin': 1, 'bulb-polar': 24, 'bulb-generic': 256, 'quaternion-generic': 256, 'quaternion-boundary': 8, adversarial: 1 };
+
+async function numericsSetupInPage() {
+  const { createWebGPUBackend } = await import('/src/space/render/webgpu/backend.js');
+  const kernels = await import('/src/space/render/webgpu/kernels.js');
+  const contract = await import('/src/space/render/backend.js');
+  const parameters = await import('/src/space/numerics/parameters.js');
+  const canvas = document.createElement('canvas');
+  canvas.id = 'space-b08-canvas';
+  canvas.style.cssText = 'position:fixed;right:0;bottom:0;width:16px;height:9px;z-index:2147483647;pointer-events:none';
+  document.body.append(canvas);
+  const backend = createWebGPUBackend({ canvas, clock: performance });
+  const acquired = await backend.acquire();
+  const events = [], started = performance.now();
+  const prepared = await backend.prepare({ epoch: acquired.epoch, pipelineSet: kernels.fieldPipelineSet(), onProgress: event => events.push(event) });
+  const preparationMs = performance.now() - started;
+  const boxes = {};
+  for (const depth of [1, 2]) { const data = kernels.mengerBoxData(depth); boxes[depth] = backend.allocate({ name: `menger-boxes-${depth}`, bytes: data.byteLength, usage: 'storage', data }); }
+  const s = { backend, kernels, contract, parameters, canvas, boxes,
+    identity: jobId => ({ requestId: `request-${jobId}`, jobId, viewId: 'space-numerics', generation: { deviceEpoch: backend.currentEpoch(), viewRevision: 1, geometryRevision: 1, appearanceRevision: 1 } }),
+    lease: jobId => ({ admission: contract.createAdmission({ epoch: backend.currentEpoch(), jobId }) }),
+  };
+  globalThis.__b08 = s;
+  return { acquired: { epoch: acquired.epoch, requestedLimits: acquired.requestedLimits, limits: acquired.limits, canvasFormat: acquired.canvasFormat }, prepared, preparationMs, events,
+    implementationHashes: kernels.implementationHashes(), kernelVersion: kernels.KERNEL_VERSION, formulation: kernels.KERNEL_FORMULATION };
+}
+
+// One allocate()d points buffer and one sentinel-filled results buffer per call; one batch (one lease)
+// per entry over its own row-aligned span; one admitted readback of the results. `raw` encodes points
+// without admission and `rawModel` bypasses admitPointModel — used only to exercise in-kernel guards.
+async function pointsInPage({ label, pitch, batches, raw = false }) {
+  const s = globalThis.__b08, { backend, kernels } = s, jobId = `numerics-${label}`;
+  const spans = [], all = [], derivative = batches.some(batch => batch.pipelineId === kernels.DERIVATIVE_PIPELINE_ID);
+  let first = 0;
+  for (const batch of batches) {
+    const rows = Math.ceil(batch.points.length / pitch);
+    spans.push({ first, count: batch.points.length, pitch });
+    // NaN and Infinity cross the page boundary as string tokens (raw guard points only).
+    all.push(...(raw ? batch.points.map(p => p.map(v => (typeof v === 'string' ? Number(v) : v))) : batch.points));
+    for (let k = batch.points.length; k < rows * pitch; k++) all.push(derivative ? { grow: 0, add: 0, updates: 0 } : [0, 0, 0]);
+    first += rows * pitch;
+  }
+  const data = derivative ? kernels.encodeDerivativeProbes(all) : raw ? kernels.encodeRawPoints(all) : kernels.encodePoints(all);
+  const pointsBuffer = backend.allocate({ name: `points:${label}`, bytes: data.byteLength, usage: 'storage', data });
+  const resultsBuffer = backend.allocate({ name: `results:${label}`, bytes: first * kernels.POINT_RESULT_BYTES, usage: 'storage', data: kernels.sentinelResults(first) });
+  const started = performance.now(), tickets = [];
+  batches.forEach((batch, i) => {
+    const model = batch.rawModel ?? kernels.admitPointModel(batch.modelId, batch.effective, batch.cap);
+    const pipelineId = batch.pipelineId ?? kernels.pointsPipelineId(batch.modelId), span = spans[i];
+    const inputs = { points: pointsBuffer, results: resultsBuffer };
+    if (pipelineId !== kernels.DERIVATIVE_PIPELINE_ID) inputs.menger_boxes = s.boxes[model.depth === 2 ? 2 : 1];
+    tickets.push(backend.submitBatch({ identity: s.identity(jobId), pipelineId, pass: kernels.POINT_BATCH_PASS, region: kernels.pointRegion(span),
+      sample: { sequence: 'atlas-aa-v1', seed: 1, index: 0 }, bounds: kernels.pointBounds(model, span), inputs, outputs: { results: resultsBuffer },
+      uniforms: kernels.pointUniforms(model, span) }, s.lease(jobId)));
+  });
+  const outcomes = await Promise.all(tickets.map(ticket => ticket.done));
+  const read = backend.readback({ identity: s.identity(jobId), source: resultsBuffer, region: { x: 0, y: 0, width: first * kernels.POINT_RESULT_BYTES, height: 1 }, fields: ['results'] }, s.lease(jobId));
+  const readDone = await read.done;
+  let bytes = null, readError = null;
+  try { bytes = (await read.result).data; } catch (error) { readError = String(error?.message ?? error); }
+  backend.release(pointsBuffer); backend.release(resultsBuffer);
+  let binary = '';
+  if (bytes) for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  const counts = {};
+  for (const done of outcomes) counts[done.outcome] = (counts[done.outcome] ?? 0) + 1;
+  return { spans, total: first, batches: batches.length, outcomes: counts, failures: outcomes.filter(done => done.outcome !== 'completed').slice(0, 5).map(done => ({ outcome: done.outcome, reason: done.reason })),
+    read: { outcome: readDone.outcome, error: readError, bytes: bytes?.length ?? 0 }, wallMs: performance.now() - started,
+    queueMs: outcomes.reduce((sum, done) => sum + (done.timing?.elapsedMs ?? 0), 0), base64: btoa(binary) };
+}
+
+// Host admission of the five invalid adversarial inputs: refused before any dispatch.
+async function invalidAdmissionInPage(cases) {
+  const { kernels, parameters } = globalThis.__b08;
+  const attempt = fn => { try { fn(); return { admission: 'admitted' }; } catch (error) { return { admission: 'reject', error: `${error?.name}: ${error?.message}` }; } };
+  return cases.map(c => {
+    const value = c.inputs.invalidValue === 'NaN' ? Number.NaN : c.inputs.invalidValue === 'Infinity' ? Number.POSITIVE_INFINITY : c.inputs.invalidValue;
+    switch (c.inputs.interpretation) {
+      case 'invalid-bulb-coordinate': return attempt(() => { kernels.admitPointModel('mandelbulb', { power: 8 }, 128); kernels.encodePoints([[value, 0, 0]]); });
+      case 'invalid-quaternion-coordinate': return attempt(() => { kernels.admitPointModel('quaternion-julia', { C: [0, 0, 0, 0], kappa: 0 }, 128); kernels.encodePoints([[value, 0, 0]]); });
+      case 'invalid-bulb-power': return attempt(() => kernels.admitPointModel('mandelbulb', { power: value }, 128));
+      // A requested decimal just outside [-4, 4] rounds to 4 in binary32: B02 refuses it as a decimal.
+      case 'invalid-quaternion-parameter': return attempt(() => { const { effective } = parameters.effectiveParameters('quaternion-julia', { C: [value, '0', '0', '0'], kappa: '0' }); kernels.admitPointModel('quaternion-julia', effective, 128); });
+      case 'invalid-iteration-budget': return attempt(() => kernels.admitPointModel('mandelbulb', { power: 8 }, value));
+      default: return { admission: 'unknown interpretation' };
+    }
+  });
+}
+
+async function numericsFinishInPage() {
+  const s = globalThis.__b08, { backend } = s;
+  for (const handle of Object.values(s.boxes)) backend.release(handle);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const uncaptured = backend.testAdapter?.uncapturedErrors?.() ?? [];
+  backend.destroy();
+  const final = backend.diagnostics();
+  s.canvas.remove();
+  return { uncaptured, final: { state: final.state, epoch: final.epoch, tracked: final.tracked } };
+}
+
+async function runNumerics({ page }) {
+  const { loadPinnedPointStrata, comparePointStratum } = await import('./support/space-numerics.mjs');
+  const kernels = await import('../src/space/render/webgpu/kernels.js');
+  const { buildArithmeticRecords, createValidationRegistry, ARITHMETIC_RECORD_IDS, requiredStrata, MATRIX_PINS } = await import('../src/space/numerics/validation-records.js');
+  const { effectiveParameters, escapeRadius, sliceIsEmpty } = await import('../src/space/numerics/parameters.js');
+  const { derivativeUpdate } = await import('./reference/f32.js');
+  const view = loadPinnedPointStrata();
+  const tol = view.tolerances, strata = view.strata;
+  report.push({ name: 'Matrix pins and loaded point shards (partial view; not whole-matrix qualification)', complete: view.complete, pins: MATRIX_PINS, shards: view.shards, strata: strata.length });
+
+  await page.goto(url, { timeout: LIMITS.launch });
+  await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
+  await idleWithin(page);
+  const setup = await ev(page, numericsSetupInPage, undefined, 'numerics setup', LIMITS.deep);
+  assert.deepEqual(setup.acquired.requestedLimits, {}, 'no blanket requiredLimits');
+  assert.deepEqual(setup.prepared.preparedPipelineIds, kernels.fieldPipelineDescriptors().map(d => d.pipelineId));
+  assert.deepEqual(setup.implementationHashes, kernels.implementationHashes(), 'the served kernel metadata is the checkout\'s');
+  report.push({ name: 'Field kernels prepared (recorded)', ...setup });
+
+  const decode = (run, batches) => {
+    assert.equal(run.read.outcome, 'completed', `readback ${JSON.stringify(run.read)}`);
+    const bytes = new Uint8Array(Buffer.from(run.base64, 'base64'));
+    return batches.map((batch, i) => {
+      const span = run.spans[i], slice = bytes.subarray(span.first * kernels.POINT_RESULT_BYTES, (span.first + span.count) * kernels.POINT_RESULT_BYTES);
+      return kernels.decodePointResults(slice, span.count, batch.modelId ?? 'mandelbulb');
+    });
+  };
+  const runs = {}, results = new Map();
+  const strataOf = kind => strata.filter(row => row.kind === kind);
+  for (const kind of ['bulb-origin', 'bulb-polar', 'bulb-generic', 'quaternion-generic', 'quaternion-boundary']) {
+    const rows = strataOf(kind), quaternion = kind.startsWith('quaternion');
+    const batches = rows.map(row => ({ modelId: quaternion ? 'quaternion-julia' : 'mandelbulb', cap: row.parameters.cap,
+      effective: quaternion ? { C: row.parameters.C, kappa: row.parameters.kappa } : { power: row.parameters.power }, points: row.cases.map(c => c.inputs.effective) }));
+    const run = await ev(page, pointsInPage, { label: kind, pitch: NUMERICS_PITCH[kind], batches }, `points ${kind}`, LIMITS.deep);
+    const { base64, ...summary } = run; runs[kind] = summary;
+    assert.deepEqual(run.outcomes, { completed: rows.length }, `${kind}: every batch completes ${JSON.stringify(run.failures)}`);
+    decode(run, batches).forEach((decoded, i) => results.set(rows[i].id, { row: rows[i], decoded }));
+  }
+
+  // Adversarial: the GPU evaluates every dispatchable case; the invalid inputs are refused by
+  // admission and, written raw, are reported numerical failure by the kernels' own guards.
+  const adversarial = strataOf('adversarial-point')[0];
+  const dispatchable = adversarial.cases.filter(c => c.inputs.model && !c.inputs.interpretation);
+  const advBatches = dispatchable.map(c => c.inputs.model === 'mandelbulb'
+    ? { modelId: 'mandelbulb', effective: { power: c.inputs.power }, cap: c.inputs.cap, points: [c.inputs.p.map(Math.fround)] }
+    : { modelId: 'quaternion-julia', effective: { C: c.inputs.C.map(Math.fround), kappa: Math.fround(c.inputs.q0[3]) }, cap: c.inputs.cap, points: [c.inputs.q0.slice(0, 3).map(Math.fround)] });
+  const advRun = await ev(page, pointsInPage, { label: 'adversarial', pitch: 1, batches: advBatches }, 'points adversarial', LIMITS.deep);
+  assert.deepEqual(advRun.outcomes, { completed: advBatches.length });
+  const advDecoded = new Map(decode(advRun, advBatches).map((decoded, i) => [dispatchable[i].id, decoded[0]]));
+  const invalid = adversarial.cases.filter(c => c.inputs.interpretation);
+  const admissions = await ev(page, invalidAdmissionInPage, invalid, 'invalid admission');
+  const guardModels = {
+    'invalid-bulb-coordinate': { modelId: 'mandelbulb', rawModel: { ...kernels.admitPointModel('mandelbulb', { power: 8 }, 128) }, points: [[Number.NaN, 0, 0]] },
+    'invalid-quaternion-coordinate': { modelId: 'quaternion-julia', rawModel: { ...kernels.admitPointModel('quaternion-julia', { C: [0, 0, 0, 0], kappa: 0 }, 128) }, points: [[Number.POSITIVE_INFINITY, 0, 0]] },
+    'invalid-bulb-power': { modelId: 'mandelbulb', rawModel: { ...kernels.admitPointModel('mandelbulb', { power: 8 }, 128), power: 9 }, points: [[Math.fround(0.1), 0, 0]] },
+    'invalid-iteration-budget': { modelId: 'mandelbulb', rawModel: { ...kernels.admitPointModel('mandelbulb', { power: 8 }, 128), cap: 0 }, points: [[Math.fround(0.1), 0, 0]] },
+    'raw C component 4.5 (beyond the supported box)': { modelId: 'quaternion-julia', rawModel: { ...kernels.admitPointModel('quaternion-julia', { C: [0, 0, 0, 0], kappa: 0 }, 128), C: [4.5, 0, 0, 0] }, points: [[0, 0, 0]] },
+  };
+  // NaN and Infinity do not survive JSON: the raw points are rebuilt in the page from tokens.
+  const guardBatches = Object.values(guardModels).map(({ modelId, rawModel, points }) => ({ modelId, rawModel, points: points.map(p => p.map(v => (Number.isFinite(v) ? v : String(v)))) }));
+  const guardRun = await ev(page, pointsInPage, { label: 'guards', pitch: 1, batches: guardBatches, raw: true }, 'raw guard points', LIMITS.deep);
+  assert.deepEqual(guardRun.outcomes, { completed: guardBatches.length });
+  const guardDecoded = new Map(decode(guardRun, guardBatches).map((decoded, i) => [Object.keys(guardModels)[i], decoded[0]]));
+  const advResults = adversarial.cases.map(c => {
+    if (c.id === 'derivative-update-44') return null; // filled from the derivative probes below
+    if (c.inputs.interpretation) {
+      const refused = admissions[invalid.indexOf(c)], guarded = guardDecoded.get(c.id);
+      const guardOk = c.id === 'invalid-quaternion-parameter' || guarded?.status === 'numerical failure';
+      return { status: refused.admission === 'reject' && guardOk ? 'numerical failure' : 'escaped', admission: refused.admission, guard: guarded?.status ?? 'not applicable: binary32 rounds the requested decimal to 4' };
+    }
+    return advDecoded.get(c.id);
+  });
+
+  // Derivative probes: D' = 8D + 1 from the zero state for 1..128 updates, against B04's binary32 reference.
+  const probeBatches = [{ modelId: 'mandelbulb', pipelineId: kernels.DERIVATIVE_PIPELINE_ID, rawModel: { ...kernels.admitPointModel('mandelbulb', { power: 8 }, 128) },
+    points: Array.from({ length: 128 }, (_, n) => ({ grow: 8, add: 1, updates: n + 1 })) }];
+  const probeRun = await ev(page, pointsInPage, { label: 'derivative', pitch: 128, batches: probeBatches }, 'derivative probes', LIMITS.deep);
+  assert.deepEqual(probeRun.outcomes, { completed: 1 });
+  const probes = decode(probeRun, probeBatches)[0];
+  advResults[adversarial.cases.findIndex(c => c.id === 'derivative-update-44')] = probes[43];
+  results.set(adversarial.id, { row: adversarial, decoded: advResults });
+
+  // Bulb power-map probes (B08 fix round 1): two updates from z0 = 0 give z2 = P_p(c) + c, compared
+  // with binary64 references: identity against the spec formula (atan2 angles) under the component
+  // tolerance; polar axis exact; normalization against the scaled complex-power form (|x|, |y| down to 2^-100, where x² + y² underflows in binary32;
+  // the mapped transverse values stay above 2^-126, below which WGSL may flush to zero):
+  // relative 10^-4 with no absolute floor, so the transverse components are actually tested.
+  const { bulbMapTrig, bulbMapComplex } = await import('./support/space-numerics.mjs');
+  const mapReference = (c, p, kind) => (kind === 'identity' ? bulbMapTrig : bulbMapComplex)(c, p).map((v, k) => v + c[k]);
+  const grid = Array.from({ length: 7 }, (_, i) => Math.fround(-0.9 + 1.8 * (i + 0.5) / 7));
+  const mapProbes = {
+    identity: grid.flatMap(x => grid.flatMap(y => grid.map(z => [x, y, z]))).filter(([x, y]) => x !== 0 || y !== 0),
+    axis: [[0, 0, 0.5], [0, 0, -0.5], [0, 0, 1], [0, 0, -1], [0, 0, 0.25]],
+    normalization: [[2 ** -80, 2 ** -80, 0.5], [2 ** -80, -(2 ** -80), -0.5], [-(2 ** -100), 0, 0.75], [0, 2 ** -100, 0.25], [2 ** -70, 2 ** -71, 0.5], [-(2 ** -90), -(2 ** -90), -0.75]],
+  };
+  const mapBatches = [];
+  for (let power = 2; power <= 8; power++) for (const [kind, points] of Object.entries(mapProbes)) mapBatches.push({ kind, power, modelId: 'mandelbulb', effective: { power }, cap: 2, points });
+  const mapRun = await ev(page, pointsInPage, { label: 'power-map', pitch: 256, batches: mapBatches.map(({ kind, power, ...batch }) => batch) }, 'bulb power-map probes', LIMITS.deep);
+  assert.deepEqual(mapRun.outcomes, { completed: mapBatches.length });
+  const mapDecoded = decode(mapRun, mapBatches);
+
+  // Menger applicability probes (fix round 2): a shared seam whose touching boxes cover all eight
+  // orthants is union interior (codex-B08-consult2-findings.md); faces, strict interiors and exterior
+  // points keep their classes; exterior distances against B04's mengerDistance (analytic tolerance).
+  const { mengerDistance } = await import('./reference/menger.js');
+  const third = Math.fround(1 / 3), twoThirds = Math.fround(2 / 3);
+  const mengerProbes = [
+    { depth: 1, c: [-twoThirds, -twoThirds, -third], expected: 'interior' }, { depth: 1, c: [-twoThirds, -third, -twoThirds], expected: 'interior' },
+    { depth: 1, c: [Math.fround(0.8), Math.fround(0.8), Math.fround(0.8)], expected: 'interior' }, { depth: 1, c: [1, Math.fround(0.9), Math.fround(0.9)], expected: 'boundary' },
+    { depth: 1, c: [1.5, 0, 0], expected: 'exterior' }, { depth: 1, c: [0, 0, 0], expected: 'exterior' }, { depth: 2, c: [Math.fround(-7 / 9), Math.fround(-8 / 9), Math.fround(-8 / 9)], expected: 'interior' },
+    { depth: 2, c: [0, 0, 0], expected: 'exterior' },
+  ];
+  const mengerBatches = mengerProbes.map(({ depth, c }) => ({ modelId: 'menger', effective: { depth }, cap: 1, points: [c] }));
+  const mengerRun = await ev(page, pointsInPage, { label: 'menger', pitch: 1, batches: mengerBatches }, 'menger probes', LIMITS.deep);
+  assert.deepEqual(mengerRun.outcomes, { completed: mengerBatches.length });
+  const mengerDecoded = decode(mengerRun, mengerBatches).map(d => d[0]);
+
+  // Per-stratum qualification table.
+  const table = [];
+  for (const row of strata) {
+    const entry = results.get(row.id);
+    const comparison = comparePointStratum(row, entry?.decoded, tol);
+    const p = row.parameters ?? {};
+    table.push({ ...comparison, model: row.kind.startsWith('bulb') ? 'mandelbulb' : row.kind === 'adversarial-point' ? 'mixed' : 'quaternion-julia', power: p.power, C: p.C, kappa: p.kappa, cap: p.cap });
+  }
+  report.push({ name: 'Per-stratum point qualification (recorded; joins on matrixSha256 and stratum id)', matrixSha256: view.matrixSha256, runs: { ...runs, adversarial: (({ base64, ...x }) => x)(advRun) },
+    rows: table.map(({ failures, ...row }) => ({ ...row, firstFailures: failures.slice(0, 3) })) });
+  const failedChecks = [];
+  const check = (name, fn) => { try { const details = fn(); pass(name, details); } catch (error) { failedChecks.push(name); report.push({ name: `FAILED ${name}`, error: String(error?.message ?? error).slice(0, 4000) }); console.log(`FAILED ${name}: ${String(error?.message).slice(0, 600)}`); } };
+  const byState = rows => rows.reduce((acc, row) => ({ ...acc, [row.state]: (acc[row.state] ?? 0) + 1 }), {});
+  const failing = rows => rows.filter(row => !row.passed).map(row => ({ id: row.id, state: row.state, failureCount: row.failureCount, numericalFailures: row.numericalFailures, first: row.failures.slice(0, 3), belowFloor: row.belowFloor }));
+
+  check('Bulb power map: identity, polar axis and normalization (fix round 1; recorded, not a manifest pass)', () => {
+    const worst = { identity: 0, normalization: 0 }, failures = [];
+    mapBatches.forEach((batch, b) => batch.points.forEach((c, i) => {
+      const actual = mapDecoded[b][i], expected = mapReference(c, batch.power, batch.kind);
+      if (actual.status === 'numerical failure' || actual.status === 'missing') return failures.push({ kind: batch.kind, power: batch.power, c, status: actual.status });
+      expected.forEach((v, k) => {
+        const a = actual.value[k];
+        if (batch.kind === 'axis') { if (a !== Math.fround(v)) failures.push({ kind: 'axis', power: batch.power, c, k, a, v }); return; }
+        const allow = batch.kind === 'identity' ? Math.max(tol.component0.floor, tol.component0.value * Math.abs(v)) : tol.component0.value * Math.abs(v);
+        const ratio = v === 0 ? (a === 0 ? 0 : Infinity) : Math.abs(a - v) / allow;
+        worst[batch.kind] = Math.max(worst[batch.kind], ratio);
+        if (!(ratio <= 1)) failures.push({ kind: batch.kind, power: batch.power, c, k, a, v, ratio });
+      });
+    }));
+    assert.deepEqual(failures.slice(0, 8), [], `${failures.length} power-map failures`);
+    return { probes: mapBatches.reduce((n, batch) => n + batch.points.length, 0), worst };
+  });
+  check('Menger applicability: union-interior seams, faces and exterior distances (fix round 2; recorded, not a manifest pass)', () => {
+    const rows = mengerProbes.map((probe, i) => ({ ...probe, actual: mengerDecoded[i].applicability, distance: mengerDecoded[i].distance, reference: mengerDistance(probe.c, probe.depth).distance }));
+    for (const row of rows) {
+      assert.equal(row.actual, row.expected, `depth ${row.depth} ${JSON.stringify(row.c)}`);
+      if (row.expected === 'exterior') assert.ok(Math.abs(row.distance - row.reference) <= Math.max(1e-6, 1e-3 * row.reference), `distance ${row.distance} vs ${row.reference}`);
+      else assert.equal(row.distance, 0);
+    }
+    return { rows };
+  });
+  check(NUMERICS_PASSES[0], () => {
+    const rows = table.filter(row => row.kind.startsWith('bulb'));
+    assert.equal(rows.length, 7 * 4 * 3);
+    assert.deepEqual(failing(rows), [], 'every bulb stratum passes');
+    for (const row of rows.filter(r => r.kind === 'bulb-generic')) assert.ok(row.eligible.continuous >= (row.power === 7 ? 400 : 410), `${row.id} floor`);
+    return { byState: byState(rows), worst: Object.fromEntries(['component0', 'component1', 'component2', 'logEscapeRadius', 'log2DE', 'log2Derivative'].map(q => [q, Math.max(0, ...rows.map(r => r.worst[q] ?? 0))])),
+      eligible: rows.filter(r => r.kind === 'bulb-generic').map(r => [r.id, r.eligible.continuous]) };
+  });
+  check(NUMERICS_PASSES[1], () => {
+    const rows = table.filter(row => row.kind.startsWith('quaternion'));
+    assert.equal(rows.length, 168 + 672);
+    assert.deepEqual(failing(rows), [], 'every quaternion stratum passes');
+    // Boundary admission, bound and rejection assertions (B02 product admission and outward bound).
+    const boundary = strataOf('quaternion-boundary'), bounds = { equal: 0, wider: 0 };
+    for (const row of boundary) {
+      const decimal = v => String(v);
+      const admitted = effectiveParameters('quaternion-julia', { C: row.parameters.C.map(decimal), kappa: decimal(row.parameters.kappa) });
+      assert.deepEqual(admitted.effective.C, row.parameters.C); assert.equal(admitted.effective.kappa, row.parameters.kappa);
+      const { bound } = escapeRadius(row.parameters.C), raw = Math.max(2, (1 + Math.sqrt(1 + 4 * Math.hypot(...row.parameters.C))) / 2);
+      assert.ok(bound >= raw && bound >= row.cases[0].expected.bound, `${row.id}: B02 bound ${bound} is outward of R(C) ${raw} and the reference ${row.cases[0].expected.bound}`);
+      bounds[bound === row.cases[0].expected.bound ? 'equal' : 'wider']++;
+      for (const c of row.cases) assert.equal(sliceIsEmpty(row.parameters.kappa, bound), c.expected.emptySlice, `${c.id} empty-slice predicate`);
+      for (const rejection of row.rejectionCases) {
+        const [field, index] = rejection.field.split('.');
+        const requested = { C: ['0', '0', '0', '0'], kappa: '0' };
+        if (field === 'C') requested.C[Number(index)] = rejection.requested; else requested.kappa = rejection.requested;
+        assert.equal(rejection.expected, 'out-of-range');
+        assert.throws(() => effectiveParameters('quaternion-julia', requested), /\[-4, 4\]/, `${row.id} ${rejection.field} rejects ${rejection.requested}`);
+      }
+    }
+    return { byState: byState(rows), boundsVsReference: bounds, worst: Object.fromEntries(['component0', 'component1', 'component2', 'component3', 'logEscapeRadius', 'log2DE'].map(q => [q, Math.max(0, ...rows.map(r => r.worst[q] ?? 0))])) };
+  });
+  check(NUMERICS_PASSES[2], () => {
+    const rows = table.filter(row => row.kind.startsWith('quaternion') && Math.abs(row.kappa) === 4);
+    assert.equal(rows.length, 6 * 2 * 4 + 24 * 2 * 4);
+    let cases = 0;
+    for (const row of rows) {
+      assert.equal(row.passed, true, `${row.id}: ${JSON.stringify(row.failures.slice(0, 3))}`);
+      const { row: source, decoded } = results.get(row.id);
+      assert.equal(kernels.admitPointModel('quaternion-julia', { C: source.parameters.C, kappa: source.parameters.kappa }, source.parameters.cap).emptySlice, true, `${row.id} is an empty slice`);
+      for (const [i, c] of source.cases.entries()) {
+        assert.equal(c.expected.emptySlice, true); assert.equal(decoded[i].status, 'escaped', c.id); assert.equal(decoded[i].escapeIndex, 0, `${c.id} escapes at initialization`);
+        cases++;
+      }
+    }
+    return { strata: rows.length, cases };
+  });
+  check(NUMERICS_PASSES[3], () => {
+    const row = table.find(r => r.kind === 'adversarial-point');
+    assert.equal(adversarial.cases.length, 20);
+    assert.equal(row.passed, true, JSON.stringify(row.failures));
+    return { cases: adversarial.cases.map((c, i) => ({ id: c.id, expected: c.expected.status ?? 'derivative', actual: advResults[i]?.status, admission: advResults[i]?.admission, guard: advResults[i]?.guard })), guards: Object.fromEntries([...guardDecoded].map(([k, v]) => [k, v.status])) };
+  });
+  check(NUMERICS_PASSES[4], () => {
+    let reference = { zero: true, mantissa: 0, exponent: 0 }, bitExact = 0;
+    const frozen = adversarial.cases.find(c => c.id === 'derivative-update-44').expected.derivative;
+    for (let n = 1; n <= 128; n++) {
+      reference = derivativeUpdate(reference, 8, 1, 'f32');
+      const gpu = probes[n - 1].derivative;
+      assert.equal(gpu.zero, false, `update ${n}`);
+      assert.ok(gpu.mantissa >= 1 && gpu.mantissa < 2, `update ${n}: normalized mantissa ${gpu.mantissa}`);
+      assert.equal(gpu.exponent, reference.exponent, `update ${n}: exponent`);
+      assert.equal(gpu.mantissa, reference.mantissa, `update ${n}: exact binary32 state (fix round 2 ruling)`);
+      if (n >= 44) assert.ok(gpu.exponent > 127, `update ${n} lies beyond the binary32 scalar range`);
+      bitExact += Number(gpu.mantissa === reference.mantissa);
+    }
+    assert.deepEqual(probes[43].derivative, frozen, 'update 44 equals the frozen reference state');
+    return { update44: probes[43].derivative, update128: probes[127].derivative, exactStates: bitExact, of: 128 };
+  });
+  check(NUMERICS_PASSES[5], () => {
+    const { records, withheld } = buildArithmeticRecords({ results: table, implementationHashes: setup.implementationHashes });
+    const registry = createValidationRegistry();
+    for (const record of records) registry.register(record);
+    const passedIds = new Set(table.filter(row => row.passed).map(row => row.id));
+    for (const recordId of ARITHMETIC_RECORD_IDS) {
+      const covered = requiredStrata(recordId).every(id => passedIds.has(id));
+      assert.equal(records.some(r => r.recordId === recordId), covered, `${recordId} is registered iff all its mandatory strata passed`);
+    }
+    for (const record of registry.list()) {
+      const effective = record.modelId === 'mandelbulb' ? { power: record.testedParameters.power[0] } : { C: record.testedParameters.C[0], kappa: record.testedParameters.kappa[0] };
+      const query = { modelId: record.modelId, evidenceClass: 'arithmetic', implementationHashes: setup.implementationHashes, profile: 'surface-v1', effective, sampling: { maxIterations: 128 }, domain: record.testedDomain };
+      assert.equal(registry.lookup(query)?.recordId, record.recordId);
+      assert.equal(registry.lookup({ ...query, implementationHashes: { ...setup.implementationHashes, kernelVersion: 'other' } }), null, 'another kernel never matches');
+    }
+    return { registered: records.map(r => r.recordId), withheld: withheld.map(w => ({ recordId: w.recordId, failing: w.failing.slice(0, 10), failingCount: w.failing.length })), records };
+  });
+
+  const finish = await ev(page, numericsFinishInPage, undefined, 'numerics teardown');
+  report.push({ name: 'Numerics teardown (recorded)', ...finish });
+  assert.deepEqual(finish.uncaptured, [], `no uncaptured WebGPU errors: ${JSON.stringify(finish.uncaptured)}`);
+  assert.deepEqual(failedChecks, [], `numerics checks failed: ${failedChecks.join('; ')}`);
+}
+
+// ---- the numerics-divergence diagnostic (B08 fix round 2; test-only, never gated) -----------------
+// Runs the served fields.wgsl bulb_power_map through a test-only compute shader that records, per
+// update, z_n, |z_n|, and the power map's normalization and complex-product intermediates, so the
+// first GPU/CPU-f32 divergence can be attributed to an operation. No production code is involved
+// beyond the served kernel source.
+const DIVERGENCE_STEPS = 20;
+async function divergenceInPage({ cases, intermediates, steps }) {
+  const { acquireDevice } = await import('/src/space/render/webgpu/device.js');
+  const { wgslConstants } = await import('/src/space/render/status.js');
+  const fields = await (await fetch('/src/space/render/webgpu/shaders/fields.wgsl')).text();
+  const { device } = await acquireDevice({ onLost: () => {} });
+  const code = `${wgslConstants()}\n${fields}\n@group(0) @binding(2) var<storage, read> menger_boxes: array<MengerBox>;
+@group(0) @binding(0) var<storage, read> input: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> out: array<vec4<f32>>;
+@compute @workgroup_size(1) fn diag(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let c = input[gid.x].xyz; let p = u32(input[gid.x].w);
+  var z = vec3<f32>(0.0);
+  for (var n = 0u; n < ${steps}u; n++) {
+    let r = length(z);
+    let m = bulb_power_map(z, r, p);
+    var a = vec4<f32>(0.0); var b = vec4<f32>(0.0); var wq = vec4<f32>(0.0);
+    ${intermediates}
+    let base = (gid.x * ${steps}u + n) * 5u;
+    z = m.xyz + c;
+    out[base] = vec4<f32>(z, length(z)); out[base + 1u] = vec4<f32>(r, a.x, a.y, a.z); out[base + 2u] = b; out[base + 3u] = wq; out[base + 4u] = m;
+  }
+}`;
+  const module = device.createShaderModule({ code });
+  const info = (await module.getCompilationInfo()).messages.filter(m => m.type === 'error').map(m => `${m.lineNum}: ${m.message}`);
+  if (info.length) return { error: info };
+  const pipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: 'diag' } });
+  const input = device.createBuffer({ size: cases.length * 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+  device.queue.writeBuffer(input, 0, new Float32Array(cases.flatMap(({ c, p }) => [...c, p])));
+  const bytes = cases.length * steps * 5 * 16;
+  const out = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+  const read = device.createBuffer({ size: bytes, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+  const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass();
+  pass.setPipeline(pipeline); pass.setBindGroup(0, device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: input } }, { binding: 1, resource: { buffer: out } }] }));
+  pass.dispatchWorkgroups(cases.length); pass.end();
+  encoder.copyBufferToBuffer(out, 0, read, 0, bytes); device.queue.submit([encoder.finish()]);
+  await read.mapAsync(GPUMapMode.READ);
+  const values = Array.from(new Float32Array(read.getMappedRange().slice(0)));
+  read.unmap(); device.destroy();
+  return { values };
+}
+// The intermediates replicate the kernel body under test (a: s, rho_s, rho; b: t, unit; wq: w, q).
+export const DIVERGENCE_INTERMEDIATES = {
+  'max-scaling': `let s = max(abs(z.x), abs(z.y)); if (s >= SMALLEST_NORMAL) { let t = vec2<f32>(z.x, z.y) / s; let rho_s = length(t); let rho = s * rho_s; let unit = t / rho_s;
+    var w = vec2<f32>(1.0, 0.0); var q = vec2<f32>(1.0, 0.0); for (var k = 0u; k < p; k++) { w = complex_mul(w, vec2<f32>(z.z, rho)); q = complex_mul(q, unit); }
+    a = vec4<f32>(s, rho_s, rho, 0.0); b = vec4<f32>(t, unit); wq = vec4<f32>(w, q); }`,
+  'pow2-scaling': `let s = max(abs(z.x), abs(z.y)); if (s >= SMALLEST_NORMAL) { let e = frexp(s).exp; let t = ldexp(vec2<f32>(z.x, z.y), vec2<i32>(-e)); let h = length(t); let rho = ldexp(h, e); let unit = t / h;
+    var w = vec2<f32>(1.0, 0.0); var q = vec2<f32>(1.0, 0.0); for (var k = 0u; k < p; k++) { w = complex_mul(w, vec2<f32>(z.z, rho)); q = complex_mul(q, unit); }
+    a = vec4<f32>(s, h, rho, 0.0); b = vec4<f32>(t, unit); wq = vec4<f32>(w, q); }`,
+};
+async function runNumericsDivergence({ page }) {
+  await page.goto(url, { timeout: LIMITS.launch });
+  await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
+  const { readFileSync } = await import('node:fs');
+  const a = JSON.parse(readFileSync('tests/reference/space-matrix/bulb-generic.json', 'utf8'));
+  const row = a.find(x => x.id === 'bulb/p4/n64/generic');
+  const cases = [340, 364].map(i => ({ id: row.cases[i].id, c: row.cases[i].inputs.effective, p: 4 }));
+  const variant = process.env.ATLAS_DIVERGENCE_VARIANT ?? 'max-scaling';
+  const result = await ev(page, divergenceInPage, { cases, intermediates: DIVERGENCE_INTERMEDIATES[variant], steps: DIVERGENCE_STEPS }, 'divergence probe', LIMITS.deep);
+  assert.ok(!result.error, JSON.stringify(result.error));
+  report.push({ name: 'Bulb orbit divergence probe (diagnostic; test-only)', variant, cases: cases.map((c, k) => ({ ...c,
+    steps: Array.from({ length: DIVERGENCE_STEPS }, (_, n) => { const o = (k * DIVERGENCE_STEPS + n) * 20, v = result.values.slice(o, o + 20);
+      return { n: n + 1, z: v.slice(0, 3), norm: v[3], rIn: v[4], s: v[5], rhoS: v[6], rho: v[7], t: v.slice(8, 10), unit: v.slice(10, 12), w: v.slice(12, 14), q: v.slice(14, 16), map: v.slice(16, 19), rp1: v[19] }; }) })) });
+  pass('Bulb orbit divergence probe recorded (diagnostic)');
+}
+
 // ---- harness ---------------------------------------------------------------------------------------
 
 async function readEffectiveEnvironment(context) {
@@ -944,7 +1381,7 @@ async function ensureServer() {
 
 let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
-const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery };
+const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence };
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
 let source = null, serverOwnership = null;
 
@@ -981,7 +1418,7 @@ try {
   ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
   console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
   assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
-  if (['coexistence', 'recovery'].includes(options.group)) {
+  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence'].includes(options.group)) {
     // One launch under the complete profile; the application page is a WebGL (Plane) page, so its close
     // in the finally goes through the local expected-backend drain wrapper (drainExpecting).
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });

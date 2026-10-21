@@ -32,6 +32,8 @@
     "tests/unit/reference-rays.test.js",
     "tests/unit/reference-p3.test.js",
     "tests/unit/reference-suite.test.js",
-    "tests/unit/space-camera.test.js"
+    "tests/unit/space-camera.test.js",
+    "tests/unit/kernel-metadata.test.js",
+    "tests/unit/space-numerics.test.js"
   ]
 }
