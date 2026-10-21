@@ -174,7 +174,7 @@ test('the watchdog fires on the injected timer while a hidden view holds a lease
     pipelineId: 'test', kind: 'compute', sourceIds: ['test.wgsl'], entryPoint: 'main', constants: {},
     bindings: [{ slot: 'status', type: 'storage-texture', access: 'write' }], uniformLayout: { byteLength: 0, fields: [] },
   }] }) }); backend.finishPrepare(); await preparation;
-  const handle = backend.allocate({ name: 'status', bytes: 32, width: 8, height: 1, format: 'r32uint', bytesPerTexel: 4 });
+  const handle = backend.allocateImage({ name: 'status', bytes: 32, width: 8, height: 1, format: 'r32uint', bytesPerTexel: 4 });
   const { job } = enqueue(scheduler, 'stuck', { kind: 'settled', outputs: { status: handle } });
   const [entry] = scheduler.admit(); const ticket = backend.submitBatch(entry.operation.batch, { admission: entry.admission });
   backend.release(handle); scheduler.hidden('main', true);
@@ -452,7 +452,7 @@ test('added: resuming or pausing an unadmitted Update cannot orphan its selected
 
 test('added: readback and presentation use real backend leases from the same pool', async () => {
   const { scheduler, clock } = setup(); const backend = createFakeBackend({ clock }); await backend.acquire();
-  const handle = backend.allocate({ name: 'display', bytes: 32, width: 8, height: 1, format: 'rgba8unorm', bytesPerTexel: 4 });
+  const handle = backend.allocateImage({ name: 'display', bytes: 32, width: 8, height: 1, format: 'rgba8unorm', bytesPerTexel: 4 });
   const id = requestData('aux');
   const identity = { jobId: id.jobId, requestId: id.requestId, viewId: id.viewId, generation: id.generation };
   const readback = { id: 'readback', dependsOn: [], kind: 'readback', descriptor: { identity, source: handle,

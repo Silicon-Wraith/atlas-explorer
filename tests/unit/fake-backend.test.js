@@ -19,7 +19,7 @@ async function ready(options = {}) {
   const prepared = backend.prepare({ epoch: backend.currentEpoch(), pipelineSet: pipelineSet() }); backend.finishPrepare(); await prepared;
   return backend;
 }
-const resource = (backend, bytes = 16) => backend.allocate({ name: 'status', bytes, width: bytes / 4, height: 1, format: 'r32uint', bytesPerTexel: 4 });
+const resource = (backend, bytes = 16) => backend.allocateImage({ name: 'status', bytes, width: bytes / 4, height: 1, format: 'r32uint', bytesPerTexel: 4 });
 const batch = (backend, handle, patch = {}) => createBatch({ identity: identity(backend.currentEpoch()), pipelineId: 'probe-test', pass: 'probe',
   region: { x: 0, y: 0, width: 1, height: 1 }, sample: { sequence: 'atlas-aa-v1', seed: 1, index: 0 },
   bounds: { pixels: 1, raySteps: 0, iterations: 0, normalFieldSamples: 0, shadowRays: 0, shadowSteps: 0, aoSamples: 0 },
@@ -108,11 +108,16 @@ test('target replacement is transactional and counts each actual internal dimens
   await assert.rejects(backend.configureTargets({ ...input, internalSize: { width: 4, height: 4 } }), code('allocation-failed'));
   const ticket = backend.present({ identity: identity(backend.currentEpoch()), display: targets.handles.display }, lease(backend));
   backend.complete(ticket, { elapsedMs: 2 }); assert.equal((await ticket.done).outcome, 'completed');
-  await backend.configureTargets(input); assert.equal(backend.diagnostics().tracked, 288);
+  // Target handles stay caller-owned: a replacement leaves the earlier set live until release.
+  const replacement = await backend.configureTargets(input); assert.equal(backend.diagnostics().tracked, 576);
+  const previous = backend.present({ identity: identity(backend.currentEpoch()), display: targets.handles.display }, lease(backend));
+  backend.complete(previous, { elapsedMs: 1 }); assert.equal((await previous.done).outcome, 'completed', 'the previous image can still be presented');
+  for (const handle of Object.values(targets.handles).flat()) backend.release(handle);
+  assert.equal(backend.diagnostics().tracked, 288); assert.ok(replacement.handles.display);
 });
 
 test('readback stages exact region bytes and keeps mapping ownership after queue completion', async () => {
-  const backend = await ready(), handle = backend.allocate({ name: 'pixels', bytes: 32, width: 4, height: 2, format: 'r32uint', bytesPerTexel: 4 });
+  const backend = await ready(), handle = backend.allocateImage({ name: 'pixels', bytes: 32, width: 4, height: 2, format: 'r32uint', bytesPerTexel: 4 });
   const bytes = Uint8Array.from({ length: 32 }, (_, i) => i); backend.stage(handle, bytes); bytes.fill(255);
   const read = backend.readback({ identity: identity(backend.currentEpoch()), source: handle, region: { x: 1, y: 0, width: 2, height: 2 }, fields: ['status'] }, lease(backend));
   backend.release(handle); backend.complete(read, { elapsedMs: 4 });
@@ -125,7 +130,7 @@ test('readback stages exact region bytes and keeps mapping ownership after queue
 });
 
 test('readbacks enforce 256 rows and two staging buffers and loss rejects outstanding copy-out', async () => {
-  const backend = await ready(), handle = backend.allocate({ name: 'status', bytes: 4 * 257, width: 1, height: 257, bytesPerTexel: 4, format: 'r32uint' });
+  const backend = await ready(), handle = backend.allocateImage({ name: 'status', bytes: 4 * 257, width: 1, height: 257, bytesPerTexel: 4, format: 'r32uint' });
   const desc = { identity: identity(backend.currentEpoch()), source: handle, region: { x: 0, y: 0, width: 1, height: 1 }, fields: ['status'] };
   assert.throws(() => backend.readback({ ...desc, region: { ...desc.region, height: 257 } }, lease(backend)), code('invalid-descriptor'));
   const a = backend.readback(desc, lease(backend)), b = backend.readback(desc, lease(backend));
@@ -281,4 +286,18 @@ test('uniform bindings distinguish generated fields from explicitly allocated in
   assert.throws(() => backend.submitBatch(batch(backend, handle, { inputs: { params: uniform }, uniforms: { count: 1 } }), lease(backend)), code('invalid-descriptor'));
   const generated = backend.submitBatch(batch(backend, handle, { uniforms: { count: 1 } }), lease(backend));
   backend.complete(generated, { elapsedMs: 1 }); assert.equal((await generated.done).outcome, 'completed');
+});
+
+test('production allocate refuses texture-shaped descriptors; allocateImage is a fake-only image control', async () => {
+  const backend = await ready();
+  for (const desc of [{ name: 'status', bytes: 16, width: 4, height: 1, format: 'r32uint', bytesPerTexel: 4 },
+    { name: 'status', bytes: 16, usage: 'storage', width: 4, height: 1 }, { name: 'status', bytes: 16, height: 1 }]) {
+    assert.throws(() => backend.allocate(desc), code('invalid-descriptor'), JSON.stringify(desc));
+  }
+  assert.equal(backend.diagnostics().tracked, 0, 'a refused descriptor is never counted');
+  assert.equal(typeof backend.allocateImage, 'function');
+  const image = backend.allocateImage({ name: 'status', bytes: 16, width: 4, height: 1, format: 'r32uint', bytesPerTexel: 4 });
+  assert.deepEqual(backend.diagnostics().inventory.map(item => [item.name, item.width, item.height]), [['status', 4, 1]]);
+  backend.release(image);
+  assert.throws(() => backend.allocateImage({ name: 'buffer', bytes: 16, usage: 'storage' }), code('invalid-descriptor'), 'allocateImage requires image dimensions');
 });

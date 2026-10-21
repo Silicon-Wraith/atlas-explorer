@@ -8,8 +8,8 @@
 // every tracked application file the server serves), records {name, details} passes to its own report with the requested and effective
 // launch arguments, the chrome://gpu identity, the GPU handoff and the source, and is bounded by
 // installSuiteDeadline. B01 registers `coexistence` (gated) and `developer-flag-experiment` (a
-// separately reported portability experiment, never gated); later tasks add numerics, rendering,
-// recovery and shell. The spike document is written only after the run passed, its report was
+// separately reported portability experiment, never gated); B06 registers `recovery`; later tasks add
+// numerics, rendering and shell. The spike document is written only after the run passed, its report was
 // persisted and every page, context and browser was drained and closed.
 import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
@@ -22,7 +22,7 @@ import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
@@ -433,7 +433,7 @@ async function runCoexistence({ context, page, environment }) {
   assert.ok(isFallbackAdapter === 'unavailable' || typeof isFallbackAdapter?.value === 'boolean', JSON.stringify(isFallbackAdapter));
   assert.notEqual(isFallbackAdapter?.value, true, 'a fallback adapter is a software device and never satisfies the physical-GPU requirement');
   assert.deepEqual(features.requested, ['timestamp-query']);
-  assert.deepEqual(Object.keys(limits), ['maxBufferSize', 'maxStorageBufferBindingSize', 'maxUniformBufferBindingSize', 'maxTextureDimension2D', 'maxComputeWorkgroupsPerDimension', 'maxComputeInvocationsPerWorkgroup', 'maxBindGroups', 'maxStorageBuffersPerShaderStage']);
+  assert.deepEqual(Object.keys(limits), ['maxBufferSize', 'maxStorageBufferBindingSize', 'maxUniformBufferBindingSize', 'maxTextureDimension2D', 'maxComputeWorkgroupsPerDimension', 'maxComputeInvocationsPerWorkgroup', 'maxBindGroups', 'maxStorageBuffersPerShaderStage', 'maxStorageTexturesPerShaderStage']);
   for (const [key, value] of Object.entries(limits)) assert.ok(value === 'unavailable' || (Number.isInteger(value) && value > 0), `${key}: ${value}`);
   const observedFields = Object.values(identity).filter(field => field !== 'unavailable').length;
   const corroborated = { webglRenderer: webgl.renderer, chromeGpu: environment.chromeGpu };
@@ -485,6 +485,400 @@ async function runDeveloperFlagExperiment({ launchProfile }) {
     pass(name, { launch, attemptId: acquired.attemptId, identity: acquired.identity, isFallbackAdapter: acquired.isFallbackAdapter, features: acquired.features, limits: acquired.limits, probe: webgpu.probe, canvasFormat: webgpu.canvasFormat, lost: destroyed.lost });
     await closeDrained(page, `application page (${launch})`);
   }
+}
+
+// ---- the recovery group (plan B06: the WebGPU backend, its allocator, admission and loss) ------------
+// Born here with the backend checks; B13 extends it. Every in-page step drives the production backend
+// (src/space/render/webgpu/backend.js) through the B00 contract only: leases from createAdmission,
+// opaque handles, tickets. The backend's onPhase intervals and every long-task entry leave the page so
+// the suite attributes long tasks to backend phases by interval overlap (B01 Q2; B15 enforces P3).
+export const RECOVERY_PASSES = Object.freeze([
+  'Self-check pipelines prepare asynchronously with progress and the probe readback is ATLS through ordinary admission',
+  'A batch completes with queue-completion timing and a 256-row banded readback returns the staged pattern',
+  'Presentation renders the display texture to the preferred canvas format at the output size without a second transfer function',
+  'A real device loss through the test adapter settles outstanding tickets interrupted, marks the backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a new epoch',
+  'Configuration failure keeps the previous target set usable',
+  'A 4K target set allocates within the cap at 72 bytes per pixel and is reclaimed after the last ticket retires',
+]);
+
+async function recoverySetupInPage() {
+  const { createWebGPUBackend } = await import('/src/space/render/webgpu/backend.js');
+  const { SELF_CHECK_PIPELINE_SET } = await import('/src/space/render/webgpu/pipelines.js');
+  const contract = await import('/src/space/render/backend.js');
+  const canvas = document.createElement('canvas');
+  canvas.id = 'space-b06-canvas';
+  canvas.style.cssText = 'position:fixed;right:0;bottom:0;width:160px;height:90px;z-index:2147483647;pointer-events:none';
+  document.body.append(canvas);
+  const phases = [], longTasks = [];
+  let observerError = null;
+  try { new PerformanceObserver(list => { for (const e of list.getEntries()) longTasks.push({ name: e.name, startTime: e.startTime, duration: e.duration }); }).observe({ type: 'longtask', buffered: true }); }
+  catch (error) { observerError = String(error?.message ?? error); }
+  const backend = createWebGPUBackend({ canvas, clock: performance, onPhase: entry => phases.push(entry) });
+  const b = {
+    backend, contract, SELF_CHECK_PIPELINE_SET, canvas, phases, longTasks, observerError,
+    identity: jobId => ({ requestId: `request-${jobId}`, jobId, viewId: 'space', generation: { deviceEpoch: backend.currentEpoch(), viewRevision: 1, geometryRevision: 1, appearanceRevision: 1 } }),
+    lease: jobId => ({ admission: contract.createAdmission({ epoch: backend.currentEpoch(), jobId }) }),
+    batch: (pipelineId, slot, handle, region, jobId = 'probe') => ({ identity: b.identity(jobId), pipelineId, pass: 'probe', region, sample: { sequence: 'atlas-aa-v1', seed: 1, index: 0 },
+      bounds: { pixels: region.width * region.height, raySteps: 0, iterations: 0, normalFieldSamples: 0, shadowRays: 0, shadowSteps: 0, aoSamples: 0 },
+      inputs: {}, outputs: { [slot]: handle }, uniforms: { origin: [region.x, region.y], size: [region.width, region.height] } }),
+    // Sequential ≤ 256-row bands (the annex limit), each through its own lease; tight rows concatenated.
+    async readBands(source, width, height, bytesPerTexel, jobId = 'readback') {
+      const out = new Uint8Array(width * height * bytesPerTexel), bands = [];
+      for (let y = 0; y < height; y += 256) {
+        const rows = Math.min(256, height - y);
+        const ticket = backend.readback({ identity: b.identity(jobId), source, region: { x: 0, y, width, height: rows }, fields: ['band'] }, b.lease(jobId));
+        const done = await ticket.done, result = await ticket.result;
+        out.set(result.data, y * width * bytesPerTexel);
+        const staging = backend.diagnostics().inventory.filter(item => item.name.startsWith('readback-staging'));
+        bands.push({ y, rows, outcome: done.outcome, method: done.timing.method, bytes: result.data.length, staging: staging.map(item => ({ name: item.name, bytes: item.bytes, bytesPerRow: item.bytesPerRow, mappings: item.mappings })) });
+      }
+      return { data: out, bands };
+    },
+    async prepareSelfCheck() {
+      const events = [], started = performance.now();
+      const prepared = await backend.prepare({ epoch: backend.currentEpoch(), pipelineSet: SELF_CHECK_PIPELINE_SET, onProgress: event => events.push({ ...event, atMs: performance.now() - started }) });
+      return { prepared, events, preparationMs: performance.now() - started };
+    },
+    // The canvas is sampled in the task that presented it: once the frame is composited the current
+    // texture expires and drawImage would read the replaced (transparent) drawing buffer.
+    sampleCanvas() {
+      const copy = document.createElement('canvas'); copy.width = canvas.width; copy.height = canvas.height;
+      const context = copy.getContext('2d', { willReadFrequently: true, colorSpace: 'srgb' });
+      context.drawImage(canvas, 0, 0);
+      return context.getImageData(0, 0, copy.width, copy.height, { colorSpace: 'srgb' }).data;
+    },
+    // Output pixel (x, y) shows the nearest display texel: floor((2x + 1) · internal / (2 · output)).
+    compareCanvas(pixels, display, internal, output) {
+      let mismatches = 0, first = null;
+      for (let y = 0; y < output.height; y++) for (let x = 0; x < output.width; x++) {
+        const sx = Math.min(Math.floor((2 * x + 1) * internal.width / (2 * output.width)), internal.width - 1);
+        const sy = Math.min(Math.floor((2 * y + 1) * internal.height / (2 * output.height)), internal.height - 1);
+        const o = (y * output.width + x) * 4, s = (sy * internal.width + sx) * 4;
+        for (let c = 0; c < 4; c++) if (pixels[o + c] !== display[s + c]) { mismatches++; first ??= { x, y, canvas: [...pixels.subarray(o, o + 4)], display: [...display.subarray(s, s + 4)] }; break; }
+      }
+      return { mismatches, first, compared: output.width * output.height };
+    },
+    displayPatternMismatches(display, width, height) {
+      let mismatches = 0;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4, expected = [x & 255, y & 255, (x ^ y) & 255, 255];
+        if (expected.some((value, c) => display[i + c] !== value)) mismatches++;
+      }
+      return mismatches;
+    },
+    // Target handles are caller-owned until release (B06 r1 finding 5).
+    releaseSet(targets) { for (const handle of Object.values(targets.handles).flat()) backend.release(handle); },
+    async drawDisplay(targets, jobId = 'present') {
+      const { width, height } = targets.internalSize;
+      const drawn = backend.submitBatch(b.batch('probe-display', 'display', targets.handles.display, { x: 0, y: 0, width, height }, jobId), b.lease(jobId));
+      const presented = backend.present({ identity: b.identity(jobId), display: targets.handles.display }, b.lease(jobId));
+      const pixels = b.sampleCanvas();
+      return { drawn: await drawn.done, presented: await presented.done, pixels };
+    },
+  };
+  globalThis.__b06 = b;
+  return { observerError };
+}
+
+async function selfCheckInPage() {
+  const b = globalThis.__b06, { backend } = b;
+  const acquired = await backend.acquire();
+  const preparation = await b.prepareSelfCheck();
+  const targets = await backend.configureTargets({ epoch: acquired.epoch, layoutId: 'space-targets-v1', internalSize: { width: 1, height: 1 }, outputSize: { width: 1, height: 1 } });
+  const probe = b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 1, height: 1 });
+  const refusals = {};
+  try { backend.submitBatch(probe, {}); } catch (error) { refusals.withoutLease = error.code; }
+  const lease = b.lease('probe');
+  const ticket = backend.submitBatch(probe, lease);
+  try { backend.submitBatch(probe, lease); } catch (error) { refusals.reusedLease = error.code; }
+  const done = await ticket.done;
+  const read = backend.readback({ identity: b.identity('probe'), source: targets.handles.status, region: { x: 0, y: 0, width: 1, height: 1 }, fields: ['status'] }, b.lease('probe'));
+  const readDone = await read.done, result = await read.result;
+  const word = new DataView(result.data.buffer, result.data.byteOffset, 4).getUint32(0, true);
+  const staging = backend.diagnostics().inventory.filter(item => item.name.startsWith('readback-staging')).map(item => ({ bytes: item.bytes, bytesPerRow: item.bytesPerRow, mappings: item.mappings }));
+  return { acquired, ...preparation, targets: { epoch: targets.epoch, layoutId: targets.layoutId, accumulation: targets.descriptions.accumulation }, done, readDone, word, dataLength: result.data.length, staging, refusals };
+}
+
+async function bandedInPage() {
+  const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
+  const width = 1024, height = 600;
+  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width, height }, outputSize: { width, height } });
+  // F3 ruling (a): B06 owns resource initialization — both fresh accumulation textures and the flags
+  // texture read back as zero through admitted readback (B11 owns sample-0 initialization).
+  const zero = {};
+  for (const [name, handle, bpt] of [['accumulation-0', targets.handles.accumulation[0], 16], ['accumulation-1', targets.handles.accumulation[1], 16], ['accumulationFlags', targets.handles.accumulationFlags, 4]]) {
+    const { data } = await b.readBands(handle, width, height, bpt, 'zero');
+    const words = new Uint32Array(data.buffer, data.byteOffset, data.length / 4);
+    let nonzero = 0; for (let i = 0; i < words.length; i++) if (words[i] !== 0) nonzero++;
+    zero[name] = { bytes: data.length, nonzero };
+  }
+  const ticket = backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width, height }), b.lease('probe'));
+  const done = await ticket.done;
+  const { data, bands } = await b.readBands(targets.handles.status, width, height, 4);
+  const words = new Uint32Array(data.buffer, data.byteOffset, width * height);
+  let mismatches = 0;
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (words[y * width + x] !== ((0x41544c53 ^ ((y << 16) | x)) >>> 0)) mismatches++;
+  // An unaligned interior region: 3 texels (12 bytes) in a 256-byte row pitch, padding stripped.
+  const narrow = backend.readback({ identity: b.identity('narrow'), source: targets.handles.status, region: { x: 5, y: 7, width: 3, height: 2 }, fields: ['status'] }, b.lease('narrow'));
+  const narrowData = new Uint32Array((await narrow.result).data.buffer);
+  const narrowExpected = [0, 1].flatMap(dy => [5, 6, 7].map(x => (0x41544c53 ^ (((7 + dy) << 16) | x)) >>> 0));
+  // Production allocate (B00 ruling 8): copied, zero-padded initial data; no queue submission, no lease.
+  const source = Uint8Array.from([1, 2, 3, 4, 5]);
+  const model = backend.allocate({ name: 'model', bytes: 16, usage: 'storage', data: source });
+  source[0] = 99; // the copy was taken at creation
+  const modelRead = backend.readback({ identity: b.identity('model'), source: model, region: { x: 0, y: 0, width: 16, height: 1 }, fields: ['model'] }, b.lease('model'));
+  const modelBytes = [...(await modelRead.result).data];
+  const refusals = {};
+  for (const [label, desc] of [['texture-shaped', { name: 'image', bytes: 16, width: 2, height: 2 }], ['not divisible by four', { name: 'odd', bytes: 6, usage: 'storage' }],
+    ['unknown usage', { name: 'vertex', bytes: 16, usage: 'vertex' }], ['zero bytes', { name: 'empty', bytes: 0, usage: 'uniform' }]]) {
+    try { backend.allocate(desc); refusals[label] = 'accepted'; } catch (error) { refusals[label] = error.code; }
+  }
+  const before = backend.diagnostics().tracked;
+  try { backend.allocate({ name: 'uniform-too-large', bytes: globalThis.__b06Limits.maxUniformBufferBindingSize + 4, usage: 'uniform' }); refusals.uniformAboveBindingLimit = 'accepted'; } catch (error) { refusals.uniformAboveBindingLimit = error.code; }
+  const trackedUnchanged = backend.diagnostics().tracked === before;
+  backend.release(model);
+  // A GPU validation failure (B07 ruling (d)): the depth target (r32float) bound where the probe's auto
+  // layout expects an r32uint storage texture passes the JS slot checks, fails createBindGroup inside the
+  // ticket's error scope, and settles `failed` only after the scopes and the fence — holds released.
+  const invalidTicket = backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.depth, { x: 0, y: 0, width: 8, height: 8 }, 'failing'), b.lease('failing'));
+  const failed = await invalidTicket.done;
+  const depthEntry = backend.diagnostics().inventory.find(item => item.id === targets.handles.depth.id);
+  const failedHolds = { depthTickets: depthEntry.tickets, lingeringUniforms: backend.diagnostics().inventory.filter(item => item.name.startsWith('uniforms:')).length, uncaptured: backend.testAdapter.uncapturedErrors().length };
+  const afterFailure = await backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 8, height: 8 }), b.lease('probe')).done;
+  b.releaseSet(targets);
+  return { zero, failed, failedHolds, afterFailure, epochAfterFailure: backend.currentEpoch(), epoch, done, bands, mismatches, pixels: width * height, narrow: { matches: narrowData.every((value, i) => value === narrowExpected[i]), length: narrowData.length }, modelBytes, refusals, trackedUnchanged };
+}
+
+async function presentInPage() {
+  const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
+  const internal = { width: 320, height: 180 }, output = { width: 640, height: 360 };
+  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: internal, outputSize: output });
+  const { pixels, ...drawn } = await b.drawDisplay(targets);
+  const { data: display } = await b.readBands(targets.handles.display, internal.width, internal.height, 4);
+  b.releaseSet(targets);
+  return { drawn, canvas: { width: b.canvas.width, height: b.canvas.height }, displayPattern: b.displayPatternMismatches(display, internal.width, internal.height), comparison: b.compareCanvas(pixels, display, internal, output) };
+}
+
+async function lossInPage() {
+  const b = globalThis.__b06, { backend } = b;
+  const first = { epoch: backend.currentEpoch() };
+  const targets = await backend.configureTargets({ epoch: first.epoch, layoutId: 'space-targets-v1', internalSize: { width: 256, height: 256 }, outputSize: { width: 256, height: 256 } });
+  const seen = [];
+  const unsubscribe = backend.onLoss(event => seen.push({ event, epochInCallback: backend.currentEpoch(), stateInCallback: backend.diagnostics().state, trackedInCallback: backend.diagnostics().tracked }));
+  const oldLease = b.lease('probe');
+  const tickets = [0, 1, 2].map(() => backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 256, height: 256 }), b.lease('probe')));
+  const read = backend.readback({ identity: b.identity('probe'), source: targets.handles.status, region: { x: 0, y: 0, width: 256, height: 256 }, fields: ['status'] }, b.lease('probe'));
+  const observedLoss = await backend.testAdapter.destroyDevice();
+  const outcomes = await Promise.all([...tickets, read].map(ticket => ticket.done));
+  let readResult;
+  try { await read.result; readResult = 'resolved'; } catch (error) { readResult = error.code; }
+  const after = backend.diagnostics();
+  const refusals = {};
+  try { backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 1, height: 1 }), oldLease); } catch (error) { refusals.afterLoss = error.code; }
+  const second = await backend.acquire();
+  try { backend.submitBatch({ ...b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 1, height: 1 }), identity: { ...b.identity('probe'), generation: { ...b.identity('probe').generation, deviceEpoch: first.epoch } } }, oldLease); } catch (error) { refusals.staleEpoch = error.code; }
+  await b.prepareSelfCheck();
+  const probeTargets = await backend.configureTargets({ epoch: second.epoch, layoutId: 'space-targets-v1', internalSize: { width: 1, height: 1 }, outputSize: { width: 1, height: 1 } });
+  try { backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 1, height: 1 }), b.lease('probe')); } catch (error) { refusals.oldHandle = error.code; }
+  const probe = await backend.submitBatch(b.batch('probe', 'probe_target', probeTargets.handles.status, { x: 0, y: 0, width: 1, height: 1 }), b.lease('probe')).done;
+  const word = new DataView((await backend.readback({ identity: b.identity('probe'), source: probeTargets.handles.status, region: { x: 0, y: 0, width: 1, height: 1 }, fields: ['status'] }, b.lease('probe')).result).data.buffer).getUint32(0, true);
+  // The injected notification exercises the same invalidation path.
+  const injectedTicket = backend.submitBatch(b.batch('probe', 'probe_target', probeTargets.handles.status, { x: 0, y: 0, width: 1, height: 1 }), b.lease('probe'));
+  const injected = backend.testAdapter.injectLoss({ reason: 'unknown', message: 'injected by the recovery suite' });
+  const injectedState = { epoch: backend.currentEpoch(), state: backend.diagnostics().state, outcome: await injectedTicket.done };
+  const third = await backend.acquire();
+  await b.prepareSelfCheck();
+  unsubscribe();
+  return { first, observedLoss, seen, outcomes, readResult, after: { state: after.state, epoch: after.epoch, tracked: after.tracked, inventory: after.inventory.length }, refusals,
+    second: { epoch: second.epoch, attemptId: second.identity.attemptId }, probe, word, injected, injectedState, third: { epoch: third.epoch, attemptId: third.identity.attemptId } };
+}
+
+async function configurationFailureInPage() {
+  const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
+  const internal = { width: 320, height: 180 }, output = { width: 640, height: 360 };
+  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: internal, outputSize: output });
+  await b.drawDisplay(targets);
+  const snapshot = () => { const d = backend.diagnostics(); return { tracked: d.tracked, live: d.inventory.filter(item => item.state === 'live').map(item => item.id).sort() }; };
+  const before = snapshot(), failures = {};
+  try { await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width: 8192, height: 8192 }, outputSize: { width: 8192, height: 8192 } }); failures.aboveCap = 'accepted'; } catch (error) { failures.aboveCap = error.code; }
+  const afterCap = snapshot();
+  backend.testAdapter.failNextAllocation();
+  try { await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } }); failures.injected = 'accepted'; } catch (error) { failures.injected = error.code; }
+  const afterInjected = snapshot();
+  // The earlier set still presents: redraw and present it, then compare the canvas with its display bytes.
+  const { pixels, ...drawn } = await b.drawDisplay(targets);
+  const { data: display } = await b.readBands(targets.handles.display, internal.width, internal.height, 4);
+  const comparison = b.compareCanvas(pixels, display, internal, output);
+  b.releaseSet(targets);
+  return { failures, before, afterCap, afterInjected, drawn, canvas: { width: b.canvas.width, height: b.canvas.height }, comparison, displayPattern: b.displayPatternMismatches(display, internal.width, internal.height) };
+}
+
+async function fourKInPage() {
+  const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
+  const internal = { width: 3840, height: 2160 };
+  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: internal, outputSize: { width: 1920, height: 1080 } });
+  const ids = new Set(Object.values(targets.handles).flat().map(handle => handle.id));
+  const inventory = () => backend.diagnostics().inventory.filter(item => ids.has(item.id));
+  const allocated = inventory().map(({ name, bytes, width, height, format, state }) => ({ name, bytes, width, height, format, state }));
+  const targetBytes = allocated.reduce((sum, item) => sum + item.bytes, 0), trackedAtAllocation = backend.diagnostics().tracked;
+  const ticket = backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, ...internal }), b.lease('probe'));
+  backend.release(targets.handles.status); // released while the ticket still references it
+  const whileHeld = { tracked: backend.diagnostics().tracked, retiring: backend.diagnostics().retiring, status: inventory().find(item => item.name === 'status') };
+  const done = await ticket.done;
+  const afterTicket = { tracked: backend.diagnostics().tracked, retiring: backend.diagnostics().retiring, statusPresent: inventory().some(item => item.name === 'status') };
+  const replacement = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } });
+  // Caller-owned: the earlier 4K set survives the replacement and its display can still be presented.
+  const keptAfterReplacement = inventory().length;
+  const previousPresented = await backend.present({ identity: b.identity('present'), display: targets.handles.display }, b.lease('present')).done;
+  const retained = { tracked: backend.diagnostics().tracked };
+  b.releaseSet(targets);
+  const afterReplacement = { tracked: backend.diagnostics().tracked, remaining4K: inventory().length, peak: backend.diagnostics().peak };
+  b.releaseSet(replacement);
+  return { allocated, targetBytes, trackedAtAllocation, whileHeld, done, afterTicket, keptAfterReplacement, previousPresented, retained, afterReplacement };
+}
+
+async function recoveryFinishInPage() {
+  const b = globalThis.__b06, { backend } = b;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  backend.destroy();
+  const final = backend.diagnostics();
+  let reacquire;
+  try { await backend.acquire(); reacquire = 'accepted'; } catch (error) { reacquire = error.code; }
+  b.canvas.remove();
+  return { phases: b.phases, longTasks: b.longTasks, observerError: b.observerError, uncaptured: backend.testAdapter.uncapturedErrors(), final: { state: final.state, epoch: final.epoch, tracked: final.tracked }, reacquire };
+}
+
+async function runRecovery({ page }) {
+  await page.goto(url, { timeout: LIMITS.launch });
+  await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
+  await idleWithin(page);
+  await ev(page, recoverySetupInPage, undefined, 'recovery setup');
+  const cap = 2 ** 30;
+
+  try {
+    const selfCheck = await ev(page, selfCheckInPage, undefined, 'self-check preparation and probe', LIMITS.deep);
+    await ev(page, limits => { globalThis.__b06Limits = limits; }, selfCheck.acquired.limits, 'record limits');
+    const { acquired } = selfCheck;
+    assert.ok(acquired.epoch >= 1, `a successful acquisition has a positive epoch (${acquired.epoch})`);
+    assert.equal(typeof acquired.identity.attemptId, 'string');
+    assert.deepEqual(acquired.requestedLimits, {}, 'no blanket requiredLimits: B06 requests no increase');
+    for (const key of ['maxUniformBufferBindingSize', 'maxStorageTexturesPerShaderStage', 'maxStorageBuffersPerShaderStage', 'maxTextureDimension2D']) {
+      assert.ok(Number.isInteger(acquired.limits[key]) && Number.isInteger(acquired.adapterLimits[key]) && acquired.adapterLimits[key] >= acquired.limits[key], `${key}: granted ${acquired.limits[key]} / adapter ${acquired.adapterLimits[key]}`);
+    }
+    assert.ok(['bgra8unorm', 'rgba8unorm'].includes(acquired.canvasFormat));
+    assert.deepEqual(selfCheck.prepared.preparedPipelineIds, ['probe', 'probe-display', 'selfcheck-trace', 'present']);
+    assert.equal(selfCheck.prepared.epoch, acquired.epoch);
+    assert.equal(selfCheck.events[0].stage, 'preparing'); assert.equal(selfCheck.events[0].completed, 0);
+    assert.deepEqual(selfCheck.events.map(event => event.completed), [0, 1, 2, 3, 4], 'progress counts every pipeline once');
+    assert.ok(selfCheck.events.every(event => event.total === 4));
+    assert.ok(selfCheck.preparationMs < PREPARATION_BOUND_MS);
+    assert.deepEqual(selfCheck.refusals, { withoutLease: 'no-admission', reusedLease: 'no-admission' });
+    assert.equal(selfCheck.done.outcome, 'completed'); assert.equal(selfCheck.done.timing.method, 'queue-completion');
+    assert.ok(Number.isFinite(selfCheck.done.timing.elapsedMs) && selfCheck.done.queueCompletedAt !== null);
+    assert.equal(selfCheck.readDone.outcome, 'completed');
+    assert.equal(selfCheck.word, 0x41544c53, `the probe readback must be ATLS, got 0x${selfCheck.word.toString(16)}`);
+    assert.equal(selfCheck.dataLength, 4, 'row padding is stripped on copy-out');
+    assert.deepEqual(selfCheck.staging, [{ bytes: 256, bytesPerRow: 256, mappings: 0 }], 'one 256-byte-aligned staging row; mapping ended before the result');
+    assert.equal(selfCheck.targets.layoutId, 'space-targets-v1'); assert.equal(selfCheck.targets.accumulation.length, 2);
+    pass(RECOVERY_PASSES[0], { acquired, preparationMs: selfCheck.preparationMs, events: selfCheck.events, prepared: selfCheck.prepared, done: selfCheck.done, word: `0x${selfCheck.word.toString(16)}`, refusals: selfCheck.refusals, staging: selfCheck.staging });
+
+    const banded = await ev(page, bandedInPage, undefined, 'banded readback', LIMITS.deep);
+    assert.equal(banded.done.outcome, 'completed'); assert.equal(banded.done.timing.method, 'queue-completion'); assert.ok(Number.isFinite(banded.done.timing.elapsedMs));
+    assert.deepEqual(banded.bands.map(band => [band.y, band.rows]), [[0, 256], [256, 256], [512, 88]]);
+    for (const band of banded.bands) {
+      assert.equal(band.outcome, 'completed'); assert.equal(band.bytes, 1024 * 4 * band.rows);
+      assert.ok(band.staging.length <= 2 && band.staging.every(item => item.bytesPerRow % 256 === 0 && item.mappings === 0), JSON.stringify(band.staging));
+    }
+    assert.equal(banded.mismatches, 0, `${banded.mismatches} of ${banded.pixels} texels differ from the staged pattern`);
+    assert.deepEqual(banded.narrow, { matches: true, length: 6 });
+    assert.deepEqual(banded.modelBytes, [1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'allocate copies initial data at creation and zero-pads');
+    assert.deepEqual(banded.refusals, { 'texture-shaped': 'invalid-descriptor', 'not divisible by four': 'invalid-descriptor', 'unknown usage': 'invalid-descriptor', 'zero bytes': 'invalid-descriptor', uniformAboveBindingLimit: 'allocation-failed' });
+    assert.equal(banded.trackedUnchanged, true);
+    assert.deepEqual(banded.zero, { 'accumulation-0': { bytes: 1024 * 600 * 16, nonzero: 0 }, 'accumulation-1': { bytes: 1024 * 600 * 16, nonzero: 0 }, accumulationFlags: { bytes: 1024 * 600 * 4, nonzero: 0 } }, 'fresh accumulation and flags targets read back zero');
+    assert.equal(banded.failed.outcome, 'failed', JSON.stringify(banded.failed));
+    assert.equal(banded.failed.queueCompletedAt, null); assert.equal(banded.failed.timing.elapsedMs, null); assert.equal(banded.failed.timing.timestampMs, undefined);
+    assert.ok(typeof banded.failed.reason === 'string' && banded.failed.reason.length > 0, 'a failure carries the error message');
+    assert.deepEqual(banded.failedHolds, { depthTickets: 0, lingeringUniforms: 0, uncaptured: 0 }, 'a failed ticket is terminal: its holds are released and its scope captured the error');
+    assert.equal(banded.afterFailure.outcome, 'completed', 'a failed ticket is not a loss'); assert.equal(banded.epochAfterFailure, banded.epoch);
+    pass(RECOVERY_PASSES[1], { done: banded.done, bands: banded.bands, mismatches: banded.mismatches, narrow: banded.narrow, modelBytes: banded.modelBytes, refusals: banded.refusals, zero: banded.zero, failed: banded.failed, failedHolds: banded.failedHolds, afterFailure: banded.afterFailure });
+
+    const presented = await ev(page, presentInPage, undefined, 'presentation', LIMITS.deep);
+    assert.equal(presented.drawn.drawn.outcome, 'completed'); assert.equal(presented.drawn.presented.outcome, 'completed');
+    assert.deepEqual(presented.canvas, { width: 640, height: 360 }, 'the canvas is at the output size');
+    assert.equal(presented.displayPattern, 0, 'the display texture holds the probe-display pattern');
+    assert.equal(presented.comparison.mismatches, 0, `canvas differs from the display bytes: ${JSON.stringify(presented.comparison.first)}`);
+    pass(RECOVERY_PASSES[2], { canvasFormat: acquired.canvasFormat, ...presented });
+
+    const loss = await ev(page, lossInPage, undefined, 'device loss and reacquisition', LIMITS.deep);
+    assert.equal(loss.observedLoss, true);
+    assert.equal(loss.seen.length, 2, 'one notification for the real loss and one for the injected loss');
+    assert.equal(loss.seen[0].event.epoch, loss.first.epoch); assert.equal(loss.seen[0].event.reason, 'destroyed');
+    assert.equal(loss.seen[0].epochInCallback, 0, 'the epoch is invalidated before clients are notified');
+    assert.equal(loss.seen[0].stateInCallback, 'unavailable', 'the backend is unavailable before clients are notified');
+    assert.equal(loss.seen[0].trackedInCallback, 0, 'resources are released before clients are notified');
+    for (const outcome of loss.outcomes) {
+      assert.equal(outcome.outcome, 'interrupted', JSON.stringify(outcome));
+      assert.equal(outcome.queueCompletedAt, null); assert.equal(outcome.timing.elapsedMs, null); assert.equal(outcome.timing.timestampMs, undefined);
+    }
+    assert.equal(loss.readResult, 'device-lost');
+    assert.deepEqual(loss.after, { state: 'unavailable', epoch: 0, tracked: 0, inventory: 0 });
+    assert.deepEqual(loss.refusals, { afterLoss: 'unavailable', staleEpoch: 'stale-epoch', oldHandle: 'invalid-descriptor' });
+    assert.ok(loss.second.epoch > loss.first.epoch, 'reacquisition yields a new, larger epoch');
+    assert.notEqual(loss.second.attemptId, acquired.identity.attemptId, 'reacquisition is a fresh attempt');
+    assert.equal(loss.probe.outcome, 'completed'); assert.equal(loss.word, 0x41544c53);
+    assert.equal(loss.injected, true);
+    assert.deepEqual({ epoch: loss.injectedState.epoch, state: loss.injectedState.state, outcome: loss.injectedState.outcome.outcome }, { epoch: 0, state: 'unavailable', outcome: 'interrupted' });
+    assert.equal(loss.seen[1].epochInCallback, 0); assert.equal(loss.seen[1].event.reason, 'unknown');
+    assert.ok(loss.third.epoch > loss.second.epoch); assert.notEqual(loss.third.attemptId, loss.second.attemptId);
+    pass(RECOVERY_PASSES[3], loss);
+
+    const configuration = await ev(page, configurationFailureInPage, undefined, 'configuration failure', LIMITS.deep);
+    assert.deepEqual(configuration.failures, { aboveCap: 'allocation-failed', injected: 'allocation-failed' });
+    assert.deepEqual(configuration.afterCap, configuration.before, 'a refused configuration leaves accounting and the live set unchanged');
+    assert.deepEqual(configuration.afterInjected, configuration.before, 'a failed creation rolls back completely');
+    assert.equal(configuration.drawn.presented.outcome, 'completed');
+    assert.deepEqual(configuration.canvas, { width: 640, height: 360 });
+    assert.equal(configuration.displayPattern, 0);
+    assert.equal(configuration.comparison.mismatches, 0, `the earlier set no longer presents: ${JSON.stringify(configuration.comparison.first)}`);
+    pass(RECOVERY_PASSES[4], configuration);
+
+    const fourK = await ev(page, fourKInPage, undefined, '4K target set', LIMITS.deep);
+    const bpp = { depth: 4, status: 4, normal: 8, sampleColor: 8, lightingStatus: 4, accumulationFlags: 4, 'accumulation-0': 16, 'accumulation-1': 16, display: 4, retained: 4 };
+    assert.deepEqual(fourK.allocated.map(item => item.name).sort(), Object.keys(bpp).sort());
+    for (const item of fourK.allocated) { assert.equal(item.bytes, 3840 * 2160 * bpp[item.name], item.name); assert.deepEqual([item.width, item.height, item.state], [3840, 2160, 'live']); }
+    assert.equal(fourK.targetBytes, 597_196_800, '72 bytes per pixel at 3840 × 2160'); assert.equal(3840 * 2160 * 72, 597_196_800);
+    assert.ok(fourK.trackedAtAllocation <= cap);
+    assert.equal(fourK.whileHeld.tracked, fourK.trackedAtAllocation + 16, 'released bytes stay tracked while the ticket holds them (plus its counted 16-byte uniform snapshot)');
+    assert.equal(fourK.whileHeld.retiring, 3840 * 2160 * 4 + 16, 'the released status target and the uniform snapshot are retiring'); assert.equal(fourK.whileHeld.status.state, 'retiring'); assert.equal(fourK.whileHeld.status.tickets, 1);
+    assert.equal(fourK.done.outcome, 'completed');
+    assert.deepEqual(fourK.afterTicket, { tracked: fourK.trackedAtAllocation - 3840 * 2160 * 4, retiring: 0, statusPresent: false }, 'reclaimed once the last ticket retires');
+    assert.equal(fourK.keptAfterReplacement, 9, 'reconfiguration keeps the earlier set caller-owned (status was already released)');
+    assert.equal(fourK.previousPresented.outcome, 'completed', 'the previous image can still be presented after reconfiguration');
+    assert.equal(fourK.afterReplacement.remaining4K, 0, 'the earlier 4K set is reclaimed after its explicit release');
+    assert.equal(fourK.afterReplacement.tracked, fourK.trackedAtAllocation - fourK.targetBytes + 64 * 64 * 72);
+    pass(RECOVERY_PASSES[5], fourK);
+  } finally { await recordRecoveryLongTasks(page); }
+
+  const finish = await ev(page, recoveryFinishInPage, undefined, 'recovery teardown');
+  assert.deepEqual(finish.uncaptured, [], `no uncaptured WebGPU errors: ${JSON.stringify(finish.uncaptured)}`);
+  assert.deepEqual(finish.final, { state: 'destroyed', epoch: 0, tracked: 0 }); assert.equal(finish.reacquire, 'unavailable', 'destroy() is terminal');
+}
+
+// Long tasks attributed to backend phases by interval overlap (B01 Q2; recorded, B15 enforces P3).
+// Collected in the group's finally, so failure exits keep their phase and observer evidence.
+async function recordRecoveryLongTasks(page) {
+  let evidence;
+  try { evidence = await ev(page, () => { const b = globalThis.__b06; return b ? { phases: b.phases, longTasks: b.longTasks, observerError: b.observerError } : null; }, undefined, 'long-task evidence'); }
+  catch (error) { report.push({ name: 'Long tasks attributed to backend phases (recorded; B15 enforces P3)', unavailable: String(error?.message ?? error) }); return; }
+  if (!evidence) return;
+  const phases = Object.fromEntries(evidence.phases.map((entry, index) => [`${index}:${entry.phase}`, { start: entry.start, end: entry.end }]));
+  const attributed = evidence.observerError ? null : longTasksByPhase(evidence.longTasks, phases);
+  const byKind = {}, spans = {}, failures = {};
+  if (attributed) for (const [name, tasks] of Object.entries(attributed.byPhase)) if (tasks.length) { const kind = name.slice(name.indexOf(':') + 1); byKind[kind] = (byKind[kind] ?? 0) + tasks.length; }
+  for (const entry of evidence.phases) { spans[entry.phase] = Math.max(spans[entry.phase] ?? 0, entry.end - entry.start); if (entry.failed) failures[entry.phase] = (failures[entry.phase] ?? 0) + 1; }
+  const summary = { observerError: evidence.observerError, totalLongTasks: evidence.longTasks.length, overlappingBackendPhases: byKind, startup: attributed?.startup.length ?? null, outside: attributed?.outside.length ?? null, phaseCount: evidence.phases.length, failureExits: failures, longestPhaseMs: spans };
+  report.push({ name: 'Long tasks attributed to backend phases (recorded; B15 enforces P3)', ...summary, tasks: evidence.longTasks });
+  console.log(`long tasks ${JSON.stringify(summary)}`);
 }
 
 // ---- harness ---------------------------------------------------------------------------------------
@@ -550,7 +944,7 @@ async function ensureServer() {
 
 let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
-const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment };
+const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery };
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
 let source = null, serverOwnership = null;
 
@@ -587,11 +981,13 @@ try {
   ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
   console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
   assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
-  if (options.group === 'coexistence') {
+  if (['coexistence', 'recovery'].includes(options.group)) {
+    // One launch under the complete profile; the application page is a WebGL (Plane) page, so its close
+    // in the finally goes through the local expected-backend drain wrapper (drainExpecting).
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });
     const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl');
     watchErrors(page);
-    await groups.coexistence({ context, page, environment });
+    await groups[options.group]({ context, page, environment });
   } else await groups[options.group]({ launchProfile });
   assert.deepEqual(errors, []);
   pass('No browser runtime errors');
