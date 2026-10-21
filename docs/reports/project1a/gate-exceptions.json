@@ -8,6 +8,20 @@
       "reason": "The workflow race \"a confirmed completion ends the recovery episode\" reported recovery attempts 1, expected 0, in artifacts/gates/2026-10-21T06-09-00-031Z-c6706b33394e.json; fixed in c899416.",
       "approvedBy": "user",
       "date": "2026-10-21"
+    },
+    {
+      "commit": "6e99c4b3f9fadc2768d434b37034958ff51a04c6",
+      "supersededBy": "99767edb74873c2fbb3b7913770bf935cd433078",
+      "reason": "space-numerics failed bulb powers 2, 6 and 7 against the frozen matrix in artifacts/gates/2026-10-21T20-30-21-820Z-6e99c4b3f9fa.json; fixed by B08 fix rounds 1-2 (c511240, 99767ed).",
+      "approvedBy": "user",
+      "date": "2026-10-21"
+    },
+    {
+      "commit": "c511240363ebbc43e98c6e67a4c892966dd77113",
+      "supersededBy": "99767edb74873c2fbb3b7913770bf935cd433078",
+      "reason": "space-numerics failed bulb power 4 at 1.010x the ln R tolerance in artifacts/gates/2026-10-21T20-39-56-195Z-c511240363eb.json; fixed in 99767ed (power-of-two normalization).",
+      "approvedBy": "user",
+      "date": "2026-10-21"
     }
   ]
 }
