@@ -6,6 +6,7 @@
     "tests/unit/scene.test.js",
     "tests/unit/plane-scene.test.js",
     "tests/unit/history.test.js",
+    "tests/unit/history-camera-equality.test.js",
     "tests/unit/render-adapter.test.js",
     "tests/unit/renderer-guards.test.js",
     "tests/unit/discoveries.test.js",
