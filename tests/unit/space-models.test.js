@@ -217,3 +217,119 @@ test('camera classification details its reason and never treats an unavailable e
   assert.equal(classifyCamera(bulb, power8, [0, 0, 0], 128).detail.result.index, 128, 'the budget is the iteration budget');
   for (const budget of [0, 513, 2.5]) assert.throws(() => classifyCamera(bulb, power8, [0, 0, 0], budget), RangeError);
 });
+
+// --- Fix round 1 (Codex B03 r1) ------------------------------------------------
+
+test('malformed and sparse points are rejected by every evaluator', () => {
+  const power8 = effectiveParameters('mandelbulb', { power: '8' }).effective;
+  const quat = effectiveParameters('quaternion-julia', { C: ['-0.2', '0.8', '0', '0'], kappa: '0' }).effective;
+  const evaluators = [
+    p => mandelbulb.evaluate(power8, p, { maxIterations: 1 }), p => mandelbulb.trace(power8, p, { maxIterations: 1 }),
+    p => quaternionJulia.evaluate(quat, p, { maxIterations: 1 }), p => quaternionJulia.trace(quat, p, { maxIterations: 1 }),
+    p => analytic.sphere.evaluate({}, p), p => analytic.box.evaluate({}, p), p => menger.evaluate({ depth: 1 }, p), p => menger.evaluate({ depth: 2 }, p),
+    p => classifyCamera(getModel('mandelbulb', 1), power8, p, 8),
+  ];
+  const sparse = [Array(3), [0, , 0], [, 0, 0], [0, 0, ,], [0, 0, undefined], [0, '0', 0], [0, 0], [0, 0, 0, 0], null, 'abc', { 0: 0, 1: 0, 2: 0, length: 3 }];
+  for (const evaluate of evaluators) {
+    for (const bad of sparse) assert.throws(() => evaluate(bad), TypeError, `${JSON.stringify(bad)} is malformed`);
+    assert.doesNotThrow(() => evaluate([0, 0, NaN]), 'a numeric NaN component is a field-domain failure, not a shape error');
+  }
+});
+
+test('the boundary scanner handles postfix operators, control-statement regexes and escapes, and fails closed', () => {
+  assert.deepEqual(scanSource('let x = 1; x++ / 2; import "node:fs"; const r = /foo/;').static, ['node:fs']);
+  assert.equal(scanSource('let x = 1; x++ / 2; import(name); const r = /foo/;').dynamic, 1);
+  assert.deepEqual(scanSource('let x = 1; x++ / 2; document.body; const r = /foo/;').globals, ['document']);
+  assert.deepEqual(scanSource('let x = 1; x-- / 2; window.x; const r = /foo/;').globals, ['window']);
+  assert.deepEqual(scanSource('const s = "doc\\u0075ment";').globals, ['document'], 'string escapes are decoded');
+  assert.deepEqual(scanSource("const s = 'nav\\x69gator';").globals, ['navigator']);
+  assert.deepEqual(scanSource('const s = `GPU\\u{44}evice`;').globals, ['GPUDevice']);
+  assert.deepEqual(scanSource("if (ok) /'/.test(s); import './after.js';").static, ['./after.js'], 'a regex after a control-statement condition');
+  assert.deepEqual(scanSource("const q = (a + b) / 2; import './after.js'; const t = a / b / c;").static, ['./after.js'], 'division after a parenthesized expression');
+  assert.deepEqual(scanSource('const τ = 1; const n = τ / 2;').globals, [], 'non-ASCII identifiers');
+  for (const unsupported of ['doc\\u0075ment.body;', 'function f() {}\n/x/.test(y);', "import x, y;"]) {
+    assert.throws(() => scanSource(unsupported), SyntaxError, unsupported);
+  }
+});
+
+test('boundary violations fail closed when a source cannot be scanned', async () => {
+  const violations = await boundaryViolations(['tests/fixtures/boundary/unscannable'], [/^src\//]);
+  assert.deepEqual(violations.map(v => v.kind), ['unparsed']);
+});
+
+// The Z-polar power map without spherical transcendentals: with ρ = ‖(x, y)‖,
+// (sin pθ, cos pθ)·r^p = (Im, Re) of (z + iρ)^p and (cos pφ, sin pφ)·ρ^p = (Re, Im) of (x + iy)^p.
+function algebraicStep([x, y, z], p, c) {
+  const pow = (re, im) => { let a = 1, b = 0; for (let k = 0; k < p; k++) [a, b] = [a * re - b * im, a * im + b * re]; return [a, b]; };
+  const rho = Math.hypot(x, y), [zr, zi] = pow(z, rho);
+  if (rho === 0) return [c[0], c[1], zr + c[2]];
+  const [ar, ai] = pow(x, y), scale = rho ** p;
+  return [zi * ar / scale + c[0], zi * ai / scale + c[1], zr + c[2]];
+}
+
+test('Mandelbulb off-axis orbits match an algebraic Z-polar power map for every power 2–8', () => {
+  const power2 = effectiveParameters('mandelbulb', { power: '2' }).effective;
+  const second = mandelbulb.trace(power2, [3 / 16, 4 / 16, 5 / 16], { maxIterations: 2 })[1].components;
+  [17 / 128, 7 / 16, 5 / 16].forEach((value, i) => assert.ok(Math.abs(second[i] - value) <= 2 ** -50, `component ${i}: ${second[i]}`));
+  for (let p = 2; p <= 8; p++) {
+    const effective = effectiveParameters('mandelbulb', { power: String(p) }).effective;
+    for (const c of [[0.3, -0.2, 0.25], [-0.45, 0.35, -0.1], [0.12, 0.61, 0.4]]) {
+      const steps = mandelbulb.trace(effective, c, { maxIterations: 4 });
+      let z = [0, 0, 0];
+      for (const [n, step] of steps.entries()) {
+        z = algebraicStep(z, p, c);
+        z.forEach((value, i) => assert.ok(Math.abs(step.components[i] - value) <= 1e-12 * Math.max(1, Math.abs(value)), `p=${p} c=${c} update ${n + 1} component ${i}`));
+      }
+      assert.ok(steps.length >= 2, 'each orbit has at least two updates');
+      assert.ok(steps.some(s => s.components[0] !== c[0] && s.components[1] !== c[1]), 'the azimuth contributes');
+    }
+  }
+});
+
+test('Mandelbulb negative polar-axis orbits follow the exact axis limit (0, 0, z^p) within rounding', () => {
+  for (let p = 2; p <= 8; p++) {
+    const effective = effectiveParameters('mandelbulb', { power: String(p) }).effective;
+    for (const s of [2 ** -3, 0.5, 1, 1.5, 2, 4]) {
+      const point = [0, 0, -s], result = mandelbulb.evaluate(effective, point, { maxIterations: 16 });
+      const steps = mandelbulb.trace(effective, point, { maxIterations: 16 });
+      let z = 0, index = 0;
+      for (let n = 1; n <= 16; n++) { z = z ** p - s; index = n; if (Math.abs(z) > 2) break; }
+      assert.equal(result.index, Math.abs(z) > 2 ? index : 16, `p=${p} s=${s}: escape index`);
+      assert.equal(result.status, Math.abs(z) > 2 ? 'escaped' : 'not-escaped');
+      let w = 0;
+      for (const step of steps) {
+        w = w ** p - s;
+        const scale = Math.max(1, Math.abs(w));
+        assert.ok(Math.abs(step.components[0]) <= 1e-12 * scale && Math.abs(step.components[1]) <= 1e-12 * scale, `p=${p} s=${s}: off-axis remnant is rounding only`);
+        assert.ok(Math.abs(step.components[2] - w) <= 1e-12 * scale, `p=${p} s=${s}: axis value`);
+      }
+    }
+  }
+});
+
+test('a multi-update off-plane quaternion orbit matches the Hamilton product and evolves all four components', () => {
+  const effective = effectiveParameters('quaternion-julia', { C: ['-0.2', '0.8', '0.15', '-0.1'], kappa: '0.5' }).effective;
+  const C = effective.C, hamilton = ([a, b, c, d], [e, f, g, h]) => [a * e - b * f - c * g - d * h, a * f + b * e + c * h - d * g, a * g - b * h + c * e + d * f, a * h + b * g - c * f + d * e];
+  const steps = quaternionJulia.trace(effective, [0.1, 0.2, 0.3], { maxIterations: 6 });
+  assert.equal(steps.length, 6);
+  let q = [0.1, 0.2, 0.3, effective.kappa];
+  const fourth = [];
+  for (const step of steps) {
+    q = hamilton(q, q).map((value, i) => value + C[i]);
+    q.forEach((value, i) => assert.ok(Math.abs(step.components[i] - value) <= 1e-14, `component ${i}`));
+    fourth.push(step.components[3]);
+  }
+  assert.ok(new Set(fourth).size === 6 && fourth.every(value => value !== effective.kappa), 'the fourth component evolves and is never reset to κ');
+});
+
+test('camera classification derives exterior from the full predicate and rejects inconsistent results', () => {
+  const fake = result => ({ evaluate: () => result });
+  for (const distance of [0, -1, NaN, Infinity, null]) {
+    const c = classifyCamera(fake({ kind: 'analytic', validity: 'valid', distance, applicability: 'exterior' }), {}, [0, 0, 0], 8);
+    assert.equal(c.status, 'unresolved', `distance ${distance}`); assert.equal(c.detail.reason, 'inconsistent-result');
+  }
+  const escaped = log2DE => fake({ kind: 'fractal', status: 'escaped', index: 1, logR: 1, estimate: { available: true, log2DE, reason: null }, orbit: { radius: 3, components: [3, 0, 0] } });
+  for (const bad of [NaN, Infinity, null]) assert.equal(classifyCamera(escaped(bad), {}, [0, 0, 0], 8).detail.reason, 'inconsistent-result');
+  assert.equal(classifyCamera(escaped(-3), {}, [0, 0, 0], 8).status, 'exterior');
+  assert.equal(classifyCamera(fake({ kind: 'other' }), {}, [0, 0, 0], 8).detail.reason, 'inconsistent-result');
+});

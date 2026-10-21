@@ -16,10 +16,12 @@ export function checkBudget(maxIterations) {
 // Shape errors are programming errors and throw; a well-formed point with a
 // non-finite component is a field-domain failure, reported as data.
 export function pointIsFinite(point) {
-  if (!Array.isArray(point) || point.length !== 3 || point.some(x => typeof x !== 'number')) {
-    throw new TypeError('a field point is an array of three numbers');
+  // Indices are inspected explicitly: some()/every() skip the holes of a sparse array.
+  if (!Array.isArray(point) || point.length !== 3) throw new TypeError('a field point is an array of three numbers');
+  for (let i = 0; i < 3; i++) {
+    if (!Object.hasOwn(point, i) || typeof point[i] !== 'number') throw new TypeError('a field point is an array of three numbers');
   }
-  return point.every(Number.isFinite);
+  return Number.isFinite(point[0]) && Number.isFinite(point[1]) && Number.isFinite(point[2]);
 }
 
 // The Euclidean norm and its natural logarithm without overflow: when the

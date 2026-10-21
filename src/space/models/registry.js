@@ -55,14 +55,23 @@ export function classifyCamera(model, effective, worldPosition, budget) {
   if (!model || typeof model.evaluate !== 'function') throw new TypeError('classifyCamera needs a model record');
   checkBudget(budget);
   const result = model.evaluate(effective, worldPosition, { maxIterations: budget });
-  let reason;
-  if (result.kind === 'analytic') {
-    reason = result.validity !== 'valid' ? 'numerical-failure'
-      : result.applicability === 'exterior' && result.distance > 0 ? 'exterior' : result.applicability;
-  } else {
-    reason = result.status === 'numerical-failure' ? 'numerical-failure'
-      : result.status === 'not-escaped' ? 'not-escaped'
-        : result.estimate.available ? 'exterior' : result.estimate.reason;
+  // Exterior only from the complete predicate; a result that claims exterior
+  // applicability or an available estimate without a usable value is inconsistent.
+  let reason = 'inconsistent-result';
+  if (result?.kind === 'analytic') {
+    if (result.validity === 'numerical-failure') reason = 'numerical-failure';
+    else if (result.validity === 'valid') {
+      if (result.applicability === 'exterior') {
+        if (typeof result.distance === 'number' && result.distance > 0 && Number.isFinite(result.distance)) reason = 'exterior';
+      } else if (result.applicability === 'interior' || result.applicability === 'boundary') reason = result.applicability;
+    }
+  } else if (result?.kind === 'fractal') {
+    if (result.status === 'numerical-failure' || result.status === 'not-escaped') reason = result.status;
+    else if (result.status === 'escaped') {
+      if (result.estimate?.available === true) {
+        if (typeof result.estimate.log2DE === 'number' && Number.isFinite(result.estimate.log2DE)) reason = 'exterior';
+      } else if (['zero-sensitivity', 'guard'].includes(result.estimate?.reason)) reason = result.estimate.reason;
+    }
   }
   return Object.freeze({ status: reason === 'exterior' ? 'exterior' : 'unresolved', detail: Object.freeze({ reason, result }) });
 }

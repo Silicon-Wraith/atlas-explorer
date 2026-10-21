@@ -4,7 +4,10 @@
 // to a canonical repository-relative path and checked against `allowed`, every
 // dynamic import is a violation, and the permitted dependencies are walked
 // transitively. Every scanned source is also checked for the browser and GPU global
-// names in FORBIDDEN_GLOBALS, as identifiers or inside string literals.
+// names in FORBIDDEN_GLOBALS, as identifiers or inside decoded string literals. A
+// source the tokenizer cannot classify is a violation ('unparsed'): the check fails
+// closed. It does not evaluate expressions, so computed names built at run time
+// (for example by string concatenation) are outside what a source scan can prove.
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,22 +18,55 @@ const SOURCE = /\.(?:js|mjs)$/;
 const REGEX_PRECEDING_KEYWORDS = new Set(['return', 'typeof', 'case', 'in', 'of', 'new', 'delete', 'void', 'throw', 'instanceof', 'yield', 'await', 'else', 'do']);
 
 // Minimal ECMAScript tokenizer: enough to separate code from comments and literals.
+// It fails closed (SyntaxError) on constructs it cannot classify: a "/" after a
+// block-closing "}", a backslash outside a literal (identifier escapes), and
+// unterminated literals. String and template contents are decoded (cooked).
+const NAME_START = /[\p{ID_Start}$_]/u, NAME_PART = /[\p{ID_Continue}$‌‍]/u;
+const CONTROL_KEYWORDS = new Set(['if', 'while', 'for', 'with']);
+const SIMPLE_ESCAPES = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v' };
+
+// text[i] is a backslash inside a string or template; returns [decoded, next index].
+function decodeEscape(text, i) {
+  const char = text[i + 1];
+  if (char === undefined) throw new SyntaxError('unterminated escape');
+  const hex = (from, length) => {
+    const digits = text.slice(from, from + length);
+    if (!new RegExp(`^[0-9a-fA-F]{${length}}$`).test(digits)) throw new SyntaxError('malformed escape');
+    return parseInt(digits, 16);
+  };
+  if (char === 'x') return [String.fromCharCode(hex(i + 2, 2)), i + 4];
+  if (char === 'u' && text[i + 2] === '{') {
+    const close = text.indexOf('}', i + 3);
+    if (close < 0 || !/^[0-9a-fA-F]{1,6}$/.test(text.slice(i + 3, close))) throw new SyntaxError('malformed escape');
+    return [String.fromCodePoint(parseInt(text.slice(i + 3, close), 16)), close + 1];
+  }
+  if (char === 'u') return [String.fromCharCode(hex(i + 2, 4)), i + 6];
+  if (char === '\r' && text[i + 2] === '\n') return ['', i + 3];
+  if (char === '\n' || char === '\r' || char === ' ' || char === ' ') return ['', i + 2];
+  if (char === '0' && !/[0-9]/.test(text[i + 2] || '')) return ['\0', i + 2];
+  if (/[0-9]/.test(char)) throw new SyntaxError('legacy octal escapes are not supported');
+  return [SIMPLE_ESCAPES[char] ?? char, i + 2];
+}
+
 export function tokenize(text) {
-  const tokens = [], templateDepths = [];
+  const tokens = [], templateDepths = [], parens = [];
   let i = 0, braceDepth = 0;
   const previous = () => tokens[tokens.length - 1];
   const regexAllowed = () => {
     const token = previous();
     if (!token) return true;
     if (token.type === 'name') return REGEX_PRECEDING_KEYWORDS.has(token.value);
-    if (token.type === 'number' || token.type === 'string' || token.type === 'template' || token.type === 'regex') return false;
-    return !(token.value === ')' || token.value === ']' || token.value === '}');
+    if (token.type !== 'punct') return false;
+    if (token.value === ')') return token.control === true;
+    if (token.value === '}') throw new SyntaxError('a "/" after "}" is ambiguous (block or expression)');
+    // A postfix increment or decrement ends an operand; prefix ++/-- before a regex is invalid.
+    return !(token.value === ']' || token.value === '++' || token.value === '--');
   };
   function scanTemplate() { // i is just after ` or after the } closing ${...}
     let value = '';
     while (i < text.length) {
       const char = text[i];
-      if (char === '\\') { value += text.slice(i, i + 2); i += 2; continue; }
+      if (char === '\\') { const [decoded, next] = decodeEscape(text, i); value += decoded; i = next; continue; }
       if (char === '`') { i++; tokens.push({ type: 'template', value }); return; }
       if (char === '$' && text[i + 1] === '{') { i += 2; tokens.push({ type: 'template', value }); templateDepths.push(braceDepth); braceDepth++; return; }
       value += char; i++;
@@ -49,7 +85,8 @@ export function tokenize(text) {
     if (char === '"' || char === "'") {
       let value = ''; i++;
       while (i < text.length && text[i] !== char) {
-        if (text[i] === '\\') { value += text[i + 1]; i += 2; } else value += text[i++];
+        if (text[i] === '\n') throw new SyntaxError('unterminated string');
+        if (text[i] === '\\') { const [decoded, next] = decodeEscape(text, i); value += decoded; i = next; } else value += text[i++];
       }
       if (i >= text.length) throw new SyntaxError('unterminated string');
       i++; tokens.push({ type: 'string', value }); continue;
@@ -60,10 +97,10 @@ export function tokenize(text) {
     }
     if (char === '/' && regexAllowed()) {
       let value = '/', inClass = false; i++;
-      while (i < text.length) {
+      while (true) {
         const c = text[i];
+        if (c === undefined || c === '\n') throw new SyntaxError('unterminated regular expression');
         if (c === '\\') { value += text.slice(i, i + 2); i += 2; continue; }
-        if (c === '\n') throw new SyntaxError('unterminated regular expression');
         value += c; i++;
         if (c === '[') inClass = true; else if (c === ']') inClass = false;
         else if (c === '/' && !inClass) break;
@@ -71,9 +108,10 @@ export function tokenize(text) {
       while (/[a-z]/i.test(text[i] || '')) value += text[i++];
       tokens.push({ type: 'regex', value }); continue;
     }
-    if (/[A-Za-z_$]/.test(char)) {
+    if (char === '\\') throw new SyntaxError('escapes outside string literals (identifier escapes) are not supported');
+    if (NAME_START.test(char)) {
       let value = '';
-      while (i < text.length && /[\w$]/.test(text[i])) value += text[i++];
+      while (i < text.length && NAME_PART.test(text[i])) value += text[i++];
       tokens.push({ type: 'name', value }); continue;
     }
     if (/[0-9]/.test(char) || (char === '.' && /[0-9]/.test(text[i + 1] || ''))) {
@@ -84,8 +122,11 @@ export function tokenize(text) {
       }
       tokens.push({ type: 'number', value }); continue;
     }
+    if ((char === '+' || char === '-') && text[i + 1] === char) { tokens.push({ type: 'punct', value: char + char }); i += 2; continue; }
     if (char === '{') braceDepth++;
     if (char === '}') braceDepth--;
+    if (char === '(') { const before = previous(); parens.push(before?.type === 'name' && CONTROL_KEYWORDS.has(before.value)); }
+    if (char === ')') { tokens.push({ type: 'punct', value: ')', control: parens.pop() === true }); i++; continue; }
     tokens.push({ type: 'punct', value: char }); i++;
   }
   if (templateDepths.length) throw new SyntaxError('unterminated template expression');
@@ -105,9 +146,11 @@ export function scanSource(text) {
       if (next && next.type === 'punct' && next.value === '(') { result.dynamic++; continue; }
       if (next && next.type === 'punct' && next.value === '.') continue; // import.meta
       if (next && next.type === 'string') { result.static.push(next.value); continue; }
+      let found = false;
       for (let j = k + 1; j < tokens.length && tokens[j].value !== ';'; j++) {
-        if (isName(tokens[j], 'from') && tokens[j + 1]?.type === 'string') { result.static.push(tokens[j + 1].value); break; }
+        if (isName(tokens[j], 'from') && tokens[j + 1]?.type === 'string') { result.static.push(tokens[j + 1].value); found = true; break; }
       }
+      if (!found) throw new SyntaxError('an import declaration without a resolvable specifier');
     } else if (isName(token, 'export') && next && next.type === 'punct' && (next.value === '*' || next.value === '{')) {
       for (let j = k + 1; j < tokens.length && tokens[j].value !== ';'; j++) {
         if (tokens[j].type === 'punct' && tokens[j].value === '}' && !isName(tokens[j + 1], 'from')) break;
