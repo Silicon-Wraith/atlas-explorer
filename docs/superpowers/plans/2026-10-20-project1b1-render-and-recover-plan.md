@@ -50,8 +50,9 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 1 — joint draft (Claude drafting; Codex co-author from Round 0: runs
-20261020T211454Z-d306 and 20261020T212435Z-94a5). **Authors:** Claude and Codex as peers
+**Revision:** 2 — joint draft (Claude drafting; Codex co-author from Round 0: runs
+20261020T211454Z-d306, 20261020T212435Z-94a5 and the rev 1 review 20261020T214114Z-aba8, whose
+fifteen findings are applied here). **Authors:** Claude and Codex as peers
 (AGENTS.md/CLAUDE.md protocol). The verbatim record is
 `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md` ("PLAN 1b.1" entries), archived to
 `docs/codesign/project1-log.md` at the milestone.
@@ -140,7 +141,8 @@ the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit
   schema `atlas.scene` v1; conventions `atlas-space-rh-zup-abcd-v1`; §16.4 targets (B15).
 - **Plan defaults (not spec constants):** default vertical FOV 60° (Project 0 A.1); preparation
   bound 60 s; lighting bounds six normal samples, one shadow ray of ≤ 64 steps, five AO samples;
-  `RECENTRE_BOUND = 2⁻⁴⁰`; `MAX_PARAMETER_DIGITS = 64`; camera limits in B02; the neutral
+  the recentre bound 2⁻⁴⁰ × scale (`RECENTRE_BOUND_LOG2 = −40`); `MAX_PARAMETER_DIGITS = 64`;
+  camera limits in B02; the neutral
   inspection light ℓ = normalize(1, 0.6, 1.5) with 0.15 + 0.85·max(0, n·ℓ) (Project 0 A.5).
 - **Provisional product defaults (spec §19.2, for the user's confirmation):** Q2 — Space opens
   with the neutral inspection lighting (presets arrive in 1b.3); Q5 — desktop-first; Space has no
@@ -167,29 +169,32 @@ itself. Each is pinned by named tests in its owning task.
 2. **A manufactured surface or a hidden failure** — an interior start accepted as a hit, a
    secondary-ray failure shaded as lit, a stagnating ray forced forward, an unavailable normal
    erasing its depth, or a numerical failure painted as a miss. *B10:* `Adversarial rays terminate
-   with their expected status and subreason`; `Normals are available exactly where their samples
-   resolve and unavailable normals keep their depth`. *B11:* `Secondary-ray failures leave a sample
-   unlit, never lit`; `Diagnostic modes show the legend colours exactly for the status words`.
+   with their expected status and subreason`; `Normals require distinct resolved samples and a
+   finite nonzero gradient, and unavailable normals keep their depth`. *B11:* `Secondary-ray
+   failures remain visibly diagnostic and are counted`; `Diagnostic modes show the legend colours
+   exactly for the status words`.
 3. **Recovery that loses the investigation** — a device loss that drops the scene or a history,
    an allocation failure that quietly lowers the request, repeated loss looping forever, or a
    cancellation reported as preemption. *B13:* `recovery never modifies the scene or either
    history`; `allocation failure releases obsolete generations before offering a lower-cost choice
-   and never changes the request`; `a second loss within the window stops automatic recovery and
-   leaves retry explicit`. *B07:* `cancel reports none, drained or interrupted truthfully`.
+   and never changes the request`; `a second loss stops automatic recovery even after more than 60
+   seconds`. *B07:* `cancel reports none, drained or interrupted only on completion or loss
+   evidence`.
 4. **Input that outlives its owner** — flight that keeps moving after blur or a workspace switch,
    a captured drag that survives deactivation, a stale focus pick that moves the camera, or a
    hidden workspace that keeps rendering. *B12:* `a flight run commits on escape, blur and
    visibility loss with one entry and zero velocity afterwards`; `a focus whose pick is stale or
-   unresolved starts no gesture and leaves the camera where it was`. *B14:* `deactivate closes
-   admission, invalidates picks, settles navigation and releases capture without touching the
-   scene`; `Switching during a Plane export does not interrupt the export`.
+   unresolved starts no gesture and leaves the camera where it was`. *B14:* `deactivation commits
+   the last preview exactly once and a later capture-loss callback cannot cancel it`; `a late
+   activation cannot reactivate a hidden workspace`; `Switching during a Plane export does not
+   interrupt the export`.
 5. **A number presented with more authority than it has** — an effective binary32 value shown as
    the requested one, a validation record matched outside its coverage, Project 0's results
    presented as product validation, or an inconclusive matrix cell counted as passed. *B02:*
    `effective binary32 values carry their bit patterns beside the requested strings`; `a validation
-   lookup matches only inside tested coverage and infers nothing`. *B08:* `Validation records are
-   registered only for passed cells`. *B04:* `every stratum meets its floor or is marked
-   inconclusive`.
+   lookup matches only the evidence class and domain it was recorded for`. *B08:* `Validation
+   records are registered only for passed mandatory strata`. *B04:* `an inconclusive mandatory
+   stratum blocks qualification`.
 
 ---
 
@@ -206,8 +211,8 @@ itself. Each is pinned by named tests in its owning task.
 | B06 | WebGPU backend: acquisition, preparation, tracked allocation and retirement, admission-leased submission, readback, presentation, epochs | Claude | B00, B01 | 2 |
 | B07 | The shared scheduler: admission, coalescing, priorities, pause and one-snapshot update, completed-work adaptation, budgets, watchdog | Codex | B00 | 2 |
 | B08 | WGSL field kernels validated against B04's frozen references; validation records | Claude | B03, B04, B06 | 3 |
-| B09 | Pass orchestration, profiles, keys and revisions, compatible accumulation, complete-image publication, Space reports | Codex | B00, B02, B07 | 3 |
-| B10 | Primary tracing, normals and pick data; geometric validation (analytic rays, adversarial rays, convergence) before decorative shading | Claude | B04, B08, B09 | 4 |
+| B09 | Pass orchestration, profiles, keys and revisions, compatible accumulation, complete-image publication, Space reports | Codex | B00, B02, B03, B07 | 3 |
+| B10 | Primary tracing, normals and pick data; geometric validation (analytic rays, adversarial rays, convergence) before decorative shading | Claude | B04, B05, B08, B09 | 4 |
 | B11 | Lighting, bounded shadows and AO, diagnostic display, seeded jitter, linear accumulation, display mapping; shared palettes | Claude | B09, B10 | 5 |
 | B12 | Orbit, pan, dolly, orientation control, flight, Space-owned gestures, stale-safe focus, camera-exterior status | Codex | B03, B05, B09, 1a T04 | 4 |
 | B13 | Recovery orchestration: cancellation, failed allocation, stalled work, loss and repeated loss, preserving the investigation | Codex | B06 (contract), B07, B09 | 4 |
@@ -215,8 +220,9 @@ itself. Each is pinned by named tests in its owning task.
 | B15 | Headed interaction and recovery acceptance, frozen performance acceptance, the recorded investigation, the commit audit, handoff | Codex | B14; **1a T13** | 7 |
 
 Each task has one implementer and the other peer's read-only review; shared ownership is not used.
-Unit-test counts are given per task as *new* tests (the 1a baseline is still moving); the merger
-records the running total in the ledger.
+The merger records unit counts in the ledger (the 1a baseline is still moving, so this plan gives
+no cumulative counts). Every listed Node test contains executable assertions; a missing-module or
+missing-file failure never counts as behavioural RED.
 
 ## Dependencies on 1a
 
@@ -272,18 +278,25 @@ B00, B06, B08, B10 and B11, and is proposed for adoption into the spec by refere
   trace, normals and secondary field evaluation enumerated and prewarmed during preparation
   (`FIELD` is a pipeline-overridable constant; power and parameters are uniforms; no
   interaction-time compilation). One separately prepared fullscreen render pipeline presents the
-  completed display texture to the canvas in its preferred format with explicit scaling (a draft is
-  upscaled at presentation) and sRGB encoding; the display texture is never copied directly to the
-  canvas (`rgba8unorm` and `bgra8unorm` are not copy-compatible).
+  completed display texture to the canvas in its preferred unorm format with explicit scaling (a
+  draft is upscaled at presentation) and **no further transfer function**: accumulation stays
+  linear, `display_band` performs the sole sRGB encoding into `display`, and diagnostic legend
+  colours are defined in display space and written exactly. The display texture is never copied
+  directly to the canvas (`rgba8unorm` and `bgra8unorm` are not copy-compatible).
 - **Targets** (per internal resolution, through the tracked allocator): `depth` r32float (4),
   `status` r32uint (4; bits 0–3 status, 4–7 reason, 8–11 subreason, 12–31 steps), `normal`
   rgba16float (8; w = availability), `sampleColor` rgba16float (8), `lightingStatus` r32uint (4;
-  secondary-ray failures), `accumulationFlags` r32uint (4; diagnostic propagation across samples),
+  independent shadow and AO failure flags with reasons, simultaneous failures preserved),
+  `accumulationFlags` r32uint (4; diagnostic propagation across samples),
   two ping-pong `accumulation` rgba32float (16 each; sum and count, read previous, write next),
   `display` rgba8unorm (4), `retained` rgba8unorm (4; the previous complete image, shown with the
   pending mark): 72 bytes per pixel, 597,196,800 B at 3840 × 2160 before staging, uniforms, model
   buffers and overlapping generations. Each resource is counted at its actual dimensions. (Project
   0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.)
+- **Pipeline descriptors.** B00 freezes the pipeline descriptor schema, ids, binding slots and
+  uniform layouts; B06 validates preparation with executable self-check pipelines; B08, B10 and
+  B11 add their descriptors and preparation assertions as their shaders come into existence; B11
+  verifies complete product prewarming before B14 enables interaction.
 - **Batches.** The descriptor and ticket of B00 (`identity`, `pipelineId`, `pass`, `region`,
   `sample`, `bounds`, named `inputs`/`outputs` slots, `uniforms`); one command buffer per batch;
   uniform data snapshotted before submission; storage owned by an outstanding ticket is never
@@ -311,7 +324,12 @@ B00, B06, B08, B10 and B11, and is proposed for adoption into the spec by refere
 ## Precision carry-forward (binding)
 
 Project 0 records are historical evidence bound to their original implementation, profile, inputs
-and limitations; they do not constitute product validation. The power-8 10⁻⁴/10⁻⁵ observations at
+and limitations; they do not constitute product validation. Product validation records (B02's
+registry) distinguish arithmetic, tracing and geometric evidence classes; each carries the
+implementation-source hashes, the reference and generator hashes, the matrix hash, the profile and
+the exact tested input or spatial sampling domain; a lookup matches only the conditions its
+evidence class represents, and a local detail record never matches another camera patch merely
+because parameters and image height match. The power-8 10⁻⁴/10⁻⁵ observations at
 the frozen anchor belong in historical context, not in the product's applicable tested-coverage
 record, and are never a navigation clamp. Product validation records identify the product kernel
 and profile and B04's matrix results, including eligible counts, exclusions, inconclusive strata
@@ -325,7 +343,14 @@ verbatim in `limitations`.
 
 **P1 — The §16.2 matrix** (`tests/reference/space-matrix.json`, generated deterministically by
 `tests/reference/matrix.mjs` and committed in B04 before any GPU comparison). Budgets 64, 128,
-256 and 512 throughout the point matrix; bulb powers 2–8.
+256 and 512 throughout the point matrix; bulb powers 2–8. Every stratum is classified in the
+fixture schema as **mandatory** (arithmetic, semantic and geometric qualification) or
+**diagnostic** (the detail ladders). A mandatory stratum must meet its preregistered floor and
+pass its assertions; an inconclusive mandatory stratum blocks qualification and release and cannot
+satisfy a `requiredPasses` entry. B04 stops before any GPU comparison when CPU preflight cannot
+substantiate a mandatory floor (the floor is then revised by a recorded plan amendment, never
+weakened silently). Diagnostic rows may record threshold exceedance or insufficient coverage
+without claiming validation at that distance; they never substitute for mandatory qualification.
 
 | Stratum | Frozen candidates | Floor / required assertions |
 |---|---:|---|
@@ -334,49 +359,71 @@ verbatim in `limitations`.
 | Bulb generic: cell centres of an 8³ grid over [−1.2, 1.2]³, per power × budget | 512 | ≥ 410 continuous-comparison eligible |
 | Quaternion generic: C ∈ {(−.2,.8,0,0), (0,0,0,0), (2,0,0,0), (−.2,.8,.15,−.1), (.25,−.5,.5,−.25), (−.4,.2,−.3,.6)} × κ ∈ {0, ±0.5, ±2, ±4} × budget; an 8 × 8 × 4 cell-centre grid over [−1.5, 1.5]³ | 256 | ≥ 205 eligible; additionally ≥ 64 eligible non-initial-escape cases when \|κ\| ≤ 0.5. **κ = ±4 cells are empty-slice cells** (‖C‖ ≤ 8 ⇒ R(C) ≤ (1 + √33)/2 ≈ 3.3723 < 4): they require empty-slice, miss and initialization-escape assertions, not coverage minimums |
 | Quaternion supported-boundary: the 16 corners of [−4, 4]⁴ plus its 8 face centres × 7 κ values {0, ±0.5, ±2, ±4} × 8 starts (origin, the six ±0.25 axis points, (0.25, −0.5, 0.75)) × 4 budgets | 5,376 | every admission, bound and semantic assertion; singular cases never excluded; exact requested-decimal just-outside-range rejection tests beside them |
-| 32 named adversarial point cases | 32 | 32/32: zero sensitivity, derivative range (update 44), initialization escape, strict and equal empty-slice bounds, analytic interior/boundary starts, invalid inputs, both stagnation reasons |
+| 32 named adversarial cases: 20 point cases (B08) and 12 ray cases (B10) | 32 | 32/32: zero sensitivity, derivative range (update 44), initialization escape, strict and equal empty-slice bounds, four-component quaternion probes that detect dropped or wrong j/k components, invalid inputs (points); analytic interior and boundary starts, origin-through, polar-axis, grazing, inside-start and both stagnation reasons (rays) |
 | Sphere / rotated box reference rays (Project 0 A.4, re-expressed independently) | 625 / 651 | ≥ 500 / 521 eligible, each with ≥ 64 positive-depth hits |
 | Menger depth 1 / 2 reference rays (41 × 41, oblique direction) | 1,681 each | ≥ 1,345 eligible with ≥ 64 positive-depth hits |
 | Fractal overview rendering: 1,024 rays per power and per quaternion (C, κ) cell, budget 128 | 1,024 | ≥ 820 reference-eligible; hit-count requirements only for preregistered surface-bearing views |
 | Detail approaches: two independently prepared anchors per bulb power, two for the default quaternion and two for C = (−.2,.8,.15,−.1), κ = 0.5; distances 10⁻¹…10⁻⁸; the central 32 × 32 rays of a 1280 × 720 frame; budget 128; 512 steps | 1,024 per anchor and distance | ≥ 512 reference-eligible and ≥ 128 positive-depth hits for a depth claim; the ladder measures where agreement fails — "threshold exceeded" is evidence, not a pass; insufficient coverage is `inconclusive` |
 
 Totals before adversarial cases: 15,036 bulb, 43,008 generic quaternion, 5,376 boundary
-quaternion points. Compared quantities and tolerances (quantity-specific, frozen): status and
-escape index exact; ln R relative 10⁻⁴; log₂ DE absolute 2⁻¹⁰ (the estimate is compared in the log
-domain; an unavailable estimate must be unavailable on both sides); analytic ray depth relative
-10⁻³ with floor 10⁻⁶; convergence-ladder rows use Project 0 A.10's criteria (status disagreement
-≤ 5 % of eligible; large depth errors > 1 % ≤ 5 % of eligible hits), with requested-input and
-effective-input comparisons recorded separately. Sensitivity screen: Project 0 A.3's rule (a case
-whose f32 input perturbation changes status or index is excluded and counted) applies to generic
-strata only; semantic and adversarial cases are mandatory. Anchor selection: the CPU reference
-marches each anchor's central ray at 256 iterations, k = 0.5, tolerance 10⁻¹³, up to 4,096 steps,
-repeated at 10⁻¹⁵ as the convergence check (Project 0 A.6's method); the generator freezes the
-algorithm, B04's commit freezes the values. Minimum eligibility is per stratum, never pooled. A
-stratum below its floor is `inconclusive` and requires an explicit preregistration revision before
-GPU comparison; it never silently weakens the floor. CPU-only preflight in B04 must substantiate
-the floors before the file is frozen.
+quaternion points. These are sampling budgets, not evidence that the floors are attainable; CPU
+preflight establishes that. Compared quantities and proposed tolerances (quantity-specific):
+status and escape index exact; every quaternion component at escape, relative 10⁻⁴ with absolute
+floor 10⁻⁶ (so that dropped or wrong j/k components are detected); ln R relative 10⁻⁴; log₂ DE
+absolute 2⁻¹⁰ (compared in the log domain; an unavailable estimate must be unavailable on both
+sides); analytic ray depth relative 10⁻³ with floor 10⁻⁶. **Before any numerical GPU comparison,
+B04 records the analysis supporting every tolerance — fused and unfused evaluation, transcendental
+error, conditioning and output quantization — and the tolerances are not represented as derived
+until that analysis exists.** Sensitivity screen (generic strata only): for each candidate,
+independently perturb each relevant effective binary32 input to its adjacent representable
+values; exclude and count the candidate if the CPU reference changes status or escape index, or
+changes a compared continuous quantity by more than one quarter of that quantity's acceptance
+tolerance; semantic and adversarial cases are never excluded; eligibility, exclusions and
+denominators are recorded per compared quantity, with no pooling between strata. Profiles:
+ordinary-render comparisons use `surface-v1` on both sides; the detail ladders use a separately
+named harness profile `ladder-v1` (no tolerance floor, factor 0.005, tighter reference 0.0005, with
+A.10's criteria: status disagreement ≤ 5 % of eligible, large depth errors > 1 % ≤ 5 % of eligible
+hits, requested-input and effective-input comparisons recorded separately); every result names
+its profile. B04 freezes the exact case ids, start coordinates, overview cameras and pixel
+coordinates, surface-bearing classifications and hit floors, anchor seed rays and selection rule
+(the CPU reference marches each anchor's seed ray at 256 iterations, k = 0.5, tolerance 10⁻¹³, up
+to 4,096 steps, repeated at 10⁻¹⁵ as the convergence check), and the reference-convergence
+decisions; the generator freezes the algorithm and B04's commit freezes the values. Minimum
+eligibility is per stratum, never pooled.
 
 **P2 — Geometric validation** (B10): analytic rays — status exact and depth within the P1
-tolerance against the slab/sphere oracle; convergence ladder — P1's criteria; adversarial rays —
-expected status and subreason exactly; normals — on the sphere, within 10⁻³ rad of the exact
-gradient on ≥ 99 % of hits, availability exactly where the six samples resolve; silhouette — the
+tolerance against the slab/sphere oracle; the detail ladders — P1's `ladder-v1` criteria, as
+diagnostic evidence; adversarial rays — expected status and subreason exactly; normals — on the
+sphere, within 10⁻³ rad of the exact gradient on ≥ 99 % of hits; a normal is available only when
+all required samples resolve, the effective sample positions remain distinct, and the gradient is
+finite and nonzero, otherwise the depth is preserved and the normal marked unavailable; silhouette — the
 sphere's hit mask equals the analytic disc except within one pixel of the edge; the quaternion
 usability experiment — the default view's termination distribution within ±5 percentage points
 per class of B04's binary64 prediction (160 × 90 rays, 128 iterations, 512 steps).
 
-**P3 — Performance workload** (B15): 1280 × 720; scenes: the bulb overview (power 8, 128
-iterations), the quaternion default view, `menger` depth 2; motion: a 30 s orbit at 0.5 rad/s
-(draft rate and intervals), a burst of 400 camera requests at 60 ms spacing (interaction
-latency), a parameter edit every 250 ms for 10 s (stress replacement); three trials per scene,
-cold then warm; timing boundaries: request creation → first complete publication, with completed
-work, publication and readback reported separately; coverage checks against B04's prediction;
-visible-output verification (the display buffer changes between publications); harness-invalidity
-rule: a request issued more than 4 ms late invalidates the trial, which is reported as invalid,
-never as passed or failed; Project 0 timer rules; no single average-FPS figure. Targets: ≥ 30
-completed drafts/s with consecutive-interval p95 ≤ 50 ms; interaction p95 ≤ 100 ms; stress
-replacement ≤ 250 ms; no application main-thread task over 50 ms; first settled full-resolution
-geometry, normals and direct-light image ≤ 2 s from the settled request, with full quality
-reported separately.
+**P3 — Performance workload** (B15): B00 freezes a workload manifest
+(`tests/reference/performance-workload.json`) containing the complete scenes, motion trajectories
+(camera poses per request time), request times, edit values, seeds, warm-up rules and coverage
+checkpoints; B04 supplies the termination-distribution predictions for those checkpoints. Content:
+1280 × 720; scenes: the bulb overview (power 8, 128 iterations), the quaternion default view,
+`menger` depth 2; per scene: a 30 s orbit at 0.5 rad/s (draft rate and intervals), a burst of 400
+camera requests at 60 ms spacing (interaction latency), a parameter edit every 250 ms for 10 s
+(stress replacement); one cold trial after a fresh page load, then warm trials; **one
+performance suite per scene**, each with the existing ten-minute bound, requiring three valid
+trials and allowing at most five recorded attempts; insufficient valid trials are reported as
+inconclusive and non-accepting; invalid trials are never retried silently. Timing boundaries:
+request creation → first complete publication, with completed work, publication, readback and
+actual canvas presentation (a presentation callback after the presenter's submission completes)
+reported separately — a changing buffer alone does not establish presentation; coverage checks at
+the manifest's checkpoints against B04's prediction, and failed or missing coverage cannot satisfy
+a target; harness-invalidity rule: a request issued more than 4 ms late invalidates the trial,
+which is reported as invalid, never as passed or failed; Project 0 timer rules; no single
+average-FPS figure. Targets: ≥ 30 completed drafts/s with consecutive-interval p95 ≤ 50 ms;
+interaction p95 ≤ 100 ms; stress replacement ≤ 250 ms; no application main-thread task over 50 ms;
+first settled full-resolution geometry, normals and direct-light image ≤ 2 s from the settled
+request, with full quality reported separately. The harness drives the page through the B14
+inspection commands `atlas.space.requestCamera(pose)`, `atlas.space.editParameter(path, value)`
+and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPresent(listener)`.
 
 ---
 ### Task B00: Contracts, the fake backend and the frozen protocols (spec §7.1–7.5, §9, §11.4, §16)
@@ -408,8 +455,17 @@ reported separately.
   index}, bounds: {pixels, raySteps, iterations, normalFieldSamples, shadowRays, shadowSteps,
   aoSamples}, inputs: {slot: handle}, outputs: {slot: handle}, uniforms}) → frozen Batch`
   (validates every field; `pixels === width × height`; bounds within the spec limits),
-  `createPickRequest({identity, pixel, dimensions, sampleIndex}) → frozen`, `createAdmission({
-  epoch, jobId}) → lease` (single-use: `consume()` returns true once), `BACKEND_METHODS =
+  `createPickRequest({identity, pixel, dimensions, geometryRevision, sampleIndex}) → frozen`,
+  `createAdmission({epoch, jobId}) → lease` (single-use: `consume()` returns true once),
+  `createJobPlan({request, steps: [{pass, regions, sampleIndex, bounds}], onAdvance}) → JobPlan`
+  with `next() → batch | null` (the next bounded operation), `advance(batch, completion)` (marks it
+  done and may subdivide the following step from completion evidence) and `exhausted()` (the job
+  settles `completed` when every step is done, `budget-exceeded` when its budget is spent first),
+  `sampleJitter({seed, sampleIndex, pixel: [x, y]}) → {dx, dy}` (the frozen `atlas-aa-v1`
+  algorithm: a 32-bit integer hash `h = mix(seed ⊕ mix(sampleIndex ⊕ mix(x ⊕ mix(y))))` with
+  `mix(v) = ((v ⊕ (v >>> 16)) × 0x45d9f3b) >>> 0` applied twice, `dx = ((h & 0xffff) + 0.5) /
+  65536 − 0.5`, `dy = (((h >>> 16) & 0xffff) + 0.5) / 65536 − 0.5`; sample 0 is the pixel centre
+  with `{dx: 0, dy: 0}`), `BACKEND_METHODS =
   ['acquire', 'prepare', 'configureTargets', 'submitBatch', 'readback', 'present', 'release',
   'onLoss', 'currentEpoch', 'diagnostics', 'destroy']`, `assertBackend(impl)`, `BackendError
   {code: 'allocation-failed' | 'device-lost' | 'preparation-failed' | 'invalid-descriptor' |
@@ -427,13 +483,14 @@ reported separately.
 - Produces (`fake-backend.mjs`): `createFakeBackend({clock, cap = TRACKED_ALLOCATION_CAP,
   limits, failPrepareAt = null}) → backend` implementing every method deterministically:
   `prepare` resolves on `backend.finishPrepare()` (or rejects on `backend.failPrepare(stage)`);
-  tickets settle on `backend.complete(ticket | 'next' | 'oldest' | 'newest', {gpuMs})` or
-  `backend.fail(ticket, error)`; `backend.lose({reason})` fires `onLoss`, settles every
+  tickets settle on `backend.complete(ticket | 'next' | 'oldest' | 'newest', {elapsedMs,
+  timestampMs?})` or `backend.fail(ticket, error)`; `backend.lose({reason})` fires `onLoss`, settles every
   outstanding ticket `interrupted`, and the next `acquire()` advances the epoch; `readback` returns
   bytes staged with `backend.stage(handle, bytes)`; every submitting method throws
   `BackendError('no-admission')` without a consumable lease; `allocate` enforces the cap and
   records `{tracked, peak, retiring, inventory}`; `backend.log` records every call in order;
-  `backend.destroyDevice()` is the test adapter for real-loss semantics without terminal teardown.
+  `backend.testAdapter = {destroyDevice(), injectLoss({reason}), failNextAllocation()}` (declared
+  separately from the production interface; the WebGPU backend's adapter has the same shape).
 - Produces (`fake-clock.mjs`): `createFakeClock(start = 0) → {now(), advance(ms), schedule(fn,
   ms) → id, clear(id), runDue()}`.
 
@@ -447,7 +504,9 @@ P1–P3 become binding at this task's commit.
   2²⁰ − 1); `a batch rejects an unknown pass, a region whose pixels disagree with its bounds, and
   bounds above the spec limits`; `an admission lease is consumed exactly once`; `assertBackend
   rejects an implementation missing release or onLoss`; `wgslConstants emits one const per enum
-  member`. `tests/unit/fake-backend.test.js`: `allocation beyond the cap fails before any resource
+  member`; `sample jitter is deterministic, centred for sample 0 and within half a pixel`; `a job
+  plan yields bounded operations in order and settles budget-exceeded before exhaustion when its
+  budget is spent`. `tests/unit/fake-backend.test.js`: `allocation beyond the cap fails before any resource
   exists and leaves accounting unchanged`; `released bytes stay tracked while a ticket references
   the resource and leave when it settles`; `a loss settles every outstanding ticket interrupted and
   a new acquisition advances the epoch`; `submission without a lease is refused`; `completion
@@ -459,7 +518,7 @@ P1–P3 become binding at this task's commit.
 - [ ] **Step 4: GREEN** — the two files, then `npm test`. Expected: all pass; no skip or todo.
 - [ ] **Step 5: Commit** — `"Add the Space backend contract, status vocabulary and fake backend (1b.1 B00)"`, then the gate.
 
-**Expected outputs:** 10 new unit tests; no browser or GPU work.
+**Expected outputs:** the contract, fake backend and clock; no browser or GPU work.
 
 ---
 
@@ -540,12 +599,16 @@ onward and goes to the user with the evidence.
   → boolean` (strict `|κ| > bound`), `nextUp32(x)`, `nextDown32(x)`.
 - Produces (`validation-domains.js`): `SUPPORTED_DOMAINS` (per model, the requested-value
   ranges above), `inSupportedDomain(modelId, parameters) → {ok, violations: [{path, reason}]}`,
-  `VALIDATION_RECORD_FIELDS = ['recordId', 'modelId', 'implementationVersion', 'profile',
-  'testedParameters', 'testedSamplingConditions', 'coverage', 'inconclusive', 'limitations']`,
-  `createValidationRegistry() → {register(record), lookup({modelId, implementationVersion,
-  profile, effective, sampling}) → record | null, list()}` (a lookup matches only when the
-  effective inputs and sampling conditions fall inside the record's tested sets; nothing is
-  inferred). B02 registers no records; B08 and B10 do.
+  `VALIDATION_RECORD_FIELDS = ['recordId', 'modelId', 'evidenceClass', 'implementationHashes',
+  'referenceHashes', 'matrixHash', 'profile', 'testedParameters', 'testedSamplingConditions',
+  'testedDomain', 'coverage', 'inconclusive', 'limitations']` (`evidenceClass` is `'arithmetic'`,
+  `'tracing'` or `'geometric'`; `testedDomain` is the exact input set or spatial sampling domain),
+  `createValidationRegistry() → {register(record), lookup({modelId, evidenceClass,
+  implementationHashes, profile, effective, sampling, domain}) → record | null, list()}` (a lookup
+  matches only when every hash equals the record's, the effective inputs and sampling conditions
+  fall inside the tested sets, and — for `'geometric'` — the requested domain lies inside
+  `testedDomain`; nothing is inferred, and a local detail record never matches another camera
+  patch). B02 registers no records; B08 and B10 do.
 - Produces (`scene-adapter.js`): `SPACE_CONVENTIONS = 'atlas-space-rh-zup-abcd-v1'`,
   `SPACE_MODELS` (`sphere@1`, `box@1`, `menger@1`, `mandelbulb@1`, `quaternion-julia@1`),
   `CAMERA_KIND = 'anchored-perspective-v1'`, `CAMERA_LIMITS = {anchorDigits: 400, exponent:
@@ -622,14 +685,19 @@ test('fog validates only as disabled and the view mode is one of the five', () =
   assert.throws(() => createSpaceScene({ model: 'sphere', appearance: { ...SPACE_DEFAULTS.appearance, fog: { enabled: true, density: 1 } } }), e => e.code === 'invalid-value');
   assert.throws(() => createSpaceScene({ model: 'sphere', appearance: { ...SPACE_DEFAULTS.appearance, viewMode: 'orbit' } }), e => e.code === 'invalid-value');
 });
-test('a validation lookup matches only inside tested coverage and infers nothing', () => {
+test('a validation lookup matches only the evidence class and domain it was recorded for', () => {
   const registry = createValidationRegistry();
-  registry.register({ recordId: 'bulb-p8-x', modelId: 'mandelbulb', implementationVersion: 'x', profile: 'surface-v1', testedParameters: { power: [8] }, testedSamplingConditions: { maxIterations: [64, 128], heights: [720] }, coverage: {}, inconclusive: [], limitations: [] });
+  const hashes = { kernel: 'sha256:aaa', tracing: 'sha256:bbb' };
+  const base = { modelId: 'mandelbulb', implementationHashes: hashes, referenceHashes: { generator: 'sha256:ccc' }, matrixHash: 'sha256:ddd', profile: 'surface-v1', testedParameters: { power: [8] }, testedSamplingConditions: { maxIterations: [64, 128], heights: [720] }, coverage: {}, inconclusive: [], limitations: [] };
+  registry.register({ ...base, recordId: 'bulb-p8-arith', evidenceClass: 'arithmetic', testedDomain: { points: 'grid-8-1.2' } });
+  registry.register({ ...base, recordId: 'bulb-p8-geo', evidenceClass: 'geometric', testedDomain: { anchor: 'A1', distances: [0.1, 0.01] } });
   const sampling = { maxIterations: 128, height: 720 };
-  assert.ok(registry.lookup({ modelId: 'mandelbulb', implementationVersion: 'x', profile: 'surface-v1', effective: { power: 8 }, sampling }));
-  assert.equal(registry.lookup({ modelId: 'mandelbulb', implementationVersion: 'x', profile: 'surface-v1', effective: { power: 7 }, sampling }), null);
-  assert.equal(registry.lookup({ modelId: 'mandelbulb', implementationVersion: 'y', profile: 'surface-v1', effective: { power: 8 }, sampling }), null, 'a changed implementation has no record');
-  assert.equal(registry.lookup({ modelId: 'mandelbulb', implementationVersion: 'x', profile: 'surface-v1', effective: { power: 8 }, sampling: { ...sampling, maxIterations: 256 } }), null);
+  assert.ok(registry.lookup({ modelId: 'mandelbulb', evidenceClass: 'arithmetic', implementationHashes: hashes, profile: 'surface-v1', effective: { power: 8 }, sampling }));
+  assert.equal(registry.lookup({ modelId: 'mandelbulb', evidenceClass: 'arithmetic', implementationHashes: hashes, profile: 'surface-v1', effective: { power: 7 }, sampling }), null);
+  assert.equal(registry.lookup({ modelId: 'mandelbulb', evidenceClass: 'arithmetic', implementationHashes: { ...hashes, kernel: 'sha256:zzz' }, profile: 'surface-v1', effective: { power: 8 }, sampling }), null, 'a changed implementation has no record');
+  assert.equal(registry.lookup({ modelId: 'mandelbulb', evidenceClass: 'arithmetic', implementationHashes: hashes, profile: 'surface-v1', effective: { power: 8 }, sampling: { ...sampling, maxIterations: 256 } }), null);
+  assert.ok(registry.lookup({ modelId: 'mandelbulb', evidenceClass: 'geometric', implementationHashes: hashes, profile: 'surface-v1', effective: { power: 8 }, sampling, domain: { anchor: 'A1', distance: 0.1 } }));
+  assert.equal(registry.lookup({ modelId: 'mandelbulb', evidenceClass: 'geometric', implementationHashes: hashes, profile: 'surface-v1', effective: { power: 8 }, sampling, domain: { anchor: 'A2', distance: 0.1 } }), null, 'another camera patch is not covered');
 });
 ````
 
@@ -640,8 +708,8 @@ test('a validation lookup matches only inside tested coverage and infers nothing
 - [ ] **Step 4: GREEN**, then `npm test`.
 - [ ] **Step 5: Commit** — `"Add Space scenes: model codecs, effective parameters and validation domains (1b.1 B02)"`, then the gate.
 
-**Expected outputs:** 7 new unit tests; `SPACE_INITIAL_SCENE` serializes under 4 KB; the
-import-boundary test (B03) covers `space/numerics/`.
+**Expected outputs:** `SPACE_INITIAL_SCENE` serializes under 4 KB; the import-boundary test (B03)
+covers `space/numerics/`.
 
 ---
 
@@ -662,20 +730,23 @@ import-boundary test (B03) covers `space/numerics/`.
   e}` (`0.5 ≤ m < 1`, integer `e`), `update(d, grow, {add = 1}) → D'` for `D' = grow·D + add`
   without materializing an overflowing scalar, `log2(d) → number | null` (`null` for the zero
   state), `toNumber(d) → number | Infinity`, `isZero(d)`.
-- Produces (each model module): `evaluate(effective, point, {maxIterations}) → PointResult =
-  {status: 'escaped' | 'not-escaped' | 'numerical-failure', index, logR | null, estimate:
-  {available, log2DE | null, reason: null | 'zero-sensitivity' | 'guard' | 'not-escaped' |
-  'interior' | 'not-applicable'}, orbit: {radius, components}}`; `trace(effective, point,
-  {maxIterations}) → [{z, d}]` for the fractal models; calibration objects return `{status:
-  'escaped', index: 0, estimate: {available: true, log2DE: log2(distance), exact: true},
-  applicability: 'exterior' | 'interior' | 'boundary'}` (an interior signed value is reported,
-  never accepted as a hit by callers); `menger.boxes(depth) → [{centre, half}]`.
+- Produces (each model module): `evaluate(effective, point, {maxIterations}) → FieldResult`,
+  discriminated by `kind`. Fractal models return `{kind: 'fractal', status: 'escaped' |
+  'not-escaped' | 'numerical-failure', index, logR | null, estimate: {available, log2DE | null,
+  reason: null | 'zero-sensitivity' | 'guard' | 'not-escaped'}, orbit: {radius, components}}`
+  and `trace(effective, point, {maxIterations}) → [{components, d}]`. Calibration objects return
+  `{kind: 'analytic', validity: 'valid' | 'numerical-failure', distance: number | null,
+  applicability: 'exterior' | 'boundary' | 'interior'}` with no escape status or index: a boundary
+  distance of zero is a valid hit; interior applicability yields `unresolved/estimate-unavailable`
+  in the tracer (§11.4). `effective` is the `.effective` member of `effectiveParameters`'s result
+  throughout. `menger.boxes(depth) → [{centre, half}]`.
 - Produces (`registry.js`): `MODEL_RECORDS` keyed `"<id>@<version>"`: `{id, version,
   recurrenceVersion, initialization, escapeRule, supportedParameters, estimator: {category,
   semantics, derivationVersion}, enclosingVolume(effective) → {kind: 'sphere', radius} | {kind:
   'box', min, max}, evaluate, trace?}`; `getModel(id, version)`; `classifyCamera(model,
-  effective, worldPosition, budget) → {status: 'exterior' | 'unresolved', detail}` (exterior iff
-  the point escapes with an available estimate; §13.3).
+  effective, worldPosition, budget) → {status: 'exterior' | 'unresolved', detail}` (exterior iff an
+  analytic field reports exterior applicability with positive distance, or a fractal orbit escapes
+  with an available estimate; §13.3).
 
 **Design assertions:** §10.4 (zero state; normalized mantissa/exponent; D ← 8D + 1 exceeds
 binary32 at update 44 while the representation does not; availability separate from
@@ -686,8 +757,9 @@ update against the outward bound; zero sensitivity explicit); §11.3 (sphere sig
 Menger exterior-only; 20 and 400 boxes). Excludes: ray marching (B10 on the GPU; the independent
 marcher lives in `tests/reference/`); any import from `tests/`.
 
-- [ ] **Step 1: Write the failing tests** (values reproduced from the spec and verified in Node
-  during planning):
+- [ ] **Step 1: Write the failing tests** (the derivative and axis-orbit values are the spec's,
+  reproduced in Node during planning; the invariant-plane assertion computes its expectation from
+  the effective C):
 
 ````js
 test('the derivative recurrence 8D + 1 overflows binary32 at update 44 but the range-safe state does not', () => {
@@ -698,44 +770,53 @@ test('the derivative recurrence 8D + 1 overflows binary32 at update 44 but the r
   assert.equal(log2(ZERO), null); assert.equal(toNumber(update(ZERO, 8)), 1);
 });
 test('the power-8 axis orbit from (0, 0, 1) gives iterates 0, 1, 2, 257 and derivatives 0, 1, 9, 9217', () => {
-  const steps = mandelbulb.trace({ power: 8 }, [0, 0, 1], { maxIterations: 3 });
-  assert.deepEqual(steps.map(s => s.z[2]), [1, 2, 257]); assert.deepEqual(steps.map(s => toNumber(s.d)), [1, 9, 9217]);
-  assert.deepEqual(steps.map(s => [s.z[0], s.z[1]]), [[0, 0], [0, 0], [0, 0]], 'φ = 0 on the polar axis');
+  const power8 = effectiveParameters('mandelbulb', { power: '8' }).effective;
+  const steps = mandelbulb.trace(power8, [0, 0, 1], { maxIterations: 3 });
+  assert.deepEqual(steps.map(s => s.components[2]), [1, 2, 257]); assert.deepEqual(steps.map(s => toNumber(s.d)), [1, 9, 9217]);
+  assert.deepEqual(steps.map(s => [s.components[0], s.components[1]]), [[0, 0], [0, 0], [0, 0]], 'φ = 0 on the polar axis');
 });
 test('quaternion Julia with q0 = 0 and C = (2, 0, 0, 0) escapes at update 2 with an unavailable estimate', () => {
-  const effective = effectiveParameters('quaternion-julia', { C: ['2', '0', '0', '0'], kappa: '0' });
+  const effective = effectiveParameters('quaternion-julia', { C: ['2', '0', '0', '0'], kappa: '0' }).effective;
   const result = quaternionJulia.evaluate(effective, [0, 0, 0], { maxIterations: 128 });
-  assert.equal(result.status, 'escaped'); assert.equal(result.index, 2);
+  assert.equal(result.kind, 'fractal'); assert.equal(result.status, 'escaped'); assert.equal(result.index, 2);
   assert.deepEqual(result.estimate, { available: false, log2DE: null, reason: 'zero-sensitivity' });
 });
 test('on the invariant plane the quaternion recurrence equals the complex recurrence exactly', () => {
-  const effective = effectiveParameters('quaternion-julia', { C: ['-0.2', '0.8', '0', '0'], kappa: '0' });
+  const effective = effectiveParameters('quaternion-julia', { C: ['-0.2', '0.8', '0', '0'], kappa: '0' }).effective;
+  const [ca, cb] = effective.C;                      // the effective binary32 values, widened to doubles
   let a = 0.3, b = -0.1; const steps = quaternionJulia.trace(effective, [0.3, -0.1, 0], { maxIterations: 20 });
-  for (const step of steps) { [a, b] = [a * a - b * b - 0.2, 2 * a * b + 0.8]; assert.deepEqual(step.q, [a, b, 0, 0]); }
+  assert.equal(steps.length, 20);
+  for (const step of steps) { [a, b] = [a * a - b * b + ca, 2 * a * b + cb]; assert.deepEqual(step.components, [a, b, 0, 0]); }
 });
 test('a nonzero κ or an off-plane C keeps all four components', () => {
-  const effective = effectiveParameters('quaternion-julia', { C: ['-0.2', '0.8', '0.15', '-0.1'], kappa: '0.5' });
+  const effective = effectiveParameters('quaternion-julia', { C: ['-0.2', '0.8', '0.15', '-0.1'], kappa: '0.5' }).effective;
   const r = quaternionJulia.evaluate(effective, [0.1, 0.2, 0.3], { maxIterations: 8 });
   assert.equal(r.orbit.components.length, 4); assert.notEqual(r.orbit.components[3], 0);
 });
-test('calibration objects report exact distances and interior applicability', () => {
-  assert.deepEqual(analytic.sphere.evaluate({}, [0, 0, 2]).estimate, { available: true, log2DE: 0, exact: true });
+test('calibration objects report exact distances and applicability without fabricating an escape status', () => {
+  assert.deepEqual(analytic.sphere.evaluate({}, [0, 0, 2]), { kind: 'analytic', validity: 'valid', distance: 1, applicability: 'exterior' });
+  assert.deepEqual(analytic.sphere.evaluate({}, [0, 0, 1]), { kind: 'analytic', validity: 'valid', distance: 0, applicability: 'boundary' });
   assert.equal(analytic.sphere.evaluate({}, [0, 0, 0.5]).applicability, 'interior');
-  assert.equal(analytic.sphere.evaluate({}, [0, 0, 1]).applicability, 'boundary');
+  assert.ok(!('status' in analytic.sphere.evaluate({}, [0, 0, 2])) && !('index' in analytic.sphere.evaluate({}, [0, 0, 2])));
   assert.equal(menger.boxes(1).length, 20); assert.equal(menger.boxes(2).length, 400);
   assert.equal(menger.evaluate({ depth: 1 }, [0, 0, 0]).applicability, 'exterior', 'the centre is removed at depth 1');
   assert.equal(menger.evaluate({ depth: 1 }, [0.9, 0.9, 0.9]).applicability, 'interior');
 });
-test('camera classification is exterior only with an available estimate, otherwise unresolved', () => {
-  const bulb = getModel('mandelbulb', 1);
-  assert.equal(classifyCamera(bulb, { power: 8 }, [1.92, -1.44, 0.7], 128).status, 'exterior');
-  assert.equal(classifyCamera(bulb, { power: 8 }, [0, 0, 0], 128).status, 'unresolved');
+test('camera classification is exterior only with positive analytic distance or an available fractal estimate', () => {
+  const bulb = getModel('mandelbulb', 1); const power8 = effectiveParameters('mandelbulb', { power: '8' }).effective;
+  assert.equal(classifyCamera(bulb, power8, [1.92, -1.44, 0.7], 128).status, 'exterior');
+  assert.equal(classifyCamera(bulb, power8, [0, 0, 0], 128).status, 'unresolved');
   assert.equal(classifyCamera(getModel('sphere', 1), {}, [0, 0, 0.5], 128).status, 'unresolved');
+  assert.equal(classifyCamera(getModel('sphere', 1), {}, [0, 0, 1], 128).status, 'unresolved', 'a boundary start is not exterior');
 });
 test('space models and numerics import no DOM or GPU code', async () => {
-  // Read every file under src/space/models and src/space/numerics; assert each import specifier
-  // starts with './' or '../numerics/' or equals '../../shared/scene.js' or '../render/status.js',
-  // and that the sources contain neither 'document' nor 'navigator' nor 'GPU'.
+  const files = await listFiles(['src/space/models', 'src/space/numerics']);        // a small readdir helper in the test
+  assert.ok(files.length >= 8);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    for (const [, specifier] of source.matchAll(/from\s+'([^']+)'/g)) assert.ok(/^\.\.?\/(numerics\/|models\/|\.\.\/shared\/scene\.js$|\.\.\/render\/status\.js$)?[\w./-]*$/.test(specifier) && !specifier.includes('webgpu'), `${file} imports ${specifier}`);
+    assert.doesNotMatch(source, /\b(document|navigator|GPUDevice|window)\b/, file);
+  }
 });
 ````
 
@@ -747,7 +828,8 @@ test('space models and numerics import no DOM or GPU code', async () => {
 - [ ] **Step 4: GREEN**, then `npm test`.
 - [ ] **Step 5: Commit** — `"Add Space model evaluators, the range-safe derivative and model records (1b.1 B03)"`, then the gate.
 
-**Expected outputs:** 8 new unit tests.
+**Expected outputs:** the evaluators and records; the import-boundary test guards the layering
+from here on.
 
 ---
 
@@ -774,10 +856,15 @@ spec §11, not B03's code.
   f32-emulation mode for the stagnation checks), `rayFor(camera, i, j, W, H)` (Project 0 A.1,
   re-expressed), `prepareAnchor(model, effective, ray) → {anchor, t, convergence}` (P1's
   algorithm), `generateMatrix({seed}) → matrix`, the committed matrix `{schema:
-  'atlas.space-matrix', version: 1, frozenAt, generatorSha256, strata: [{id, kind, cases,
-  floor, eligible, excluded: [{id, reason}], state: 'frozen' | 'inconclusive'}], tolerances,
-  anchors}` and the usability file `{rays, settings, distribution: {hit, miss, unresolved: {...},
-  numericalFailure}}`.
+  'atlas.space-matrix', version: 1, frozenAt, generatorSha256, analysis: {path, sha256}, strata:
+  [{id, role: 'mandatory' | 'diagnostic', kind, profile: 'surface-v1' | 'ladder-v1', cases: [{id,
+  inputs, camera?, pixel?, expected}], floor, eligible, excluded: [{id, reason, quantity}], state:
+  'frozen' | 'inconclusive'}], tolerances: {quantity: {kind, value, floor?, analysisRef}},
+  anchors: [{id, model, effective, seedRay, anchor, t, convergence}]}`, the usability file
+  `{rays, settings, distribution: {hit, miss, unresolved: {...}, numericalFailure}}`, and the error
+  analysis `tests/reference/tolerance-analysis.md` (fused and unfused evaluation, transcendental
+  error, conditioning, output quantization, per compared quantity); `matrixIsQualifiable(matrix)
+  → boolean` (false while any mandatory stratum is inconclusive).
 
 **Design assertions:** §16.2 verbatim, via P1; independence (`tests/reference/` shares no code
 with `src/`); nothing is validated merely because Project 0 tested power 8 and one quaternion
@@ -791,17 +878,21 @@ detail ladder's exceedances are evidence, not passes.
   reports stagnation by field coordinate for o = 1, t = 2⁻²⁶ in f32 mode`; `the reference marcher
   reports an interior start as unresolved with estimate-unavailable`; `κ = ±4 strata contain only
   empty-slice assertions`; `the matrix generator is deterministic and its output matches the
-  committed file's sha256`; `every stratum meets its floor or is marked inconclusive`; `anchors
-  converge within the declared rule and are recorded with both tolerances`.
+  committed file's sha256`; `an inconclusive mandatory stratum blocks qualification` (the
+  generator refuses to mark a mandatory stratum `frozen` below its floor, and `matrixIsQualifiable`
+  returns false while any mandatory stratum is inconclusive); `every tolerance names its analysis
+  section`; `anchors converge within the declared rule and are recorded with both tolerances`;
+  `four-component probes detect a dropped or wrong j or k component` (a reference variant with the
+  k term zeroed fails the component comparison).
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "the complex and quaternion recurrences agree exactly on the invariant plane"`.
-- [ ] **Step 3: Implement; CPU preflight** — `node tests/reference/matrix.mjs --preflight`
-  prints per-stratum eligible counts against P1's floors; a stratum below its floor is either
-  resolved by a recorded preregistration revision to P1 (a plan amendment, before any GPU run) or
-  frozen as `inconclusive`. Then generate and commit the files with their hashes.
+- [ ] **Step 3: Implement; write the tolerance analysis; CPU preflight** — `node
+  tests/reference/matrix.mjs --preflight` prints per-stratum eligible counts against P1's floors;
+  B04 stops before any GPU comparison if a mandatory floor is not substantiated, and the floor is
+  revised only by a recorded plan amendment. Then generate and commit the files with their hashes.
 - [ ] **Step 4: GREEN**, `npm test`.
 - [ ] **Step 5: Commit** — `"Add independent Space references and freeze the validation matrix (1b.1 B04)"`, then the gate.
 
-**Expected outputs:** 10 new unit tests; the committed matrix and usability files; the preflight
+**Expected outputs:** the committed matrix, usability file and tolerance analysis; the preflight
 table in the task report.
 
 ---
@@ -815,23 +906,36 @@ table in the task report.
 - Test: `tests/unit/space-camera.test.js`
 
 **Interfaces:**
-- Consumes: `CAMERA_KIND`, `CAMERA_LIMITS`, `parseDecimal` (B02).
-- Produces: `RECENTRE_BOUND = 2 ** -40`, `anchorAdd(anchor, scale, local) → anchor'` (exact
-  decimal arithmetic on `BigInt`-scaled integers; the represented point `anchor + scale × local` is
-  preserved to within `RECENTRE_BOUND × scale`), `recentre(camera) → {camera, driftBound}` (moves
-  the local part into the anchor when `‖positionLocal‖ > 1024` or `< 2⁻¹⁰`, re-expressing
-  `focusLocal` consistently), `worldOrigin(camera) → {high: [3], low: [3]}` (double–double
-  components; the GPU receives `high` and `low` as separate binary32 triples, never a collapsed
-  sum), `basis(camera) → {forward, right, up, degenerate}` (A.1: world up (0, 0, 1); `right =
-  normalize(forward × up)`, `up' = right × forward`; when `forward` is parallel to Z the previous
-  `right` is kept and `degenerate` is true), `rayDirection(camera, i, j, width, height)` (A.1
-  pixel centres with `h = tan(fov/2)`), `angularPixelSize(camera, height)`, `orbit(camera, dYaw,
-  dPitch)` (about `focusLocal`; pitch clamped to ±89°), `pan(camera, dx, dy)`, `dolly(camera,
-  factor)` (toward `focusLocal`, never crossing it), `lookAt(camera, focusWorld)`,
-  `setOrientation(camera, wxyz, {lockAxis: null | 'x' | 'y' | 'z'})`, `resetOrientation(camera)`,
-  `overview(model, effective) → camera` (2.5 × the enclosing radius along Project 0 A.6's
-  direction), `equalCameras(a, b)`, `flightStep(camera, {forward, strafe, rise, yaw, pitch},
-  speed, dtSeconds)` (upright: yaw about world Z, no roll).
+- Consumes: `CAMERA_KIND`, `CAMERA_LIMITS` (B02). Anchors use their own bounded decimal parser
+  (`parseAnchorDecimal`, up to `CAMERA_LIMITS.anchorDigits`); B02's `parseDecimal` stays limited to
+  64 significant digits for parameters.
+- Produces: `RECENTRE_BOUND_LOG2 = -40` (the bound is `2⁻⁴⁰ × scale`, kept in scaled or
+  log form; it is never materialized as a possibly underflowing double), `anchorAdd(anchor, scale,
+  local) → anchor'` (exact decimal arithmetic on `BigInt`-scaled integers), `recentre(camera) →
+  {camera, driftBoundLog2} | {camera, unchanged: true, reason: 'precision-limit'}` (moves the
+  local part into the anchor when `‖positionLocal‖ > 1024` or `< 2⁻¹⁰`, re-expressing `focusLocal`
+  consistently; when the bound cannot be met within `anchorDigits`, the camera is returned
+  unchanged with an explicit precision-limit result), `encodeOrdinaryOrigin(camera) → {highF32:
+  [3], lowF32: [3], errorBoundLog2} | {unavailable: true, reason}` (the ordinary binary32
+  transport: `high` is the binary32 rounding of the double–double value, `low` the binary32
+  rounding of the exact remainder, computed in that order from the exact anchor; the field
+  coordinate on the GPU is `(high + t·d) + low` in that order; a represented origin whose remainder
+  exceeds binary32 range is `unavailable` and the saved camera is not changed), `basis(camera) →
+  {forward, right, up}` (rotates the canonical right (1, 0, 0), up (0, 1, 0) and forward (0, 0, −1)
+  by `orientationWxyz`; a serialized orientation is reconstructed exactly, roll included; upright
+  constraints apply to navigation operations, not to reconstruction), `rayDirection(camera, i, j,
+  width, height, jitter = {dx: 0, dy: 0})` (A.1 pixel centres with `h = tan(fov/2)` plus the
+  sample jitter), `angularPixelSize(camera, height)`, `orbit(camera, dYaw, dPitch)` (about
+  `focusLocal`; upright; pitch clamped to ±89°), `pan(camera, dx, dy)`, `dolly(camera, factor)`
+  (toward `focusLocal`, never crossing it), `lookAt(camera, focusLocal)` (upright),
+  `setOrientation(camera, wxyz, {lockAxis: null | 'x' | 'y' | 'z'})`, `resetOrientation(camera)`
+  (upright, looking at `focusLocal`), `overview(model, effective) → camera` (2.5 × the enclosing
+  radius along Project 0 A.6's direction), `equalCameras(a, b)`, `flightStep(camera, {forward,
+  strafe, rise, yaw, pitch}, speed, dtSeconds)` (upright: yaw about world Z, no roll),
+  `reconstructHit(camera, pixel, jitter, depth, width, height) → anchoredPoint` (the pick result's
+  anchored world position, from the sample's own camera, pixel and jitter — never three binary32
+  values), `toLocal(camera, anchoredPoint) → [3]` (the point expressed in the camera's anchor and
+  scale, for `lookAt`).
 
 **Design assertions:** §5.2 (represented position; recentring preserves positions to a declared
 bound; never one `Number` world position; world Z up; upright navigation; orientation preserved
@@ -840,24 +944,31 @@ translation). Isolated behind the camera contract (B02). Excludes: events and ge
 picking (B10/B12).
 
 - [ ] **Step 1: Write the failing tests** — `anchor arithmetic preserves the represented point
-  within RECENTRE_BOUND across a recentre` (anchor `["0.6570552405982646",
-  "-0.49279143044869844", "0.23955138980145063"]`, scale 2⁻²⁰, `positionLocal` `[3000, 0, 0]`;
-  after `recentre`, the double–double origin agrees with the exact decimal within `RECENTRE_BOUND ×
-  scale` and `‖positionLocal‖ ≤ 1024`); `a world origin is delivered as high and low parts whose
-  sum is not representable in one double` (a 30-digit anchor; `low ≠ 0`); `the basis matches
-  Project 0 A.1 for the bulb overview` (`forward` ≈ (−0.768, 0.576, −0.28) within 10⁻³);
-  `ray directions use pixel centres and the vertical field of view` (the centre of 1280 × 720 is
-  `forward`; the corner matches A.1's formula); `orbit keeps the focus and the distance`; `dolly
-  never crosses the focus`; `flight is upright: yaw about world Z, pitch clamped, no roll`; `a
-  degenerate forward keeps the previous right vector and is flagged`; `overview places the camera
-  at 2.5 radii`; `setOrientation with a locked axis changes only the other two`.
-- [ ] **Step 2: Skeleton and RED** — `--expect-fail "anchor arithmetic preserves the represented point within RECENTRE_BOUND across a recentre"`.
+  within the recentre bound` (anchor `["0.6570552405982646", "-0.49279143044869844",
+  "0.23955138980145063"]`, scale 2⁻²⁰, `positionLocal` `[3000, 0, 0]`; after `recentre`, the exact
+  represented point (compared with `BigInt` arithmetic) moved by less than 2⁻⁴⁰ × scale and
+  `‖positionLocal‖ ≤ 1024`); `recentring beyond the anchor digit limit returns the camera unchanged
+  with a precision-limit result` (a 400-digit anchor and a scale of 2⁻¹⁰⁰⁰); `the ordinary origin
+  is encoded as binary32 high and low parts in the declared order` (a 30-digit anchor: `lowF32 ≠
+  0`, and `highF32 + lowF32` in double equals the double–double value within 2⁻⁴⁶ relative); `an
+  origin whose remainder is out of binary32 range is unavailable and the camera unchanged`; `a
+  serialized orientation with roll is reconstructed exactly by basis`; `the basis matches Project 0
+  A.1 for the bulb overview` (`forward` ≈ (−0.768, 0.576, −0.28) within 10⁻³); `ray directions use
+  pixel centres, the vertical field of view and the sample jitter` (the centre of 1280 × 720 with
+  zero jitter is `forward`; the corner matches A.1's formula; jitter `{dx: 0.5, dy: 0}` moves the
+  direction by one half pixel); `orbit keeps the focus and the distance and stays upright`; `dolly
+  never crosses the focus`; `flight is upright: yaw about world Z, pitch clamped, no roll`;
+  `overview places the camera at 2.5 radii`; `setOrientation with a locked axis changes only the
+  other two`; `reconstructHit returns an anchored point that agrees with the exact ray within the
+  depth's binary32 spacing`.
+- [ ] **Step 2: Skeleton and RED** — `--expect-fail "anchor arithmetic preserves the represented point within the recentre bound"`.
 - [ ] **Step 3: Implement** (`BigInt` is Space-owned and never in `shared/`; the orientation is a
-  unit quaternion `[w, x, y, z]`).
+  unit quaternion `[w, x, y, z]`; the double–double split uses Dekker's exact two-sum on the
+  anchor's truncated decimal expansion).
 - [ ] **Step 4: GREEN**, `npm test`.
 - [ ] **Step 5: Commit** — `"Add the anchored Space camera and perspective arithmetic (1b.1 B05)"`, then the gate.
 
-**Expected outputs:** 10 new unit tests.
+**Expected outputs:** the camera module, the only Space code that sees anchors as decimals.
 
 ---
 
@@ -887,9 +998,14 @@ picking (B10/B12).
   Promise<pipelines>` (`createComputePipelineAsync` per variant; progress `{stage, completed,
   total}`; timeout invalidates the attempt), `createPresenter({device, canvas}) → {present(
   displayTexture, {admission})}` (the fullscreen render pipeline to the preferred canvas format
-  with scaling and sRGB encoding); the probe pass writes `0x41544c53` ("ATLS") into a 1 × 1
-  r32uint target, read back through ordinary admission; a mismatch is `preparation-failed`.
-  `backend.testAdapter = {destroyDevice()}` (real loss without terminal teardown).
+  with scaling and no further transfer function); the probe pass writes `0x41544c53` ("ATLS")
+  into a 1 × 1 r32uint target, read back through ordinary admission; a mismatch is
+  `preparation-failed`. `backend.testAdapter = {destroyDevice(), injectLoss({reason}),
+  failNextAllocation()}` (declared separately from the production interface; `destroyDevice` is a
+  real loss without terminal teardown). `pipelineDescriptors.js` is **not** created here: B00 froze
+  the descriptor schema; B06 prepares executable self-check pipelines (`probe`, `present`, and a
+  `selfcheck-trace` that runs a fixed 64-step loop) and B08, B10 and B11 register their own
+  descriptors with preparation assertions as their shaders come into existence.
 
 **Design assertions:** §9 (the backend owns resources, encoding, submission, completion,
 presentation and readback; shared and UI code never see `GPUDevice`); §8.3 (1 GiB cap; retiring
@@ -902,12 +1018,13 @@ banded readback with 256-byte row alignment).
   exceed the cap`; `release keeps bytes tracked until the last retaining owner retires`;
   `diagnostics report tracked, peak, retiring and the inventory by name and actual dimensions`;
   `uniform, staging and model buffers are counted`.
-- [ ] **Step 2: Headed checks** (`space-recovery` `requiredPasses`): `Pipelines prepare
+- [ ] **Step 2: Headed checks** (`space-recovery` `requiredPasses`): `Self-check pipelines prepare
   asynchronously with progress and the probe readback is ATLS through ordinary admission`;
   `A batch completes with queue-completion timing and a 256-row banded readback returns the staged
   pattern` (the probe pass at 1024 × 600 writing a known pattern; rows read back in bands with
   aligned `bytesPerRow`); `Presentation renders the display texture to the preferred canvas format
-  at the output size` (a draft at half size presented upscaled; sampled canvas pixels match);
+  at the output size without a second transfer function` (a draft at half size presented upscaled;
+  sampled canvas pixels equal the display texture's bytes);
   `A real device loss through the test adapter settles outstanding tickets interrupted, marks the
   backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a
   new epoch`; `Configuration failure keeps the previous target set usable` (request a target set
@@ -916,8 +1033,8 @@ banded readback with 256-byte row alignment).
 - [ ] **Step 3: Implement.** - [ ] **Step 4: GREEN** — Node first, then `flock … npm run test:space -- --group recovery`.
 - [ ] **Step 5: Commit** — `"Add the WebGPU backend with tracked allocation, admission and loss mapping (1b.1 B06)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
-**Expected outputs:** 4 new unit tests; six named headed passes; preparation time for the
-complete pipeline set recorded in the report (the B01 measurement repeated with the final set).
+**Expected outputs:** six named headed passes; self-check preparation time recorded in the
+report (B11 records the complete product set's preparation time once it exists).
 
 ---
 
@@ -930,27 +1047,34 @@ complete pipeline set recorded in the report (the B01 measurement repeated with 
 - Test: `tests/unit/scheduler.test.js`
 
 **Interfaces:**
-- Consumes: `createAdmission` (B00) — the scheduler is the only producer of admission leases;
-  `RENDER_OUTCOMES` (1a T06); the fake clock (B00).
+- Consumes: `RENDER_OUTCOMES` (1a T06); the fake clock (B00). The lease factory and the job
+  plan are **injected** (`makeAdmission`, `JobPlan` instances from B00's `createJobPlan`); shared
+  code imports no Space module.
 - Produces: `SCHEDULER_DEFAULTS = {maxOutstanding: 2, batchTargetMs: 8, watchdogMs: 5000,
   budgets: {draftMs: 1000, settledMs: 10000, exportMs: 120000}, instrumentHz: 2}`, `PRIORITIES =
   ['navigation', 'inspection', 'refinement', 'export', 'swatch']`, `createScheduler({clock,
-  ...SCHEDULER_DEFAULTS}) → {registerView(viewId, {hidden = false}), setEpoch(epoch),
-  request(viewId, {jobId, requestId, priority, kind: 'draft' | 'settled', plan}) → job` (one
-  coalesced pending interactive request per view: a newer request replaces the pending one, which
-  settles `superseded`; a running job is never replaced, only cancelled), `admit() → [{batch,
-  admission}]` (at most `maxOutstanding` leases outstanding across all views and jobs per epoch;
-  priority order; hidden and paused views never admitted; auxiliary submissions — probes, readbacks,
-  presentation — take leases from the same pool), `completed(admission, {epoch, elapsedMs})`
-  (adapts the next batch's bounds toward `batchTargetMs` from completion evidence; never above the
-  descriptor's hard bounds), `failed(admission, error)`, `pause(viewId)`, `resume(viewId)`,
-  `update(viewId)` (admits exactly one frozen current snapshot's job, then returns the view to
-  paused), `hidden(viewId, bool)`, `cancel(jobId) → {outcome: 'cancelled', submitted: 'none' |
-  'drained' | 'interrupted'}`, `tick()` (the watchdog: no completion for `watchdogMs` while leases
-  are outstanding stops admission for that epoch and settles the job `budget-exceeded` with reason
-  `watchdog`; it never claims cancellation and never releases the lease's resources), `snapshot()`,
-  `subscribe(listener)}`. Elapsed work excludes time while the view was paused or hidden;
-  exceeding a budget settles `budget-exceeded` with `{continuation: 'resume' | 'lower-cost'}`.
+  makeAdmission, setTimer, clearTimer, ...SCHEDULER_DEFAULTS}) → {registerView(viewId, {hidden =
+  false}), setEpoch(epoch), request(viewId, {jobId, requestId, priority, kind: 'draft' |
+  'settled', plan: JobPlan}) → job` (one coalesced pending interactive request per view: a newer
+  request replaces the pending one, which settles `superseded`; a running job is never replaced,
+  only cancelled), `admit() → [{batch, admission}]` (at most `maxOutstanding` leases outstanding
+  across all views and jobs per epoch; priority order; hidden and paused views never admitted;
+  auxiliary submissions — probes, readbacks, presentation — take leases from the same pool through
+  `requestAuxiliary(viewId, kind)`), `completed(admission, {epoch, elapsedMs})` (advances the plan;
+  adapts the next batch's bounds toward `batchTargetMs` from completion evidence, never above the
+  hard bounds), `failed(admission, error)`, `interrupted(epoch)` (observed loss: every lease of
+  that epoch settles `interrupted`), `pause(viewId)`, `resume(viewId)`, `update(viewId)` (admits
+  exactly one frozen current snapshot's job, then returns the view to paused), `hidden(viewId,
+  bool)`, `cancel(jobId) → {accepted: boolean, done: Promise<{outcome: 'cancelled', submitted:
+  'none' | 'drained' | 'interrupted'}>}` (stops admission immediately; `done` reports `drained` only
+  after completion evidence for every outstanding lease, or `interrupted` after observed loss;
+  watchdog expiry proves neither), `snapshot()`, `subscribe(listener)}`. The watchdog runs on the
+  injected timer while leases are outstanding, including for hidden views; it never depends on
+  animation-frame ticks: expiry stops admission for that epoch and settles the job
+  `budget-exceeded` with reason `watchdog`, without claiming cancellation and without releasing the
+  lease's resources. Elapsed work excludes time while the view was paused or hidden; exceeding a
+  budget settles `budget-exceeded` with `{continuation: 'resume' | 'lower-cost'}`; a job settles
+  `completed` when its plan is exhausted.
 
 **Design assertions:** §7.3 (lifecycle and outcomes; cancelling stops future submissions and
 drains; "cancelled" never implies preemption; rejecting a stale result is not cancelling it; pause
@@ -964,18 +1088,20 @@ view; priority order; hidden views paused; instruments ≤ 2 Hz, used in 1b.2); 
   the pending one and never the running one`; `priority order admits navigation before refinement
   before export`; `a hidden or paused view is never admitted and its elapsed work stops`; `update
   admits exactly one frozen snapshot and returns to paused`; `cancel reports none, drained or
-  interrupted truthfully` (before any lease; after a lease completes; after `setEpoch` interrupts
-  it); `the watchdog settles budget-exceeded, keeps the lease outstanding and never says
-  cancelled`; `a draft exceeding 1 s of unpaused work settles budget-exceeded with a continuation`;
-  `batch bounds adapt toward 8 ms from completion evidence and never exceed the hard bounds`; `a
-  completion from an older epoch is ignored`.
+  interrupted only on completion or loss evidence` (before any lease: `none` at once; with a lease
+  outstanding: `done` stays pending until `completed` → `drained`, or `interrupted(epoch)` →
+  `interrupted`; a watchdog expiry leaves `done` pending); `the watchdog fires on the injected
+  timer while a hidden view holds a lease, settles budget-exceeded and never says cancelled`; `a
+  draft exceeding 1 s of unpaused work settles budget-exceeded with a continuation`; `batch bounds
+  adapt toward 8 ms from completion evidence and never exceed the hard bounds`; `a completion from
+  an older epoch is ignored`; `a job settles completed when its plan is exhausted`; `shared
+  scheduler imports nothing from src/space`.
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "at most two leases are outstanding per epoch across views, jobs and auxiliary submissions"`.
-- [ ] **Step 3: Implement** (pure; no timers — `tick()` is called by the renderer's frame loop or
-  the test).
+- [ ] **Step 3: Implement** (pure over the injected clock and timers).
 - [ ] **Step 4: GREEN**, `npm test`.
 - [ ] **Step 5: Commit** — `"Add the shared render scheduler (1b.1 B07)"`, then the gate.
 
-**Expected outputs:** 10 new unit tests.
+**Expected outputs:** the scheduler; the only shared module that knows about admission.
 
 ---
 ### Task B08: WGSL field kernels and the GPU numerics comparison (spec §10.2–10.4, §11.1–11.3, §16.2; P1)
@@ -984,69 +1110,77 @@ view; priority order; hidden views paused; instruments ≤ 2 Hz, used in 1b.2); 
 
 **Files:**
 - Create: `src/space/render/webgpu/shaders/fields.wgsl`,
-  `src/space/render/webgpu/shaders/points.wgsl` (a list evaluator used only by validation and
-  by the camera classification under effective inputs: points in, `PointResult` words out),
+  `src/space/render/webgpu/shaders/points.wgsl` (a list evaluator used by validation and by the
+  camera classification under effective inputs: points in, `PointResult` words out),
+  `src/space/render/webgpu/kernels.js` (JavaScript metadata: `KERNEL_VERSION`, the source
+  hashes, the `points` and field pipeline descriptors registered with B00's schema),
   `src/space/numerics/validation-records.js`
 - Modify: `tests/space.mjs` (the `numerics` group), `tests/suites.manifest.json` (append
   `space-numerics`)
-- Test: `tests/unit/wgsl-sources.test.js` (parses the WGSL text: every `acos`, `log`, `sqrt`,
-  `atan2`, division and derivative update is preceded by a `// guard:` token naming the checked
-  condition — a textual contract check, not a proof); headed checks.
+- Test: `tests/unit/kernel-metadata.test.js` (`the kernel metadata hashes equal the shader
+  sources on disk and the descriptors validate against the B00 schema`); headed checks. Guard
+  annotations in the WGSL (`// guard:` before each `acos`, `log`, `sqrt`, `atan2`, division and
+  derivative update) support source auditing only; guarded evaluation is established by the frozen
+  adversarial cases and the headed readback assertions.
 
 **Interfaces:**
-- Consumes: `wgslConstants`, status words (B00); the matrix and usability files (B04); the
-  evaluators (B03) for context; the backend (B06).
+- Consumes: `wgslConstants`, status words, the pipeline descriptor schema (B00); the matrix and
+  usability files (B04); the evaluators (B03) for context; the backend (B06).
 - Produces: WGSL `bulb_eval(p, power, cap) → PointEval`, `qjulia_eval(q0, C, bound, cap) →
   PointEval`, `sphere_distance`, `box_distance`, `menger_distance(p, depth)` (boxes from a storage
   buffer), `derivative_update` on the `(m, e)` state (`f32` mantissa, `i32` exponent),
-  `log2_estimate(...)`, `KERNEL_VERSION = 'space-fields-v1'`; `points.wgsl` entry
-  `evaluate_points`; validation records `mandelbulb@1/space-fields-v1/p<power>` and
-  `quaternion-julia@1/space-fields-v1` with `coverage` and `inconclusive` copied from the
-  comparison results and `limitations` carrying the precision carry-forward verbatim.
+  `log2_estimate(...)`; `points.wgsl` entry `evaluate_points`; `kernels.js`: `KERNEL_VERSION =
+  'space-fields-v1'`, `KERNEL_HASHES` (sha256 of each shader source, computed at build and
+  verified by the unit test), `fieldPipelineDescriptors()`; validation records
+  `mandelbulb@1/arithmetic/p<power>` and `quaternion-julia@1/arithmetic` (`evidenceClass:
+  'arithmetic'`, `implementationHashes` from `KERNEL_HASHES`, `coverage` and `inconclusive`
+  copied from the comparison results, `limitations` carrying the precision carry-forward verbatim).
 
 **Design assertions:** §10.2 (guards before dangerous operations; no post-hoc NaN detection;
 frozen tolerances); §10.3 (the G5-D plain `qsq(q) + c` formulation, independently implemented,
 cited by profile and fragment hash; the product kernel separately identified by
 `KERNEL_VERSION`); §10.4 in WGSL; §11.1 (φ = 0 on the axis; zero power map at r = 0); §16.2 (P1).
 
-- [ ] **Step 1: Node test** (`wgsl-sources.test.js`): `every dangerous WGSL operation carries a
-  guard token` — RED on the missing files.
-- [ ] **Step 2: Headed checks** (`space-numerics` `requiredPasses`): `Bulb kernels match the
-  frozen references for every power, stratum and budget` (iterates the point strata through
-  `evaluate_points`; per stratum `passed` or `inconclusive`, never `failed`; eligible counts and
-  worst ratios written to the report); `Quaternion kernels match the frozen references across
-  off-plane C, nonzero κ and the boundary strata`; `κ = ±4 strata report empty slices and
-  initialization escapes exactly`; `The 32 adversarial point cases give their expected statuses on
-  the GPU`; `Derivative range safety holds on the GPU beyond update 44`; `Validation records are
-  registered only for passed strata and name every inconclusive one`.
-- [ ] **Step 3: Implement** the WGSL and the records.
-- [ ] **Step 4: GREEN** — `npm test`, then `flock … npm run test:space -- --group numerics`.
-- [ ] **Step 5: Commit** — `"Add the Space field kernels and validate them against the frozen matrix (1b.1 B08)"`, then the gate with `ATLAS_GPU_HANDOFF`.
+- [ ] **Step 1: Headed checks first** (`space-numerics` `requiredPasses`; this is GPU work, so its
+  checks are written before the shaders and first run under the lock): `Bulb kernels match the
+  frozen references for every power, mandatory stratum and budget` (iterates the point strata
+  through `evaluate_points`; every mandatory stratum `passed`; eligible counts and worst ratios
+  written to the report); `Quaternion kernels match the frozen references across off-plane C,
+  nonzero κ and the boundary strata including every component`; `κ = ±4 strata report empty
+  slices and initialization escapes exactly`; `The 20 adversarial point cases give their expected
+  statuses on the GPU`; `Derivative range safety holds on the GPU beyond update 44`; `Validation
+  records are registered only for passed mandatory strata`.
+- [ ] **Step 2: Implement** the WGSL, `kernels.js` and the records; the unit test on the metadata.
+- [ ] **Step 3: GREEN** — `npm test`, then `flock … npm run test:space -- --group numerics`.
+- [ ] **Step 4: Commit** — `"Add the Space field kernels and validate them against the frozen matrix (1b.1 B08)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
-**Expected outputs:** 1 new unit test; six headed passes; the per-stratum table in the report. A
-`failed` stratum blocks the commit: the kernel is fixed or the failure is escalated with the
-evidence; tolerances are never relaxed.
+**Expected outputs:** six headed passes; the per-stratum table in the report. A mandatory stratum
+that fails or is inconclusive blocks the commit: the kernel is fixed or the failure is escalated
+with the evidence; tolerances and floors are never relaxed.
 
 ---
 
 ### Task B09: The pass graph — requests, keys, accumulation, publication, reports (spec §7.1–7.4, §8.1, §8.2)
 
-**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B00, B02, B07.
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B00, B02, B03, B07.
 
 **Files:**
 - Create: `src/space/render/renderer.js`, `src/space/render/profiles.js`,
   `src/space/render/keys.js`, `src/space/render-adapter.js`
-- Modify (additive, with a regression test): `src/shared/render-report.js` — `EVENTS` gains
+- Modify (additive, with regression tests): `src/shared/render-report.js` — `EVENTS` gains
   `preparing` and `prepared` (preparation duration is `prepared − preparing`; `prepared` alone is
   elapsed time from request creation); nothing else changes; `tests/unit/render-adapter.test.js`
-  gains `the preparing and prepared events are optional and Plane reports omit them`
+  gains `the preparing and prepared events are optional and Plane reports omit them` and `every
+  shared timing mark survives a workspace-field extension`
 - Test: `tests/unit/space-renderer.test.js`, `tests/unit/space-keys.test.js`
 
 **Interfaces:**
 - Consumes: `createScheduler` (B07); the fake backend, `createBatch`, `createPickRequest`,
-  `TARGET_LAYOUT_V1`, `LIGHTING_BOUNDS_DEFAULT` (B00); `createRenderRequest`, `isPublishable`,
-  `createReportBuilder`, `observed`, `UNAVAILABLE` (1a T06); `sceneCodec`, `effectiveParameters`
-  (B02); `getModel` (B03, for `estimator.category` and the enclosing volume).
+  `createJobPlan`, `sampleJitter`, `createAdmission` (B00; the renderer passes `createAdmission`
+  to the scheduler as `makeAdmission`); `TARGET_LAYOUT_V1`, `LIGHTING_BOUNDS_DEFAULT` (B00);
+  `createRenderRequest`, `isPublishable`, `createReportBuilder`, `observed`, `UNAVAILABLE` (1a
+  T06); `sceneCodec`, `effectiveParameters` (B02); `getModel` (B03, resolved per request from
+  `request.sceneSnapshot.model`, never a fixed constructor argument).
 - Produces (`profiles.js`): `PROFILES = {draft: {scale: 0.5, maxIterations: 64, maxSteps: 256,
   lighting: 'direct', samples: 1, budgetMs: 1000}, settled: {scale: 1, maxIterations: 'scene',
   maxSteps: 'scene', lighting: 'full', samples: 'scene', budgetMs: 10000}}`, `resolveQuality(scene,
@@ -1063,27 +1197,39 @@ evidence; tolerances are never relaxed.
 - Produces (`render-adapter.js`): `createSpaceRequest({scene, purpose, width, height, profile,
   generation, viewId, versions}) → request` (frozen; `quality` from `resolveQuality`; keys from
   `keys.js`); `spaceWorkspaceFields(reportInputs)` (the Space report fields below).
-- Produces (`renderer.js`): `createSpaceRenderer({backend, scheduler, clock, viewId, versions,
-  model}) → {prepare() → Promise, render(request, {currentGeneration}) → job, pick(pickRequest)
-  → Promise<{status, depth, world} | {stale: true}>, cancel(jobId), resize({width, height}),
-  onPublish(listener), onReport(listener), onStatus(listener), tick(), destroy()}`. A job settles
+- Produces (`renderer.js`): `createSpaceRenderer({backend, scheduler, clock, viewId, versions})
+  → {prepare() → Promise, render(request, {currentGeneration}) → job, pick(pickRequest) →
+  Promise<{identity, status, depth, sample: {camera, pixel, jitter}} | {stale: true}>,
+  classifyEffectiveCamera(request) → Promise<{identity, status: 'exterior' | 'unresolved',
+  detail} | {stale: true}>` (through the backend's `evaluate_points` pipeline; stale identities
+  rejected), `cancel(jobId) → {accepted, done}`, `resize({width, height})`, `onPublish(listener)`,
+  `onPresent(listener)`, `onReport(listener)`, `onStatus(listener)`, `destroy()}`. A job settles
   `{outcome, reason, report}`. Publication events: `{kind: 'draft' | 'settled-first' |
   'refinement', requestId, geometryRequestId, samples, pending: false}`; a status event `{pending:
   true, since}` is emitted the moment a new request supersedes the published image. The renderer
-  walks §8.1 through the scheduler (trace → normals → shade → accumulate → display → present), each
-  pass as batches within the §7.5 bounds, every submission with its admission lease; completed
-  geometry is bound to a newer request only after key, epoch and resource-lifetime checks; a
-  publication requires request and view identity to match beyond `isPublishable`; partial tiles
-  and mixed generations are never published; samples under a different appearance key are never
-  accumulated; a pick is answered only for the current epoch, view revision and request, otherwise
-  `{stale: true}`.
-- Report `workspaceFields`: `rayTermination: {hit, miss, unresolved: {pointBudget,
-  estimateUnavailable, rayStepBudget, stagnation: {rayParameter, fieldCoordinate}},
-  numericalFailure}`, `unavailableNormals`, `lightingFailures: {shadow, ao}`, `estimator:
-  {category, derivationVersion, validationRecordId | null, inconclusive: []}`, `parameters:
-  {requested, effective, bits}`, `samples: {target, completed}`, `milestones:
-  {settledFirstImageMs, fullQualityMs}`, `allocation: {peak, outstandingBatchesMax}`,
-  `timings.gpu: 'queue-completion' | 'timestamp'`, `preview: boolean`.
+  builds a `JobPlan` per request and walks §8.1 through the scheduler (trace → normals → shade →
+  accumulate → display → present), each pass as batches within the §7.5 bounds, every submission
+  with its admission lease; it supplies `sampleJitter` to the trace pass before tracing, and
+  normals, shading and picking use the same sample geometry; accumulation consumes completed
+  samples in ascending sample-index order per pixel, so batch reordering changes scheduling, never
+  floating-point summation order. **Settled sequence:** a settled request first produces
+  full-resolution geometry, normals and direct lighting at the settled caps; that complete image
+  publishes as `settled-first` without completing the job; shadow and AO refinement then proceeds
+  under a distinct appearance and accumulation identity to the requested sample target; direct-light
+  samples are never mixed into the full-light accumulation. Completed geometry is bound to a newer
+  request only after key, epoch and resource-lifetime checks; a publication requires request and
+  view identity to match beyond `isPublishable`; partial tiles and mixed generations are never
+  published; a pick is answered only for the current epoch, request, geometry revision, dimensions
+  and sample identity, otherwise `{stale: true}`.
+- Report `workspaceFields` (never a replacement `timings` object; the shared lifecycle marks stay
+  intact): `rayTermination: {hit, miss, unresolved: {pointBudget, estimateUnavailable,
+  rayStepBudget, stagnation: {rayParameter, fieldCoordinate}}, numericalFailure}`,
+  `unavailableNormals`, `lightingFailures: {shadow, ao, both}`, `estimator: {category,
+  derivationVersion, validationRecordId | null, inconclusive: []}`, `parameters: {requested,
+  effective, bits}`, `samples: {target, completed}`, `milestones: {settledFirstImageMs,
+  fullQualityMs}`, `allocation: {peak, outstandingBatchesMax}`, `gpuTiming: {completionMethod:
+  'queue-completion', queueElapsedMs, timestampMs?}` (timestamps are optional duration evidence and
+  never replace queue-completion evidence), `preview: boolean`.
 
 **Design assertions:** §7.2 (keys versus revisions; A → B → A gets a new revision; a late
 completion never publishable by content equality); §7.3 outcomes; §7.4 (every field truthful or
@@ -1099,61 +1245,78 @@ the pending mark); §8.2 (diagnostic modes bypass lighting). Excludes: WGSL (B08
   key`; `a report counts terminations and lighting failures from the status words and marks GPU
   timing as queue-completion`; `the first settled direct-light image and full-quality completion
   are separate milestones`; `a loss during tracing settles interrupted and publishes nothing`;
-  `sample seeds are independent of batch order` (two completion orders; identical accumulations);
-  `every submission carries a consumed admission lease`; `a pick for an older view revision is
-  stale`; `the preparing and prepared events are optional and Plane reports omit them`.
+  `accumulation order is ascending sample index whatever the completion order` (two completion
+  orders; bit-identical accumulations); `every submission carries a consumed admission lease`; `a
+  pick for an older geometry revision or other dimensions is stale`; `the model is resolved from
+  each request`; `classifyEffectiveCamera rejects a stale identity`; `the preparing and prepared
+  events are optional and Plane reports omit them`; `every shared timing mark survives a
+  workspace-field extension`.
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "a draft replaces the published image only when complete and the retained image is marked pending meanwhile"`.
-- [ ] **Step 3: Implement.** - [ ] **Step 4: GREEN**, `npm test` (the Plane render-adapter suite
-  still passes with the added events).
+- [ ] **Step 3: Implement** the pass walk over the fake backend: the integration this task closes
+  is request → `JobPlan` → scheduler leases → backend tickets → publication and report.
+- [ ] **Step 4: GREEN**, `npm test` (the Plane render-adapter suite still passes with the added
+  events).
 - [ ] **Step 5: Commit** — `"Add the Space pass graph, profiles, keys and reports (1b.1 B09)"`, then the gate.
 
-**Expected outputs:** 12 new unit tests (11 Space + 1 Plane regression).
+**Expected outputs:** the renderer and its report fields, Node-tested end to end on the fake
+backend.
 
 ---
 
 ### Task B10: Tracing, normals, pick data and geometric validation (spec §11.4, §8.1 steps 2–3, §13.3; P2)
 
-**Owner:** Claude. **Reviewer:** Codex. **Depends on:** B04, B08, B09.
+**Owner:** Claude. **Reviewer:** Codex. **Depends on:** B04, B05, B08, B09.
 
 **Files:**
 - Create: `src/space/render/webgpu/shaders/trace.wgsl`,
   `src/space/render/webgpu/shaders/normals.wgsl`, `src/space/render/webgpu/passes.js`
-  (bind-group layouts, named slots and uniform packing for every pass)
+  (bind-group layouts, named slots, uniform packing and the pipeline descriptors for the trace,
+  normals and pick passes; exports `TRACING_VERSION` and `TRACING_HASHES`)
 - Modify: `tests/space.mjs` (the `rendering` group is born), `tests/suites.manifest.json`
-  (append `space-rendering`), `src/space/numerics/validation-records.js` (tracing records)
+  (append `space-rendering`), `src/space/numerics/validation-records.js` (tracing and geometric
+  records)
+- Test: `tests/unit/tracing-metadata.test.js` (hashes equal the sources; descriptors validate);
+  headed checks.
 
 **Interfaces:**
-- Consumes: `fields.wgsl` (B08); descriptors and status words (B00); `rayDirection`,
-  `worldOrigin` (B05); the matrix ray strata and anchors (B04); the renderer's pass sequence and
-  pick API (B09).
+- Consumes: `fields.wgsl`, `kernels.js` (B08); descriptors and status words (B00);
+  `rayDirection`, `encodeOrdinaryOrigin`, `reconstructHit` (B05); the matrix ray strata and
+  anchors (B04); the renderer's pass sequence and pick API (B09).
 - Produces: WGSL entries `trace_band` (writes `depth` and the packed `status`), `normals_band`
   (central differences at ε = 0.5·τ(t); writes `normal` with availability), `pick_readback` (one
-  pixel's depth, status and world-space hit as four f32 from the high/low origin);
-  `TRACING_VERSION = 'surface-v1/space-trace-v1'`; `passes.js`: `traceUniforms(request, camera,
-  effective)` (origin high and low, basis, α, the τ floor, step multiplier, caps, enclosing-interval
-  parameters), `normalsUniforms`, `pickUniforms`.
+  pinned geometry sample's depth and packed status; the CPU reconstructs the anchored hit with
+  `reconstructHit` from that sample's camera, pixel and jitter — no absolute world hit is collapsed
+  to binary32); `passes.js`: `TRACING_VERSION = 'surface-v1/space-trace-v1'`, `TRACING_HASHES`,
+  `tracePipelineDescriptors()`, `traceUniforms(request, camera, effective, jitter)` (origin
+  `highF32` and `lowF32`, basis, α, the τ floor, step multiplier, caps, enclosing-interval
+  parameters; the field coordinate is formed as `(high + t·d) + low`), `normalsUniforms`,
+  `pickUniforms`.
 
 **Design assertions:** §11.4 verbatim (starting conditions; outward-safe enclosing volumes; the
 ordered step rules; `0.9·DE`; stagnation by ray parameter or field coordinate compared in
 binary32; the step cap; no minimum step; an interior start → `unresolved/estimate-unavailable`
 with interior detail); §8.1 (normals with availability; an unavailable normal keeps the depth);
-Project 0 A.5 (six samples; any unresolved or invalid → unavailable; zero gradient →
-unavailable); §13.3 (focus by asynchronous depth readback; a pick rejected when epoch, view
-revision or request no longer match). P2 is the acceptance protocol.
+P2's normal rule (all required samples resolved, effective sample positions distinct, gradient
+finite and nonzero); §13.3 (focus by asynchronous depth readback; a pick rejected when epoch,
+request, geometry revision, dimensions or sample identity no longer match). P2 is the acceptance
+protocol.
 
-- [ ] **Step 1: Headed checks** (`space-rendering` `requiredPasses`): `Analytic rays trace to the
-  oracle depth with exact statuses`; `Bulb and quaternion detail ladders agree with the converged
-  references within P1's criteria where eligible and record each exceedance`; `Adversarial rays
-  terminate with their expected status and subreason`; `Normals are available exactly where their
-  samples resolve and unavailable normals keep their depth`; `The sphere silhouette equals the
+- [ ] **Step 1: Headed checks first** (`space-rendering` `requiredPasses`): `Analytic rays trace
+  to the oracle depth with exact statuses`; `The detail ladders record agreement or exceedance per
+  distance under ladder-v1 as diagnostic evidence`; `The 12 adversarial ray cases terminate with
+  their expected status and subreason`; `Normals require distinct resolved samples and a finite
+  nonzero gradient, and unavailable normals keep their depth`; `The sphere silhouette equals the
   analytic disc except within one pixel of the edge`; `The quaternion default view's termination
   distribution matches the independently predicted one within 5 points`; `A pick returns the
-  depth of the picked pixel and a stale pick is rejected`.
-- [ ] **Step 2: Implement** `trace.wgsl` (the §11.4 loop), `normals.wgsl`, `passes.js`.
-- [ ] **Step 3: GREEN** under the lock (`--group rendering`). - [ ] **Step 4: Commit** —
-  `"Add Space tracing, normals and picking with geometric validation (1b.1 B10)"`, then the gate with `ATLAS_GPU_HANDOFF`.
+  pinned sample's depth and reconstructs an anchored hit, and a stale pick is rejected`.
+- [ ] **Step 2: Implement** `trace.wgsl` (the §11.4 loop), `normals.wgsl`, `passes.js`, the
+  geometric and tracing records (`evidenceClass: 'tracing'` for the status and adversarial
+  evidence, `'geometric'` with `testedDomain` per anchor for the ladders).
+- [ ] **Step 3: GREEN** — `npm test`, then under the lock (`--group rendering`).
+- [ ] **Step 4: Commit** — `"Add Space tracing, normals and picking with geometric validation (1b.1 B10)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
-**Expected outputs:** seven headed passes; tracing validation records registered per family.
+**Expected outputs:** seven headed passes; tracing and geometric validation records registered per
+family with their domains.
 
 ---
 
@@ -1173,15 +1336,21 @@ revision or request no longer match). P2 is the acceptance protocol.
 **Interfaces:**
 - Consumes: B10's buffers and slots; `appearanceKey` (B09); `LEGEND`, `LIGHTING_STATUS` (B00).
 - Produces: `shade_band` (the neutral inspection light; one bounded shadow ray of ≤ 64 steps
-  through the same tracer, its failure status written to `lightingStatus` and the sample shaded
-  unlit, never lit; restrained AO with five bounded samples along the normal; diagnostic modes
-  `normals` (n·0.5 + 0.5), `depth` (normalized by the enclosing interval), `steps` (a cost ramp,
-  labelled "computational cost"), `termination` (legend colours) — all bypassing lighting and
-  writing `accumulationFlags` so diagnostic outcomes survive accumulation), `accumulate_band`
-  (ping-pong linear sum and count under one accumulation key; jittered primary rays seeded by
-  `atlas-aa-v1(seed, sampleIndex, pixel)`, independent of batch order), `display_band` (sRGB
-  mapping of the mean; a sample count below the target leaves the image complete and reported as
-  partial quality, never pending). `src/shared/palettes.js`: `PALETTES`, `paletteBytes(palette,
+  through the same tracer and restrained AO with five bounded samples along the normal; **lighting
+  failure flags independently preserve shadow and AO failures, including simultaneous failures and
+  their reasons, in `lightingStatus`; unknown visibility is never encoded as known lit or known
+  occluded; a failed secondary evaluation produces a diagnostic presentation and a report count,
+  and accumulation preserves the failure indication**; diagnostic modes `normals` (n·0.5 + 0.5),
+  `depth` (normalized by the enclosing interval), `steps` (a cost ramp, labelled "computational
+  cost"), `termination` (legend colours) — all bypassing lighting and writing `accumulationFlags`
+  so diagnostic outcomes survive accumulation), `accumulate_band` (ping-pong linear sum and count
+  under one accumulation key, consuming completed samples in ascending sample-index order per
+  pixel), `display_band` (the sole sRGB encoding of the mean into `display`; legend colours
+  written exactly in display space; a sample count below the target leaves the image complete and
+  reported as partial quality, never pending); `src/space/render/webgpu/appearance.js`
+  (`APPEARANCE_VERSION`, `APPEARANCE_HASHES`, `appearancePipelineDescriptors()`, and
+  `verifyPrewarm(pipelines)`, which B14 calls before enabling interaction to confirm every product
+  pipeline variant is prepared). `src/shared/palettes.js`: `PALETTES`, `paletteBytes(palette,
   size)`, `interpolatePalette(palette, t)`.
 
 **Design assertions:** §8.1 (secondary-ray failures never become confident lighting; accumulation
@@ -1192,16 +1361,21 @@ samples); §13.9 (no fog); §4.1 (palette definitions and interpolation shared; 
 
 - [ ] **Step 1: Tests** — Node: `the shared palette bytes equal Plane's former output byte for
   byte` (a fixture of `paletteBytes(PALETTES[i], 1024)` captured from the pre-change module, for
-  every palette). Headed (`requiredPasses`): `A settled image accumulates eight jittered samples
-  and the result is independent of batch order`; `Shadowed samples never enter a direct-light
-  accumulation and the first settled direct-light image precedes full quality`; `Diagnostic modes
-  show the legend colours exactly for the status words`; `Secondary-ray failures leave a sample
-  unlit, never lit, and are counted in the report`; `Diagnostic outcomes survive accumulation`.
-- [ ] **Step 2: Implement.** - [ ] **Step 3: GREEN** (`npm test`, the Plane gate suites, then `--group rendering` under the lock).
+  every palette); `the appearance metadata hashes equal the sources and verifyPrewarm reports a
+  missing variant`. Headed (`requiredPasses`): `A settled image accumulates eight jittered samples
+  and the result is bit-identical across completion orders`; `Shadowed samples never enter a
+  direct-light accumulation and the first settled direct-light image precedes full quality`;
+  `Diagnostic modes show the legend colours exactly for the status words`; `Secondary-ray
+  failures remain visibly diagnostic and are counted`, including a simultaneous shadow and AO
+  failure; `Diagnostic outcomes survive accumulation`; `The complete product pipeline set prewarms
+  within the bound and its preparation time is recorded`.
+- [ ] **Step 2: Implement** the three shaders, `appearance.js` and the shared palette extraction
+  (the integration this task closes: a settled job runs to full quality on the real device).
+- [ ] **Step 3: GREEN** (`npm test`, the Plane gate suites, then `--group rendering` under the lock).
 - [ ] **Step 4: Commit** — `"Add Space lighting, antialiasing, accumulation and display; share palette definitions (1b.1 B11)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
-**Expected outputs:** 1 new unit test; five headed passes; every existing Plane assertion
-unchanged and green.
+**Expected outputs:** six headed passes; the complete pipeline set's preparation time; every
+existing Plane assertion unchanged and green.
 
 ---
 
@@ -1214,9 +1388,9 @@ unchanged and green.
 - Test: `tests/unit/space-gestures.test.js`, `tests/unit/space-navigation.test.js`
 
 **Interfaces:**
-- Consumes: `createHistory` (1a T04), `COMMAND_TYPES.setCamera`; camera functions (B05);
-  `classifyCamera` (B03); `createPickRequest` (B00); `renderer.pick` (B09); `evaluate_points`
-  through the renderer for the effective-input classification (B08).
+- Consumes: `createHistory` (1a T04) and the command `{type: 'setCamera', camera}`; camera
+  functions (B05); `classifyCamera` (B03); `createPickRequest` (B00); `renderer.pick` and
+  `renderer.classifyEffectiveCamera` (B09).
 - Produces (`gestures.js`): `SPACE_KINDS = ['orbit-drag', 'pan-drag', 'wheel-dolly',
   'key-nudge', 'flight', 'focus']`, `createSpaceGestures({history, onTransition, groupQuietMs =
   200, setTimer, clearTimer}) → {drag(kind, camera), dragCommit(kind), dragCancel(kind),
@@ -1227,19 +1401,23 @@ unchanged and green.
   commits the last preview and releases input; workspace deactivation commits before releasing
   capture; a flight run commits on every exit; focus starts no history gesture until a valid pick
   returns, then applies one camera-only jump — a stale, unresolved or missed pick changes nothing**;
-  back and forward settle any open gesture first. Nothing imports `src/plane/gestures.js`.
-- Produces (`flight.js`): `createFlight({getCamera, setCamera, clock}) → {keyDown(code),
-  keyUp(code), pointerLook(dx, dy), setSpeed(unitsPerSecond), tick(now), stop(reason: 'escape' |
-  'blur' | 'hidden' | 'stop-key' | 'deactivate'), active}` (no inertia; `stop` zeroes every
-  velocity immediately; `tick` applies `flightStep` with the elapsed time clamped to 100 ms).
+  back and forward, undo and redo, scene replacement and workspace deactivation first stop flight
+  and settle navigation; a tick after a gesture closed cannot update it. Nothing imports
+  `src/plane/gestures.js`.
+- Produces (`flight.js`): `createFlight({getCamera, setCamera, clock, onStart, onStop}) →
+  {start(), toggle(), keyDown(code), keyUp(code), pointerLook(dx, dy), setSpeed(unitsPerSecond),
+  speed, tick(now), stop(reason: 'escape' | 'blur' | 'hidden' | 'stop-key' | 'deactivate' |
+  'history'), active}` (`onStart`/`onStop` notify the gesture owner, which opens and commits the
+  `flight` gesture; no inertia; `stop` zeroes every velocity immediately; `tick` applies
+  `flightStep` with the elapsed time clamped to 100 ms and does nothing when inactive).
 - Produces (`navigation.js`): `bindSpaceNavigation({surface, gestures, flight, getCamera, pick,
   onStatus}) → {reset() → number of released pointers, destroy()}` (pointer orbit; pan with the
   secondary button or Shift; wheel dolly grouped; keys for nudge and the flight toggle `F`;
   `Escape` releases input and stops flight; `blur` and `visibilitychange` stop flight and commit an
   open drag; double-click requests a pick and applies `lookAt(hit)` only on a valid result);
-  `cameraStatus({model, effective, camera, rendererClassification}) → {status: 'exterior' |
-  'unresolved', detail}` (unresolved when either the CPU classification or the renderer's
-  effective-input evaluation of the camera position is unresolved; §13.3).
+  `cameraStatus({cpu, effective}) → {status: 'exterior' | 'unresolved', detail}` (`cpu` from
+  `classifyCamera`, `effective` from `renderer.classifyEffectiveCamera`; unresolved when either is
+  unresolved or the effective result is stale; §13.3).
 
 **Design assertions:** §6 (gestures `begin → update* → commit | cancel`; one entry per continuous
 navigation; camera-only jumps add one entry; undo never moves the camera); §13.3 (orbit, pan,
@@ -1255,12 +1433,17 @@ action away). Excludes DOM layout (B14).
   with one entry and zero velocity afterwards`; `a focus whose pick is stale or unresolved starts
   no gesture and leaves the camera where it was`; `a valid pick is one camera-only jump`; `reset
   releases captured pointers so later moves cannot navigate`; `the camera status is unresolved when
-  either evaluator is unresolved`; `back and forward settle an open gesture and stop flight`.
+  either evaluator is unresolved or the effective result is stale`; `back, forward, undo, redo and
+  scene replacement stop flight and settle an open gesture`; `a flight tick after the gesture closed
+  does not move the camera`.
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "an orbit drag is one camera-history entry and undo does not move the camera"`.
-- [ ] **Step 3: Implement.** - [ ] **Step 4: GREEN**, `npm test`.
+- [ ] **Step 3: Implement** the three modules against the fake DOM (the integration this task
+  closes: input events → gestures → history transitions → camera, with the renderer's pick and
+  classification as injected promises).
+- [ ] **Step 4: GREEN**, `npm test`.
 - [ ] **Step 5: Commit** — `"Add Space navigation, flight, gestures and focus (1b.1 B12)"`, then the gate.
 
-**Expected outputs:** 10 new unit tests.
+**Expected outputs:** navigation that is Node-testable without a DOM or a GPU.
 
 ---
 
@@ -1275,15 +1458,17 @@ action away). Excludes DOM layout (B14).
 **Interfaces:**
 - Consumes: the renderer (B09), the scheduler (B07), `BackendError` codes and the backend's
   `onLoss`, `acquire`, `prepare`, `configureTargets`, `diagnostics` (B00).
-- Produces: `RECOVERY_POLICY = {maxAutomaticRecoveries: 1, windowMs: 60000}`,
-  `createRecovery({backend, renderer, scheduler, clock, policy, onNotice}) → {state() →
-  {epoch, phase: 'ready' | 'preparing' | 'recovering' | 'stopped', lastLoss,
+- Produces: `RECOVERY_POLICY = {maxAutomaticRecoveries: 1}` (the allowance is consumed by an
+  automatic recovery attempt and is not reset by elapsed time, successful reacquisition or
+  workspace switching; a subsequent loss stops automatic retry; only an explicit user retry starts a
+  new recovery episode), `createRecovery({backend, renderer, scheduler, clock, policy, onNotice})
+  → {state() → {epoch, phase: 'ready' | 'preparing' | 'recovering' | 'stopped', lastLoss,
   automaticRecoveries}, onLoss(event) → 'recover' | 'stopped', retry() (the explicit action after
-  `stopped`), onAllocationFailure({request, failed}) → {choices: ['release-and-retry',
-  'lower-resolution', 'fewer-samples'], released}` (releases obsolete generations first; offers the
-  explicit lower-cost choice; never changes the request silently), `onBudgetExceeded(job) →
-  {continuation: 'resume' | 'lower-cost'}`, `cancel(jobId) → outcome` (from the scheduler; never
-  "preempted"), `destroy()`}.
+  `stopped`; starts a new episode), onAllocationFailure({request, failed}) → {choices:
+  ['release-and-retry', 'lower-resolution', 'fewer-samples'], released}` (releases obsolete
+  generations first; offers the explicit lower-cost choice; never changes the request silently),
+  `onBudgetExceeded(job) → {continuation: 'resume' | 'lower-cost'}`, `cancel(jobId) → {accepted,
+  done}` (from the scheduler; never "preempted"), `destroy()`}.
 
 **Design assertions:** §14 (device loss keeps the job and snapshot; one automatic viewport
 recovery; repeated loss stops automatic retry; allocation failure releases obsolete resources and
@@ -1292,17 +1477,21 @@ pause); recovery never touches the scene, undo history or camera history.
 
 - [ ] **Step 1: Write the failing tests** — `a loss during preparation, configuration, tracing
   and readback each settles the job interrupted and triggers one automatic recovery`; `a second
-  loss within the window stops automatic recovery and leaves retry explicit`; `late callbacks from
+  loss stops automatic recovery even after more than 60 seconds`; `an explicit retry starts a new
+  episode with one automatic recovery`; `late callbacks from
   the lost epoch are ignored after recovery`; `allocation failure releases obsolete generations
   before offering a lower-cost choice and never changes the request`; `a failed configuration keeps
   the previous target set and the previous publication`; `cancellation during retirement keeps
   bytes tracked until the ticket settles`; `a watchdog budget-exceeded offers a continuation and
   does not claim cancellation`; `recovery never modifies the scene or either history`.
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "a loss during preparation, configuration, tracing and readback each settles the job interrupted and triggers one automatic recovery"`.
-- [ ] **Step 3: Implement.** - [ ] **Step 4: GREEN**, `npm test`.
+- [ ] **Step 3: Implement** the policy over the fake backend and scheduler (the integration this
+  task closes: backend loss and failure events → scheduler outcomes → renderer state → the choices
+  offered to the workspace).
+- [ ] **Step 4: GREEN**, `npm test`.
 - [ ] **Step 5: Commit** — `"Add Space recovery orchestration (1b.1 B13)"`, then the gate.
 
-**Expected outputs:** 8 new unit tests.
+**Expected outputs:** the recovery policy, Node-tested for every §15 row that applies to 1b.1.
 
 ---
 
@@ -1327,31 +1516,40 @@ transitively T05, T07, T08, T09b, T10, T11); the dependency table reconciled aga
 - Consumes: **(1a, unlanded)** `createShell`, `createPlaneWorkspace({shell, discoveries}) →
   {inspection, destroy()}`, `createNotifier`, `installDialogs` (T12); everything above.
 - Produces: `createSpaceWorkspace({shell, backendFactory = createWebGPUBackend, clock}) →
-  {inspection, activate(), deactivate(), destroy()}` (`inspection` = `window.atlas.space`:
-  `scene`, `history`, `lastReport`, `lastPublication`, `cameraStatus`, `backendDiagnostics`,
-  `whenIdle({timeoutMs})`, `setBackend(fake)` as a test seam, `injectLoss()` and
+  {inspection, activate(token) → Promise<{outcome}>, deactivate(), destroy()}` (`inspection` =
+  `window.atlas.space`: `scene`, `history`, `lastReport`, `lastPublication`, `cameraStatus`,
+  `backendDiagnostics`, `whenIdle({timeoutMs})`, the harness commands `requestCamera(pose)`,
+  `editParameter(path, value)`, `cancelCurrent()`, the subscriptions `onPublish(listener)`,
+  `onPresent(listener)`, and the test seams `setBackend(fake)`, `injectLoss()`,
   `injectAllocationFailure()` through the backend's test adapter); `createWorkspaceSwitcher({root,
-  workspaces: {plane, space}, initial: 'plane'}) → {switchTo(id), current(), destroy()}` (calls
-  `deactivate()` on the current workspace, then `activate()` on the next; the first switch to
-  Space acquires the device and prepares pipelines with visible status; a failure shows "Space
-  unavailable: <reason>" and keeps Plane active); the Space panel: family selector, parameter
-  inputs (decimal strings; invalid input reported inline, never clamped), iterations and steps,
-  view mode, the viewport indicators (`#space-estimator` "exact distance" / "heuristic,
-  exterior-only"; `#space-pending`; `#space-camera-status`; the preparation status), overview,
-  orientation reset, the orientation control, Back/Forward, undo/redo, "Save scene" (downloads
-  `atlas.scene` JSON via `encodeSceneFile`) and "Open scene" (file input → `decodeSceneFile` →
-  `restoreScene`: one undo entry and one camera entry; invalid files reported without changing the
-  scene); graphics diagnostics extended with the backend identity and tracked inventory.
+  workspaces: {plane, space}, initial: 'plane'}) → {switchTo(id) → Promise<{activeId, outcome}>,
+  current(), destroy()}` (assigns a monotonically increasing activation token; calls `deactivate()`
+  on the current workspace, then `activate(token)` on the next; only the latest token may commit
+  visibility, focus or publication; deactivation invalidates pending activation and pick work; the
+  first switch to Space acquires the device, prepares pipelines with visible status and calls
+  B11's `verifyPrewarm` before enabling interaction; a failed activation shows "Space unavailable:
+  <reason>" and restores Plane only if that activation is still current); the Space panel: family
+  selector, parameter inputs (decimal strings; invalid input reported inline, never clamped),
+  iterations and steps, view mode, the appearance controls that exist in 1b.1 (palette, view
+  mode, the inspection lighting switch between direct-only and full), the flight speed control,
+  the viewport indicators (`#space-estimator` "exact distance" / "heuristic, exterior-only";
+  `#space-pending`; `#space-camera-status`; the preparation status), overview, orientation reset,
+  the orientation control, Back/Forward, undo/redo, "Save scene" (downloads `atlas.scene` JSON via
+  `encodeSceneFile`) and "Open scene" (file input → `decodeSceneFile` → `restoreScene`: one undo
+  entry and one camera entry; invalid files reported without changing the scene); graphics
+  diagnostics extended with the backend identity and tracked inventory.
 - **Activation contract (both workspaces; both methods idempotent):** `deactivate()` first closes
-  admission and invalidates pending picks, then settles navigation (commits an open gesture, stops
-  flight), stops automation (tours, palette animation), releases pointer capture and keyboard
-  focus, and detaches its global listeners; capture-loss callbacks arriving afterwards cannot
-  cancel that settlement; the scene, undo history and camera history are preserved; Space marks
-  its views hidden in the scheduler and lets submitted batches drain, never claiming preemption;
-  an in-flight Plane export keeps its lease and completes under T07/T08's rules, its completion
-  callbacks respecting the inactive state. `activate()` re-attaches listeners, resumes views, and
-  issues at most one current-state request when the publication is stale (Space may then publish
-  several refinements from it).
+  admission and invalidates pending picks and pending activation, then settles navigation
+  (preserves the last previewed pose, commits an open gesture exactly once, stops flight), stops
+  automation (tours, palette animation), releases pointer capture and keyboard focus, and detaches
+  its global listeners; capture-loss callbacks arriving afterwards cannot cancel that commit; all
+  prior history entries, the scene, undo history and camera history are preserved; Space marks its
+  views hidden in the scheduler and lets submitted batches drain, never claiming preemption; an
+  in-flight Plane export keeps its lease and completes under T07/T08's rules, its completion
+  callbacks respecting the inactive state. `activate(token)` re-attaches listeners, resumes views,
+  and issues at most one current-state request when the publication is stale (Space may then
+  publish several refinements from it); it does not restart stopped tours, palette animation or
+  flight; a late activation whose token is no longer current does nothing.
 
 **Design assertions:** §13.1 (two retained investigations, one active view; a switch preserves
 scene, camera, undo and camera history; hidden work pauses; captured input released; a fresh start
@@ -1361,13 +1559,15 @@ and history); §4.3 (every existing Plane assertion survives).
 
 - [ ] **Step 1: Node tests** (fake DOM, fake backend): `a fresh start activates Plane and never
   calls the Space backend factory`; `switching deactivates the current workspace before activating
-  the next and both keep their histories`; `deactivate closes admission, invalidates picks, settles
-  navigation and releases capture without touching the scene`; `a capture-loss callback after
-  deactivation cannot cancel the settled gesture`; `activate issues at most one request when the
-  publication is stale`; `opening an invalid scene file reports and changes nothing`; `opening a
-  valid file is one undo entry and one camera entry`; `a backend acquisition failure leaves Plane
-  active with a notice`; `Plane deactivate stops a tour and detaches its keyboard listener, and
-  activate restores them`.
+  the next and both keep their histories`; `deactivation commits the last preview exactly once and
+  a later capture-loss callback cannot cancel it`; `deactivate closes admission and invalidates
+  pending picks and activation`; `a late activation cannot reactivate a hidden workspace` (switch
+  to Space while acquisition is pending, switch back, then let acquisition resolve: Plane stays
+  active and keeps focus); `activate issues at most one request when the publication is stale and
+  does not restart a stopped tour`; `opening an invalid scene file reports and changes nothing`;
+  `opening a valid file is one undo entry and one camera entry`; `a backend acquisition failure
+  restores Plane only when that activation is still current`; `Plane deactivate stops a tour and
+  detaches its keyboard listener`.
 - [ ] **Step 2: Browser checks.** `tests/space-shell.mjs` (headless, evidence `browser`): `Space
   reports unavailable without WebGPU and Plane keeps working`; `Switching to Space and back
   preserves the Plane scene and both histories` (the Space backend replaced by the fake through the
@@ -1380,13 +1580,15 @@ and history); §4.3 (every existing Plane assertion survives).
   offers a lower-cost choice and never changes the request`; `A camera inside the set shows the
   unresolved exterior status with overview and reset available`; `Switching during a Plane export
   does not interrupt the export`; `Keyboard focus, capture and flight end on blur and on switching`.
-- [ ] **Step 3: Implement.** - [ ] **Step 4: GREEN** — `npm test`, the Plane gate suites
-  (`browser`, `browser-hardware`, `navigation`, `graphics`), `space-shell`, then
-  `flock … npm run test:space -- --group shell`.
+- [ ] **Step 3: Implement** the workspace, the switcher, the panel and the Plane activation
+  methods (the integration this task closes: the composition root owns two workspaces and one
+  active view).
+- [ ] **Step 4: GREEN** — `npm test`, the Plane gate suites (`browser`, `browser-hardware`,
+  `navigation`, `graphics`), `space-shell`, then `flock … npm run test:space -- --group shell`.
 - [ ] **Step 5: Commit** — `"Add the Space workspace, the workspace switcher and the activation contract (1b.1 B14)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
-**Expected outputs:** 9 new unit tests; two headless passes; ten headed passes; every Plane suite
-green with unchanged assertions.
+**Expected outputs:** two headless passes; ten headed passes; every Plane suite green with
+unchanged assertions.
 
 ---
 
@@ -1395,17 +1597,22 @@ green with unchanged assertions.
 **Owner:** Codex. **Reviewer:** Claude. **Depends on:** B14; **1a T13** (audit scripts).
 
 **Files:**
-- Create: `tests/space-performance.mjs` (headed, `gpu: true`, `benchmark: true`),
-  `tests/support/timing.mjs`, `docs/reports/project1b/1b1-performance.json` (generated),
+- Create: `tests/space-performance.mjs` (headed, `gpu: true`, `benchmark: true`; one manifest
+  entry per P3 scene: `space-performance-bulb`, `space-performance-quaternion`,
+  `space-performance-menger`, each `--scene <id>`), `tests/support/timing.mjs`,
+  `scripts/audit-gates-1b1.mjs` (a thin wrapper over T13's ledger functions writing the 1b.1
+  output path), `docs/reports/project1b/1b1-performance.json` (generated),
   `docs/reports/project1b/1b1-investigation.md` (the recorded investigation),
-  `docs/reports/project1b/gate-ledger-1b1.json` (generated by the T13 audit)
-- Modify: `tests/suites.manifest.json`, `README.md`, `HANDOFF.md`, `AGENTS.md` (exact
-  replacements for the Space paths and commands)
-- Test: `tests/unit/timing.test.js`; the performance suite.
+  `docs/reports/project1b/gate-ledger-1b1.json` (generated by the audit)
+- Modify: `tests/suites.manifest.json`, `README.md`, `HANDOFF.md`, `AGENTS.md`, `CLAUDE.md` (exact
+  replacements for the Space paths and commands; the protocol section identical in AGENTS.md and
+  CLAUDE.md)
+- Test: `tests/unit/timing.test.js`; the performance suites.
 
 **Interfaces:**
-- Consumes: **(1a, unlanded)** `auditLedger`, `judgeRecord`, `requiredIdsFromManifest`,
-  `scripts/audit-gates.mjs` (T13); `window.atlas.space` (B14); P3.
+- Consumes: **(1a, unlanded)** `auditLedger`, `judgeRecord`, `requiredIdsFromManifest` (T13;
+  gate execution unchanged); `window.atlas.space` harness commands and subscriptions (B14); P3
+  and its workload manifest (B00, B04).
 - Produces (`timing.mjs`): `scheduleAbsolute({clock, setTimer}, targets, callback) →
   {rearms, lateByMs[], longTasks[], invalidated}` (rounds every positive wait up to a whole
   millisecond; re-arms against absolute targets; a request issued more than 4 ms late invalidates
@@ -1416,26 +1623,33 @@ green with unchanged assertions.
 1b.1 commit accepted by its own gate record); §3 (the 1b.1 release row demonstrated end to end).
 
 - [ ] **Step 1: Tests** — Node: `waits are rounded up and scheduled against absolute targets`;
-  `a late issuance invalidates the trial and is recorded with its lateness`. Headed
-  (`space-performance` `requiredPasses`, one per P3 target, each asserting its threshold on every
-  valid trial and at least three valid trials per scene, with completed work, publication and
-  readback reported separately and coverage checked against B04's prediction).
+  `a late issuance invalidates the trial and is recorded with its lateness`; `the audit wrapper
+  writes the 1b.1 ledger path and judges every commit in the range`. Headed (each scene suite's
+  `requiredPasses`, one per P3 target, asserting its threshold on every valid trial, at least
+  three valid trials from at most five attempts, completed work, publication, readback and canvas
+  presentation reported separately, and coverage at the manifest's checkpoints within B04's
+  prediction; insufficient valid trials are `inconclusive` and do not accept).
 - [ ] **Step 2: The recorded investigation** — headed, on the physical GPU, scripted by `node
   tests/space.mjs --group shell --investigation` and written to `1b1-investigation.md` with report
   ids and termination counts: open Plane; switch to Space; explore each calibration object, the
   bulb at two powers and the quaternion set (the default and C = (−.2, .8, .15, −.1), κ = 0.5);
-  orbit, dolly, focus, flight; edit a parameter and undo; save the scene file, reload the page, open
-  the file and verify the scene hash; inject a device loss and recover; inject an allocation
-  failure and choose the lower-cost option; move the camera inside the set and recover with
-  overview.
-- [ ] **Step 3: Audit** — `node scripts/audit-gates.mjs <1b.1 base> <head>`: every 1b.1 commit
-  `accepted`; the summary committed as `gate-ledger-1b1.json`.
-- [ ] **Step 4: Documentation** — README, HANDOFF and AGENTS exact replacements (Space source
-  map, `npm run test:space`, the GPU lock, the headed requirement, the PR-only rule for `main`).
-- [ ] **Step 5: Commit** — `"1b.1 acceptance: performance evidence, recorded investigation, gate audit and handoff (B15)"`, then the gate with `ATLAS_GPU_HANDOFF`.
+  orbit, dolly, focus, flight; edit a parameter and undo; cancel a settled render and render again
+  successfully; save the scene file, reload the page, open the file and verify the scene hash;
+  inject a device loss and recover; inject an allocation failure and choose the lower-cost option;
+  move the camera inside the set and recover with overview.
+- [ ] **Step 3: Documentation** — README, HANDOFF, AGENTS and CLAUDE exact replacements (Space
+  source map, `npm run test:space`, the GPU lock, the headed requirement, the PR-only rule for
+  `main`).
+- [ ] **Step 4: Commit and gate** — `"1b.1 acceptance: performance evidence, recorded
+  investigation and handoff (B15)"`, then the gate with `ATLAS_GPU_HANDOFF`.
+- [ ] **Step 5: Audit** — `node scripts/audit-gates-1b1.mjs <1b.1 base> <implementation head>`
+  on the exact head just gated: every 1b.1 commit `accepted`; commit the summary as
+  `gate-ledger-1b1.json` (`"1b.1 gate audit"`), gate that commit, and run a final audit including
+  it, retaining that final record in `artifacts/gates/` outside the commit it describes; the task
+  report names the audited head explicitly.
 
-**Expected outputs:** 2 new unit tests; the performance report with per-trial results; the
-investigation document; the audit summary with every commit accepted.
+**Expected outputs:** three performance reports with per-trial results; the investigation
+document; the audit summary with every commit accepted and the audited head named.
 
 ---
 
@@ -1470,34 +1684,18 @@ B02 → B05/B09 → B12/B13 runs beside it.
 | `tests/suites.manifest.json` | B01, B06, B08, B10, B11, B14, B15 | append-only; the merger appends |
 | `tests/unit.manifest.json` | every Node task | append-only; the merger appends |
 | `tests/space.mjs` | B01, B06, B08, B10, B11, B14, B15 | one group per task; groups are separate top-level blocks; merge in task order |
-| `src/space/numerics/validation-records.js` | B08, B10 | B10 appends tracing records |
+| `src/space/numerics/validation-records.js` | B08, B10 | B10 appends tracing and geometric records |
 | `package.json` | B01 | `test:space` once |
 
 All other files are single-owner.
 
-## Self-review against the spec
+## Items for the user
 
-- §3 release row 1b.1: calibration objects, bulb, quaternion (B02, B03, B08); orbit and flight
-  (B05, B12, B14); recovery from bad camera (B03, B12, B14), cancellation (B07, B13), allocation
-  failure (B06, B13, B14), device loss (B06, B13, B14); scene JSON (B02, B14); estimator category
-  (B03, B09, B14), pending marks (B09, B14), distinct statuses (B00, B08, B10, B11).
-- §4.1 boundaries (B00, B03 import test, B11 palettes); §4.3 Plane unchanged (B11 byte test, B14
-  gate suites).
-- §5 Space scenes and the rev 4 camera (B02; user item); §6 gestures and histories (B12, B14).
-- §7.1–7.6 requests, keys, outcomes, reports, scheduler, profiles (B00, B07, B09).
-- §8.1–8.3 pass graph, view modes, resources (B06, B09, B10, B11; the annex).
-- §9 backend interface, allocator, fake backend, annex (B00, B06; user item).
-- §10.1–10.5 representation, WGSL rules, quaternion arithmetic, range-safe derivative (B03, B05,
-  B08); the precision indicator is 1b.2 (records stored from B08/B10).
-- §11.1–11.4 families, calibration, tracing profile and statuses (B03, B04, B08, B10).
-- §13.1–13.3 shell, layout, navigation (B12, B14); §13.9 fog/pause/update controls 1b.3 (Global
-  Constraints); §14 scene files and failure behaviour (B13, B14); §15 (B06, B07, B13, B14).
-- §16.1 layers (every task), §16.2 matrix (P1, B04, B08, B10), §16.3 gate (every commit), §16.4
-  performance (P3, B15), §16.5 hardware (Global Constraints).
-- §18 risks: coexistence (B01), estimator usability (B04, B10), precision outside measured
-  domains (records, B08), compounded cost (B07, B15), loss races (B00, B13), preparation time (B01,
-  B06).
-- §19.2 Q2, Q5, Q6: provisional defaults (Global Constraints; user items).
-- Items for the user, collected: (a) adopt the §9.1 backend annex; (b) approve rev 4 §5.2/§10.1's
-  anchored camera for ordinary Space; (c) confirm the Q2/Q5/Q6 defaults; (d) erratum: §13.2's
-  indicator list to mark the precision badge "(1b.2)".
+Collected from the plan; none blocks drafting, each is a proposal until approved:
+- (a) adopt the §9.1 WebGPU backend annex (above) into the spec by reference;
+- (b) approve rev 4 §5.2/§10.1's `anchored-perspective-v1` camera representation for ordinary
+  Space (this plan implements it; a "no" revises B02's camera codec, B05 and the serialization
+  fixtures before implementation);
+- (c) confirm the §19.2 provisional defaults: Q2 neutral inspection lighting, Q5 desktop-first,
+  Q6 scene files only with Space share URLs deferred;
+- (d) erratum: mark the precision badge "(1b.2)" in §13.2's indicator list, matching §3.
