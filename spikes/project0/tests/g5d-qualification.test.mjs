@@ -18,6 +18,7 @@ import { decideBackends } from '../decision.js';
 import { SOURCE_PATHS } from '../fixture-files.mjs';
 import { launchIdentity } from '../evidence.mjs';
 import { fx, gpuRaw, planeWords, committedMatrix } from './g5d-helpers.mjs';
+import { evidenceSkip } from './evidence-guard.mjs';
 
 const imp = p => import(p).catch(e => ({ __missing: e.message }));
 const Qn = await import('../qualification.mjs');
@@ -28,11 +29,9 @@ const Cf = await imp('../qualification/g5d-config.js');
 const Col = await imp('../qualification/g5d-collect.js');
 const Pf = await imp('../qualification/g5d-profile.mjs');
 const V = await import('../remediation/validate.mjs');
-// Tests that read the git-ignored local evidence (artifacts/project0: the webgpu-1 and webgpu-remediation run directories) skip with a
-// reason when it is absent, as report.test.mjs and precision-t12.test.mjs do, so a clean clone does not fail on it.
-const EVIDENCE_SKIP = ['webgpu-1', 'webgpu-remediation']
-  .flatMap(c => JSON.parse(readFileSync(join(ROOT, `docs/reports/project0/${c}-manifest.json`), 'utf8')).runDirs)
-  .every(d => existsSync(join(ROOT, 'artifacts/project0', d))) ? false : 'the git-ignored raw evidence (artifacts/project0) is not present';
+// Tests that read the git-ignored campaign evidence (artifacts/project0: the webgpu-1 and webgpu-remediation run directories) skip with a
+// reason when it is wholly absent (a clean clone); partial evidence throws (evidence-guard.mjs).
+const EVIDENCE_SKIP = evidenceSkip();
 const ER = await import('../remediation/evidence-rules.mjs');
 const need = (...mods) => { for (const m of mods) assert.equal(m.__missing, undefined, m.__missing); };
 const sha = b => createHash('sha256').update(b).digest('hex');

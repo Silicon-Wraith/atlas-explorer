@@ -42,7 +42,7 @@ The evidence is the final campaign, `webgpu-g5d`: implementation f754534, all ga
   - Long-escape (S3) orbits are not validated at f32 input precision. They were measured as a diagnostic only.
   - The original failures stand under their own contracts: 2.7498 for the eight-iterate continuation (webgpu-1) and 4.7449 for the G5-A remediation.
 - **G5-A compensated arithmetic was defeated by compiler reassociation.** The TwoSum error term was eliminated, so compensated binary32 arithmetic is not available on this path.
-- **G1 identity depends on a developer flag.** G1 identity corroboration was collected only under `--enable-webgpu-developer-features`, plus the launcher's default `--enable-unsafe-swiftshader`. Neither flag is claimed as a product runtime requirement, and dependence on `--enable-unsafe-swiftshader` was not tested.
+- **G1 passes were collected with a developer flag.** Both passing qualification G1 launches used `--enable-webgpu-developer-features`, plus the launcher's default `--enable-unsafe-swiftshader`. The headed G1 launch in webgpu-1 omitted the developer flag and was invalid/inconclusive with an empty adapter device; implementation changes between campaigns prevent isolating the flag's effect. Neither flag is claimed as a product runtime requirement; operation without them was not established by these campaigns.
 - **Full carry-forward list:** [carry-forward.md](carry-forward.md).
 
 ## Carry-forward: the harness timer defect

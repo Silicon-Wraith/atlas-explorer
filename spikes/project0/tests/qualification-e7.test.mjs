@@ -3,7 +3,7 @@
 // representation, and the campaign/qualify/closure integration. CPU only: no browser, no GPU; filesystem fixtures under artifacts/runtime.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { mkdtemp, mkdir, writeFile, rm, readFile, copyFile } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -13,17 +13,16 @@ import { gatePlan } from '../gates.js';
 import { EXPECTED_TIMING } from '../timing-contract.js';
 import { decideBackends } from '../decision.js';
 import { SOURCE_PATHS } from '../fixture-files.mjs';
+import { evidenceSkip } from './evidence-guard.mjs';
 
 const Qn = await import('../qualification.mjs').catch(() => ({}));
 const Q = await import('../qualify.mjs');
 const GC = await import('../gates-checked.js');
 const fx = JSON.parse(readFileSync(new URL('../fixtures.json', import.meta.url), 'utf8'));
 const sha = b => createHash('sha256').update(b).digest('hex');
-// Tests that read the git-ignored local evidence (artifacts/project0: the webgpu-1 and webgpu-remediation run directories) skip with a
-// reason when it is absent, as report.test.mjs and precision-t12.test.mjs do, so a clean clone does not fail on it.
-const EVIDENCE_SKIP = ['webgpu-1', 'webgpu-remediation']
-  .flatMap(c => JSON.parse(readFileSync(join(ROOT, `docs/reports/project0/${c}-manifest.json`), 'utf8')).runDirs)
-  .every(d => existsSync(join(ROOT, 'artifacts/project0', d))) ? false : 'the git-ignored raw evidence (artifacts/project0) is not present';
+// Tests that read the git-ignored campaign evidence (artifacts/project0: the webgpu-1 and webgpu-remediation run directories) skip with a
+// reason when it is wholly absent (a clean clone); partial evidence throws (evidence-guard.mjs).
+const EVIDENCE_SKIP = evidenceSkip();
 const ID = 'project0-e7-headed-v1', PATH = 'spikes/project0/qualification/e7-headed-v1.json', HASH = '99ea9a3030fd31f68a3cb39cc97b10227fd28afdfc38e55a82119618991d8c51';
 const REF = { id: ID, path: PATH, sha256: HASH };
 const AMENDMENT = { schema: 1, id: ID, authority: { decision: 'E7', commit: 'e3ee2c0a584c5daa4df750332e82d64b88aa5251' },
