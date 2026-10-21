@@ -159,6 +159,8 @@ try {
   assert.equal(await page.locator('.saved-wrapper').count(), 1);
   await drainExpecting(page); // Reload discards the old document's accessible GL context too.
   await page.reload({ timeout: LIMITS.launch }); await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: 60000 });
+  // Discoveries load from IndexedDB independently of rendering: wait, bounded, for the count to settle (T12).
+  await page.waitForFunction(() => document.querySelector('#saved-count').textContent !== '…', null, { timeout: LIMITS.operation });
   assert.equal(await page.locator('#saved-count').textContent(), '1');
   pass('Bookmarks persist across reloads');
 

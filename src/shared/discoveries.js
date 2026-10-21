@@ -67,6 +67,7 @@ export function deliver(listeners, change, onListenerError) {
   }
 }
 const reportListenerError = error => console.error('A discoveries listener failed:', error);
+const reportCleanupError = (error, write) => console.warn(`Discovery write cleanup failed (${write.kind} ${write.writeId}; its marker is kept):`, error.message);
 
 export function createLocalDiscoverySource({ store, sceneCodec, onListenerError = reportListenerError }) {
   const listeners = new Set();
@@ -136,7 +137,11 @@ const newWriteId = () => `write-${globalThis.crypto?.randomUUID?.() ?? `${Date.n
 // request identity: a refresh invalidates the source's earlier list and paging reads, and only
 // the current request may publish. Every record shown or opened is validated here, whatever
 // source supplied it. Writes are observed until their source reports a definite outcome.
-export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs = 5000, writeWaitMs = 5000, reconcileAttempts = 3, onListenerError = reportListenerError }) {
+// `onCleanupError(error, write)` (T12, plan amendment E(2) carry-forward) is a failure-isolated
+// diagnostic for marker cleanup that threw, rejected, timed out or replied without `committed`; it
+// never changes a write's result, authorises a retry or a sweep, or treats an absent optional cleanup
+// operation as a failure.
+export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs = 5000, writeWaitMs = 5000, reconcileAttempts = 3, onListenerError = reportListenerError, onCleanupError = reportCleanupError }) {
   if (!sceneCodec) throw new TypeError('createDiscoveriesController requires sceneCodec');
   const listeners = new Set();
   let workspace = null, destroyed = false, openToken = 0;
@@ -209,10 +214,14 @@ export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs
       // No retry, outcome rewrite, or claim of deletion on failure (including a non-definite
       // reply). Atomicity/cancellation before commit belong to the source's prune contract.
       const controller = new AbortController();
+      const cleanupFailed = error => { try { onCleanupError(error, Object.freeze({ ...write })); } catch { /* a diagnostic never escalates */ } };
       race(Promise.resolve().then(() => {
         // An eviction notification can synchronously destroy the controller.
         if (!destroyed) return source.prune([write.writeId], { signal: controller.signal });
-      }), readTimeoutMs, controller).catch(() => {});
+      }), readTimeoutMs, controller).then(
+        result => { if (result !== undefined && result?.status !== 'committed') cleanupFailed(new Error(`the cleanup replied ${result?.status ? `${result.status}${result.reason ? ` (${result.reason})` : ''}` : 'without a status'}`)); },
+        error => cleanupFailed(error instanceof Error ? error : new Error(String(error))),
+      );
     }, 0);
   }
 

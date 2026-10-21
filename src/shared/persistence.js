@@ -13,7 +13,11 @@ export class PersistenceError extends Error {
   constructor(code, message) { super(message); this.name = 'PersistenceError'; this.code = code; }
 }
 
-export function openPersistence({ indexedDB = globalThis.indexedDB, databaseName = DATABASE_NAME, version = DATABASE_VERSION, timeoutMs = 5000 } = {}) {
+// `onClosed(reason)` (T12, plan amendment J carry-forward): called once if the connection is closed
+// behind the application — 'versionchange' when another ATLAS tab upgrades or deletes the database
+// (the connection is released so that tab can proceed), 'closed' when the browser ends it. Every
+// later call then reports `closed` with an actionable reason instead of the browser's exception.
+export function openPersistence({ indexedDB = globalThis.indexedDB, databaseName = DATABASE_NAME, version = DATABASE_VERSION, timeoutMs = 5000, onClosed = () => {} } = {}) {
   return new Promise((resolve, reject) => {
     if (!indexedDB) { reject(new PersistenceError('unavailable', 'This browser does not provide IndexedDB storage.')); return; }
     let settled = false, request, upgrade = null;
@@ -41,8 +45,7 @@ export function openPersistence({ indexedDB = globalThis.indexedDB, databaseName
       upgrade = null;
       if (settled) { db.close(); return; }
       settled = true; clearTimeout(timer);
-      db.onversionchange = () => db.close();
-      resolve(createStore(db, typeof indexedDB.cmp === 'function' ? (a, b) => indexedDB.cmp(a, b) : compareKeys));
+      resolve(createStore(db, typeof indexedDB.cmp === 'function' ? (a, b) => indexedDB.cmp(a, b) : compareKeys, onClosed));
     };
   });
 }
@@ -154,7 +157,19 @@ export const afterAnchor = (anchor, createdAt, id, compare = compareKeys) => {
   return byTime < 0 || (byTime === 0 && compare(id, anchor.id) < 0);
 };
 
-function createStore(db, compare) {
+const CLOSED_MESSAGE = 'Browser storage was closed behind ATLAS (another ATLAS tab updated it, or the browser ended the connection). Reload this page to use discoveries again.';
+
+function createStore(db, compare, onClosed = () => {}) {
+  // A connection closed behind the application: reported once, then every call says so.
+  let closed = null;
+  const markClosed = reason => {
+    if (closed) return;
+    closed = new PersistenceError('closed', CLOSED_MESSAGE);
+    try { onClosed(reason); } catch (error) { console.error('A storage close listener failed:', error); }
+  };
+  db.onversionchange = () => { db.close(); markClosed('versionchange'); };
+  db.onclose = () => markClosed('closed');
+  const open = start => () => { if (closed) throw closed; return start(); };
   // Every index key [workspace, createdAt] of one workspace, whatever createdAt's type: [workspace]
   // sorts before all of them, and [workspace + '\u0000'] (excluded) after all of them and before
   // every other workspace, since no string lies between workspace and workspace + '\u0000'.
@@ -193,18 +208,19 @@ function createStore(db, compare) {
   const getFrom = (store, key) => done(db.transaction(store, 'readonly').objectStore(store).get(key)).then(value => value ?? null);
   return Object.freeze({
     // Newest first, by `createdAt`, within one workspace.
-    listDiscoveries({ workspace, limit = 50, cursor = null, signal }) { return cancellable(() => readPage({ workspace, limit, cursor }), signal); },
+    listDiscoveries({ workspace, limit = 50, cursor = null, signal }) { return cancellable(open(() => readPage({ workspace, limit, cursor })), signal); },
     countDiscoveries({ workspace, signal }) {
-      return cancellable(() => done(db.transaction('discoveries', 'readonly').objectStore('discoveries').index('byWorkspaceCreated').count(workspaceRange(workspace))), signal);
+      return cancellable(open(() => done(db.transaction('discoveries', 'readonly').objectStore('discoveries').index('byWorkspaceCreated').count(workspaceRange(workspace)))), signal);
     },
-    getDiscovery(id, { signal } = {}) { return cancellable(() => getFrom('discoveries', id), signal); },
-    getWriteMarker(writeId, { signal } = {}) { return cancellable(() => getFrom('writes', writeId), signal); },
+    getDiscovery(id, { signal } = {}) { return cancellable(open(() => getFrom('discoveries', id)), signal); },
+    getWriteMarker(writeId, { signal } = {}) { return cancellable(open(() => getFrom('writes', writeId)), signal); },
     // One transaction for the whole batch → { status: 'committed' } only on its `complete` event,
     // else { status: 'aborted' (cancelled before commit) | 'failed', reason }. A cancellation that
     // arrives after commit leaves the commit standing.
     commit({ puts = [], deletes = [] }, { signal } = {}) {
       return new Promise(resolve => {
         if (signal?.aborted) { resolve({ status: 'aborted', reason: 'cancelled before the transaction started' }); return; }
+        if (closed) { resolve({ status: 'failed', reason: closed.message }); return; }
         const names = [...new Set([...puts, ...deletes].map(operation => operation.store))];
         let transaction, cancelled = false, failure = null;
         try { transaction = db.transaction(names, 'readwrite'); }
