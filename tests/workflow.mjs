@@ -357,6 +357,9 @@ async function checkExportRestart(page) {
 // renders — queued desired state, tour frames and other automatic requests included — until the
 // explorer resumes explicitly (spec §14, charter §3.10). `rendered` and `whenIdle` stay app-side.
 const pausedState = page => ev(page, () => ({ rendered: atlas.rendered, recovery: atlas.recovery, state: atlas.device.state, webgl: !!atlas.renderer.gl, consistent: atlas.rendererConsistent, resumeOffered: !document.querySelector('#resume-rendering').hidden, status: document.querySelector('#render-status').textContent, tourActive: !document.querySelector('#tour-status').hidden }));
+// Completion evidence returned by whenDrawn() closes the episode in the same turn (fix round 2b):
+// the app's own confirmation polls the same fence from an independent timer, so without that rule
+// the order of the two observers would be a race (the c6706b3 gate failure).
 async function resumeAndConfirm(page, renderedBefore) {
   await ev(page, () => document.querySelector('#resume-rendering').click());
   await page.waitForFunction(count => atlas.rendered > count, renderedBefore, { timeout: LIMITS.deep });
@@ -370,8 +373,11 @@ async function checkRepeatedLossPausesRecovery(page) {
   const before = await ev(page, () => ({ rendered: atlas.rendered, recovery: atlas.recovery }));
   assert.deepEqual(before.recovery, { attempts: 0, paused: false });
 
-  // Phase 1: the application-side return of the recovery render does not end the episode. The second
-  // loss is raised in the same task that observed the return, before any completion poll could run.
+  // Phase 1: the application-side return of the recovery render does not end the episode. The app's
+  // own confirmation is held (atlas.setRecoveryHooks, a test seam) until the check has observed the
+  // submission and raised the second loss — the GPU may be fast, and an unsignaled fence is never
+  // inferred from elapsed time (Codex r3 finding 6; the c6706b3 gate failure).
+  await ev(page, () => atlas.setRecoveryHooks({ hold: () => new Promise(resolve => { window.__releaseRecovery = resolve; }) }));
   await loseContext(page);
   await waitEvents(page, ['lost']);
   await restoreContext(page);
@@ -383,6 +389,7 @@ async function checkRepeatedLossPausesRecovery(page) {
     return { rendered: atlas.rendered, recovery };
   }, before.rendered, 'recovery submitted', LIMITS.deep);
   assert.deepEqual(submitted.recovery, { attempts: 1, paused: false }, 'the application-side return leaves the recovery unconfirmed');
+  await ev(page, () => { window.__releaseRecovery(); atlas.setRecoveryHooks(null); });
   await waitEvents(page, ['lost', 'restored', 'lost']);
   await restoreContext(page);
   await waitEvents(page, ['lost', 'restored', 'lost', 'restored']);

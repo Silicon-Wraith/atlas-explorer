@@ -184,10 +184,14 @@ export function createPlaneRenderAdapter({ renderer, clock }) {
     };
     still();
     if (timeoutMs <= 0) throw new CompletionError('no time remains for GPU completion', 'timeout');
+    const started = now();
     const evidence = (source, polls, waitMs) => Object.freeze({ reportId: report.reportId, requestId: report.requestId, deviceEpoch: ticket.deviceEpoch, source, clock: 'page-performance-now', completedAt: clock(), polls, waitMs });
     if (!ticket.gl) return evidence('synchronous-paint', 0, 0);
     const { polls, waitMs } = await awaitFence({ gl: ticket.gl, sync: ticket.sync, ms: timeoutMs, stillValid: still, now, yieldTask });
-    still(); // the final asynchronous boundary: a loss between the signal and this continuation
+    // The final asynchronous boundary: a loss between the signal and this continuation, and the one
+    // absolute deadline, which holds through the continuation itself — no late success.
+    still();
+    if (now() - started >= timeoutMs) throw new CompletionError(`GPU completion did not arrive within ${timeoutMs} ms`, 'timeout');
     return evidence('queue-completion', polls, waitMs);
   }
 

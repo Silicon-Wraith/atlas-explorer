@@ -27,7 +27,7 @@ function fenceGl({ statuses = ['TIMEOUT_EXPIRED', 'CONDITION_SATISFIED'], nullFe
     deleteSync: sync => calls.push(`delete ${sync.id}`),
   });
   const options = { now: () => clock, yieldTask: async () => { calls.push('yield'); yielded = true; clock += 5; } };
-  return { gl, calls, options, lose: () => { lost = true; } };
+  return { gl, calls, options, lose: () => { lost = true; }, advance: ms => { clock += ms; } };
 }
 const fenceCalls = calls => calls.filter(call => call === 'fence').length;
 const rejectsWith = (promise, code) => assert.rejects(promise, error => error instanceof CompletionError && error.code === code, code);
@@ -175,7 +175,9 @@ test('a replaced device followed by a new publication reports interruption for t
 test('a loss at the final continuation after the fence signaled is an interruption, never evidence with a later epoch', async () => {
   const renderer = createFakeRenderer();
   let adapter;
-  const fence = fenceGl({ statuses: ['CONDITION_SATISFIED'], onSignal: () => adapter.invalidate() });
+  // The loss lands in a microtask after the signaled poll: past awaitFence's own post-poll check,
+  // before the adapter's continuation (Codex r3 finding 7).
+  const fence = fenceGl({ statuses: ['CONDITION_SATISFIED'], onSignal: () => queueMicrotask(() => adapter.invalidate()) });
   renderer.gl = fence.gl;
   adapter = createPlaneRenderAdapter({ renderer, clock });
   const report = await published(adapter, renderer);
@@ -203,6 +205,20 @@ test('a successful poll that overran the deadline is a timeout, and an exhausted
   const cpu = createFakeRenderer({ gl: false });
   const cpuAdapter = createPlaneRenderAdapter({ renderer: cpu, clock });
   await rejectsWith(cpuAdapter.completion(await published(cpuAdapter, cpu), { timeoutMs: 0 }), 'timeout');
+});
+
+test('a continuation that overran the deadline after a successful poll is a timeout, not late success', async () => {
+  // Codex r3 finding 5: the poll succeeds at 5 ms of a 10 ms bound; a queued microtask then advances
+  // the clock past the bound before the adapter's continuation runs. The absolute deadline must hold
+  // through that continuation.
+  const renderer = createFakeRenderer();
+  let fence;
+  fence = fenceGl({ statuses: ['CONDITION_SATISFIED'], onSignal: () => queueMicrotask(() => fence.advance(20)) });
+  renderer.gl = fence.gl;
+  const adapter = createPlaneRenderAdapter({ renderer, clock });
+  const report = await published(adapter, renderer);
+  await rejectsWith(adapter.completion(report, { timeoutMs: 10, ...fence.options }), 'timeout');
+  assert.equal(fence.calls.filter(call => call.startsWith('poll')).length, 1, 'the fence had signaled; the overrun was in the continuation');
 });
 
 test('the CPU fallback completes synchronously after its paint', async () => {

@@ -8,6 +8,7 @@ import { sceneCodec, createPlaneScene, toPlaneState, PLANE_INITIAL_SCENE, encode
 import { createGestureArbiter } from './plane/gestures.js';
 import { createPlaneRenderAdapter, createPlaneRequest } from './plane/render-adapter.js';
 import { startExport, EXPORT_LIMITS } from './plane/export.js';
+import { CompletionError } from './plane/completion.js';
 
 const $ = selector => document.querySelector(selector);
 installIcons();
@@ -24,7 +25,7 @@ let rendered = 0, requestVersion = 0, cycle = false, tour = null;
 // The render adapter is the only caller of the renderer's render() and color() (spec §7.4, §14),
 // and its publication is the authoritative provenance of the image on the canvas (atlas.lastReport).
 // `lastExport` is the last export job; an interrupted one keeps its request for a restart.
-let adapter, lastExport = null, exportHooks = {}, pendingReplacement = false;
+let adapter, lastExport = null, exportHooks = {}, recoveryHooks = {}, pendingReplacement = false;
 let geometryRevision = 0, appearanceRevision = 0;
 // Device lifecycle (spec §14, charter §3.10): `contextLost` spans the lost → restored events of the
 // canvas; a loss stays `lossPending` until the replacement that follows it; after a loss the view is
@@ -92,12 +93,19 @@ function adopt(transition, interactive = false) {
 // GPU may still be executing the recovery draw when adapter.render() returns, and a loss caused by
 // that draw must count against the episode. A publication superseded before its fence signals hands
 // over to the next one: every later publication — an interactive render, a recolor, an export render
-// — asks again while an episode is open.
+// — asks again while an episode is open. The evidence is the fact, whoever observes it: the app's
+// own confirmation and a caller's atlas.whenDrawn() close the episode alike (fix round 2b), so a
+// caller holding completion evidence never sees the episode still open behind it.
+function recovered(evidence) {
+  if (recoveryAttempts && evidence.deviceEpoch === adapter.epoch) recoveryAttempts = 0;
+}
 function confirmRecovery(report) {
   if (!recoveryAttempts) return;
-  const episodeEpoch = adapter.epoch;
-  adapter.completion(report, { timeoutMs: 120000, now: () => performance.now() })
-    .then(evidence => { if (recoveryAttempts && evidence.deviceEpoch === episodeEpoch && adapter.epoch === episodeEpoch) recoveryAttempts = 0; }, () => { /* superseded, interrupted or late: the episode stays open */ });
+  // `recoveryHooks.hold` is a test seam: it holds the app's own confirmation until released, so a
+  // check can observe an unconfirmed recovery deterministically instead of racing the GPU.
+  Promise.resolve(recoveryHooks.hold?.())
+    .then(() => adapter.completion(report, { timeoutMs: 120000, now: () => performance.now() }))
+    .then(recovered, () => { /* superseded, interrupted or late: the episode stays open */ });
 }
 const generation = () => ({ deviceEpoch: adapter.epoch, viewRevision: sceneHistory.snapshot().revision, geometryRevision, appearanceRevision });
 
@@ -649,6 +657,7 @@ window.atlas = {
   },
   get rendererConsistent() { return renderer === adapter.renderer; },
   setExportHooks(hooks) { exportHooks = hooks || {}; },
+  setRecoveryHooks(hooks) { recoveryHooks = hooks || {}; },
   // `rendered`, `lastReport` and `whenIdle` are application-side facts (a render was adopted and
   // its report published); they do not claim that the GPU has finished drawing (plan amendment G).
   get rendered() { return rendered; }, goTo,
@@ -669,8 +678,13 @@ window.atlas = {
       target = adapter.publication?.report;
       if (!target) throw Object.assign(new Error('nothing has been published'), { name: 'CompletionError', code: 'none' });
     }
-    // The remaining budget, never fresh time: an exhausted bound rejects before the fence or paint.
-    return adapter.completion(target, { timeoutMs: deadline - performance.now(), now: () => performance.now() });
+    // The remaining budget, never fresh time: an exhausted bound rejects before the fence or paint,
+    // and the absolute deadline holds through this return — late evidence is a timeout to the caller
+    // (it still closes a recovery episode: the completion is a fact, only its delivery was late).
+    const evidence = await adapter.completion(target, { timeoutMs: deadline - performance.now(), now: () => performance.now() });
+    recovered(evidence);
+    if (performance.now() > deadline) throw new CompletionError(`GPU completion did not arrive within ${timeoutMs} ms`, 'timeout');
+    return evidence;
   },
 };
 syncControls(); renderPlaces(); updateHistoryControls(); requestRender();
