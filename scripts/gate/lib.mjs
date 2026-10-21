@@ -1,5 +1,6 @@
 // Pure evidence and classification rules for the unit runner and the Plane gate.
 // Nothing here launches a process or touches the file system.
+import { validateReferenceReport } from './reference-evidence.mjs';
 
 export const SUITE_STATES = Object.freeze(['passed', 'failed', 'deferred', 'not-run', 'incomplete']);
 
@@ -71,6 +72,7 @@ export function validateEvidence(suite, evidence) {
   }
   const report = evidence.report;
   if (report === undefined) return { ok: false, kind: 'missing', detail: `no report at ${suite.report}` };
+  if (suite.evidence === 'reference') return validateReferenceReport(suite, report);
   if (!Array.isArray(report) || report.length === 0) return { ok: false, kind: 'invalid', detail: 'report is empty or not a list' };
   if (suite.evidence === 'browser') {
     if (report.some(entry => entry?.name === 'FAIL')) return { ok: false, kind: 'invalid', detail: 'report records a failure' };

@@ -27,6 +27,10 @@
     "tests/unit/space-models.test.js",
     "tests/unit/scheduler.test.js",
     "tests/unit/space-allocator.test.js",
-    "tests/unit/space-webgpu-backend.test.js"
+    "tests/unit/space-webgpu-backend.test.js",
+    "tests/unit/reference-points.test.js",
+    "tests/unit/reference-rays.test.js",
+    "tests/unit/reference-p3.test.js",
+    "tests/unit/reference-suite.test.js"
   ]
 }
