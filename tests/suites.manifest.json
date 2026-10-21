@@ -10,6 +10,8 @@
     { "id": "navigation", "gpu": false, "command": ["tests/navigation.mjs"], "report": "artifacts/navigation-report.json", "evidence": "navigation" },
     { "id": "graphics", "gpu": true, "benchmark": true, "command": ["tests/graphics.mjs", "--chrome", "--headed", "--compositor", "--benchmark"], "report": "artifacts/graphics-report.json", "evidence": "graphics" },
     { "id": "space-coexistence", "gpu": true, "command": ["tests/space.mjs", "--group", "coexistence"], "report": "artifacts/space-coexistence-report.json", "evidence": "browser",
-      "requiredPasses": ["WebGL 2 and WebGPU contexts coexist in one page", "Adapter identity reports observed or unavailable fields truthfully", "A representative pipeline set prepares within the bound with progress events"] }
+      "requiredPasses": ["WebGL 2 and WebGPU contexts coexist in one page", "Adapter identity reports observed or unavailable fields truthfully", "A representative pipeline set prepares within the bound with progress events"] },
+    { "id": "space-recovery", "gpu": true, "command": ["tests/space.mjs", "--group", "recovery"], "report": "artifacts/space-recovery-report.json", "evidence": "browser",
+      "requiredPasses": ["Self-check pipelines prepare asynchronously with progress and the probe readback is ATLS through ordinary admission", "A batch completes with queue-completion timing and a 256-row banded readback returns the staged pattern", "Presentation renders the display texture to the preferred canvas format at the output size without a second transfer function", "A real device loss through the test adapter settles outstanding tickets interrupted, marks the backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a new epoch", "Configuration failure keeps the previous target set usable", "A 4K target set allocates within the cap at 72 bytes per pixel and is reclaimed after the last ticket retires"] }
   ]
 }

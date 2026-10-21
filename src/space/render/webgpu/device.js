@@ -8,6 +8,8 @@ export const IDENTITY_FIELDS = Object.freeze(['vendor', 'architecture', 'device'
 export const RECORDED_LIMITS = Object.freeze([
   'maxBufferSize', 'maxStorageBufferBindingSize', 'maxUniformBufferBindingSize', 'maxTextureDimension2D',
   'maxComputeWorkgroupsPerDimension', 'maxComputeInvocationsPerWorkgroup', 'maxBindGroups', 'maxStorageBuffersPerShaderStage',
+  // The binding risk (rev 4.4 joint ruling (a)): default 4, so read-only inputs use sampled bindings.
+  'maxStorageTexturesPerShaderStage',
 ]);
 export const DEFAULT_OPTIONAL_FEATURES = Object.freeze(['timestamp-query']);
 const ERROR_CODES = Object.freeze(['no-webgpu', 'no-adapter', 'device-refused']);
@@ -34,10 +36,18 @@ const observedLimit = value => (Number.isFinite(value) ? value : UNAVAILABLE);
 
 // One requestAdapter per attempt; adapter.info read on that retained adapter before requestDevice;
 // device.lost observed before returning and never awaited. Resolves
-// { device, adapter, attemptId, identity, isFallbackAdapter, features, limits }.
-export async function acquireDevice({ gpu = globalThis.navigator?.gpu, powerPreference = 'high-performance', optionalFeatures = DEFAULT_OPTIONAL_FEATURES, onLost } = {}) {
+// { device, adapter, attemptId, identity, isFallbackAdapter, features, limits, adapterLimits, requestedLimits }:
+// `limits` are the granted device limits; `adapterLimits` what the adapter supports; `requestedLimits`
+// exactly the increases passed as requiredLimits (rev 4.4 ruling (a): none by default, never blanket).
+// A requested increase the adapter does not support is refused before requestDevice.
+export async function acquireDevice({ gpu = globalThis.navigator?.gpu, powerPreference = 'high-performance', optionalFeatures = DEFAULT_OPTIONAL_FEATURES, requiredLimits = {}, onLost } = {}) {
   if (!gpu || typeof gpu.requestAdapter !== 'function') throw new DeviceError('no-webgpu', 'navigator.gpu is unavailable in this browser');
   if (onLost !== undefined && typeof onLost !== 'function') throw new TypeError('onLost must be a function');
+  if (requiredLimits === null || typeof requiredLimits !== 'object') throw new TypeError('requiredLimits must be an object');
+  for (const [key, value] of Object.entries(requiredLimits)) {
+    if (!RECORDED_LIMITS.includes(key)) throw new TypeError(`requiredLimits.${key} is not a recorded limit`);
+    if (!Number.isSafeInteger(value) || value < 1) throw new TypeError(`requiredLimits.${key} must be a positive integer`);
+  }
   const attemptId = freshAttemptId();
   const adapter = await gpu.requestAdapter({ powerPreference });
   if (!adapter) throw new DeviceError('no-adapter', `requestAdapter(${powerPreference}) returned null`);
@@ -47,8 +57,13 @@ export async function acquireDevice({ gpu = globalThis.navigator?.gpu, powerPref
   const available = [...(adapter.features ?? [])].sort();
   const requested = [...optionalFeatures];
   const granted = requested.filter(feature => adapter.features?.has(feature));
+  const adapterLimits = Object.freeze(Object.fromEntries(RECORDED_LIMITS.map(key => [key, observedLimit(adapter.limits?.[key])])));
+  for (const [key, value] of Object.entries(requiredLimits)) {
+    if (!(adapterLimits[key] >= value)) throw new DeviceError('device-refused', `requiredLimits.${key} = ${value} but the adapter supports ${adapterLimits[key]}`);
+  }
+  const requestedLimits = Object.freeze({ ...requiredLimits });
   let device;
-  try { device = await adapter.requestDevice({ requiredFeatures: granted, label: attemptId }); }
+  try { device = await adapter.requestDevice({ requiredFeatures: granted, ...(Object.keys(requestedLimits).length ? { requiredLimits: { ...requestedLimits } } : {}), label: attemptId }); }
   catch (error) { throw new DeviceError('device-refused', `requestDevice refused: ${error?.message ?? error}`, { cause: error }); }
   if (!device) throw new DeviceError('device-refused', 'requestDevice returned no device');
   const limits = Object.freeze(Object.fromEntries(RECORDED_LIMITS.map(key => [key, observedLimit(device.limits?.[key])])));
@@ -59,6 +74,6 @@ export async function acquireDevice({ gpu = globalThis.navigator?.gpu, powerPref
   return {
     device, adapter, attemptId, identity, isFallbackAdapter,
     features: Object.freeze({ requested: Object.freeze(requested), granted: Object.freeze(granted), available: Object.freeze(available), timestampQuery: granted.includes('timestamp-query') }),
-    limits,
+    limits, adapterLimits, requestedLimits,
   };
 }

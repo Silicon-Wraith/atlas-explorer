@@ -91,23 +91,28 @@ export function createFakeBackend({ clock, cap = TRACKED_ALLOCATION_CAP, limits 
     const resource = { ...desc, epoch, handle, retiring: false, tickets: new Set(), mappings: new Set(), owners: new Set(), staged: initialData };
     resources.set(handle, resource); tracked += desc.bytes; peak = Math.max(peak, tracked); return handle;
   }
+  // The production buffer form is exactly {name, bytes, usage, data?} (§9.1 Allocator). A texture-
+  // shaped description is refused here; logical images are the fake-only allocateImage control.
   function allocate(desc) {
     available();
-    // Legacy logical image descriptions are a fake-only allocation exercise. The
-    // production buffer form is exactly {name, bytes, usage, data?}.
-    const logicalImage = desc?.width !== undefined || desc?.height !== undefined;
-    if (!logicalImage) {
-      if (!isPlainObject(desc) || Object.keys(desc).some(key => !['name', 'bytes', 'usage', 'data'].includes(key))) invalid('invalid buffer allocation descriptor');
-      if (!['storage', 'uniform'].includes(desc.usage)) invalid('buffer usage must be storage or uniform');
-      count(desc.bytes, 'buffer bytes', 1);
-      if (desc.bytes % 4) invalid('buffer bytes must be a multiple of four');
-    }
+    if (!isPlainObject(desc) || Object.keys(desc).some(key => !['name', 'bytes', 'usage', 'data'].includes(key))) invalid('invalid buffer allocation descriptor');
+    if (!['storage', 'uniform'].includes(desc.usage)) invalid('buffer usage must be storage or uniform');
+    count(desc.bytes, 'buffer bytes', 1);
+    if (desc.bytes % 4) invalid('buffer bytes must be a multiple of four');
     if (desc.data !== undefined && (!(desc.data instanceof Uint8Array) || desc.data.byteLength > desc.bytes)) invalid('initial data must be Uint8Array with length <= bytes');
     const description = allocationDescription(desc); reservation(description.bytes);
     // Keep bytes outside frozen metadata. Only initial data needs host storage; absent
     // and trailing bytes read as zero. No lease or queue work is involved in creation.
     const initialData = desc.data === undefined ? null : new Uint8Array(desc.data);
     return createResource(description, initialData);
+  }
+  // Fake-only control (B06 carry-forward): a logical image {name, bytes, width, height, format?,
+  // bytesPerTexel?} for exercising readback and region checks without a target set.
+  function allocateImage(desc) {
+    available();
+    if (!isPlainObject(desc) || desc.width === undefined || desc.height === undefined || desc.usage !== undefined || desc.data !== undefined) invalid('allocateImage requires {name, bytes, width, height, format?, bytesPerTexel?}');
+    const description = allocationDescription(desc); reservation(description.bytes);
+    return createResource(description);
   }
   function admissionFor(id, options) {
     checkEpoch(id.generation.deviceEpoch);
@@ -249,7 +254,8 @@ export function createFakeBackend({ clock, cap = TRACKED_ALLOCATION_CAP, limits 
       // Acquisition is not a reset operation. Call loss/teardown explicitly before replacing a device.
       if (state === 'ready') throw new BackendError('unavailable', 'device already acquired');
       attempt++; epoch = ++lastEpoch; state = 'ready';
-      return deepFreeze({ epoch, identity: { attemptId: `fake-attempt-${attempt}`, vendor: 'unavailable', architecture: 'unavailable', device: 'unavailable', description: 'unavailable', isFallbackAdapter: 'unavailable' }, limits: observedLimits, features: [] });
+      // limits are the granted limits; adapterLimits and requestedLimits mirror the WebGPU backend (B06).
+      return deepFreeze({ epoch, identity: { attemptId: `fake-attempt-${attempt}`, vendor: 'unavailable', architecture: 'unavailable', device: 'unavailable', description: 'unavailable', isFallbackAdapter: 'unavailable' }, limits: observedLimits, adapterLimits: observedLimits, requestedLimits: {}, features: [] });
     },
     prepare({ epoch: requestedEpoch, pipelineSet, onProgress }) {
       checkEpoch(requestedEpoch);
@@ -344,6 +350,7 @@ export function createFakeBackend({ clock, cap = TRACKED_ALLOCATION_CAP, limits 
     },
     destroy() { invalidate('destroyed', 'terminal teardown', true); },
     allocate,
+    allocateImage,
     retain(handle, owner) { available(); string(owner, 'owner'); lookup(handle).owners.add(owner); },
     retire(owner) { for (const resource of resources.values()) { resource.owners.delete(owner); reclaim(resource); } },
     stage(handle, bytes) {
