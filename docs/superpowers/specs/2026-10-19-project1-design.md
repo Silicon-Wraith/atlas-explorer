@@ -702,7 +702,7 @@ Every model record:
 { id, version, recurrenceVersion, initialization, escapeRule, supportedParameters,
   estimator: { category, semantics, derivationVersion } }
 ```
-Every static model record contains exactly these fields. Empirical validation records are stored
+Every static model record contains the following metadata fields. Empirical validation records are stored
 separately in the validation registry described by §16.2. Applicable evidence is selected by model,
 evidence class, implementation hashes, profile, effective parameters, sampling conditions and
 spatial domain. A model record does not itself assert validated coverage; absence of matching
