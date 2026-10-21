@@ -111,6 +111,14 @@ export function createLocalDiscoverySource({ store, sceneCodec, onListenerError 
       // (reads only the marker this write committed)
       return (await store.getWriteMarker(writeId, { signal })) !== null;
     },
+    // Optional DiscoverySource operation: atomically forget only the supplied write markers,
+    // without notifying discovery listeners. Same result and abort-before-commit contract as
+    // save/remove; rejection or a non-committed result leaves the batch intact. Callers own
+    // eligibility (definite delivery and finished readers), never the persistence store.
+    async prune(writeIds, { signal } = {}) {
+      if (!writeIds.length) return { status: 'committed' };
+      return store.commit({ puts: [], deletes: writeIds.map(key => ({ store: 'writes', key })) }, { signal });
+    },
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
   });
 }
@@ -139,10 +147,13 @@ export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs
   const opens = new Set();
   const abortOpens = () => { for (const controller of opens) controller.abort(); opens.clear(); };
   const writes = new Map(), controllers = new Map();
+  // History and marker lifetimes are independent. A reader can outlive history eviction;
+  // its closure retains this private state until the source promise really settles.
+  const writeStates = new WeakMap(), deliveredHistory = new Set();
   const bySource = Object.fromEntries(sources.map(source => [source.id, source]));
   const unsubscribe = sources.map(source => source.subscribe?.(() => { if (!destroyed && workspace) refresh(); }));
 
-  const snapshot = () => Object.freeze({
+  const makeSnapshot = () => Object.freeze({
     workspace,
     sources: Object.freeze(Object.fromEntries(sources.map(source => {
       const { generation, pages, reads, ...view } = views[source.id];
@@ -150,7 +161,66 @@ export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs
     }))),
     writes: Object.freeze([...writes.values()].map(write => Object.freeze({ ...write }))),
   });
-  const emit = () => { if (!destroyed) deliver(listeners, snapshot(), onListenerError); };
+  const snapshot = () => {
+    const value = makeSnapshot();
+    value.writes.forEach(noteDelivery);
+    return value;
+  };
+  const emit = () => {
+    if (destroyed) return;
+    const value = makeSnapshot(), observed = listeners.size > 0;
+    deliver(listeners, value, onListenerError);
+    if (observed) value.writes.forEach(noteDelivery);
+  };
+
+  // A public result/snapshot or subscriber notification delivers the immutable observation.
+  // Defer maintenance to the next task so all promise continuations and synchronous listeners
+  // can receive it first. The timer is a delivery boundary, never an age/expiry policy.
+  function noteDelivery(observation) {
+    if (destroyed || !DEFINITE.includes(observation.status)) return;
+    const write = writes.get(observation.writeId), state = write && writeStates.get(write);
+    if (!state || state.delivered || state.deliveryPending) return;
+    state.deliveryPending = true;
+    schedulePruning(state);
+  }
+
+  function schedulePruning(state) {
+    if (destroyed || state.scheduled || (!state.delivered && !state.deliveryPending)) return;
+    state.scheduled = true;
+    setTimeout(() => {
+      state.scheduled = false;
+      if (destroyed) return;
+      const { write } = state;
+      if (state.deliveryPending) {
+        state.deliveryPending = false;
+        state.delivered = true;
+        deliveredHistory.add(write);
+        if (deliveredHistory.size > 100) {
+          const oldest = deliveredHistory.values().next().value;
+          deliveredHistory.delete(oldest);
+          writes.delete(oldest.writeId);
+          emit();
+        }
+      }
+      const source = bySource[write.sourceId];
+      if (state.readers || state.observers || state.cleanupStarted || typeof source.prune !== 'function') return;
+      state.cleanupStarted = true;
+      // Cleanup has its own cancellation, independent of the write and observation lifetime.
+      // No retry, outcome rewrite, or claim of deletion on failure (including a non-definite
+      // reply). Atomicity/cancellation before commit belong to the source's prune contract.
+      const controller = new AbortController();
+      race(Promise.resolve().then(() => {
+        // An eviction notification can synchronously destroy the controller.
+        if (!destroyed) return source.prune([write.writeId], { signal: controller.signal });
+      }), readTimeoutMs, controller).catch(() => {});
+    }, 0);
+  }
+
+  function writeResult(write) {
+    const result = Object.freeze({ ...write });
+    noteDelivery(result);
+    return result;
+  }
 
   // Every item is validated here, whatever its source said about it.
   const checked = (source, item) => {
@@ -230,12 +300,20 @@ export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs
     const source = bySource[write.sourceId];
     if (destroyed || typeof source.confirm !== 'function') return false;
     const controller = new AbortController();
-    try { return await waitForObservation(source.confirm(write.writeId, { signal: controller.signal }), readTimeoutMs, controller) === true; } catch { return false; }
+    const state = writeStates.get(write);
+    state.readers++;
+    const reading = Promise.resolve().then(() => destroyed || controller.signal.aborted ? false : source.confirm(write.writeId, { signal: controller.signal })).finally(() => {
+      state.readers--;
+      schedulePruning(state);
+    });
+    try { return await waitForObservation(reading, readTimeoutMs, controller) === true; } catch { return false; }
   }
 
   async function observe(kind, source, id, operation) {
     const writeId = newWriteId(), controller = new AbortController();
     const write = { writeId, kind, sourceId: source.id, id, status: 'pending', reason: '' };
+    const state = { write, readers: 0, observers: 1, delivered: false, deliveryPending: false, scheduled: false, cleanupStarted: false };
+    writeStates.set(write, state);
     writes.set(writeId, write);
     controllers.set(writeId, controller);
     emit();
@@ -258,7 +336,9 @@ export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs
       }
     }
     if (write.status === 'pending' || write.status === 'checking') settleWrite(write, 'unknown', destroyed ? 'the control was destroyed before the outcome was known' : 'the outcome is unknown; check again');
-    return Object.freeze({ ...write });
+    state.observers--;
+    schedulePruning(state);
+    return writeResult(write);
   }
 
   function writeSource(sourceId, kind) {
@@ -286,9 +366,15 @@ export function createDiscoveriesController({ sources, sceneCodec, readTimeoutMs
     async reconcile(writeId) {
       const write = writes.get(writeId);
       if (destroyed) return write ? Object.freeze({ ...write }) : null;
-      if (write && (write.status === 'unknown' || write.status === 'checking') && await confirmWrite(write)) settleWrite(write, 'committed', 'confirmed by this write\'s marker');
-      await refresh();
-      return write ? Object.freeze({ ...write }) : null;
+      const state = write && writeStates.get(write);
+      if (state) state.observers++;
+      try {
+        if (write && (write.status === 'unknown' || write.status === 'checking') && await confirmWrite(write)) settleWrite(write, 'committed', 'confirmed by this write\'s marker');
+        await refresh();
+        return write ? writeResult(write) : null;
+      } finally {
+        if (state) { state.observers--; schedulePruning(state); }
+      }
     },
     // Only the latest open may resolve; an obsolete selection is rejected.
     async open(sourceId, id) {

@@ -645,3 +645,381 @@ test('an unsupported record at a page boundary is listed as unsupported and the 
   view = controller.snapshot().sources.local;
   assert.deepEqual([view.status, view.items.length, view.items.at(-1)?.id, view.nextCursor], ['ready', 51, 'd50', null], 'the valid record after the unsupported one is reachable');
 });
+
+
+// T09b: wait for the post-delivery task, never for an age-based eviction deadline.
+const pruningTurn = async () => { await wait(5); await flush(); };
+const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
+const pruningSetup = (overrides = {}, options = {}) => {
+  const markers = new Set(), pruned = [];
+  const source = writable({
+    save: async (value, { writeId }) => { markers.add(writeId); return { status: 'committed' }; },
+    remove: async (id, { writeId }) => { markers.add(writeId); return { status: 'committed' }; },
+    confirm: async writeId => markers.has(writeId),
+    prune: async ids => { pruned.push(...ids); ids.forEach(id => markers.delete(id)); return { status: 'committed' }; },
+    ...overrides,
+  });
+  const controller = createDiscoveriesController({ sources: [source], sceneCodec, readTimeoutMs: 20, writeWaitMs: 5, reconcileAttempts: 1, ...options });
+  return { source, controller, markers, pruned };
+};
+
+test('T09b local pruning deletes only named markers through one silent atomic batch', async () => {
+  const { store, local } = setup();
+  const saved = record('a');
+  await local.save(saved, { writeId: 'keep', report: { reportId: 'report-1', sceneHash: saved.sceneHash, outcome: 'completed' } });
+  await local.remove('missing', { writeId: 'drop' });
+  let notifications = 0;
+  local.subscribe(() => notifications++);
+  const batches = [], commit = store.commit;
+  store.commit = (batch, options) => { batches.push({ batch, signal: options.signal }); return commit(batch, options); };
+  const signal = new AbortController().signal;
+  const result = await local.prune(['drop', 'absent'], { signal });
+  assert.deepEqual(result, { status: 'committed' });
+  assert.deepEqual(batches, [{ batch: { puts: [], deletes: [{ store: 'writes', key: 'drop' }, { store: 'writes', key: 'absent' }] }, signal }]);
+  assert.deepEqual([...store.stores.writes.keys()], ['keep']);
+  assert.equal(store.stores.discoveries.has('a'), true);
+  assert.equal(store.stores.reports.has('report-1'), true);
+  assert.equal(notifications, 0, 'cleanup is not another discovery change');
+});
+
+test('T09b fake delete batches are atomic and honour failure cancellation and holds', async () => {
+  const store = createFakePersistence();
+  const seed = () => { store.stores.writes.set('w', { writeId: 'w' }); store.stores.discoveries.set('a', { id: 'a' }); };
+  seed();
+  const batch = { puts: [], deletes: [{ store: 'writes', key: 'w' }, { store: 'discoveries', key: 'a' }] };
+  store.holdCommits = true;
+  const pending = store.commit(batch);
+  assert.equal(store.stores.writes.has('w'), true);
+  store.releaseCommit();
+  assert.equal((await pending).status, 'committed');
+  assert.deepEqual([store.stores.writes.size, store.stores.discoveries.size], [0, 0]);
+  seed();
+  const cancellation = new AbortController();
+  const cancelled = store.commit(batch, { signal: cancellation.signal });
+  cancellation.abort(); store.releaseCommit();
+  assert.equal((await cancelled).status, 'aborted');
+  store.failNext = 'quota';
+  const failed = store.commit(batch); store.releaseCommit();
+  assert.equal((await failed).status, 'failed');
+  assert.deepEqual([store.stores.writes.size, store.stores.discoveries.size], [1, 1]);
+  store.holdCommits = false;
+  // A bad request after a valid delete aborts the whole batch, as in production.
+  assert.equal((await store.commit({ deletes: [{ store: 'writes', key: 'w' }, { store: 'missing', key: 'a' }] })).status, 'failed');
+  assert.equal(store.stores.writes.has('w'), true);
+  assert.equal((await store.commit({ deletes: [{ store: 'writes', key: 'w' }] })).status, 'committed');
+  assert.equal(store.stores.writes.has('w'), false);
+});
+
+test('T09b saves and removals deliver definite results before marker cleanup', async () => {
+  for (const kind of ['save', 'remove']) for (const status of ['committed', 'aborted', 'failed']) {
+    let delivered = false;
+    const { controller, source, markers, pruned } = pruningSetup();
+    source[kind] = async (value, { writeId }) => { markers.add(writeId); return { status, reason: 'original' }; };
+    const original = source.prune;
+    source.prune = (ids, options) => { assert.equal(delivered, true, 'cleanup must follow the public promise continuation'); return original(ids, options); };
+    const result = await write(controller, kind).then(value => { delivered = true; assert.equal(markers.has(value.writeId), true, 'marker exists at delivery'); return value; });
+    assert.deepEqual([result.status, result.reason], [status, 'original']);
+    await pruningTurn();
+    assert.deepEqual(pruned, [result.writeId]);
+    assert.equal(markers.has(result.writeId), false);
+    assert.equal(controller.snapshot().writes[0].status, status);
+    controller.destroy();
+  }
+});
+
+test('T09b history keeps exactly the newest 100 first-delivered definite outcomes across sources', async () => {
+  const { source, controller: unused } = pruningSetup(); unused.destroy();
+  let status = 'committed';
+  const second = { ...source, id: 'other', save: async () => ({ status }) };
+  const controller = createDiscoveriesController({ sources: [source, second], sceneCodec });
+  const results = [];
+  for (let i = 0; i < 103; i++) {
+    status = ['committed', 'aborted', 'failed'][i % 3];
+    results.push(await controller.save('other', { id: `d${i}` }));
+  }
+  results.push(await controller.remove('test', 'a'));
+  await pruningTurn();
+  assert.deepEqual(controller.snapshot().writes.map(w => w.writeId), results.slice(-100).map(w => w.writeId));
+  // Re-reading an older outcome must not make it newest again.
+  await controller.reconcile(results[4].writeId);
+  results.push(await controller.save('other', { id: 'last' }));
+  await pruningTurn();
+  assert.deepEqual(controller.snapshot().writes.map(w => w.writeId), results.slice(-100).map(w => w.writeId));
+  controller.destroy();
+});
+
+test('T09b history orders by definite delivery rather than write admission', async () => {
+  const late = deferred();
+  const { controller } = pruningSetup({ save: value => value.id === 'late' ? late.promise : Promise.resolve({ status: 'committed' }) }, { writeWaitMs: 1000 });
+  const first = controller.save('test', { id: 'late' });
+  const outcomes = [];
+  for (let i = 0; i < 101; i++) outcomes.push(await controller.save('test', { id: `d${i}` }));
+  await pruningTurn();
+  late.resolve({ status: 'failed' });
+  const last = await first;
+  await pruningTurn();
+  assert.equal(controller.snapshot().writes.length, 100);
+  assert.deepEqual(new Set(controller.snapshot().writes.map(w => w.writeId)), new Set([...outcomes.slice(-99).map(w => w.writeId), last.writeId]));
+  controller.destroy();
+});
+
+for (const phase of ['pending', 'checking', 'unknown']) {
+  test(`T09b preserves every ${phase} write and marker under count and age pressure`, async t => {
+    const now = Date.now;
+    t.after(() => { Date.now = now; });
+    const started = deferred();
+    const { controller, source, markers, pruned } = pruningSetup({}, { writeWaitMs: phase === 'pending' ? 1000 : 1, readTimeoutMs: 1000, reconcileAttempts: phase === 'unknown' ? 0 : 1 });
+    t.after(() => controller.destroy());
+    controller.subscribe(() => {});
+    source.save = (value, { writeId }) => { markers.add(writeId); return new Promise(() => {}); };
+    source.confirm = () => { started.resolve(); return new Promise(() => {}); };
+    const pending = Array.from({ length: 105 }, (_, i) => controller.save('test', { id: `d${i}`, createdAt: '1900-01-01T00:00:00.000Z' }));
+    if (phase === 'checking') await started.promise;
+    if (phase === 'unknown') await Promise.all(pending);
+    await flush();
+    Date.now = () => now() + 100 * 365 * 24 * 60 * 60 * 1000;
+    await controller.refresh();
+    for (let i = 0; i < 102; i++) await controller.remove('test', `completed-${i}`);
+    await pruningTurn();
+    const history = controller.snapshot().writes;
+    assert.equal(history.filter(w => w.status === phase).length, 105, 'all unresolved writes survive history pressure');
+    assert.equal(history.filter(w => w.status === 'committed').length, 100);
+    for (const w of history.filter(w => w.status === phase)) assert.equal(markers.has(w.writeId), true, `${phase} marker retained`);
+    assert.equal(pruned.length, 102, 'only delivered definite writes are cleaned');
+    controller.destroy(); await Promise.all(pending);
+  });
+}
+
+test('T09b timeout record presence absence and elapsed time never authorise pruning', async () => {
+  const { controller, source, markers, pruned } = pruningSetup({ confirm: async () => false });
+  source.save = (value, { writeId }) => { markers.add(writeId); return new Promise(() => {}); };
+  source.get = async id => id === 'present' ? { id, record: record(id) } : null;
+  source.list = async () => ({ items: [{ id: 'present', record: record('present') }], nextCursor: null });
+  const results = await Promise.all(['present', 'absent'].map(id => controller.save('test', { id })));
+  assert.deepEqual(results.map(w => w.status), ['unknown', 'unknown']);
+  await controller.setWorkspace('plane');
+  await controller.open('test', 'present');
+  await assert.rejects(controller.open('test', 'absent'), error => error.code === 'not-found');
+  await wait(50);
+  for (const w of results) assert.equal((await controller.reconcile(w.writeId)).status, 'unknown');
+  assert.deepEqual(pruned, []);
+  assert.equal(markers.size, 2);
+  assert.equal(controller.snapshot().writes.length, 2);
+  controller.destroy();
+});
+
+test('T09b destroy retains evidence even for a late definite source outcome', async () => {
+  const late = deferred();
+  const { controller, source, markers, pruned } = pruningSetup();
+  source.save = (value, { writeId }) => { markers.add(writeId); return late.promise; };
+  const saving = controller.save('test', { id: 'a' }); await flush();
+  controller.destroy();
+  const result = await saving;
+  assert.equal(result.status, 'unknown');
+  late.resolve({ status: 'committed' });
+  await pruningTurn();
+  assert.equal(controller.snapshot().writes[0].status, 'committed');
+  await pruningTurn();
+  assert.deepEqual(pruned, []);
+  assert.equal(markers.has(result.writeId), true);
+});
+
+test('T09b an undelivered late outcome retains its marker until an explicit observation', async () => {
+  const late = deferred();
+  const { controller, source, markers, pruned } = pruningSetup({}, { reconcileAttempts: 0 });
+  source.save = (value, { writeId }) => { markers.add(writeId); return late.promise; };
+  const unknown = await controller.save('test', { id: 'a' });
+  assert.equal(unknown.status, 'unknown');
+  late.resolve({ status: 'committed' }); await pruningTurn();
+  assert.deepEqual(pruned, [], 'source settlement alone is not caller delivery');
+  assert.equal(markers.has(unknown.writeId), true);
+  assert.equal((await controller.reconcile(unknown.writeId)).status, 'committed');
+  assert.equal(markers.has(unknown.writeId), true, 'reconcile delivery precedes cleanup');
+  await pruningTurn();
+  assert.deepEqual(pruned, [unknown.writeId]);
+  controller.destroy();
+});
+
+for (const delivery of ['snapshot', 'subscription']) {
+  test(`T09b a late definite ${delivery} delivery permits cleanup`, async () => {
+    const late = deferred();
+    const { controller, source, markers, pruned } = pruningSetup({}, { reconcileAttempts: 0 });
+    source.save = (value, { writeId }) => { markers.add(writeId); return late.promise; };
+    const unknown = await controller.save('test', { id: 'a' });
+    const received = [];
+    if (delivery === 'subscription') controller.subscribe(value => { if (value.writes[0]?.status === 'committed') { assert.equal(markers.has(unknown.writeId), true); received.push(value); } });
+    late.resolve({ status: 'committed' }); await flush();
+    if (delivery === 'snapshot') received.push(controller.snapshot());
+    assert.equal(received[0].writes[0].status, 'committed');
+    await pruningTurn();
+    assert.deepEqual(pruned, [unknown.writeId]);
+    controller.destroy();
+  });
+}
+
+test('T09b concurrent reconciliation readers all finish before marker cleanup', async () => {
+  const reads = [deferred(), deferred()]; let call = 0;
+  const { controller, markers, source, pruned } = pruningSetup({ confirm: () => reads[call++].promise }, { readTimeoutMs: 1000 });
+  source.save = async (value, { writeId }) => { markers.add(writeId); return { status: 'unknown' }; };
+  const unknown = await controller.save('test', { id: 'a' });
+  const a = controller.reconcile(unknown.writeId), b = controller.reconcile(unknown.writeId);
+  reads[0].resolve(true);
+  assert.equal((await a).status, 'committed');
+  await pruningTurn();
+  assert.deepEqual(pruned, []);
+  assert.equal(markers.has(unknown.writeId), true);
+  reads[1].resolve(true);
+  assert.equal((await b).status, 'committed');
+  await pruningTurn();
+  assert.deepEqual(pruned, [unknown.writeId]);
+  controller.destroy();
+});
+
+test('T09b a timed-out marker read that ignores abort still pins evidence until it settles', async () => {
+  const read = deferred(); let signal;
+  const { controller, source, markers, pruned } = pruningSetup();
+  source.save = async (value, { writeId }) => { markers.add(writeId); return { status: 'unknown' }; };
+  source.confirm = (id, options) => { signal = options.signal; return read.promise; };
+  const unknown = await controller.save('test', { id: 'a' });
+  assert.equal((await controller.reconcile(unknown.writeId)).status, 'unknown');
+  assert.equal(signal.aborted, true);
+  source.confirm = async () => true;
+  assert.equal((await controller.reconcile(unknown.writeId)).status, 'committed');
+  await pruningTurn();
+  assert.deepEqual(pruned, [], 'timeout does not finish a source promise that ignores abort');
+  assert.equal(markers.has(unknown.writeId), true);
+  read.reject(new Error('late read failure'));
+  await pruningTurn();
+  assert.deepEqual(pruned, [unknown.writeId]);
+  controller.destroy();
+});
+
+test('T09b reconciliation delays pin evidence after another caller confirms the write', async () => {
+  let confirms = 0;
+  const { controller, source, markers, pruned } = pruningSetup({}, { readTimeoutMs: 100, writeWaitMs: 1 });
+  source.save = (value, { writeId }) => { markers.add(writeId); return new Promise(() => {}); };
+  source.confirm = async () => ++confirms > 1;
+  const saving = controller.save('test', { id: 'a' });
+  await wait(10); // the first false confirmation has entered the bounded reconcile delay
+  const id = controller.snapshot().writes[0].writeId;
+  assert.equal((await controller.reconcile(id)).status, 'committed');
+  await pruningTurn();
+  assert.deepEqual(pruned, []);
+  assert.equal(markers.has(id), true);
+  assert.equal((await saving).status, 'committed');
+  await pruningTurn();
+  assert.deepEqual(pruned, [id]);
+  controller.destroy();
+});
+
+test('T09b history eviction cannot release an active reconciliation reader', async () => {
+  const read = deferred(); let calls = 0;
+  const { controller, source, markers, pruned } = pruningSetup({}, { readTimeoutMs: 1000 });
+  source.save = async (value, { writeId }) => { markers.add(writeId); return { status: 'unknown' }; };
+  source.confirm = () => ++calls === 1 ? read.promise : Promise.resolve(true);
+  const unknown = await controller.save('test', { id: 'a' });
+  const reading = controller.reconcile(unknown.writeId);
+  await controller.reconcile(unknown.writeId);
+  await pruningTurn();
+  for (let i = 0; i < 101; i++) await controller.remove('test', `d${i}`);
+  await pruningTurn();
+  assert.equal(controller.snapshot().writes.some(w => w.writeId === unknown.writeId), false);
+  assert.equal(markers.has(unknown.writeId), true, 'history and marker lifetimes are independent');
+  read.resolve(true); await reading; await pruningTurn();
+  assert.equal(markers.has(unknown.writeId), false);
+  assert.equal(pruned.filter(id => id === unknown.writeId).length, 1);
+  controller.destroy();
+});
+
+for (const failure of ['throw', 'reject', 'timeout', 'failed', 'aborted', 'unknown', 'missing']) {
+  test(`T09b cleanup ${failure} preserves evidence and the delivered write result`, async () => {
+    const { controller, source, markers, pruned } = pruningSetup();
+    let signal;
+    source.prune = (ids, options) => {
+      pruned.push(...ids); signal = options.signal;
+      if (failure === 'throw') throw new Error('cleanup throw');
+      if (failure === 'reject') return Promise.reject(new Error('cleanup rejection'));
+      if (failure === 'timeout') return new Promise(() => {});
+      return Promise.resolve({ status: failure, reason: 'cleanup reason' });
+    };
+    if (failure === 'missing') delete source.prune;
+    const result = await controller.save('test', { id: 'a' });
+    assert.equal(result.status, 'committed');
+    await wait(40); await flush();
+    assert.equal(markers.has(result.writeId), true);
+    assert.deepEqual(controller.snapshot().writes[0], result, 'cleanup cannot rewrite the delivered outcome');
+    assert.equal(pruned.length, failure === 'missing' ? 0 : 1, 'at most one cleanup attempt, no retry loop');
+    if (failure === 'timeout') assert.equal(signal.aborted, true);
+    await controller.reconcile(result.writeId); await pruningTurn();
+    assert.equal(pruned.length, failure === 'missing' ? 0 : 1);
+    controller.destroy();
+  });
+}
+
+test('T09b a held local cleanup aborts on timeout and leaves the durable marker', async () => {
+  const { controller, store } = setup({ readTimeoutMs: 15 });
+  const result = await controller.save('local', record('a'));
+  store.holdCommits = true;
+  await wait(35);
+  assert.equal(store.held.length, 1, 'cleanup uses a persistence commit');
+  store.releaseCommit(); await flush();
+  assert.equal(store.stores.writes.has(result.writeId), true);
+  assert.deepEqual(controller.snapshot().writes[0], result);
+  controller.destroy();
+});
+
+
+test('T09b elapsed time never evicts an old delivered definite outcome', async t => {
+  const now = Date.now;
+  t.after(() => { Date.now = now; });
+  const { controller } = pruningSetup();
+  const result = await controller.save('test', { id: 'old' });
+  await pruningTurn();
+  Date.now = () => now() + 100 * 365 * 24 * 60 * 60 * 1000;
+  await controller.refresh();
+  await pruningTurn();
+  assert.deepEqual(controller.snapshot().writes, [result]);
+  controller.destroy();
+});
+
+test('T09b undelivered definite outcomes do not consume the delivered history allowance', async () => {
+  const late = deferred();
+  const { controller, source, markers, pruned } = pruningSetup({}, { reconcileAttempts: 0 });
+  source.save = (value, { writeId }) => { markers.add(writeId); return late.promise; };
+  const unknown = await controller.save('test', { id: 'late' });
+  late.resolve({ status: 'committed' }); await flush();
+  for (let i = 0; i < 102; i++) await controller.remove('test', `d${i}`);
+  await pruningTurn();
+  assert.equal(markers.has(unknown.writeId), true);
+  assert.equal(pruned.includes(unknown.writeId), false);
+  const snapshot = controller.snapshot();
+  assert.equal(snapshot.writes.length, 101, '100 delivered outcomes plus the newly observed late outcome');
+  assert.equal(snapshot.writes.some(w => w.writeId === unknown.writeId), true);
+  await pruningTurn();
+  assert.equal(controller.snapshot().writes.length, 100);
+  assert.equal(controller.snapshot().writes.some(w => w.writeId === unknown.writeId), true, 'the newly delivered late outcome is now newest');
+  controller.destroy();
+});
+
+test('T09b history retention is independent of failed or unavailable cleanup', async () => {
+  for (const prune of [undefined, async () => { throw new Error('cleanup failed'); }]) {
+    const { controller, markers } = pruningSetup({ prune });
+    const results = [];
+    for (let i = 0; i < 102; i++) results.push(await controller.save('test', { id: `d${i}` }));
+    await pruningTurn();
+    assert.deepEqual(controller.snapshot().writes.map(w => w.writeId), results.slice(-100).map(w => w.writeId));
+    assert.equal(markers.size, 102, 'history eviction cannot discard failed cleanup evidence');
+    controller.destroy();
+  }
+});
+
+test('T09b teardown during a pruning notification starts no further cleanup', async () => {
+  const { controller, markers, pruned } = pruningSetup();
+  for (let i = 0; i < 100; i++) await controller.save('test', { id: `d${i}` });
+  await pruningTurn();
+  controller.subscribe(value => { if (value.writes.length === 100) controller.destroy(); });
+  const last = await controller.save('test', { id: 'last' });
+  await pruningTurn();
+  assert.equal(markers.has(last.writeId), true, 'a reentrant teardown stops the scheduled cleanup');
+  assert.equal(pruned.length, 100);
+});
