@@ -1,7 +1,7 @@
 // Undo history and camera history for one workspace (spec §6, user decision 2026-10-20).
 // Undo covers parameters, tracing, slices, appearance and whole-scene restorations;
 // camera moves go to a separate back/forward history. The current camera-history entry
-// always equals the committed camera.
+// always equals the committed camera under cameraEqual.
 import { reduceCommand, changedDomains, withDomains, WHOLE_SCENE } from './commands.js';
 import { SceneError, canonicalJson } from './scene.js';
 
@@ -9,7 +9,12 @@ const rethrowAsync = error => queueMicrotask(() => { throw error; });
 
 // Display listeners cannot veto state changes. An optional error hook receives
 // (error, transition); by default errors are rethrown after the caller returns.
-export function createHistory({ initialScene, codec, undoLimit = 100, cameraLimit = 100, onListenerError = rethrowAsync }) {
+// cameraEqual compares validated cameras for pose history only. Space supplies
+// its equalCameras; the default preserves Plane's canonical-JSON comparison.
+export function createHistory({
+  initialScene, codec, undoLimit = 100, cameraLimit = 100, onListenerError = rethrowAsync,
+  cameraEqual = (a, b) => canonicalJson(a) === canonicalJson(b),
+}) {
   let scene = codec.validate(initialScene);
   let revision = 0, gestureCounter = 0, gesture = null;
   const undoStack = [], redoStack = [], listeners = new Set();
@@ -40,7 +45,7 @@ export function createHistory({ initialScene, codec, undoLimit = 100, cameraLimi
   }
 
   function recordCamera(camera) {
-    if (canonicalJson(poses[poseIndex]) === canonicalJson(camera)) return;
+    if (cameraEqual(poses[poseIndex], camera)) return;
     poses.splice(poseIndex + 1);
     poses.push(camera);
     if (poses.length > cameraLimit) poses.shift();

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createFakeClock } from '../support/fake-clock.mjs';
 import { createFakeBackend } from '../support/fake-backend.mjs';
 import { createScheduler } from '../../src/shared/scheduler.js';
-import { createAdmission, createPipelineSet, createPickRequest, sampleJitter } from '../../src/space/render/backend.js';
+import { BackendError, createAdmission, createPipelineSet, createPickRequest, sampleJitter } from '../../src/space/render/backend.js';
 import { packStatus, packLightingStatus } from '../../src/space/render/status.js';
 import { createSpaceScene, sceneCodec } from '../../src/space/scene-adapter.js';
 import { createSpaceRequest } from '../../src/space/render-adapter.js';
@@ -118,6 +118,212 @@ async function rig({ limits = {}, probe = 0x41544c53, statusWords, lightingWords
 }
 const batches = (h, jobId) => h.submissions.filter(x => x.method === 'submitBatch' && x.desc.identity.jobId === jobId).map(x => x.desc);
 const auxiliaryResult = async (h, promise) => { let result; promise.then(value => { result = value; }); await h.until(() => result !== undefined); return result; };
+
+const inventoryEntry = (h, handle) => h.fake.diagnostics().inventory.find(entry => entry.id === handle.id && entry.epoch === handle.epoch);
+const pixelsIn = r => r.quality.internalSize.width * r.quality.internalSize.height;
+
+test('releaseObsolete preserves the live viewport cache after a different export fails', async () => {
+  const h = await rig(), a = request(directScene(), generation(), 'settled');
+  let live = a.generation;
+  await h.finish(h.renderer.render(a, { currentGeneration: () => live }));
+  const exporting = createSpaceRequest({ scene: scene({ model: 'box' }), purpose: 'export', width: 32, height: 16,
+    profile: 'settled', generation: generation(9), viewId: 'space', versions });
+  h.fake.testAdapter.failNextAllocation();
+  assert.equal((await h.finish(h.renderer.render(exporting))).outcome, 'failed');
+  const before = h.fake.diagnostics(), released = h.fake.log.filter(entry => entry.method === 'release').length;
+  assert.deepEqual(h.renderer.releaseObsolete({ request: exporting }), { freed: 0, retiring: 0 });
+  live = { ...live, viewRevision: 2, appearanceRevision: 2 };
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 }, 'an unsubmitted appearance edit preserves geometry');
+  assert.deepEqual(h.fake.diagnostics(), before);
+  assert.equal(h.fake.log.filter(entry => entry.method === 'release').length, released);
+  const b = request(changed(a.sceneSnapshot, { appearance: { ...a.sceneSnapshot.appearance, palette: 'rose' } }), live, 'settled');
+  assert.equal((await h.finish(h.renderer.render(b, { currentGeneration: () => live }))).outcome, 'completed');
+  assert.equal(batches(h, b.jobId).filter(batch => ['trace', 'normals'].includes(batch.pass)).length, 0);
+  assert.equal(h.publications.at(-1).geometryRequestId, a.requestId);
+  h.renderer.destroy(); h.fake.destroy();
+});
+
+test('releaseObsolete keeps the cache when the live currentGeneration callback throws', async t => {
+  const h = await rig(); t.after(() => { h.renderer.destroy(); h.fake.destroy(); });
+  const a = request(directScene(), generation(), 'settled'); let throwing = false;
+  const currentGeneration = () => { if (throwing) throw new Error('live generation temporarily unavailable'); return a.generation; };
+  assert.equal((await h.finish(h.renderer.render(a, { currentGeneration }))).outcome, 'completed');
+  const before = h.fake.diagnostics(), releases = h.fake.log.filter(value => value.method === 'release').length;
+  throwing = true;
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+  assert.deepEqual(h.fake.diagnostics(), before);
+  assert.equal(h.fake.log.filter(value => value.method === 'release').length, releases);
+  throwing = false;
+  const b = request(a.sceneSnapshot, a.generation, 'settled');
+  assert.equal((await h.finish(h.renderer.render(b, { currentGeneration }))).outcome, 'completed');
+  assert.ok(!batches(h, b.jobId).some(batch => ['trace', 'normals'].includes(batch.pass)));
+  assert.equal(h.publications.at(-1).geometryRequestId, a.requestId);
+});
+
+test('releaseObsolete follows unsubmitted live geometry edits and keeps the published pick handles', async () => {
+  const h = await rig({ depths: [7] }), a = request(directScene(), generation(), 'settled');
+  let live = a.generation;
+  await h.finish(h.renderer.render(a, { currentGeneration: () => live }));
+  const { depth, status, normal, display } = h.targets.at(-1).handles;
+  live = generation(3); // A -> B -> A can have the same key and a new revision.
+  const exporting = createSpaceRequest({ scene: a.sceneSnapshot, purpose: 'export', width: a.output.width, height: a.output.height,
+    profile: 'settled', generation: a.generation, viewId: 'space', versions });
+  h.fake.testAdapter.failNextAllocation();
+  assert.equal((await h.finish(h.renderer.render(exporting))).outcome, 'failed');
+  const before = h.fake.diagnostics().tracked;
+  const receipt = h.renderer.releaseObsolete({ request: exporting });
+  assert.deepEqual(receipt, { freed: pixelsIn(a) * 8, retiring: 0 });
+  assert.ok(Object.isFrozen(receipt));
+  assert.equal(h.fake.diagnostics().tracked, before - receipt.freed);
+  assert.equal(inventoryEntry(h, normal), undefined);
+  for (const handle of [depth, status, display]) assert.equal(inventoryEntry(h, handle).state, 'live');
+  const pick = createPickRequest({ identity: identity(a), pixel: [0, 0], dimensions: a.quality.internalSize, geometryRevision: 1, sampleIndex: 0 });
+  assert.equal((await auxiliaryResult(h, h.renderer.pick(pick))).depth, 7);
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+  assert.equal(h.fake.log.filter(entry => entry.method === 'release' && entry.args[0] === normal).length, 1);
+  h.renderer.destroy(); h.fake.destroy();
+});
+
+test('releaseObsolete checks the live request key and sample seed as well as its geometry revision', async () => {
+  for (const change of ['key', 'seed', 'revision', 'epoch']) {
+    const h = await rig(), a = request(directScene(), generation(), 'settled');
+    let live = a.generation;
+    await h.finish(h.renderer.render(a, { currentGeneration: () => live }));
+    if (change === 'epoch') live = { ...live, deviceEpoch: 2 };
+    else {
+      const nextScene = change === 'key' ? scene({ model: 'box' }) : change === 'seed'
+        ? changed(a.sceneSnapshot, { sampling: { ...a.sceneSnapshot.sampling, seed: a.sceneSnapshot.sampling.seed + 1 } }) : a.sceneSnapshot;
+      const next = request(nextScene, change === 'revision' ? generation(2) : a.generation, 'settled');
+      h.fake.testAdapter.failNextAllocation();
+      assert.equal((await h.finish(h.renderer.render(next))).outcome, 'failed');
+    }
+    assert.deepEqual(h.renderer.releaseObsolete(), { freed: pixelsIn(a) * 8, retiring: 0 }, change);
+    h.renderer.destroy(); h.fake.destroy();
+  }
+});
+
+test('releaseObsolete drops only cache ownership while an active job still owns its geometry', async () => {
+  const h = await rig(), r = request(directScene(), generation(), 'settled');
+  let live = r.generation;
+  const job = h.renderer.render(r, { currentGeneration: () => live });
+  await h.until(() => batches(h, r.jobId).some(batch => batch.pass === 'shade'));
+  const handles = ['depth', 'status', 'normal'].map(name => h.targets.at(-1).handles[name]);
+  live = generation(2);
+  const before = h.fake.diagnostics(), scheduled = h.scheduler.snapshot();
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+  assert.deepEqual(h.fake.diagnostics(), before);
+  assert.deepEqual(h.scheduler.snapshot(), scheduled, 'cache release never cancels or consumes a lease');
+  for (const handle of handles) assert.equal(inventoryEntry(h, handle).state, 'live');
+  h.renderer.cancel(r.jobId);
+  assert.equal((await h.finish(job)).outcome, 'cancelled');
+  for (const handle of handles) assert.equal(inventoryEntry(h, handle), undefined, 'no cache owner survives the drop');
+  h.renderer.destroy(); h.fake.destroy();
+});
+
+test('releaseObsolete reports retiring cache bytes until the outstanding ticket drains', async () => {
+  const h = await rig(), r = request(directScene(), generation(), 'settled');
+  let live = r.generation;
+  const job = h.renderer.render(r, { currentGeneration: () => live });
+  await h.until(() => batches(h, r.jobId).some(batch => batch.pass === 'shade'));
+  h.scheduler.pause('space'); h.clock.advance(5000); await flush();
+  assert.equal((await job.done).reason, 'watchdog');
+  const handles = ['depth', 'status', 'normal'].map(name => h.targets.at(-1).handles[name]);
+  live = generation(2);
+  const before = h.fake.diagnostics(), outstanding = h.scheduler.snapshot().outstanding;
+  assert.ok(before.retiring > 0, 'unrelated ticket-owned targets already retire');
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: pixelsIn(r) * 16 });
+  assert.equal(h.fake.diagnostics().tracked, before.tracked);
+  assert.equal(h.fake.diagnostics().retiring, before.retiring + pixelsIn(r) * 16);
+  assert.equal(h.scheduler.snapshot().outstanding, outstanding);
+  for (const handle of handles) assert.equal(inventoryEntry(h, handle).state, 'retiring');
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+  let drained = false;
+  const cancellation = h.renderer.cancel(r.jobId); cancellation.done.then(() => { drained = true; });
+  await flush(); assert.equal(drained, false);
+  await h.until(() => drained);
+  assert.equal((await cancellation.done).submitted, 'drained');
+  for (const handle of handles) assert.equal(inventoryEntry(h, handle), undefined);
+  assert.equal((await job.done).outcome, 'budget-exceeded');
+  h.renderer.destroy(); h.fake.destroy();
+});
+
+test('releaseObsolete separates freed bytes from a cache readback still held by mapping', async () => {
+  const h = await rig(), r = request(directScene(), generation(), 'settled');
+  let live = r.generation;
+  const job = h.renderer.render(r, { currentGeneration: () => live });
+  await h.until(() => h.tickets.some(item => item.pending && item.method === 'readback' && item.desc.fields[0] === 'status'));
+  const readback = h.tickets.find(item => item.pending && item.method === 'readback' && item.desc.fields[0] === 'status');
+  h.scheduler.pause('space'); h.clock.advance(5000); await flush();
+  assert.equal((await job.done).reason, 'watchdog');
+  live = generation(2);
+  h.fake.complete(readback.ticket, { elapsedMs: 8 }); // Fence done; mapping copy-out is still queued.
+  const status = readback.desc.source, before = h.fake.diagnostics().tracked;
+  assert.equal(inventoryEntry(h, status).tickets, 0);
+  assert.equal(inventoryEntry(h, status).mappings, 1);
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: pixelsIn(r) * 12, retiring: pixelsIn(r) * 4 });
+  assert.equal(h.fake.diagnostics().tracked, before - pixelsIn(r) * 12);
+  assert.equal(inventoryEntry(h, status).state, 'retiring');
+  assert.equal(h.scheduler.snapshot().outstanding, 1, 'one region retains one lease through copy-out');
+  await flush();
+  assert.equal(inventoryEntry(h, status), undefined);
+  assert.equal(h.fake.diagnostics().tracked, before - pixelsIn(r) * 16);
+  assert.equal(h.scheduler.snapshot().outstanding, 0);
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+  h.renderer.destroy(); h.fake.destroy();
+});
+
+test('releaseObsolete is harmless before rendering and after loss or destruction', async () => {
+  const h = await rig();
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+  await h.finish(h.renderer.render(request()));
+  h.fake.lose({ reason: 'cache epoch lost' });
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+  assert.equal(h.fake.diagnostics().tracked, 0);
+  h.renderer.destroy();
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
+});
+
+test('job results preserve allocation error codes from configuration and admitted operations', async () => {
+  for (const phase of ['configuration', 'trace', 'readback']) {
+    const h = await rig();
+    if (phase === 'configuration') h.fake.testAdapter.failNextAllocation();
+    else h.hooks.before = (method, desc) => {
+      if (phase === 'trace' ? desc.pass === 'trace' : method === 'readback' && desc.fields[0] === 'status') {
+        h.fake.testAdapter.failNextAllocation(); h.hooks.before = undefined;
+      }
+    };
+    const result = await h.finish(h.renderer.render(request(directScene(), generation(), 'settled')));
+    assert.equal(result.outcome, 'failed');
+    assert.equal(result.errorCode, 'allocation-failed', phase);
+    assert.equal(result.report.outcome, 'failed');
+    h.renderer.destroy(); h.fake.destroy();
+  }
+});
+
+test('job results preserve preparation and copy-out error codes without parsing reason text', async () => {
+  const bad = await rig({ probe: 0 });
+  const job = bad.renderer.render(request());
+  await flush(); bad.fake.finishPrepare();
+  const preparation = await bad.finish(job);
+  assert.equal(preparation.outcome, 'failed'); assert.equal(preparation.errorCode, 'preparation-failed');
+  bad.renderer.destroy(); bad.fake.destroy();
+  const h = await rig();
+  h.hooks.after = (method, desc, ticket) => method === 'readback' && desc.fields[0] === 'status'
+    ? { ...ticket, result: ticket.result.then(() => { throw new BackendError('invalid-descriptor', 'opaque copy-out failure'); }) } : undefined;
+  const result = await h.finish(h.renderer.render(request()));
+  assert.equal(result.outcome, 'failed'); assert.equal(result.errorCode, 'invalid-descriptor');
+  assert.equal(result.reason, 'opaque copy-out failure');
+  h.renderer.destroy(); h.fake.destroy();
+});
+
+test('job results do not invent error codes for untyped failures or successful jobs', async () => {
+  const bad = await rig({ rejectConfiguration: true });
+  assert.equal((await bad.finish(bad.renderer.render(request()))).errorCode, undefined);
+  bad.renderer.destroy(); bad.fake.destroy();
+  const h = await rig();
+  assert.equal((await h.finish(h.renderer.render(request()))).errorCode, undefined);
+  h.renderer.destroy(); h.fake.destroy();
+});
 
 test('a draft replaces the published image only when complete and the retained image is marked pending meanwhile', async () => {
   const h = await rig(); const a = request(); await h.finish(h.renderer.render(a));
