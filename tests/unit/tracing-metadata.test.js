@@ -29,7 +29,7 @@ const loadFromDisk = async id => readFileSync(shaderPath(id), 'utf8');
 const DEFAULT_LIMITS = { maxStorageBuffersPerShaderStage: 8, maxStorageTexturesPerShaderStage: 4, maxUniformBufferBindingSize: 65536, maxComputeInvocationsPerWorkgroup: 256 };
 
 test('the tracing metadata hashes equal the shader sources on disk and the descriptors validate against the B00 schema', async () => {
-  assert.equal(TRACING_VERSION, 'surface-v1/space-trace-v1');
+  assert.equal(TRACING_VERSION, 'surface-v1/space-trace-v2');
   const descriptors = [...tracePipelineDescriptors(), ...validationPipelineDescriptors()];
   const sources = new Set(descriptors.flatMap(d => d.sourceIds).filter(id => id !== 'fields'));
   assert.deepEqual(Object.keys(TRACING_HASHES.sources).sort(), [...sources].sort());

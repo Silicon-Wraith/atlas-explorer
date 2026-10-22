@@ -148,10 +148,12 @@ fn field_sample(p: vec3<f32>) -> FieldSample {
 // No rebasing: the line is the original expression's, and dd is used as represented (never assumed 1).
 // The test discriminant dd·R'² − |high × d|² has relative rounding a few ulp of R'²·dd, i.e. an equivalent
 // radius error of a few ulp of R', far below m; near tangency its square root can be off by
-// √(6·2^-24)·R' ≈ 6e-4·R', which the inflation's chord widening (>= m/4 >= 2^-10·R + 6e-4·m) covers.
+// √(6u)·R' ≈ 6e-4·R' (u = 2^-24), which the inflation's chord widening covers: with m >= R/256, R' = R + m <= 257·m,
+// so m/4 >= R'/1028 > √(6u)·R' (B10-F6).
 // The roots are padded by m (in t, |d| ≈ 1) for the rounding of −high·d / dd and of the division.
 // Ranges: |high_i| <= 2^62 and |d_i| <= 2, so each cross component is below 2^64 and dot(·, ·) below 3·2^126;
-// R' <= 16 + 2^-17·(3·2^62 + 16) < 2^46, so dd·R'² < 2^93.
+// R' = R + m with R <= 16, the low parts of a B05 transport pair below 2^38 each and 2^-17·(|high|_1 + R) < 3·2^45 + 1,
+// so conservatively R' < 2^47 and dd·R'² < 2^95 (B10-F6).
 fn enclosing_sphere(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, radius: f32) -> Interval {
   if (!finite_f32(radius) || !(radius > 0.0) || radius > 16.0) { return Interval(2u, 0.0, 0.0); }
   let extent = abs(high.x) + abs(high.y) + abs(high.z);
@@ -161,7 +163,7 @@ fn enclosing_sphere(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, radius: f32) 
   let perpendicular = cross(high, d);
   let disc = dd * (r * r) - dot(perpendicular, perpendicular);
   if (disc < 0.0) { return Interval(1u, 0.0, 0.0); }
-  // guard: disc >= 0 (checked above) and below 2^93
+  // guard: disc >= 0 (checked above) and below 2^95
   let half_chord = sqrt(disc) / dd;
   // guard: dd >= 1 − 4e-6 (admitted)
   let mid = -dot(high, d) / dd;

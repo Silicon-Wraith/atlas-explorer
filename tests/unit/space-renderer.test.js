@@ -399,11 +399,51 @@ test('a report counts terminations and lighting failures from the status words a
   const r = request(directScene(), generation(), 'settled', { width: 8, height: 1 });
   const { report } = await h.finish(h.renderer.render(r));
   assert.deepEqual(report.rayTermination, { hit: 1, miss: 1, unresolved: { pointBudget: 1, estimateUnavailable: 1, rayStepBudget: 1, stagnation: { rayParameter: 1, fieldCoordinate: 1 } }, numericalFailure: 1 });
-  assert.deepEqual(report.lightingFailures, { shadow: 4, ao: 4, both: 2 }); assert.equal(report.unavailableNormals, 4);
+  // B11b measurement fix: an unavailable normal counts only where the same sample hit (pixel 0 of 0, 2, 4, 6).
+  assert.deepEqual(report.lightingFailures, { shadow: 4, ao: 4, both: 2 }); assert.equal(report.unavailableNormals, 1);
   assert.equal(report.gpuTiming.completionMethod, 'queue-completion'); assert.ok(report.gpuTiming.queueElapsedMs > 0);
   assert.equal(report.timings.gpu, 'unavailable'); assert.equal(report.outcome, 'completed');
   assert.equal(report.estimator.category, 'exact-distance'); assert.equal(report.estimator.validationRecordId, null);
   assert.deepEqual(report.samples, { target: 1, completed: 1 }); h.renderer.destroy();
+});
+
+test('a report carries per-sample outcome metrics and pixelwise unions from the same full-light samples', async () => {
+  const HIT = packStatus({ status: 0, reason: 0, subreason: 0, steps: 2 }), MISS = packStatus({ status: 1, reason: 0, subreason: 0, steps: 2 });
+  const AO = packLightingStatus({ shadow: null, ao: { status: 2, reason: 1, subreason: 0 } }), SHADOW = packLightingStatus({ shadow: { status: 2, reason: 3, subreason: 0 }, ao: null });
+  // Ordinal 0 is the direct sample (its own accumulation identity); ordinals 1 and 2 are full-light samples 0 and 1.
+  const frames = [
+    { status: [HIT, HIT, HIT, HIT], normal: [false, false, false, false], lighting: [0, 0, 0, 0] },
+    { status: [HIT, MISS, HIT, HIT], normal: [true, false, true, false], lighting: [0, 0, 0, 0] },
+    { status: [MISS, MISS, HIT, HIT], normal: [false, false, true, true], lighting: [0, 0, AO, SHADOW] },
+  ];
+  const h = await rig();
+  let ordinal = 0;
+  const normalBytes = flags => { const d = new Uint16Array(flags.length * 4); flags.forEach((f, i) => { d[4 * i + 3] = f ? 0x3c00 : 0; }); return new Uint8Array(d.buffer); };
+  h.hooks.before = (method, desc) => {
+    if (method === 'present') ordinal++;
+    if (method !== 'readback' || !desc.identity?.jobId) return;
+    const frame = frames[ordinal], field = desc.fields[0];
+    if (field === 'status') h.fake.stage(desc.source, words(frame.status));
+    if (field === 'normal') h.fake.stage(desc.source, normalBytes(frame.normal));
+    if (field === 'lightingStatus') h.fake.stage(desc.source, words(frame.lighting));
+  };
+  const s = scene(), r = request(changed(s, { sampling: { ...s.sampling, targetSamples: 2 } }), generation(), 'settled', { width: 4, height: 1 });
+  const { report } = await h.finish(h.renderer.render(r));
+  assert.equal(report.outcome, 'completed');
+  const masks = report.outcomeMasks;
+  assert.ok(masks, 'the report retains the outcome masks');
+  assert.equal(masks.accumulationKey, h.publications.at(-1).accumulationKey, 'the masks belong to the published accumulation identity');
+  assert.notEqual(masks.accumulationKey, h.publications[0].accumulationKey, 'the direct sample is a different identity');
+  assert.deepEqual(masks.samples.map(x => [x.sample, x.hits, x.unavailableNormals, x.lightingUnresolved]), [[0, 3, 1, 0], [1, 2, 0, 2]]);
+  assert.deepEqual(masks.union, { samples: 2, pixels: 4, hits: 3, nonMiss: 3, primaryUnresolved: 0, numericalFailures: 0, unavailableNormals: 1, lightingUnresolved: 2, shadowUnresolved: 1, aoUnresolved: 1, lightingNumericalFailures: 0 });
+  // The legacy last-sample counts use the same joint hit/normal mask.
+  assert.equal(report.unavailableNormals, 0); assert.deepEqual(report.lightingFailures, { shadow: 1, ao: 1, both: 0 });
+  // A later request starts its own masks: nothing of this job's samples enters it.
+  h.hooks.before = undefined;
+  const again = request(changed(s, { sampling: { ...s.sampling, targetSamples: 1 }, appearance: { ...s.appearance, lightingQuality: 'direct' } }), generation(2), 'settled', { width: 4, height: 1 });
+  const second = (await h.finish(h.renderer.render(again))).report.outcomeMasks;
+  assert.equal(second.samples.length, 1); assert.equal(second.union.samples, 1);
+  h.renderer.destroy();
 });
 
 test('the first settled direct-light image and full-quality completion are separate milestones', async () => {

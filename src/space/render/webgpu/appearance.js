@@ -16,8 +16,8 @@ import { TRACE_FIELD_IDS, TRACE_UNIFORM_LAYOUT, traceLayout, tracePipelineDescri
 import { APPEARANCE_HASHES } from './appearance-hashes.js';
 
 export { APPEARANCE_HASHES };
-export const APPEARANCE_VERSION = 'space-appearance-v1';
-export const PRODUCT_PIPELINE_SET_ID = 'space-product-v1';
+export const APPEARANCE_VERSION = 'space-appearance-v2'; // rev 5.0 (B11b): lighting-unresolved tint; space-appearance-v1 was B11's
+export const PRODUCT_PIPELINE_SET_ID = 'space-product-v2';
 export const DIAGNOSTIC_MODES = Object.freeze(VIEW_MODES.filter(mode => mode !== 'shaded'));
 export const VIEW_MODE_CODES = Object.freeze(Object.fromEntries(VIEW_MODES.map((mode, code) => [mode, code])));
 // The labels a view-mode control shows; step count is computational cost, never estimator error (spec §8.2).
@@ -28,6 +28,10 @@ export const ACCUMULATION_FLAGS = Object.freeze({ primaryNumericalFailure: 1, pr
   shadowUnresolved: 8, shadowNumericalFailure: 16, aoUnresolved: 32, aoNumericalFailure: 64 });
 // Display-space bytes for the termination view (unresolved and numerical failure use LEGEND).
 export const TERMINATION_COLOURS = deepFreeze({ hit: [200, 200, 200], miss: [24, 28, 40] });
+// Rev 5.0 (B11b, user decision 2026-10-22): a lighting-only unresolved outcome (shadow or AO) keeps its shaded mean and
+// is marked with this faint desaturated tint, mixed in display space (display.wgsl LIGHTING_TINT, _WEIGHT): never the
+// primary-failure magenta. Its reasons and counts stay in lightingStatus, accumulationFlags and the report.
+export const LIGHTING_TINT = deepFreeze({ colour: [0.8, 0.66, 0.36], weight: 0.2 });
 const refuse = message => { throw new RangeError(message); };
 
 // ---- descriptors -------------------------------------------------------------------------------------------
@@ -146,7 +150,7 @@ export function sampleFlags({ statusWord, normalAvailable, lightingWord }) {
 export function displayLegend(flags, viewMode) {
   const F = ACCUMULATION_FLAGS;
   if (flags & (F.primaryNumericalFailure | F.shadowNumericalFailure | F.aoNumericalFailure)) return 'numericalFailure';
-  if (flags & (F.primaryUnresolved | F.shadowUnresolved | F.aoUnresolved)) return 'unresolved';
+  if (flags & F.primaryUnresolved) return 'unresolved';
   if (flags & F.unavailableNormal && (viewMode === VIEW_MODE_CODES.shaded || viewMode === VIEW_MODE_CODES.normals)) return 'unavailableNormal';
   return null;
 }
@@ -159,7 +163,8 @@ export function expectedDisplay({ sum, flags, lightingStage, viewMode }) {
   const legend = displayLegend(flags, viewMode);
   if (legend) return legendBytes(LEGEND[legend]);
   if (!(sum[3] >= 1) || !sum.slice(0, 3).every(Number.isFinite)) return legendBytes(LEGEND.unresolved);
-  const mean = sum.slice(0, 3).map(v => v / sum[3]);
-  const display = lightingStage === LIGHTING_STAGE_CODES.diagnostic ? mean.map(v => Math.min(1, Math.max(0, v))) : mean.map(srgbEncode);
+  const mean = sum.slice(0, 3).map(v => v / sum[3]), F = ACCUMULATION_FLAGS;
+  let display = lightingStage === LIGHTING_STAGE_CODES.diagnostic ? mean.map(v => Math.min(1, Math.max(0, v))) : mean.map(srgbEncode);
+  if (flags & (F.shadowUnresolved | F.aoUnresolved)) display = display.map((v, k) => (1 - LIGHTING_TINT.weight) * v + LIGHTING_TINT.weight * LIGHTING_TINT.colour[k]);
   return [...display.map(v => Math.round(v * 255)), 255];
 }

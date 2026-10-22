@@ -11,7 +11,8 @@
 // separately reported portability experiment, never gated); B06 registers `recovery`; B08 registers
 // `numerics` (the field kernels against B04's frozen matrix); B10 registers `rendering` (tracing, normals and
 // picking against B04's ray strata and anchors) and B11 adds its shading, accumulation, display and product-set
-// checks to that group; B14 registers `shell` (the Space workspace in the application: `space-interaction`). The spike document is written only after the run passed, its report was
+// checks to that group; B11b adds the six-scene visual acceptance to it (and a diagnostic `visual` group that runs it alone, never
+// gated); B14 registers `shell` (the Space workspace in the application: `space-interaction`). The spike document is written only after the run passed, its report was
 // persisted and every page, context and browser was drained and closed.
 import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
@@ -24,7 +25,7 @@ import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'shell']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
@@ -1432,6 +1433,32 @@ async function renderingSetupInPage({ fixtures }) {
     product, validation, preparationMs, events, implementationHashes: passes.tracingImplementationHashes(), tracingVersion: passes.TRACING_VERSION, bindings: passes.TRACING_BINDINGS };
 }
 
+// B11b one-sided stencil probes: fixture-place puts every pixel's hit at parameter t, then the product normals_band
+// of the family runs with a test-only normals profile (its ε) and the normals are read back.
+async function stencilProbeInPage(spec) {
+  const s = globalThis.__b10, { backend, passes } = s, jobId = `b11b-stencil-${spec.label}`, size = spec.size, region = { x: 0, y: 0, ...size };
+  if (!globalThis.__b11bPlace) {
+    const { createPipelineSet } = await import('/src/space/render/backend.js');
+    const b = (slot, type, access) => ({ slot, type, access });
+    globalThis.__b11bPlace = await backend.prepare({ epoch: backend.currentEpoch(), pipelineSet: createPipelineSet({ id: 'b11b-place', descriptors: [{ pipelineId: 'fixture-place', kind: 'compute', sourceIds: ['fixture-place'], entryPoint: 'place', constants: {},
+      bindings: [b('u', 'uniform-buffer', 'read'), b('depth', 'storage-texture', 'write'), b('status', 'storage-texture', 'write')],
+      uniformLayout: { byteLength: 32, fields: [{ name: 'origin', type: 'vec2<u32>', offset: 0 }, { name: 'size', type: 'vec2<u32>', offset: 8 }, { name: 't', type: 'f32', offset: 16 }] } }] }) });
+  }
+  const targets = await s.targetsFor(size), h = targets.handles, menger = spec.modelId === 'menger' ? { menger_boxes: s.boxes[spec.effective.depth] } : {};
+  const zero = { raySteps: 0, iterations: 0, normalFieldSamples: 0, shadowRays: 0, shadowSteps: 0, aoSamples: 0 }, out = [];
+  for (const t of spec.depths) {
+    const placed = await backend.submitBatch({ identity: s.identity(jobId), pipelineId: 'fixture-place', pass: 'probe', region, sample: { sequence: 'atlas-aa-v1', seed: 0, index: 0 },
+      bounds: { pixels: size.width * size.height, ...zero }, inputs: {}, outputs: { depth: h.depth, status: h.status }, uniforms: { origin: [0, 0], size: [size.width, size.height], t } }, s.lease(jobId)).done;
+    if (placed.outcome !== 'completed') throw new Error(`place: ${placed.outcome} ${placed.reason}`);
+    const done = await backend.submitBatch({ identity: s.identity(jobId), pipelineId: `normals_band:${spec.modelId}`, pass: 'normals', region, sample: { sequence: 'atlas-aa-v1', seed: 0, index: 0 },
+      bounds: passes.traceBounds(region, spec.profile, 'normals'), inputs: { depth: h.depth, status: h.status, ...menger }, outputs: { normal: h.normal },
+      uniforms: passes.normalsUniforms({ modelId: spec.modelId, camera: spec.camera, effective: spec.effective, region, internalSize: size, sampling: { seed: 0, sampleIndex: 0 }, profile: spec.profile }) }, s.lease(jobId)).done;
+    if (done.outcome !== 'completed') throw new Error(`normals: ${done.outcome} ${done.reason}`);
+    out.push({ t, normal: s.base64(await s.read(h.normal, region, 'normal', jobId)), depth: s.base64(await s.read(h.depth, region, 'depth', jobId)) });
+  }
+  return out;
+}
+
 // trace_band over `region` in bands of ≤ 32768 pixels (one lease each), then optionally normals_band
 // with its own profile; reads depth and status before and after normals, and the normals.
 async function traceFrameInPage(spec) {
@@ -1636,6 +1663,19 @@ fn poison(@builtin(global_invocation_id) gid: vec3<u32>) {
   textureStore(acc0, p, vec4<f32>(1.0e30, -7.0, 3.0e38, 1.0e6));
   textureStore(acc1, p, vec4<f32>(-1.0e30, 9.0, 1.0e-30, 5.0));
   textureStore(flags_out, p, vec4<u32>(0xffffffffu, 0u, 0u, 1u));
+}`,
+  // B11b: every pixel an approximate hit at the uniform ray parameter t, so normals_band evaluates its stencil at
+  // chosen positions (the one-sided fallback probes).
+  'fixture-place': `struct U { origin: vec2<u32>, size: vec2<u32>, t: f32 };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var depth_out: texture_storage_2d<r32float, write>;
+@group(0) @binding(2) var status_out: texture_storage_2d<r32uint, write>;
+@compute @workgroup_size(8, 8, 1)
+fn place(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = vec2<i32>(u.origin + gid.xy);
+  textureStore(depth_out, p, vec4<f32>(u.t, 0.0, 0.0, 1.0));
+  textureStore(status_out, p, vec4<u32>(0u, 0u, 0u, 1u));
 }`,
   'fixture-capture': `struct U { origin: vec2<u32>, size: vec2<u32>, base: u32 };
 @group(0) @binding(0) var<uniform> u: U;
@@ -1849,7 +1889,295 @@ async function passesInPage(spec) {
   } finally { for (const handle of Object.values(h).flat()) backend.release(handle); }
 }
 
+// ---- B11b visual acceptance (plan rev 5.0 B11b; tests/support/visual-acceptance.mjs) -------------------------
+// One product settled job of a frozen scene and view through the B09 renderer on the shared backend. Each completed
+// status, normal and lightingStatus readback of the renderer is copied, per ordinal, into this page's own bit masks
+// (spec.bits, the VA_BITS layout); nothing is taken from the renderer's outcome masks, which are returned separately
+// in its report for comparison. Returned: the per-ordinal masks, a SHA-256 of each ordinal's status words (identical
+// rays across views), the final presented display, and the final accumulation and flags.
+async function visualJobInPage(spec) {
+  const s = globalThis.__b10, a = globalThis.__b11, { backend } = s;
+  const { createSpaceRenderer } = await import('/src/space/render/renderer.js');
+  const { createSpaceScene, sceneCodec } = await import('/src/space/scene-adapter.js');
+  const { createSpaceRequest } = await import('/src/space/render-adapter.js');
+  const { TARGET_LAYOUT_V1 } = await import('/src/space/render/backend.js');
+  const appearance = await import('/src/space/render/webgpu/appearance.js');
+  const { KERNEL_VERSION } = await import('/src/space/render/webgpu/kernels.js');
+  const { TRACING_VERSION } = await import('/src/space/render/webgpu/passes.js');
+  const W = spec.size.width, H = spec.size.height, pixels = W * H, aux = `b11b-aux-${spec.label}`, B = spec.bits;
+  const base = createSpaceScene({ model: spec.model, parameters: spec.parameters, camera: spec.camera });
+  const scene = sceneCodec.validate({ ...base, appearance: { ...base.appearance, ...spec.appearance } });
+  const ordinals = scene.appearance.viewMode === 'shaded' && scene.appearance.lightingQuality === 'full' ? scene.sampling.targetSamples + 1 : scene.sampling.targetSamples;
+  const capture = backend.allocate({ name: `b11b-capture-${spec.label}`, bytes: 4 * pixels, usage: 'storage' });
+  const kept = [], masks = [], statusFrames = [], availability = [], copies = [];
+  let presents = 0, lastAccumulate = null, captured = null;
+  const ensure = ordinal => {
+    if (!masks[ordinal]) { masks[ordinal] = new Uint16Array(pixels); statusFrames[ordinal] = new Uint8Array(pixels * 4); availability[ordinal] = new Uint8Array(pixels); }
+  };
+  const proxy = Object.freeze({ ...backend,
+    release(handle) { kept.push(handle); },
+    submitBatch(batch, options) {
+      if (batch.pass === 'accumulate') lastAccumulate = { next: batch.outputs.next, flags: batch.outputs.accumulationFlags };
+      return backend.submitBatch(batch, options);
+    },
+    readback(desc, options) {
+      const ticket = backend.readback(desc, options), ordinal = presents, field = desc.fields[0], r = desc.region;
+      if (['status', 'normal', 'lightingStatus'].includes(field)) {
+        copies.push(ticket.result.then(result => {
+          ensure(ordinal);
+          const view = new DataView(result.data.buffer, result.data.byteOffset, result.data.byteLength), m = masks[ordinal], bpt = TARGET_LAYOUT_V1[field].bytesPerTexel;
+          for (let row = 0; row < r.height; row++) for (let col = 0; col < r.width; col++) {
+            const i = (r.y + row) * W + r.x + col, k = row * r.width + col;
+            if (field === 'status') {
+              const word = view.getUint32(4 * k, true); statusFrames[ordinal].set(result.data.subarray(4 * k, 4 * k + 4), 4 * i);
+              m[i] |= [B.hit, B.miss, B.unresolved, B.numerical][word & 15];
+            } else if (field === 'normal') availability[ordinal][i] = (view.getUint16(8 * k + 6, true) & 0x7fff) !== 0 ? 1 : 0;
+            else {
+              const word = view.getUint32(4 * k, true);
+              if (word & 1) m[i] |= ((word >>> 2) & 3) === 3 ? B.shadowNumerical : B.shadowUnresolved;
+              if (word & 2) m[i] |= ((word >>> 12) & 3) === 3 ? B.aoNumerical : B.aoUnresolved;
+            }
+          }
+          if (bpt * r.width * r.height !== result.data.byteLength) throw new Error('readback length');
+        }, () => {}));
+      }
+      return ticket;
+    },
+    present(desc, options) {
+      const ticket = backend.present(desc, options);
+      if (presents === ordinals - 1) {
+        captured = backend.submitBatch({ identity: s.identity(aux), pipelineId: 'fixture-capture', pass: 'probe', region: { x: 0, y: 0, width: W, height: H },
+          sample: { sequence: 'atlas-aa-v1', seed: 0, index: 0 }, bounds: { pixels, ...a.zero }, inputs: { display: desc.display, captured: capture }, outputs: { captured: capture },
+          uniforms: { origin: [0, 0], size: [W, H], base: 0 } }, s.lease(aux)).done;
+      }
+      presents++;
+      return ticket;
+    } });
+  const versions = { kernelVersion: KERNEL_VERSION, tracingVersion: TRACING_VERSION }, viewId = `space-b11b-${spec.label}`;
+  const renderer = createSpaceRenderer({ backend: proxy, clock: () => performance.now(), viewId, versions, pipelineSet: appearance.productPipelineSet() });
+  const reports = [];
+  renderer.onReport(r => reports.push(JSON.parse(JSON.stringify(r))));
+  const started = performance.now();
+  try {
+    await renderer.prepare();
+    const request = createSpaceRequest({ scene, purpose: 'interactive', width: W, height: H, profile: 'settled',
+      generation: { deviceEpoch: backend.currentEpoch(), viewRevision: 1, geometryRevision: 1, appearanceRevision: 1 }, viewId, versions });
+    const done = await (renderer.render(request)).done;
+    await Promise.all(copies);
+    const capturedDone = captured && await captured;
+    if (capturedDone && capturedDone.outcome !== 'completed') throw new Error(`capture: ${capturedDone.outcome}`);
+    const out = { outcome: done.outcome, reason: done.reason ?? null, presents, ordinals, wallMs: performance.now() - started, report: reports.at(-1) ?? null,
+      quality: JSON.parse(JSON.stringify(request.quality)), masks: [], statusSha256: [] };
+    for (let o = 0; o < masks.length; o++) {
+      if (!masks[o]) { out.masks.push(null); out.statusSha256.push(null); continue; }
+      for (let i = 0; i < pixels; i++) if ((masks[o][i] & B.hit) && !availability[o][i]) masks[o][i] |= B.normalUnavailable;
+      out.masks.push(s.base64(new Uint8Array(masks[o].buffer)));
+      out.statusSha256.push([...new Uint8Array(await crypto.subtle.digest('SHA-256', statusFrames[o]))].map(b => b.toString(16).padStart(2, '0')).join(''));
+    }
+    if (captured) out.display = s.base64(await s.read(capture, { x: 0, y: 0, width: 4 * pixels, height: 1 }, 'capture', aux));
+    if (lastAccumulate && spec.accumulation) {
+      out.accumulation = s.base64(await s.read(lastAccumulate.next, { x: 0, y: 0, width: W, height: H }, 'accumulation', aux));
+      out.flags = s.base64(await s.read(lastAccumulate.flags, { x: 0, y: 0, width: W, height: H }, 'accumulationFlags', aux));
+    }
+    return out;
+  } finally {
+    renderer.destroy();
+    for (const handle of new Set([...kept, capture])) { try { backend.release(handle); } catch { /* already released */ } }
+  }
+}
+
+// The same frozen rays traced directly with the product trace and normals pipelines, one sample at a time: each
+// sample's status SHA-256 (compared with the renderer job's) and its hits as compact records (pixel u32, t f32 and
+// the raw rgba16float normal, 16 bytes) for the face-normal comparison on the CPU.
+async function visualNormalsInPage(spec) {
+  const s = globalThis.__b10, { backend, passes } = s, jobId = `b11b-normals-${spec.label}`, size = spec.size, W = size.width, H = size.height, pixels = W * H;
+  const targets = await s.targetsFor(size), h = targets.handles, menger = spec.modelId === 'menger' ? { menger_boxes: s.boxes[spec.effective.depth] } : {};
+  const rows = Math.max(1, Math.floor(32768 / W)), bands = [];
+  for (let y = 0; y < H; y += rows) bands.push({ x: 0, y, width: W, height: Math.min(rows, H - y) });
+  const out = [];
+  for (let sample = 0; sample < spec.samples; sample++) {
+    const sampling = { seed: spec.seed, sampleIndex: sample }, common = { modelId: spec.modelId, camera: spec.camera, effective: spec.effective, internalSize: size, sampling, profile: spec.profile };
+    const submit = async (pass, pipelineId, uniformsFor, inputs, outputs) => {
+      const done = await Promise.all(bands.map(band => backend.submitBatch({ identity: s.identity(jobId), pipelineId, pass, region: band,
+        sample: { sequence: 'atlas-aa-v1', seed: spec.seed, index: sample }, bounds: passes.traceBounds(band, spec.profile, pass), inputs, outputs, uniforms: uniformsFor(band) }, s.lease(jobId)).done));
+      const failed = done.filter(d => d.outcome !== 'completed');
+      if (failed.length) throw new Error(`${pipelineId} sample ${sample}: ${failed[0].outcome} ${failed[0].reason}`);
+    };
+    await submit('trace', `trace_band:${spec.modelId}`, band => passes.traceUniforms({ ...common, region: band }), { ...menger }, { depth: h.depth, status: h.status });
+    await submit('normals', `normals_band:${spec.modelId}`, band => passes.normalsUniforms({ ...common, region: band }), { depth: h.depth, status: h.status, ...menger }, { normal: h.normal });
+    const full = { x: 0, y: 0, width: W, height: H };
+    const status = await s.read(h.status, full, 'status', jobId), depth = await s.read(h.depth, full, 'depth', jobId), normal = await s.read(h.normal, full, 'normal', jobId);
+    const sv = new DataView(status.buffer, status.byteOffset, status.byteLength);
+    let hits = 0; for (let i = 0; i < pixels; i++) if ((sv.getUint32(4 * i, true) & 15) === 0) hits++;
+    const records = new Uint8Array(hits * 16), rv = new DataView(records.buffer);
+    for (let i = 0, k = 0; i < pixels; i++) {
+      if ((sv.getUint32(4 * i, true) & 15) !== 0) continue;
+      rv.setUint32(16 * k, i, true); records.set(depth.subarray(4 * i, 4 * i + 4), 16 * k + 4); records.set(normal.subarray(8 * i, 8 * i + 8), 16 * k + 8); k++;
+    }
+    out.push({ sample, hits, statusSha256: [...new Uint8Array(await crypto.subtle.digest('SHA-256', status))].map(b => b.toString(16).padStart(2, '0')).join(''), records: s.base64(records) });
+  }
+  return out;
+}
+
+// The six frozen scenes (B11b): four views each through the product renderer with identical rays, independent
+// masks, the plan thresholds, the face-normal criterion on analytic scenes and the fixed crops. Returns the scene
+// rows; `check` records the required pass. With ATLAS_VISUAL_SCREENSHOTS set, every view and crop is written there
+// as PNG (diagnostic only).
+async function runVisualAcceptance({ page, check }) {
+  const va = await import('./support/visual-acceptance.mjs');
+  const appearance = await import('../src/space/render/webgpu/appearance.js');
+  const cameraModule = await import('../src/space/camera.js');
+  const { sampleJitter } = await import('../src/space/render/backend.js');
+  const { effectiveParameters } = await import('../src/space/numerics/parameters.js');
+  const { resolveQuality } = await import('../src/space/render/profiles.js');
+  const { createSpaceScene } = await import('../src/space/scene-adapter.js');
+  const passes = await import('../src/space/render/webgpu/passes.js');
+  const { encodePng } = await import('../scripts/png.mjs');
+  const fixture = va.loadVisualFixture(), W = fixture.settings.width, H = fixture.settings.height, size = { width: W, height: H }, pixels = W * H;
+  const shots = process.env.ATLAS_VISUAL_SCREENSHOTS || null;
+  if (shots) await mkdir(shots, { recursive: true });
+  const VIEWS = { 'shaded-full': { viewMode: 'shaded', lightingQuality: 'full' }, 'shaded-direct': { viewMode: 'shaded', lightingQuality: 'direct' },
+    normals: { viewMode: 'normals' }, termination: { viewMode: 'termination' } };
+  const B = va.VA_BITS, F = appearance.ACCUMULATION_FLAGS;
+  const bytesOf = b64 => new Uint8Array(Buffer.from(b64, 'base64'));
+  const u16 = b64 => { const b = bytesOf(b64); return new Uint16Array(b.buffer, b.byteOffset, b.byteLength / 2); };
+  const toAccumulationFlags = v => (v & B.numerical ? F.primaryNumericalFailure : 0) | (v & B.unresolved ? F.primaryUnresolved : 0) | (v & B.normalUnavailable ? F.unavailableNormal : 0)
+    | (v & B.shadowUnresolved ? F.shadowUnresolved : 0) | (v & B.shadowNumerical ? F.shadowNumericalFailure : 0) | (v & B.aoUnresolved ? F.aoUnresolved : 0) | (v & B.aoNumerical ? F.aoNumericalFailure : 0);
+  const LIGHTING_UNRESOLVED = F.shadowUnresolved | F.aoUnresolved, OTHER = F.primaryNumericalFailure | F.primaryUnresolved | F.unavailableNormal | F.shadowNumericalFailure | F.aoNumericalFailure;
+  const strip = (object, key) => { const { [key]: _drop, ...rest } = object; return rest; };
+  const png = (rgba, x0, y0, w, h) => {
+    const rgb = new Uint8Array(w * h * 3);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y0 + y) * W + x0 + x, k = y * w + x; rgb.set(rgba.subarray(4 * i, 4 * i + 3), 3 * k); }
+    return encodePng(w, h, Buffer.from(rgb.buffer));
+  };
+  const alpha = 2 * Math.tan(Math.PI / 6) / H, rows = [];
+  for (const sceneSpec of fixture.scenes) {
+    const started = Date.now(), { effective } = effectiveParameters(sceneSpec.model, sceneSpec.parameters);
+    const jobs = {};
+    for (const view of fixture.views) {
+      jobs[view] = await ev(page, visualJobInPage, { label: `${sceneSpec.id}-${view}`, model: sceneSpec.model, parameters: sceneSpec.parameters, camera: sceneSpec.camera,
+        appearance: VIEWS[view], size, bits: B, accumulation: view === 'shaded-full' }, `visual ${sceneSpec.id} ${view}`, 3 * LIMITS.deep);
+    }
+    const row = { id: sceneSpec.id, class: sceneSpec.class, failures: [], wallMs: Object.fromEntries(Object.entries(jobs).map(([v, j]) => [v, Math.round(j.wallMs)])) };
+    const fail = message => row.failures.push(message);
+    for (const [view, job] of Object.entries(jobs)) {
+      if (job.outcome !== 'completed') fail(`${view}: ${job.outcome} ${job.reason}`);
+      if (job.report?.samples?.completed !== fixture.settings.targetSamples) fail(`${view}: samples ${JSON.stringify(job.report?.samples)}`);
+    }
+    // Sample s of the full view is ordinal s + 1 (ordinal 0 is its direct sample); the other views start at 0.
+    const ordinalOf = (view, sample) => (view === 'shaded-full' ? sample + 1 : sample);
+    const samples = [...Array(fixture.settings.targetSamples).keys()];
+    row.identicalRays = samples.every(sample => new Set(fixture.views.map(view => jobs[view].statusSha256[ordinalOf(view, sample)])).size === 1);
+    if (!row.identicalRays) fail('the four views do not trace identical rays');
+    const full = jobs['shaded-full'], perSample = samples.map(sample => u16(full.masks[ordinalOf('shaded-full', sample)]));
+    const union = va.orBits(perSample);
+    row.perSample = perSample.map(va.vaMetrics); row.union = va.vaMetrics(union);
+    // The renderer's own outcome masks (B11b) must equal these independent masks.
+    const rendererMasks = full.report?.outcomeMasks;
+    row.rendererMasksAgree = !!rendererMasks && JSON.stringify(rendererMasks.samples.map(m => strip(m, 'sample'))) === JSON.stringify(row.perSample)
+      && JSON.stringify(strip(rendererMasks.union, 'samples')) === JSON.stringify(row.union);
+    if (!row.rendererMasksAgree) fail(`renderer outcome masks disagree: ${JSON.stringify(rendererMasks?.union ?? null)} vs ${JSON.stringify(row.union)}`);
+    // Presentation of every flagged pixel in the full shaded image.
+    const display = bytesOf(full.display), sums = (() => { const b = bytesOf(full.accumulation); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); })();
+    const flags = (() => { const b = bytesOf(full.flags); return new Uint32Array(b.buffer, b.byteOffset, b.byteLength / 4); })();
+    let flagMismatch = 0, lightingAsMagenta = 0, lostIndication = 0, tinted = 0;
+    const lostExamples = [];
+    for (let i = 0; i < pixels; i++) {
+      if (flags[i] !== toAccumulationFlags(union[i])) flagMismatch++;
+      const f = flags[i]; if (!f) continue;
+      const sum = [sums[4 * i], sums[4 * i + 1], sums[4 * i + 2], sums[4 * i + 3]], got = display.subarray(4 * i, 4 * i + 4);
+      const expected = appearance.expectedDisplay({ sum, flags: f, lightingStage: appearance.LIGHTING_STAGE_CODES.full, viewMode: appearance.VIEW_MODE_CODES.shaded });
+      if (expected.some((v, k) => Math.abs(v - got[k]) > 1)) {
+        lostIndication++;
+        if (lostExamples.length < 6) lostExamples.push({ pixel: i, flags: f, union: union[i], sum, got: [...got], expected });
+        continue;
+      }
+      if ((f & LIGHTING_UNRESOLVED) && !(f & OTHER)) {
+        if (got[0] === 255 && got[1] === 0 && got[2] === 255) { lightingAsMagenta++; continue; }
+        const plain = appearance.expectedDisplay({ sum, flags: 0, lightingStage: appearance.LIGHTING_STAGE_CODES.full, viewMode: appearance.VIEW_MODE_CODES.shaded });
+        if (Math.max(...plain.map((v, k) => Math.abs(v - got[k]))) < 2) {
+          lostIndication++;
+          if (lostExamples.length < 6) lostExamples.push({ pixel: i, flags: f, union: union[i], sum, got: [...got], plain, invisible: true });
+        } else tinted++;
+      }
+    }
+    if (flagMismatch) fail(`${flagMismatch} accumulated flags differ from the union of the sample masks`);
+    Object.assign(row, { lightingAsMagenta, lostIndication, lightingIndicated: tinted, lostExamples });
+    row.thresholds = va.evaluateScene({ sceneClass: sceneSpec.class, union: row.union, lightingAsMagenta, lostIndication });
+    if (!row.thresholds.passed) fail(`thresholds: ${row.thresholds.rows.filter(r => !r.passed).map(r => `${r.metric} ${r.numerator}/${r.denominator}`).join(', ')}`);
+    // Smooth analytic face interiors: the same rays traced directly, sample by sample.
+    const cropIndex = (crop, i) => { const x = i % W, y = Math.floor(i / W); return x >= crop.x && x < crop.x + crop.width && y >= crop.y && y < crop.y + crop.height; };
+    const cropTallies = Object.fromEntries(sceneSpec.crops.map(crop => [crop.id, []]));
+    if (sceneSpec.class === 'analytic') {
+      const scene = createSpaceScene({ model: sceneSpec.model, parameters: sceneSpec.parameters, camera: sceneSpec.camera }), quality = resolveQuality(scene, 'settled', size);
+      const traced = await ev(page, visualNormalsInPage, { label: sceneSpec.id, modelId: sceneSpec.model, camera: sceneSpec.camera, effective, size, samples: samples.length,
+        seed: fixture.settings.seed, profile: { ...quality.iteration, ...quality.tracing } }, `visual normals ${sceneSpec.id}`, 3 * LIMITS.deep);
+      const { forward, right, up } = cameraModule.basis(sceneSpec.camera), hTan = Math.tan(sceneSpec.camera.verticalFovDegrees * Math.PI / 360), origin = sceneSpec.camera.positionLocal;
+      const tallies = [];
+      for (const t of traced) {
+        if (t.statusSha256 !== full.statusSha256[ordinalOf('shaded-full', t.sample)]) fail(`sample ${t.sample}: the direct trace differs from the renderer's rays`);
+        const recordsBytes = bytesOf(t.records), view = new DataView(recordsBytes.buffer, recordsBytes.byteOffset, recordsBytes.byteLength), records = [];
+        for (let k = 0; k < t.hits; k++) {
+          const pixel = view.getUint32(16 * k, true), depth = view.getFloat32(16 * k + 4, true), x = pixel % W, y = Math.floor(pixel / W);
+          const halves = [0, 1, 2, 3].map(c => view.getUint16(16 * k + 8 + 2 * c, true));
+          const jitter = sampleJitter({ seed: fixture.settings.seed, sampleIndex: t.sample, pixel: [x, y] });
+          const sx = (2 * ((x + 0.5 + jitter.dx) / W) - 1) * hTan * (W / H), sy = (1 - 2 * ((y + 0.5 + jitter.dy) / H)) * hTan;
+          const dRaw = forward.map((f, a) => f + sx * right[a] + sy * up[a]), dLen = Math.hypot(...dRaw), d = dRaw.map(v => v / dLen);
+          const p = origin.map((o, a) => o + depth * d[a]), tau = va.tauAt(depth, alpha, quality.tracing);
+          const record = { pixel, sample: t.sample, eligibility: va.faceEligibility(sceneSpec.model, p, va.FACE_MARGIN_TAUS * tau, effective.depth),
+            normal: (halves[3] & 0x7fff) === 0 ? null : halves.slice(0, 3).map(passes.halfToNumber) };
+          records.push(record);
+          for (const crop of sceneSpec.crops) if (cropIndex(crop, pixel)) cropTallies[crop.id].push(record);
+        }
+        tallies.push(va.faceNormalTally(records));
+      }
+      row.faces = va.mergeTallies(tallies);
+      if (!row.faces.passed) fail(`smooth faces: ${row.faces.unavailable} unavailable of ${row.faces.eligible} eligible, ${(100 * row.faces.fractionWithinLimit).toFixed(3)}% within 1e-3 rad`);
+    }
+    row.crops = sceneSpec.crops.map(crop => {
+      const inside = []; for (let i = 0; i < pixels; i++) if (cropIndex(crop, i)) inside.push(union[i]);
+      const metrics = va.vaMetrics(inside), faces = sceneSpec.class === 'analytic' ? va.mergeTallies([va.faceNormalTally(cropTallies[crop.id])]) : null;
+      const passed = metrics.unavailableNormals === 0 && (!faces || faces.unavailable === 0);
+      if (!passed) fail(`crop ${crop.id}: ${metrics.unavailableNormals} unavailable-normal pixels among ${metrics.hits} hits${faces ? `, ${faces.unavailable} of ${faces.eligible} eligible face hits` : ''}`);
+      return { ...crop, metrics, faces: faces && strip(faces, 'worst'), passed };
+    });
+    if (shots) {
+      for (const view of fixture.views) {
+        const rgba = bytesOf(jobs[view].display);
+        await writeFile(`${shots}/${sceneSpec.id}-${view}.png`, png(rgba, 0, 0, W, H));
+        if (view === 'shaded-full' || view === 'normals') for (const crop of sceneSpec.crops) await writeFile(`${shots}/${sceneSpec.id}-${crop.id}-${view}.png`, png(rgba, crop.x, crop.y, crop.width, crop.height));
+      }
+    }
+    row.passed = row.failures.length === 0; row.elapsedMs = Date.now() - started;
+    rows.push(row);
+    console.log(`VISUAL ${sceneSpec.id}: ${row.passed ? 'pass' : 'FAIL'} ${JSON.stringify({ union: row.union, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures }).slice(0, 1200)}`);
+  }
+  report.push({ name: 'Visual acceptance scenes (recorded; plan rev 5.0 B11b)', fixture: fixture.version, settings: fixture.settings, thresholds: va.VISUAL_THRESHOLDS, faceCriterion: va.FACE_NORMAL_CRITERION,
+    scenes: rows.map(row => ({ ...row, perSample: row.perSample })) });
+  check(va.VISUAL_ACCEPTANCE_PASS, () => {
+    for (const row of rows) assert.deepEqual(row.failures, [], `${row.id}: ${row.failures.join('; ')}`);
+    return { scenes: rows.map(row => ({ id: row.id, union: row.union, thresholds: row.thresholds.rows.map(r => `${r.metric} ${r.numerator}/${r.denominator}`), faces: row.faces && strip(row.faces, 'worst') })) };
+  });
+  return rows;
+}
+
 const VIEW_MODE_LIST = Object.freeze(['shaded', 'normals', 'depth', 'steps', 'termination']);
+
+// The visual acceptance alone (a diagnostic convenience for B11b development; never gated: the required pass is the
+// rendering group's).
+async function runVisualOnly({ page }) {
+  await page.goto(url, { timeout: LIMITS.launch });
+  await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
+  await idleWithin(page);
+  await ev(page, renderingSetupInPage, { fixtures: { ...RENDERING_FIXTURES, ...APPEARANCE_FIXTURES } }, 'rendering setup', LIMITS.deep);
+  await ev(page, appearanceSetupInPage, undefined, 'appearance setup', LIMITS.deep);
+  const failedChecks = [];
+  const check = (name, fn) => { try { pass(name, fn()); } catch (error) { failedChecks.push(name); report.push({ name: `FAILED ${name}`, error: String(error?.message ?? error).slice(0, 4000) }); console.log(`FAILED ${name}: ${String(error?.message).slice(0, 600)}`); } };
+  await runVisualAcceptance({ page, check });
+  const finish = await ev(page, renderingFinishInPage, undefined, 'rendering teardown');
+  assert.deepEqual(finish.uncaptured, [], `no uncaptured WebGPU errors: ${JSON.stringify(finish.uncaptured)}`);
+  assert.deepEqual(failedChecks, [], `visual checks failed: ${failedChecks.join('; ')}`);
+}
 
 async function runRendering({ page }) {
   const tracing = await import('./support/space-tracing.mjs');
@@ -2049,7 +2377,55 @@ async function runRendering({ page }) {
   const BALL_PROFILES = { surface: SURFACE_V1, wide: { ...SURFACE_V1, toleranceFactor: 4 } }, balls = {};
   for (const [name, normalsProfile] of Object.entries(BALL_PROFILES)) balls[name] = await frame({ label: `quaternion-unit-ball-${name}`, modelId: 'quaternion-julia', camera: sphereCamera,
     effective: { C: [0, 0, 0, 0], kappa: 0 }, internalSize: sphereSize, region: full, sampling: { seed: 1, sampleIndex: 0 }, profile: SURFACE_V1, normals: true, normalsProfile });
+  // B11b (rev 5.0 one-sided fallback): box and Menger stencils at chosen positions under test-only normals
+  // profiles (ε = toleranceFloor / 2), predicted per pixel in binary64 (tests/support/visual-acceptance.mjs).
+  const va = await import('./support/visual-acceptance.mjs');
+  const probeSize = { width: 64, height: 36 }, sweep = (from, to, n) => Array.from({ length: n }, (_, k) => from + (to - from) * k / (n - 1));
+  const tunnelCamera = camera.lookAt({ ...SPACE_DEFAULTS.camera, positionLocal: [0.05, 0.03, 0.95], focusLocal: [0.1, 0.05, -1] }, [0.1, 0.05, -1]);
+  const boxCamera = va.loadVisualFixture().scenes.find(x => x.id === 'box').camera, mengerCamera = va.loadVisualFixture().scenes.find(x => x.id === 'menger-1').camera;
+  const STENCIL_PROBES = [
+    { label: 'box-surface', modelId: 'box', effective: {}, camera: boxCamera, depths: sweep(3.9, 5.1, 25), epsilon: 0.02 },
+    { label: 'menger1-surface', modelId: 'menger', effective: { depth: 1 }, camera: mengerCamera, depths: sweep(3.2, 4.6, 29), epsilon: 0.02 },
+    { label: 'menger2-surface', modelId: 'menger', effective: { depth: 2 }, camera: mengerCamera, depths: sweep(3.2, 4.6, 29), epsilon: 0.01 },
+    { label: 'menger1-tunnel', modelId: 'menger', effective: { depth: 1 }, camera: tunnelCamera, depths: sweep(0.2, 0.9, 8), epsilon: 0.2 },
+    { label: 'menger1-tunnel-wide', modelId: 'menger', effective: { depth: 1 }, camera: tunnelCamera, depths: sweep(0.2, 0.9, 8), epsilon: 0.4 },
+  ];
+  const stencilRuns = [];
+  for (const probe of STENCIL_PROBES) {
+    const profile = { ...SURFACE_V1, toleranceFloor: 2 * probe.epsilon, toleranceFactor: 0 };
+    stencilRuns.push({ probe, runs: await ev(page, stencilProbeInPage, { ...probe, size: probeSize, profile }, `stencil ${probe.label}`, LIMITS.deep) });
+  }
+  const stencil = { disagreements: [], directionErrors: [], worstRadians: 0, modes: {}, expected: { available: 0, unavailable: 0, ambiguous: 0 }, depthChanged: 0 };
+  for (const { probe, runs } of stencilRuns) for (const run of runs) {
+    const normals = passes.decodeNormals(bytes(run.normal), probeSize.width * probeSize.height), depths = passes.decodeDepths(bytes(run.depth));
+    normals.forEach((n, k) => {
+      if (depths[k] !== Math.fround(run.t)) stencil.depthChanged++;
+      const d = camera.rayDirection(probe.camera, k % probeSize.width, Math.floor(k / probeSize.width), probeSize.width, probeSize.height);
+      const p = probe.camera.positionLocal.map((o, axis) => o + Math.fround(run.t) * d[axis]);
+      const prediction = va.predictStencilNormal(probe.modelId, p, probe.epsilon, probe.effective.depth);
+      stencil.expected[prediction.expected]++;
+      if (prediction.expected === 'ambiguous') return;
+      const key = prediction.reason ?? prediction.modes.filter(m => m !== 'central').length + '-one-sided';
+      stencil.modes[`${probe.modelId}:${key}`] = (stencil.modes[`${probe.modelId}:${key}`] ?? 0) + 1;
+      if (n.available !== (prediction.expected === 'available')) { if (stencil.disagreements.length < 8) stencil.disagreements.push({ probe: probe.label, t: run.t, k, expected: prediction, available: n.available }); return; }
+      if (!n.available) return;
+      const angle = va.angleBetween(n.normal, prediction.normal);
+      stencil.worstRadians = Math.max(stencil.worstRadians, angle);
+      if (angle > 1e-3 && stencil.directionErrors.length < 8) stencil.directionErrors.push({ probe: probe.label, t: run.t, k, angle, normal: n.normal, expected: prediction.normal });
+    });
+  }
+  report.push({ name: 'B11b one-sided normal stencil probes (recorded; part of the normals pass)', probes: STENCIL_PROBES.map(p => ({ ...p, camera: undefined })), ...stencil });
+
   check(RENDERING_PASSES[4], () => {
+    // (e) B11b, rev 5.0: box and Menger normals follow the one-sided stencil — central where both endpoints resolve,
+    // one-sided against the resolved centre where exactly one is an analytic interior (edges, corners, tunnel walls),
+    // unavailable where both are or the needed centre is interior — in the predicted direction, and depth is kept.
+    assert.deepEqual(stencil.disagreements, [], `stencil availability disagrees with the prediction: ${JSON.stringify(stencil.disagreements.slice(0, 3))}`);
+    assert.deepEqual(stencil.directionErrors, [], `one-sided normals off the predicted direction: ${JSON.stringify(stencil.directionErrors.slice(0, 3))}`);
+    assert.equal(stencil.depthChanged, 0, 'the normals pass leaves every placed depth unchanged');
+    for (const key of ['box:1-one-sided', 'menger:1-one-sided', 'menger:2-one-sided', 'menger:both-interior', 'menger:centre-interior', 'box:0-one-sided', 'menger:0-one-sided']) {
+      assert.ok((stencil.modes[key] ?? 0) > 0, `stencil case ${key} is exercised: ${JSON.stringify(stencil.modes)}`);
+    }
     const preserved = run => { assert.equal(run.depthAfter, run.depth, 'the normals pass leaves depth unchanged'); assert.equal(run.statusAfter, run.status, 'and status unchanged'); };
     [sphereRun, collapsed, zero, ...Object.values(balls)].forEach(preserved);
     const normalsOf = (run, count) => passes.decodeNormals(bytes(run.normal), count);
@@ -2092,7 +2468,8 @@ async function runRendering({ page }) {
     }
     assert.deepEqual(prediction.disagreements.slice(0, 5), [], `${prediction.disagreements.length} unit-ball normals disagree with the sample-resolution prediction`);
     assert.ok(prediction.unavailable > 100 && prediction.available > 100, `both outcomes exercised: ${JSON.stringify(byProfile)}`);
-    return { sphere: { hits, good, unavailableHits, worstRad: worst }, collapsed: { hits: collapsedHits }, zeroGradient: { hits: zeroHits }, unitBall: { byProfile, disagreements: prediction.disagreements.length } };
+    return { sphere: { hits, good, unavailableHits, worstRad: worst }, collapsed: { hits: collapsedHits }, zeroGradient: { hits: zeroHits }, unitBall: { byProfile, disagreements: prediction.disagreements.length },
+      oneSided: { modes: stencil.modes, expected: stencil.expected, worstRadians: stencil.worstRadians } };
   });
 
   // 7. Usability: the quaternion default view at 160 × 90 against B04's binary64 prediction.
@@ -2432,11 +2809,26 @@ async function runRendering({ page }) {
       const flags = [...u32s(run.flags)];
       assert.deepEqual(flags, orFlags(run, [1, 2]), `${name}: flags`);
       assert.deepEqual(legendMismatches(captureOf(run, 2), flags, appearance.VIEW_MODE_CODES.shaded), [], `${name}: legend pixels`);
-      details[name] = { ...tally, reasons };
+      // Rev 5.0 (B11b, user decision 2): a lighting-only unresolved pixel keeps its shaded mean with the faint tint, on
+      // every flagged pixel, and never the primary magenta.
+      const image = captureOf(run, 2), sums = f32s(run.accumulation), magenta = legendOf('unresolved');
+      let tintedPixels = 0;
+      flags.forEach((f, i) => {
+        if (!(f & (F.shadowUnresolved | F.aoUnresolved)) || appearance.displayLegend(f, appearance.VIEW_MODE_CODES.shaded)) return;
+        const got = [...image.subarray(4 * i, 4 * i + 4)], sum = [...sums.subarray(4 * i, 4 * i + 4)];
+        const want = appearance.expectedDisplay({ sum, flags: f, lightingStage: appearance.LIGHTING_STAGE_CODES.full, viewMode: appearance.VIEW_MODE_CODES.shaded });
+        const plain = appearance.expectedDisplay({ sum, flags: 0, lightingStage: appearance.LIGHTING_STAGE_CODES.full, viewMode: appearance.VIEW_MODE_CODES.shaded });
+        assert.ok(want.every((v, k) => Math.abs(v - got[k]) <= 1), `${name}: pixel ${i} shows the tinted mean ${want}, got ${got}`);
+        assert.ok(got.slice(0, 3).join() !== magenta.slice(0, 3).join(), `${name}: pixel ${i} is not the primary magenta`);
+        assert.ok(Math.max(...plain.map((v, k) => Math.abs(v - got[k]))) >= 2, `${name}: pixel ${i} is visibly marked`);
+        tintedPixels++;
+      });
+      details[name] = { ...tally, reasons, tintedPixels };
     }
     assert.ok(details.shadowSteps.shadow > 0 && details.shadowSteps.ao === 0);
     assert.ok(details.numerical.both > 0 && details.numerical.aoOnly > 0, 'simultaneous numerical failures, and AO alone where the surface faces away');
     assert.ok(details.iterations.both > 0, 'a simultaneous shadow and AO failure');
+    assert.ok(details.iterations.tintedPixels > 0 && details.shadowSteps.tintedPixels > 0, 'unresolved shadow and AO failures are shown with the tint');
     // A one-iteration secondary budget leaves orbits unescaped: unresolved (never numerical) failures, with the
     // point budget among the shadow and AO reasons; the distribution is recorded.
     const iterationReasons = Object.keys(details.iterations.reasons);
@@ -2444,6 +2836,9 @@ async function runRendering({ page }) {
     assert.ok(['shadow', 'ao'].every(which => iterationReasons.includes(`${which}:unresolved/point-budget/0`)), JSON.stringify(details.iterations.reasons));
     return details;
   });
+
+  // B11b: the six frozen scenes (a required pass of this group).
+  await runVisualAcceptance({ page, check });
 
   // Representative images for manual review (recorded only; rgba8 display bytes, base64).
   report.push({ name: 'Representative settled images (recorded, rgba8 base64)', images: [
@@ -2904,7 +3299,7 @@ async function ensureServer() {
 
 let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
-const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence, rendering: runRendering, shell: runShell };
+const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence, rendering: runRendering, visual: runVisualOnly, shell: runShell };
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
 let source = null, serverOwnership = null;
 
@@ -2941,7 +3336,7 @@ try {
   ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
   console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
   assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
-  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'shell'].includes(options.group)) {
+  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell'].includes(options.group)) {
     // One launch under the complete profile; the application page is a WebGL (Plane) page, so its close
     // in the finally goes through the local expected-backend drain wrapper (drainExpecting).
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });

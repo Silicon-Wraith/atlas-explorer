@@ -20,7 +20,7 @@ import { createFakeClock } from '../support/fake-clock.mjs';
 import { createFakeBackend } from '../support/fake-backend.mjs';
 import {
   APPEARANCE_VERSION, APPEARANCE_HASHES, APPEARANCE_BINDINGS, DIAGNOSTIC_MODES, VIEW_MODE_CODES, VIEW_MODE_LABELS, LIGHTING_STAGE_CODES,
-  ACCUMULATION_FLAGS, TERMINATION_COLOURS, legendBytes, srgbEncode, sampleFlags, displayLegend, expectedDisplay,
+  ACCUMULATION_FLAGS, TERMINATION_COLOURS, legendBytes, srgbEncode, sampleFlags, displayLegend, expectedDisplay, LIGHTING_TINT,
   appearancePipelineDescriptors, appearancePipelineSet, productPipelineDescriptors, productPipelineSet, PRODUCT_PIPELINE_SET_ID,
   shadeUniforms, diagnosticUniforms, accumulateUniforms, displayUniforms, verifyPrewarm, appearanceImplementationHashes,
 } from '../../src/space/render/webgpu/appearance.js';
@@ -31,7 +31,8 @@ const loadFromDisk = async id => readFileSync(shaderPath(id), 'utf8');
 const DEFAULT_LIMITS = { maxStorageBuffersPerShaderStage: 8, maxStorageTexturesPerShaderStage: 4, maxUniformBufferBindingSize: 65536, maxComputeInvocationsPerWorkgroup: 256 };
 
 test('the appearance metadata hashes equal the sources and verifyPrewarm reports a missing variant', async () => {
-  assert.equal(APPEARANCE_VERSION, 'space-appearance-v1');
+  assert.equal(APPEARANCE_VERSION, 'space-appearance-v2');
+  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v2');
   const descriptors = appearancePipelineDescriptors();
   const owned = new Set(descriptors.flatMap(d => d.sourceIds).filter(id => !['fields', 'trace', 'menger-sample', 'menger-absent'].includes(id)));
   assert.deepEqual([...owned].sort(), ['accumulate', 'display', 'shade']);
@@ -117,6 +118,8 @@ test('the shader legend, flag and colour literals equal the appearance constants
     assert.equal(u32(accumulate, constant), value, `accumulate.wgsl ${constant}`);
     assert.equal(u32(display, constant), value, `display.wgsl ${constant}`);
   }
+  assert.deepEqual(vec3(display, 'LIGHTING_TINT'), LIGHTING_TINT.colour);
+  assert.equal(Number(display.match(/const LIGHTING_TINT_WEIGHT: f32 = ([0-9.]+);/)?.[1]), LIGHTING_TINT.weight);
   assert.equal(u32(display, 'VIEW_SHADED'), VIEW_MODE_CODES.shaded);
   assert.equal(u32(display, 'VIEW_NORMALS'), VIEW_MODE_CODES.normals);
   assert.equal(u32(display, 'STAGE_DIAGNOSTIC'), LIGHTING_STAGE_CODES.diagnostic);
@@ -157,7 +160,11 @@ test('sample flags and display legends follow the documented precedence and are 
 
   // Numerical failure, then unresolved, then (shaded and normals only) the unavailable normal.
   assert.equal(displayLegend(F.primaryUnresolved | F.aoNumericalFailure, VIEW_MODE_CODES.shaded), 'numericalFailure');
-  assert.equal(displayLegend(F.shadowUnresolved | F.unavailableNormal, VIEW_MODE_CODES.shaded), 'unresolved');
+  // Rev 5.0 (B11b, user decision 2): a lighting-only unresolved outcome is no legend; it keeps the mean with the tint.
+  assert.equal(displayLegend(F.shadowUnresolved | F.unavailableNormal, VIEW_MODE_CODES.shaded), 'unavailableNormal');
+  assert.equal(displayLegend(F.shadowUnresolved | F.aoUnresolved, VIEW_MODE_CODES.shaded), null);
+  assert.equal(displayLegend(F.aoUnresolved | F.primaryUnresolved, VIEW_MODE_CODES.shaded), 'unresolved');
+  assert.equal(displayLegend(F.aoUnresolved | F.shadowNumericalFailure, VIEW_MODE_CODES.shaded), 'numericalFailure');
   assert.equal(displayLegend(F.unavailableNormal, VIEW_MODE_CODES.shaded), 'unavailableNormal');
   assert.equal(displayLegend(F.unavailableNormal, VIEW_MODE_CODES.normals), 'unavailableNormal');
   for (const mode of ['depth', 'steps', 'termination']) assert.equal(displayLegend(F.unavailableNormal, VIEW_MODE_CODES[mode]), null, `${mode}: an unavailable normal keeps its depth and cost`);
@@ -171,6 +178,15 @@ test('sample flags and display legends follow the documented precedence and are 
   assert.deepEqual(expectedDisplay({ sum, flags: 0, lightingStage: LIGHTING_STAGE_CODES.diagnostic, viewMode: VIEW_MODE_CODES.normals }), [51, 26, 13, 255], 'diagnostic values are display-space and never encoded');
   assert.deepEqual(expectedDisplay({ sum, flags: 0, lightingStage: LIGHTING_STAGE_CODES.direct, viewMode: VIEW_MODE_CODES.shaded }), [0.2, 0.1, 0.05].map(v => Math.round(srgbEncode(v) * 255)).concat(255), 'the mean is sRGB-encoded once');
   assert.deepEqual(expectedDisplay({ sum: [0, 0, 0, 0], flags: 0, lightingStage: 0, viewMode: 0 }), legendBytes(LEGEND.unresolved), 'no completed sample is never a colour');
+  // The lighting-unresolved tint: the encoded mean mixed with LIGHTING_TINT in display space, on every flagged pixel.
+  assert.deepEqual(LIGHTING_TINT, { colour: [0.8, 0.66, 0.36], weight: 0.2 });
+  const tinted = [0.2, 0.1, 0.05].map((v, k) => Math.round((0.8 * srgbEncode(v) + 0.2 * LIGHTING_TINT.colour[k]) * 255)).concat(255);
+  for (const flags of [F.aoUnresolved, F.shadowUnresolved, F.aoUnresolved | F.shadowUnresolved]) {
+    assert.deepEqual(expectedDisplay({ sum, flags, lightingStage: LIGHTING_STAGE_CODES.full, viewMode: VIEW_MODE_CODES.shaded }), tinted);
+  }
+  const black = expectedDisplay({ sum: [0, 0, 0, 1], flags: F.aoUnresolved, lightingStage: LIGHTING_STAGE_CODES.full, viewMode: VIEW_MODE_CODES.shaded });
+  assert.deepEqual(black, [41, 34, 18, 255], 'the tint marks even a black mean');
+  assert.notDeepEqual(tinted.slice(0, 3), legendBytes(LEGEND.unresolved).slice(0, 3), 'never the primary magenta');
   assert.equal(srgbEncode(0), 0); assert.ok(Math.abs(srgbEncode(1) - 1) < 1e-15);
   assert.ok(Math.abs(srgbEncode(0.0031308) - 0.0031308 * 12.92) < 1e-12 && Math.abs(srgbEncode(0.5) - 0.7353569830524495) < 1e-12);
 });

@@ -18,7 +18,9 @@ export function resolveQuality(scene, profile, { width, height }) {
     profile, preview, internalSize: { width: Math.max(1, Math.floor(width * settings.scale)), height: Math.max(1, Math.floor(height * settings.scale)) },
     iteration: { ...scene.iteration, maxIterations: preview ? Math.min(64, scene.iteration.maxIterations) : scene.iteration.maxIterations },
     tracing: { ...scene.tracing, maxSteps: preview ? 256 : scene.tracing.maxSteps, toleranceFloor: 1e-6, toleranceFactor: 0.5 },
-    normals: { method: 'central-differences', epsilonFactor: 0.5, fieldSamples: 6 },
+    // Rev 5.0 (B11b): box and Menger add the one-sided analytic-interior fallback and its centre sample.
+    normals: ['box', 'menger'].includes(scene.model.id) ? { method: 'central-differences-one-sided-analytic-v1', epsilonFactor: 0.5, fieldSamples: 7 }
+      : { method: 'central-differences', epsilonFactor: 0.5, fieldSamples: 6 },
     lighting: { stage, ...LIGHTING_BOUNDS_DEFAULT, ...(stage === 'full' ? {} : { shadowRays: 0, shadowSteps: 0, aoSamples: 0 }) },
     sampling: { ...scene.sampling, targetSamples: preview ? 1 : scene.sampling.targetSamples },
     sampleMapping: 'pixel-centres-jittered-primary-rays-v1', orbitAttributes: [], budgetMs: settings.budgetMs,

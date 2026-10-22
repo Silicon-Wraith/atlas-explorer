@@ -17,7 +17,8 @@ export const TARGET_LAYOUT_V1 = deepFreeze({
 export const TRACKED_ALLOCATION_CAP = 2 ** 30;
 // Settled defaults and 1b.1 ceilings. Direct lighting keeps normal samples but has
 // zero shadow/AO work; raising a ceiling requires a recorded plan amendment.
-export const LIGHTING_BOUNDS_DEFAULT = Object.freeze({ normalFieldSamples: 6, shadowRays: 1, shadowSteps: 64, aoSamples: 5 });
+// normalFieldSamples: rev 5.0 (B11b) — six stencil samples plus the box and Menger one-sided fallback's centre value.
+export const LIGHTING_BOUNDS_DEFAULT = Object.freeze({ normalFieldSamples: 7, shadowRays: 1, shadowSteps: 64, aoSamples: 5 });
 export const BACKEND_METHODS = Object.freeze(['acquire', 'prepare', 'allocate', 'configureTargets', 'submitBatch', 'readback', 'present', 'release', 'onLoss', 'currentEpoch', 'diagnostics', 'destroy']);
 const ERROR_CODES = ['allocation-failed', 'device-lost', 'preparation-failed', 'invalid-descriptor', 'stale-epoch', 'no-admission', 'unavailable'];
 export class BackendError extends Error {

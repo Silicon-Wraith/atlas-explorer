@@ -2,14 +2,14 @@
 // assembled module (wgslConstants() + '\n' + sources joined by '\n'), as the backend executes it.
 export const APPEARANCE_HASHES = Object.freeze({
   sources: Object.freeze({
-    "shade": "ddc279b8b28e77967ba1cf449a442867c7f84b282a187d66ac3bcc9a9a49920a",
-    "accumulate": "0ba5b5c636882e4898605b5c3bfddc8d2900376a3b5e69f366e396fd8d257509",
-    "display": "c8ac4fe51a60f09e7010d3738a4c3dab0648225a6ecb9418f59039c0408cd3f1"
+    "shade": "cc703dd27b454c61432d1800470cf1474cceeb47e8ea8aff6c9282ffcb0511aa",
+    "accumulate": "999e3086fcfd883e2c6331ab0a3fdbb80f038017bad38d74564b7a0fe60552c9",
+    "display": "ed3904a882bd74594c59589942ad903ba2e74e301373b1c90e30aab850686d1c"
   }),
   assembled: Object.freeze({
-    "fields+menger-absent+trace+shade": "4053722411d1909bfcb7e4e41a11f8abf1f44353a800b0c636195813ea071478",
-    "fields+menger-sample+trace+shade": "2fc576d0df52b86fdb2232c1e82df915f6d8c08f5715506fa5af350f58ae0eb4",
-    "accumulate": "3a1ed436cc814c7a4722d4795c1091825f092ca741dca526dac1778a2ae300b6",
-    "display": "19734ee6a36cbe5cdba385a5b50f582cf11723c2bf2bd59e239450c39eae1759"
+    "fields+menger-absent+trace+shade": "0deac6f1dd260787dc406e0487623c856e84b8e5af5295b8d8375a7d8eea46db",
+    "fields+menger-sample+trace+shade": "b2c7198a44a9043690ec01d038750b1b464818053abdcd3109ea5002fba1eb6b",
+    "accumulate": "62f801da3cb381a54644f7d0c10384552bef726a5aa536b27c1345a5bcc83041",
+    "display": "edfc5fa8ac9195dc2855aa3f0fa0de05fcfb2783e7ad17ed8340a0825d648f14"
   }),
 });

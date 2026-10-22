@@ -49,10 +49,12 @@ test('status words pack and unpack every combination losslessly', () => {
 test('a batch rejects an unknown pass, a region whose pixels disagree with its bounds, and bounds above the spec limits', () => {
   invalid(() => createBatch({ ...batchInput(), pass: 'bogus' }));
   for (const pixels of [7, 9]) invalid(() => createBatch({ ...batchInput(), bounds: { ...batchInput().bounds, pixels } }));
-  for (const [name, value] of Object.entries({ raySteps: 1025, iterations: 513, normalFieldSamples: 7, shadowRays: 2, shadowSteps: 65, aoSamples: 6 })) {
+  for (const [name, value] of Object.entries({ raySteps: 1025, iterations: 513, normalFieldSamples: 8, shadowRays: 2, shadowSteps: 65, aoSamples: 6 })) {
     invalid(() => createBatch({ ...batchInput(), bounds: { ...batchInput().bounds, [name]: value } }));
   }
   assert.equal(createBatch(batchInput()).bounds.pixels, 8);
+  // Rev 5.0 (B11b): the box and Menger one-sided normal fallback needs a seventh field sample (the centre value).
+  assert.doesNotThrow(() => createBatch({ ...batchInput(), bounds: { ...batchInput().bounds, normalFieldSamples: 7 } }), 'seven normal field samples are within the bound');
 });
 
 test('an admission lease is consumed exactly once', () => {

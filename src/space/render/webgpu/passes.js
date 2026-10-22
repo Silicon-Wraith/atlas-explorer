@@ -14,7 +14,7 @@ import { admitPointModel, FIELD_IDS, KERNEL_HASHES, KERNEL_VERSION } from './ker
 import { TRACING_HASHES } from './tracing-hashes.js';
 
 export { TRACING_HASHES };
-export const TRACING_VERSION = 'surface-v1/space-trace-v1';
+export const TRACING_VERSION = 'surface-v1/space-trace-v2'; // rev 5.0 (B11b): the one-sided normal fallback; space-trace-v1 was B10's
 export const TRACE_FIELD_IDS = FIELD_IDS; // the product families, FIELD 0–4
 // FIELD 5 is a constant exterior distance (u.c.x): validation only, for B04's two stagnation probes.
 export const VALIDATION_FIELD_IDS = Object.freeze([...FIELD_IDS, 'constant']);
@@ -23,7 +23,9 @@ export const TRACE_RESULT_BYTES = 16; // packed status, depth bits, detail (1 = 
 // B10-F3 (fix round 1): under the estimate-unavailable reason, the B00 subreason nibble carries the
 // applicability detail (0 none, 1 interior); under stagnation it keeps the STAGNATION code. Layout unchanged.
 export const ESTIMATE_DETAIL = Object.freeze({ none: 0, interior: 1 });
-export const NORMAL_FIELD_SAMPLES = 6; // central differences: two samples per axis
+// Central differences take two samples per axis; rev 5.0 (B11b): the box and Menger one-sided fallback adds the centre
+// value, evaluated at most once per pixel, so a normals batch declares at most seven.
+export const NORMAL_FIELD_SAMPLES = 7;
 const MAX_RAY_STEPS = 1024, MAX_ITERATIONS = 512;
 const refuse = message => { throw new RangeError(message); };
 

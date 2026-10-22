@@ -130,9 +130,16 @@ export const TRACING_PROFILE = 'surface-v1';
 export const LADDER_PROFILE = 'ladder-v1';
 // Rev 4.8: analytic tracing records also carry the mandatory analytic-inspection-v1 depth check.
 export const INSPECTION_PROFILE = 'analytic-inspection-v1';
-export const tracingBulbRecordId = power => frozen(`mandelbulb@1/tracing/p${power}`);
-export const SPHERE_TRACING_RECORD_ID = frozen('sphere@1/tracing'), BOX_TRACING_RECORD_ID = frozen('box@1/tracing'), MENGER_TRACING_RECORD_ID = frozen('menger@1/tracing');
-export const QUATERNION_TRACING_RECORD_ID = frozen('quaternion-julia@1/tracing');
+// Rev 5.0 (B11b, user decision 3): the box and Menger one-sided normal fallback changes the tracing implementation
+// (TRACING_VERSION surface-v1/space-trace-v2) but not the kernels, so every record that pins tracing evidence (tracing
+// and geometric) gets a new ID ending in TRACING_IDENTITY; arithmetic records keep theirs. The rev 4.8 IDs below named
+// the space-trace-v1 evidence, which stays as it was and is never retargeted.
+export const TRACING_IDENTITY = 'space-trace-v2';
+const traced = id => `${frozen(id)}/${TRACING_IDENTITY}`;
+export const PRIOR_TRACING_IDENTITY_RECORD_IDS = deepFreeze({ tracing: PRIOR_RECORD_IDS.tracing.map(frozen), geometric: PRIOR_RECORD_IDS.geometric.map(frozen) });
+export const tracingBulbRecordId = power => traced(`mandelbulb@1/tracing/p${power}`);
+export const SPHERE_TRACING_RECORD_ID = traced('sphere@1/tracing'), BOX_TRACING_RECORD_ID = traced('box@1/tracing'), MENGER_TRACING_RECORD_ID = traced('menger@1/tracing');
+export const QUATERNION_TRACING_RECORD_ID = traced('quaternion-julia@1/tracing');
 export const TRACING_RECORD_IDS = Object.freeze([SPHERE_TRACING_RECORD_ID, BOX_TRACING_RECORD_ID, MENGER_TRACING_RECORD_ID, ...BULB_POWERS.map(tracingBulbRecordId), QUATERNION_TRACING_RECORD_ID]);
 const QUATERNION_CS = 6;
 
@@ -206,7 +213,7 @@ export function buildGeometricRecords({ ladders, anchors, implementationHashes }
     const rows = ladders.filter(row => row.anchorId === anchor.id);
     if (rows.some(row => row.role !== 'diagnostic' || row.profile !== LADDER_PROFILE)) throw new RangeError(`${anchor.id}: geometric records consume diagnostic ladder-v1 rows only`);
     const agreeing = rows.filter(row => row.outcome === 'agreement').map(row => row.distance);
-    const modelId = anchor.model, recordId = frozen(`${modelId}@1/geometric/${anchor.id}`);
+    const modelId = anchor.model, recordId = traced(`${modelId}@1/geometric/${anchor.id}`);
     if (!agreeing.length) { withheld.push({ recordId, outcomes: rows.map(row => ({ distance: row.distance, outcome: row.outcome })) }); continue; }
     records.push(deepFreeze({
       recordId, modelId, evidenceClass: 'geometric', implementationHashes: { ...implementationHashes },

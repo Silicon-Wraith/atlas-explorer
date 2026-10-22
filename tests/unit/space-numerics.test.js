@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { APPROVED_REFERENCE_IDENTITIES } from '../../scripts/gate/reference-evidence.mjs';
 import { createValidationRegistry, PRECISION_CARRY_FORWARD_LIMITATIONS } from '../../src/space/numerics/validation-records.js';
-import { MATRIX_PINS, POINT_STRATUM_KINDS, ARITHMETIC_RECORD_IDS, QUATERNION_RECORD_ID, buildArithmeticRecords, requiredStrata, PRIOR_MATRIX_PINS, PRIOR_RECORD_IDS, MATRIX_FREEZE, TRACING_RECORD_IDS } from '../../src/space/numerics/validation-records.js';
+import { MATRIX_PINS, POINT_STRATUM_KINDS, ARITHMETIC_RECORD_IDS, QUATERNION_RECORD_ID, buildArithmeticRecords, requiredStrata, PRIOR_MATRIX_PINS, PRIOR_RECORD_IDS, MATRIX_FREEZE, TRACING_RECORD_IDS, TRACING_IDENTITY, PRIOR_TRACING_IDENTITY_RECORD_IDS } from '../../src/space/numerics/validation-records.js';
 import { comparePointStratum, loadPinnedPointStrata, verifyMatrixPins } from '../support/space-numerics.mjs';
 
 const index = readFileSync(new URL('../reference/space-matrix.json', import.meta.url));
@@ -31,7 +31,18 @@ test('the rev 4.8 re-freeze gives every repinned record a new ID and keeps the p
   assert.deepEqual(PRIOR_RECORD_IDS.arithmetic, ['2', '3', '4', '5', '6', '7', '8'].map(p => `mandelbulb@1/arithmetic/p${p}`).concat('quaternion-julia@1/arithmetic'));
   assert.equal(PRIOR_RECORD_IDS.tracing.length, 11); assert.equal(PRIOR_RECORD_IDS.geometric.length, 18); assert.ok(PRIOR_RECORD_IDS.tracing.includes('sphere@1/tracing'));
   const prior = new Set([...PRIOR_RECORD_IDS.arithmetic, ...PRIOR_RECORD_IDS.tracing]);
-  for (const id of [...ARITHMETIC_RECORD_IDS, ...TRACING_RECORD_IDS]) { assert.ok(id.endsWith(`/${MATRIX_FREEZE}`), id); assert.ok(!prior.has(id), id); }
+  for (const id of ARITHMETIC_RECORD_IDS) { assert.ok(id.endsWith(`/${MATRIX_FREEZE}`), id); assert.ok(!prior.has(id), id); }
+  for (const id of TRACING_RECORD_IDS) { assert.ok(id.endsWith(`/${MATRIX_FREEZE}/${TRACING_IDENTITY}`), id); assert.ok(!prior.has(id), id); }
+});
+
+test('the rev 5.0 tracing identity gives tracing and geometric records new IDs and keeps the rev 4.8 ones', () => {
+  // B11b: the one-sided normal fallback changes the tracing hashes (not the kernel hashes), so the records that pin
+  // tracing evidence are renamed; arithmetic records keep their IDs; the rev 4.8 tracing evidence is never retargeted.
+  assert.equal(TRACING_IDENTITY, 'space-trace-v2');
+  assert.deepEqual(PRIOR_TRACING_IDENTITY_RECORD_IDS.tracing, PRIOR_RECORD_IDS.tracing.map(id => `${id}/${MATRIX_FREEZE}`));
+  assert.deepEqual(PRIOR_TRACING_IDENTITY_RECORD_IDS.geometric, PRIOR_RECORD_IDS.geometric.map(id => `${id}/${MATRIX_FREEZE}`));
+  assert.deepEqual(TRACING_RECORD_IDS, PRIOR_TRACING_IDENTITY_RECORD_IDS.tracing.map(id => `${id}/${TRACING_IDENTITY}`));
+  assert.ok(ARITHMETIC_RECORD_IDS.every(id => !id.includes(TRACING_IDENTITY)));
 });
 
 test('point strata load through the pinned index as a partial view, never as whole-matrix qualification', () => {
