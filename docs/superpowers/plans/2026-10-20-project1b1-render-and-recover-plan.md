@@ -52,7 +52,7 @@ Interfaces 1a has planned but not yet landed are cited from the 1a plan and mark
 unlanded)** (all now merged; see the rev 5.0 note after the table); this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 5.3 — rev 5.3 records two user decisions of 2026-10-22 (the pending navigation-draft publication rule, B09-F10, with spec §7.2; and the §3 definition of "demonstrated end to end" for 1b.1, carried into B15's handoff text) and the Claude/Codex agreed P3 pose-stream API (`requestCamera(pose, {phase})`, `onRequest`, `onReport`) in B14 and P3 (Codex B15 report r2). **Rev 5.2** — rev 5.2 records the user's decision of 2026-10-22 to defer the quaternion scene from required visual acceptance to diagnostic evidence and a 1b.2 item, after B11c measured 13.37% quaternion lighting-unresolved (bulb 3.82%, quaternion primary 0). **Rev 5.1** — rev 5.1 records the user's approvals of 2026-10-22 for B11c: the AO heights 4i·τ (plan) and the §11.4 quaternion-primary bounded recovery (spec). It also records the B00 `normalFieldSamples` 7 amendment and the B14 notes: the Fx4 exception, where an allocation failure or budget overrun before the first present reveals Space so its recovery UI is reachable (Codex B14 r3/r4); the test-only `env.setTimer`/`clearTimer` seams beside `env`/`toast`/`ready`; and the switcher outcomes `superseded` and `cancelled`. **Rev 5.0** — rev 5.0 (the design batch; approved by the user 2026-10-22; Codex READY run 20261022T015010Z-c512) records three user decisions of 2026-10-22 and applies accumulated Claude/Codex corrections. **User decisions, 2026-10-22:** (1) visual acceptance, a new required check before B15 on six frozen scenes (new task B11b; fractal lighting-unresolved ceiling 10%, analytic ≤1%; measurement fixes: unavailable normals counted over hits only, numerator and denominator from the same accumulation) (sources codex-B14-visual-fixes.md and claude-B14-visual-debate1.md; Codex run 20261022T010745Z-fca4); (2) lighting-only (AO/shadow) unresolved presentation is a subtle tint, never primary magenta, amending B11's presentation contract, legend tests and appearance identity, with no spec change (§8.2 allows it); (3) a one-sided normal fallback for box and Menger only, at the B10 normal rule, with B03/B08 hashes unchanged and new B10 tracing identity and record IDs. **Claude/Codex agreed corrections, no new user decision:** (4) B07b readiness wake-up text; (5) B07c `discardAuxiliary`, including that a discard is not watchdog progress; (6) new tasks T04a, B09b and B09c, and B09c's added `space-rendering` required pass; (7) B10 errata (D3/D5 interfaces, the F3 interior-detail encoding, the Menger box buffer assigned to B11, the B10-F6 and B11 AO comment fixes deferred); (8) B12 (`getPickContext()`, the "approximate hit" label, the F6 stop-reason note) and B12b (look-rate argument, gamepad allowlist); (9) the B13 → B14 recovery-facade note; (10) B14's new seams and the stale dependency-table rows; (11) B15 notes. **Rev 4.9** — rev 4.9 records the user's approval (2026-10-21) of the following on acceptance gates: full gates on merged feature candidates and on integration boundaries; tree-identical promotions take fast checks; non-promotable WIP; a mechanically checked `docs-fast` allowance; a versioned, fail-closed disposition manifest; and an enumerated retrospective transition (Claude and Codex converged; Codex runs 20261021T212923Z-663c, 20261021T214134Z-fcb2 and 20261021T214354Z-244e). **Rev 4.8** — rev 4.8 records the user's decision of 2026-10-21 on B10 S1: analytic ray depth under `surface-v1` is qualified against a sampling-aware ρ-expanded-object envelope, and relative 10⁻³ accuracy is retained under the new inspection profile `analytic-inspection-v1` (τ×0.1), with a re-freeze, new record IDs and the failed evidence preserved (Claude and Codex independent positions converged; Codex run 20261021T203032Z-7350). **Rev 4.7** — rev 4.7 applies agreed Claude/Codex corrections with no new user decision: (1) B05 — camera interface and rulings (a)–(h) as converged, and the notes for B10, B11, B12 and B14 (B14's initial bulb scene uses `overview(bulb)`; B11 drops the palette allowlist entry) (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee), including the axis-lock heading “forward azimuth minus 90° (modulo 360°)” and the Menger overview radius rule, which supersede rev 4.6's statement that these were not yet in the plan text; (2) B06 — backend plan changes PC1–PC8 (F3 sample-0 initialization owned by B11 with a B06 zero-readback test; F2 probe and `preparation-failed` owned by B09; encode-only presenter; F8 asynchronous creation errors fail their tickets; F9 caller subdivides horizontally with one lease per region; target handles caller-owned until `release()`; frozen 8×8 dispatch ABI; `destroyDevice()` loss semantics) (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca). **Rev 4.6** records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
+**Revision:** 6.0 — rev 6.0 (rev 6.0, Claude/Codex converged 2026-10-22 under the user's delegation of product direction ("you and Codex are running this… This is your show"); user informed) adds the 1b.1x "Explore and compose" plan amendment (tasks X00–X07; identities `space-compose-v1`, `space-appearance-v4`, `radial-min-v1`, `space-orbit-attributes-v1`, `space-targets-v3`) and the conditional B15 remediation tasks B15-G0/G1, and moves Mandelbox to follow 1b.3 (spec §3, §21.1; charter A3). **Rev 5.3** — rev 5.3 records two user decisions of 2026-10-22 (the pending navigation-draft publication rule, B09-F10, with spec §7.2; and the §3 definition of "demonstrated end to end" for 1b.1, carried into B15's handoff text) and the Claude/Codex agreed P3 pose-stream API (`requestCamera(pose, {phase})`, `onRequest`, `onReport`) in B14 and P3 (Codex B15 report r2). **Rev 5.2** — rev 5.2 records the user's decision of 2026-10-22 to defer the quaternion scene from required visual acceptance to diagnostic evidence and a 1b.2 item, after B11c measured 13.37% quaternion lighting-unresolved (bulb 3.82%, quaternion primary 0). **Rev 5.1** — rev 5.1 records the user's approvals of 2026-10-22 for B11c: the AO heights 4i·τ (plan) and the §11.4 quaternion-primary bounded recovery (spec). It also records the B00 `normalFieldSamples` 7 amendment and the B14 notes: the Fx4 exception, where an allocation failure or budget overrun before the first present reveals Space so its recovery UI is reachable (Codex B14 r3/r4); the test-only `env.setTimer`/`clearTimer` seams beside `env`/`toast`/`ready`; and the switcher outcomes `superseded` and `cancelled`. **Rev 5.0** — rev 5.0 (the design batch; approved by the user 2026-10-22; Codex READY run 20261022T015010Z-c512) records three user decisions of 2026-10-22 and applies accumulated Claude/Codex corrections. **User decisions, 2026-10-22:** (1) visual acceptance, a new required check before B15 on six frozen scenes (new task B11b; fractal lighting-unresolved ceiling 10%, analytic ≤1%; measurement fixes: unavailable normals counted over hits only, numerator and denominator from the same accumulation) (sources codex-B14-visual-fixes.md and claude-B14-visual-debate1.md; Codex run 20261022T010745Z-fca4); (2) lighting-only (AO/shadow) unresolved presentation is a subtle tint, never primary magenta, amending B11's presentation contract, legend tests and appearance identity, with no spec change (§8.2 allows it); (3) a one-sided normal fallback for box and Menger only, at the B10 normal rule, with B03/B08 hashes unchanged and new B10 tracing identity and record IDs. **Claude/Codex agreed corrections, no new user decision:** (4) B07b readiness wake-up text; (5) B07c `discardAuxiliary`, including that a discard is not watchdog progress; (6) new tasks T04a, B09b and B09c, and B09c's added `space-rendering` required pass; (7) B10 errata (D3/D5 interfaces, the F3 interior-detail encoding, the Menger box buffer assigned to B11, the B10-F6 and B11 AO comment fixes deferred); (8) B12 (`getPickContext()`, the "approximate hit" label, the F6 stop-reason note) and B12b (look-rate argument, gamepad allowlist); (9) the B13 → B14 recovery-facade note; (10) B14's new seams and the stale dependency-table rows; (11) B15 notes. **Rev 4.9** — rev 4.9 records the user's approval (2026-10-21) of the following on acceptance gates: full gates on merged feature candidates and on integration boundaries; tree-identical promotions take fast checks; non-promotable WIP; a mechanically checked `docs-fast` allowance; a versioned, fail-closed disposition manifest; and an enumerated retrospective transition (Claude and Codex converged; Codex runs 20261021T212923Z-663c, 20261021T214134Z-fcb2 and 20261021T214354Z-244e). **Rev 4.8** — rev 4.8 records the user's decision of 2026-10-21 on B10 S1: analytic ray depth under `surface-v1` is qualified against a sampling-aware ρ-expanded-object envelope, and relative 10⁻³ accuracy is retained under the new inspection profile `analytic-inspection-v1` (τ×0.1), with a re-freeze, new record IDs and the failed evidence preserved (Claude and Codex independent positions converged; Codex run 20261021T203032Z-7350). **Rev 4.7** — rev 4.7 applies agreed Claude/Codex corrections with no new user decision: (1) B05 — camera interface and rulings (a)–(h) as converged, and the notes for B10, B11, B12 and B14 (B14's initial bulb scene uses `overview(bulb)`; B11 drops the palette allowlist entry) (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee), including the axis-lock heading “forward azimuth minus 90° (modulo 360°)” and the Menger overview radius rule, which supersede rev 4.6's statement that these were not yet in the plan text; (2) B06 — backend plan changes PC1–PC8 (F3 sample-0 initialization owned by B11 with a B06 zero-readback test; F2 probe and `preparation-failed` owned by B09; encode-only presenter; F8 asynchronous creation errors fail their tickets; F9 caller subdivides horizontally with one lease per region; target handles caller-owned until `release()`; frozen 8×8 dispatch ABI; `destroyDevice()` loss semantics) (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca). **Rev 4.6** records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
 rev 4.4). **B02 rulings 1–10** (Claude's B02 reviews r1/r2 and Codex run 20261021T072056Z-9083):
 (1) decimal grammar with lexical significant-digit counting, explicit exponent bound, signed zero;
 (2) `toDouble`/`toBinary32` reject non-finite results; (3) **AMENDED by Codex, accepted by Claude**
@@ -2207,7 +2207,226 @@ unchanged assertions.
 **Expected outputs:** three performance reports with per-trial results; the investigation
 document; the audit summary with every commit accounted for, accepted boundaries and WIP reported separately, and the audited head named.
 
+- **Conditional remediation (rev 6.0).** B15-G0 and B15-G1 (grouped submissions, only if unchanged P3 establishes an application failure) are listed under "B15 remediation: conditional grouped submissions" in the 1b.1x amendment below.
+
 ---
+
+## 1b.1x Explore and compose (rev 6.0 plan amendment)
+
+*Added in rev 6.0, Claude/Codex converged 2026-10-22 under the user's delegation of product direction ("you and Codex are running this… This is your show"); user informed. The governing spec text is §13.11 and the §7.2 and §8.1 amendments of the same revision.*
+
+### Scope and identities
+
+Normal prerequisite: accepted B15. B15-G0/G1 below are remediation tasks and may precede that acceptance.
+
+This increment adds no runtime dependency, second Space backend, mathematical family, numerical-profile relaxation or weaker P3 target.
+
+Use these identities:
+
+| Concern | Identity |
+|---|---|
+| Scene appearance | `space-compose-v1` |
+| Appearance implementation | `space-appearance-v4` |
+| Artistic attribute definition | `radial-min-v1` |
+| Attribute implementation | `space-orbit-attributes-v1` |
+| Target layout | `space-targets-v3` |
+
+The new target set adds:
+
+| Target | Format | Bytes/pixel |
+|---|---|---:|
+| Orbit minimum | `r32float` | 4 |
+| Attribute status/reason and escape-index word | `r32uint` | 4 |
+| Shadow visibility | `r32float` | 4 |
+| Raw AO occlusion | `r32float` | 4 |
+
+Reuse the existing `lightingStatus` target. New availability/reason flags occupy unused bits in the existing accumulation flag word; existing bits retain their meanings.
+
+One complete working target set is **76 + 16 = 92 B/pixel**, or **763,084,800 B at 3840×2160** before staging, uniforms, model buffers, retained caches and overlapping work. This is a layout figure, not a measured peak or a claim that every 4K configuration fits.
+
+Retained sample-zero resources and aliases are counted exactly once while live; distinct working copies are additional allocations. The 1 GiB cap remains unchanged. Allocation failure stays explicit. 4K export remains a 1b.3 obligation.
+
+Extend B00’s pass/bounds contract for attribute and separated secondary-lighting work. Attribute batches declare at most `N≤512` recurrence updates per hit; the bound is included in scheduling and grouped-work accounting. No new pass is charged as zero work.
+
+Packed draft evidence carries attribute state/reason alongside existing primary, normal and recovery evidence. Version its layout; preserve coverage markers and exact counts.
+
+### Tasks
+
+Each task is reviewed by the other peer. GPU work remains exclusive.
+
+| Task | Owner | Depends on | Deliverable |
+|---|---|---|---|
+| **X00** | Claude | B15 evidence, with the partial-work rule below | Freeze defaults, scopes, labels, six preset payloads, reference protocols, explicit walkthrough scenes/actions and manifests. Record diagnostic baselines. |
+| **X01** | Codex | X00 | Strict schema, conversion, family-switch rules, command scopes, key contracts, target/batch ABI and unit coverage. |
+| **X02** | Claude | X01 | Attribute, secondary-lighting and appearance shaders; exact palette evaluation; status patterns; GPU reference checks; minimal uncached renderer wiring needed to execute them. |
+| **X03** | Codex | X02 | Retained sample-zero caches, pass dependencies, invalidation, resource ownership, reports and packed evidence. Extend and verify performance harnesses. |
+| **X04** | Claude | X01 | Framing, orientation, panel groups, labels, explanations, hints, keyboard alternatives and input recovery. |
+| **X05** | Codex | X03, X04 | Scoped presets and swatches; single-edit undo; scene JSON round-trip and reproduction. |
+| **X06** | Claude | X00 | Bounded compatibility investigation and visual walkthrough preparation. May run early with exclusive GPU ownership. |
+| **X07** | Codex | X00–X06; accepted B15 | Freeze final candidate, execute acceptance, assemble evidence/audit and prepare handoff. Claude reviews before completion. |
+
+X00 may perform Node-only planning/reference work while B15 remains unresolved. X01 may begin only after its complete schema/ABI/reference dependencies are frozen. Neither partial progress permits 1b.1x GPU acceptance before neutral P3 passes.
+
+The X00 baseline measurements use the accepted B15 implementation, not candidate code. Record existing reshading behavior—including the inert palette limitation—and eight-sample wall time. These diagnostics do not redefine the new acceptance budgets.
+
+**Hot-file ownership:**
+
+- `workspace.js`, `index.html`, and UI styles: X04, then X05 additive changes.
+- `shade/accumulate/display.wgsl` and new attribute shader sources: X02.
+- `renderer.js`: X02’s minimal wiring, then X03.
+- `tests/space-performance.mjs` and performance support: X03, reviewed before X07’s candidate freeze.
+- Generated shader metadata follows its owning source change; no simultaneous edits.
+
+Any later shader correction returns to X02 ownership and receives review before new acceptance.
+
+### Frozen artifacts
+
+X00 commits:
+
+- `tests/fixtures/explore-compose.json`: complete scene bytes, explicit cameras, dimensions, actions/times, expected command scopes and screenshot checkpoints.
+- Complete default and six preset payloads.
+- Attribute-reference fixtures, generator provenance, comparison protocol and coverage floors.
+- Control alternate-value fixtures and indication-test fixtures.
+- External SHA-256 manifests.
+
+No acceptance fixture is selected after observing candidate performance. Baseline observations are recorded before the final fixture freeze, without changing the stated budgets.
+
+The references import no production modules. Cases cover:
+
+- Both fractal families, all supported bulb powers and budgets 64/128/256/512.
+- Quaternion off-plane components and initialization escape.
+- Zero minima, budget exhaustion, invalid reconstruction and numerical failures.
+- Recovered primary hits and near-threshold recurrence cases.
+
+For reference comparisons, use GPU-reconstructed effective hit positions, not independently rounded substitutes. Freeze an adjacent-representable-input sensitivity screen before GPU comparison. Excluded cases remain recorded and receive diagnostic comparison.
+
+On eligible reference cases, status and escape index must agree; the allowed mismatch count is zero. X00 must independently justify and freeze the scalar-attribute tolerance and per-stratum coverage floors before comparison. Missing floors or unsupported tolerance analysis prevents X00 completion; a later amendment preserves the original failed preflight.
+
+Separately, compare the instrumented GPU evaluator with the original GPU evaluator on the same inputs. Require agreement on escape status/index and estimate availability. Non-escaped or unusable attribute results at actual primary hits are counted as inconsistent. Ordinary walkthroughs require zero such inconsistencies.
+
+### Walkthrough scenarios
+
+| Scenario | Frozen behavior |
+|---|---|
+| **Bulb overview** | Power 8; neutral opening; hints; orbit, axis-lock, keyboard steps and reset; orbit-colour preset; phase/finish edits; undo; JSON save, alteration and reload. |
+| **Bulb detail** | Fixed exterior close-up; light direction/intensity, shadows and AO; fog on/off; all diagnostic views; matched primary-buffer comparison. |
+| **Quaternion overview** | `C=(-0.2,0.8,0,0)`, `κ=0`; colour, undo and save/reload workflow; retain lighting limitations. |
+| **Quaternion detail** | Fixed exterior close-up; lighting/fog, four-component attributes, availability and diagnostics. |
+| **Family change** | Orbit-coloured fractal → sphere, box and Menger; explicit solid/shaded resolution, notice and complete undo restoration. Malformed imports remain rejected. |
+| **Recovery** | Rapid appearance edits, A → B → A, navigation during refinement, blur, cancellation, loss and allocation pressure. |
+| **Unavailable Space** | Stock installed Chrome; preserve Plane and present actionable guidance if Space cannot initialize. |
+
+X00 authors and peer-reviews explicit overview/detail cameras. Overview targets 60–80% of the unobscured viewport’s limiting dimension with the silhouette visible. Detail scenes name the intended feature and retain an exterior camera. These cameras never replace P1/P2/P3 or B11b fixtures.
+
+Ordinary scene settings are 128 iterations, 512 primary steps, eight samples and seed 1.
+
+Visual/layout checkpoints use desktop 1440×1000 and laptop 1280×720 windows, recording actual canvas dimensions. **Every timed check uses 1280×720 output.**
+
+Capture neutral/composed images, normals, depth, termination, orbit colour and direct/full comparisons. Save raw masks and reports alongside screenshots.
+
+### Control-effect and indication tests
+
+X00 freezes alternate values and applicable fixtures.
+
+For each appearance control, its alternate changes at least 1% of displayed hit pixels in the prescribed crop by at least `4/255` in one displayed channel, while matched primary buffers remain bit-equal. Background-only controls use a frozen miss-pixel crop.
+
+Shape, model and navigation controls instead verify their intended mathematics/camera changes. View controls verify the selected mapping. Disclosure/help controls verify accessibility and behavior. These cases are not falsely subjected to primary-buffer invariance.
+
+Control-effect crops exclude diagnostic overlays when measuring the control’s visual effect. Overlay correctness is tested separately against flags.
+
+Indication fixtures cover every shipped palette × background × preset combination, colours matching the old tint, strong fog, isolated pixels, thin masks and simultaneous flags. Spatial patterns must remain distinguishable; primary legends retain their required values.
+
+Readable form and useful framing remain a two-peer image review, supported by these quantitative checks.
+
+### Timed appearance workload
+
+Run with the preset gallery visible and swatches enabled. Scheduling may defer swatch work behind interaction under the existing priority rules; the harness may not disable it.
+
+After a recorded complete starting render:
+
+1. Issue 40 phase edits at 250 ms intervals, alternating `0` and `0.25`, with cached attributes.
+2. Restore the frozen scene and drain work.
+3. Issue 40 key-intensity edits at the same intervals, alternating `0.6` and `1.0`, with compatible full secondary data.
+4. In a separate case, begin with solid colour and no attribute cache, then request orbit colour.
+
+Record every request, supersession, actual quality, completed work, readback, publication and presenter-queue completion. Timing begins at request creation.
+
+A cached-edit milestone is the first complete **full-resolution sample-zero image at the requested lighting quality**. It is distinct from §16.4’s first direct-light milestone and from completed eight-sample refinement.
+
+### Budgets and acceptance
+
+| Measurement | Requirement |
+|---|---|
+| Original neutral P3 | Original bytes, quality, timing, coverage, trial rules and failure precedence |
+| Navigation draft rate | ≥30 completed drafts/s |
+| Consecutive draft interval | p95 ≤50 ms |
+| Navigation interaction | p95 ≤100 ms |
+| Stress replacement | ≤250 ms |
+| Application main-thread tasks | None over 50 ms during timed acceptance |
+| First settled complete full-resolution geometry/normals/direct image | ≤2 s from request creation |
+| Cached appearance-edit milestone | p95 ≤100 ms; maximum ≤250 ms |
+| First uncached orbit-colour image | ≤2 s; full resolution and requested colour mode, with actual lighting stage disclosed |
+| Complete eight-sample walkthrough refinement | ≤10 s wall time from the final request |
+| Admission/allocation | Two outstanding leases; aggregate 8 ms work target; existing 5 s watchdog; 1 GiB tracked cap |
+| Ordinary walkthrough numerical failures and attribute inconsistencies | Zero |
+
+The isolated walkthrough wall-time requirement is additional to runtime elapsed-work budgets. It does not change their pause/scheduling semantics.
+
+Timed appearance tests require three valid passing trials within five recorded attempts, using P3’s classification discipline. Preserve failed attempts; discard no warm-up trial. Missing coverage and harness timeouts cannot pass.
+
+Measure the compose P3 variant only after neutral P3 passes. Store it in independently hashed `performance-workload-compose.json`; do not edit original P3 bytes. For each fractal scene it changes only the frozen appearance payload, retains the same primary trajectory/coverage expectations and uses the same targets. Moving drafts include orbit attributes.
+
+Every shipped lighting preset receives fresh five-scene B11b qualification at full lighting, shadows enabled and nonzero AO. Failed presets are not shipped. Quaternion remains required diagnostic evidence, without relaxing its thresholds or its deferred investigation.
+
+Final acceptance also requires:
+
+- Existing mandatory numerical, visual, interaction, recovery and Plane gates.
+- Complete scene restoration, including requested numerical parameters.
+- Matched primary-buffer equality across appearance variants.
+- Correct secondary-cache reuse and invalidation.
+- Complete diagnostic and availability evidence through accumulation.
+- No direct/full flash on the qualified cached-edit path.
+- Peer-reviewed overview and detail results for both fractal families.
+- A clean, pinned candidate and auditable evidence provenance.
+
+### Compatibility investigation
+
+Compare exactly two launch configurations on this workstation: the documented flagged route and stock installed Chrome, using isolated profiles and the same scene.
+
+Record browser version, requested/effective arguments, adapter/device availability, identity evidence and initialization outcome.
+
+A stock failure produces a documented limitation and verified guidance. A success establishes support only for that measured configuration. No second backend, native application or speculative flag search is authorized.
+
+### B15 remediation: conditional grouped submissions
+
+List these tasks under B15:
+
+| Task | Owner | Depends on | Deliverable |
+|---|---|---|---|
+| **B15-G0** | Claude | Established P3 failure and diagnostic case for grouping | B00/B06 group contract, backend encoding, fake backend and ownership/failure tests |
+| **B15-G1** | Codex | B15-G0 | Renderer integration, exact diagnostics, candidate freeze and unchanged P3 plus affected correctness/recovery gates |
+
+Each is reviewed by the other peer.
+
+**Trigger:** unchanged P3 establishes an application failure after compatible improvements, and uncontended diagnostic evidence supports bounded grouping as remediation. Missing/inconclusive evidence requires measurement repair first.
+
+Conditionally amend §9.1:
+
+> A tagged group descriptor contains one common request/job/generation/sample identity and region, with an ordered list of prepared pass descriptors. Each pass retains pipeline identity, bindings, uniform snapshot and work bounds.
+>
+> One group is one command buffer, submission, admission lease and completion ticket. Validate the complete descriptor before admission consumption or submission. Aggregate work accounts for every pass; the 8 ms adaptation target applies to the entire group. Two leases remain the epoch-wide limit.
+>
+> Retain all constituent resources through completion, failure or loss. A final queue fence is not evidence of individual intermediate completion.
+>
+> Initial scope is navigation drafts: primary tracing, normals, optional attributes, required secondary work, shading, accumulation, display and diagnostic packing, where applicable. Preserve sample order and seed. Every grouped dependency must be valid within the same region; no uncompleted cross-region dependency is assumed.
+>
+> Readback and presentation remain separately admitted. Publish only after complete-frame work and required diagnostic evidence. Preserve exact primary, normal, recovery and attribute masks/counts.
+>
+> Cancellation stops future admissions and drains admitted groups. Timeout does not release resources. Loss invalidates the epoch; constituent failure fails the whole group.
+
+Keep settled work ungrouped initially. Freeze the algorithm and candidate before acceptance measurements.
+
+If neutral P3 still fails, 1b.1 remains unaccepted and 1b.1x GPU acceptance waits. Node-only work with frozen dependencies may continue; B15 diagnostics/remediation may continue under exclusive GPU ownership. Targets, quality, lease limits and backend scope do not change without another explicit peer-converged amendment.
 
 ## Parallel schedule
 
