@@ -135,3 +135,56 @@ test('recovery masks count attempts, outcomes, stops, midpoints and encounters p
   const waiting = createOutcomeMasks({ width: 1, height: 1 }, { recovery: true });
   assert.throws(() => sample(waiting, identity(0), { status: [HIT], normal: [true] }), /incomplete/);
 });
+
+
+test('packed draft masks preserve pixelwise statuses reasons normal availability and recovery exactly', () => {
+  const states = [HIT, MISS, UNRESOLVED, FAILED, packStatus({ status: 2, reason: 4, subreason: 2, steps: 13 })];
+  for (const recovery of [false, true]) {
+    const packed = createOutcomeMasks({ width: 5, height: 1 }, { recovery });
+    const separate = createOutcomeMasks({ width: 5, height: 1 }, { recovery });
+    assert.equal(typeof packed.recordDraft, 'function');
+    const recovered = 0x122; // approximate hit, 2 midpoint evaluations, 2 encounters
+    separate.record(identity(0), 'status', full(5), u32(states));
+    separate.record(identity(0), 'normal', full(5), normals([false, true, true, false, true]));
+    separate.record(identity(0), 'lightingStatus', full(5), u32([0, 0, 0, 0, 0]));
+    if (recovery) separate.record(identity(0), 'recovery', full(5), u32([recovered, 0, 0, 0, 0]));
+    const packet = u32(states.flatMap((status, i) => [status, 0x41540000 | ([false, true, true, false, true][i] ? 1 : 0), ...(recovery ? [i ? 0 : recovered] : [])]));
+    packed.recordDraft(identity(0), full(5), packet);
+    assert.deepEqual(packed.end(identity(0)), separate.end(identity(0)));
+    assert.deepEqual(packed.snapshot(), separate.snapshot());
+    assert.deepEqual(packed.unionBits(), separate.unionBits());
+    assert.deepEqual(packed.unionReasons(), separate.unionReasons());
+  }
+});
+
+test('packed draft diagnostics reject missing coverage malformed length duplicate pixels and stale identity', () => {
+  const masks = createOutcomeMasks({ width: 2, height: 1 });
+  assert.equal(typeof masks.recordDraft, 'function');
+  assert.throws(() => masks.recordDraft(identity(0), full(2), u32([HIT, 0x41540001])), /bytes|length/);
+  assert.throws(() => masks.recordDraft(identity(0), full(1), u32([HIT, 0])), /coverage/);
+  masks.recordDraft(identity(0), full(1), u32([HIT, 0x41540000]));
+  assert.throws(() => masks.recordDraft(identity(0), full(1), u32([HIT, 0x41540000])), /twice/);
+  assert.throws(() => masks.recordDraft(identity(0, 'wrong'), { x: 1, y: 0, width: 1, height: 1 }, u32([MISS, 0x41540001])), /stale/);
+  assert.throws(() => masks.end(identity(0)), /incomplete/);
+});
+
+test('packed GPU equivalence check requires present recovery words and rejects packets that omit them', async () => {
+  const { checkPackedDiagnostics, patternRecoveryWord } = await import('../support/packed-diagnostics.mjs');
+  const size = { width: 52, height: 4 }, pixels = size.width * size.height;
+  const statusOf = x => ({ 0: packStatus({ status: 0, reason: 0, subreason: 0, steps: 4 }), 2: packStatus({ status: 2, reason: 1, subreason: 0, steps: 4 }),
+    3: packStatus({ status: 2, reason: 2, subreason: 0, steps: 4 }), 8: packStatus({ status: 3, reason: 0, subreason: 0, steps: 4 }) })[Math.floor(x / 4) % 13] ?? 1;
+  const status = new Uint32Array(pixels), normal = new Uint16Array(pixels * 4), recovery = new Uint32Array(pixels);
+  for (let i = 0; i < pixels; i++) {
+    const x = i % size.width, y = Math.floor(i / size.width);
+    status[i] = statusOf(x); recovery[i] = patternRecoveryWord(x, y); if ((status[i] & 15) === 0) normal[i * 4 + 3] = 0x3c00;
+  }
+  const pack = recoveryOf => { const p = new Uint32Array(pixels * 3); for (let i = 0; i < pixels; i++) { p[3 * i] = status[i]; p[3 * i + 1] = 0x41540000 | (normal[i * 4 + 3] ? 1 : 0); p[3 * i + 2] = recoveryOf(i); } return p; };
+  const u8 = a => new Uint8Array(a.buffer), display = new Uint8Array(pixels * 4);
+  const input = (packet, recoveryWords = recovery) => ({ size, recovery: true, packet: u8(packet), status: u8(status), normal: u8(normal),
+    lightingStatus: new Uint8Array(pixels * 4), recoveryWords: u8(recoveryWords), display, packedDisplay: display });
+  const good = checkPackedDiagnostics(input(pack(i => recovery[i])));
+  assert.ok(good.recovery.attempts > 0 && good.recovery.outcomes['point-budget'] > 0 && Object.values(good.recovery.stops).every(n => n > 0));
+  assert.throws(() => checkPackedDiagnostics(input(pack(() => 0))), /recovery/, 'omitted recovery packing');
+  assert.throws(() => checkPackedDiagnostics(input(pack(i => recovery[(i + 1) % pixels]))), /recovery/, 'misplaced recovery packing');
+  assert.throws(() => checkPackedDiagnostics(input(pack(() => 0), new Uint32Array(pixels))), /fixture recovery word present/, 'an all-zero recovery fixture is not evidence');
+});

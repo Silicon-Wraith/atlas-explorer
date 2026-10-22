@@ -225,7 +225,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   function failReveal(reason) { if (reveal) settleReveal({ outcome: 'unavailable', reason }); }
   function presented() { return !dirty && Boolean(lastPresented) && sameGeneration(lastPresented.generation, liveGeneration()); }
   function onPublish(publication) {
-    const request = requests.get(publication.requestId);
+    const request = publication.request;
     // The renderer owns the published request even after this bounded history
     // evicts it. In particular, a delayed pending draft keeps its own metadata.
     lastPublication = publication;
@@ -410,7 +410,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   // a pick then reports unavailable instead of hitting superseded geometry.
   function pickContext() {
     if (!active || !eligibleForPicks() || pendingStatus || dirty || !lastPublication) return null;
-    const request = requests.get(lastPublication.requestId);
+    const request = lastPublication.request;
     if (!request || !sameGeneration(request.generation, liveGeneration())) return null;
     return { identity: identityOf(request), geometryRevision: request.generation.geometryRevision, dimensions: { ...request.quality.internalSize }, sampleIndex: lastPublication.sampleIndex };
   }

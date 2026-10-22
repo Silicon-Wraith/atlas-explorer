@@ -21,6 +21,20 @@ const identifier = (value, name) => {
   if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${name} must be a nonempty string`);
 };
 
+// Indexed min-heap: stable creation order survives dependency waits and requeueing.
+// Mutations are O(log live ready jobs), selection O(1); no backlog/history scan.
+function readyQueue() {
+  const heap = [], positions = new Map();
+  const swap = (a, b) => { [heap[a], heap[b]] = [heap[b], heap[a]]; positions.set(heap[a], a); positions.set(heap[b], b); };
+  function up(i) { while (i && heap[i].order < heap[(i - 1) >> 1].order) { const p = (i - 1) >> 1; swap(i, p); i = p; } return i; }
+  function down(i) { for (;;) { let n = i; for (const c of [i * 2 + 1, i * 2 + 2]) if (c < heap.length && heap[c].order < heap[n].order) n = c; if (n === i) return; swap(i, n); i = n; } }
+  return {
+    get size() { return heap.length; }, first: () => heap[0],
+    add(record) { if (positions.has(record)) return; positions.set(record, heap.length); heap.push(record); up(heap.length - 1); },
+    delete(record) { const i = positions.get(record); if (i === undefined) return false; const last = heap.pop(); positions.delete(record); if (i < heap.length) { heap[i] = last; positions.set(last, i); down(up(i)); } return true; },
+  };
+}
+
 /**
  * Owns admission, never submission or resource disposal. Every returned lease must be
  * reported back, including synchronous submission failures. The exact lease object
@@ -49,7 +63,7 @@ const identifier = (value, name) => {
  * jobs never revive. Requests during a watchdog stall queue until terminal evidence
  * retires every outstanding lease; observed loss still requires a new epoch.
  *
- * Ready sets cache one reserved operation per live job, avoiding queue/history scans
+ * Ready queues cache one reserved operation per live job, avoiding queue/history scans
  * in admit()/completed(). Plan methods and listeners are injected synchronous work
  * and must themselves be bounded. subscribe receives small change events, not a
  * full snapshot; snapshot() explicitly copies the current live state on demand.
@@ -58,6 +72,11 @@ const identifier = (value, name) => {
  * ready(jobId, {epoch}) when its resources become ready. This rechecks only that
  * job, never issues a lease, and returns true only for newly reserved work or
  * exhaustion. Stale, terminal and duplicate notifications have no effect.
+ * An optional navigationStream identifies a per-view/epoch stream: one admitted
+ * owner plus the newest pending request, including across dependency waits.
+ * job.preparation resolves true when no older owner needs to retire, or false on
+ * supersession/cancellation before selection. It never grants a GPU lease.
+ * Update pins its selected request through the old owner's cancellation/drain.
  */
 export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
   maxOutstanding = SCHEDULER_DEFAULTS.maxOutstanding,
@@ -77,8 +96,8 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
   for (const [key, value] of Object.entries(limits)) positive(value, key);
   const views = new Map(), groups = new Map(), epochs = new Map(), leases = new Map(), records = new Set();
   const issuedAdmissions = new WeakSet();
-  const ready = PRIORITIES.map(() => new Set()), listeners = new Set();
-  let epoch = 0, highestEpoch = 0;
+  const ready = PRIORITIES.map(readyQueue), listeners = new Set();
+  let epoch = 0, highestEpoch = 0, order = 0;
 
   function emit(type, record) {
     const event = Object.freeze({ type, epoch, jobId: record?.group.jobId ?? null, viewId: record?.view.viewId ?? null });
@@ -101,6 +120,7 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
     // stall therefore needs no backlog scan from completed()/failed().
     return record.group.epoch === epoch && epoch !== 0 && !epochs.get(epoch).lost &&
       !record.result && !record.group.cancellation && !record.view.hidden &&
+      (!record.group.stream?.active || record.group.stream.active === record.group) &&
       (!record.view.paused || record.view.updateJob === record) &&
       (!record.instrument || record.admittedAt !== null ||
         (record.view.instruments.values().next().value === record && now() >= nextInstrumentAt(record.view)));
@@ -143,6 +163,21 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
     cleanupGroup(record.group);
   }
   function cleanupGroup(group) {
+    const stream = group.stream;
+    if (stream?.active === group && (!group.main || group.main.result) && !group.outstanding) {
+      stream.active = null;
+      // Later inspection auxiliaries no longer own a completed draft's stream.
+      group.stream = null;
+      const selected = group.view.updateJob;
+      const pending = selected?.group.stream === stream && !selected.result ? selected : stream.pending;
+      // With no Update selection and no pending request both are null: nothing to pin.
+      if (pending && pending === selected) stream.active = selected.group;
+      if (pending && !pending.result && !pending.group.cancellation) {
+        pending.preparation.resolve(true);
+        for (const member of pending.group.members) queue(member);
+      }
+    }
+    if (stream && !stream.active && !stream.pending && group.view.streams.get(stream.key) === stream) group.view.streams.delete(stream.key);
     if (!group.members.size && !group.outstanding) groups.delete(group.jobId);
   }
   function refreshInstruments(view) {
@@ -164,6 +199,8 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
     stopClock(record); ready[record.rank].delete(record); record.next = null;
     if (record.view.instruments.delete(record)) refreshInstruments(record.view);
     record.result = Object.freeze({ outcome, reason, ...extra }); record.done.resolve(record.result);
+    record.preparation.resolve(false);
+    if (record.group.stream?.pending === record) record.group.stream.pending = null;
     if (record.view.pending === record) record.view.pending = null;
     record.view.running.delete(record);
     if (record.view.updateJob === record) record.view.updateJob = null;
@@ -183,7 +220,7 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
     groups.set(jobId, group); return group;
   }
   function newRecord(group, rank, plan = null, kind = null) {
-    const record = { group, view: group.view, rank, plan, kind, next: null, done: deferred(), result: null,
+    const record = { order: ++order, preparation: deferred(), group, view: group.view, rank, plan, kind, next: null, done: deferred(), result: null,
       outstanding: 0, requestedAt: now(), admittedAt: null, elapsedWorkMs: 0, activeAt: null,
       budgetTimer: null, instrument: plan?.request.output?.purpose === 'instrument',
       budgetMs: plan?.request.output?.purpose === 'export' ? limits.exportMs : limits[`${kind}Ms`],
@@ -256,7 +293,7 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       identifier(viewId, 'viewId');
       if (views.has(viewId)) throw new RangeError(`view already registered: ${viewId}`);
       views.set(viewId, { viewId, hidden: Boolean(hidden), paused: false, updateJob: null, pending: null,
-        members: new Set(), running: new Set(), instruments: new Set(), instrumentTimer: null, lastInstrumentAt: -Infinity });
+        streams: new Map(), members: new Set(), running: new Set(), instruments: new Set(), instrumentTimer: null, lastInstrumentAt: -Infinity });
       emit('view');
     },
     setEpoch(value) {
@@ -269,7 +306,7 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       for (const record of records) queue(record);
       emit('epoch');
     },
-    request(viewId, { jobId, requestId, priority, kind, plan }) {
+    request(viewId, { jobId, requestId, priority, kind, plan, navigationStream = null }) {
       const view = viewFor(viewId), rank = priorityIndex(priority);
       identifier(requestId, 'requestId');
       if (!['draft', 'settled'].includes(kind)) throw new RangeError('kind must be draft or settled');
@@ -280,20 +317,29 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       if (!epoch || epochs.get(epoch).lost || request?.jobId !== jobId || request.requestId !== requestId ||
         request.viewId !== viewId || request.generation?.deviceEpoch !== epoch) throw new RangeError('plan request identity must match the current epoch and job');
       if (groups.get(jobId)?.main) throw new RangeError('job already requested');
+      if (navigationStream !== null && (!Number.isSafeInteger(navigationStream) || navigationStream < 0)) throw new TypeError('navigationStream must be null or a nonnegative integer');
       const group = groupFor(jobId, view, epoch);
       const record = newRecord(group, rank, plan, kind); group.main = record;
-      record.public = Object.freeze({ jobId, requestId, viewId, request: deepFreeze(structuredClone(request)), done: record.done.promise });
+      record.public = Object.freeze({ jobId, requestId, viewId, request: deepFreeze(structuredClone(request)), done: record.done.promise, preparation: record.preparation.promise });
       const interactive = !request.output?.purpose || request.output.purpose === 'interactive';
       record.interactive = interactive;
       if (interactive) {
-        if (view.pending) {
-          const previous = view.pending.group;
+        if (navigationStream !== null) {
+          const key = `${epoch}/${navigationStream}`;
+          if (!view.streams.has(key)) view.streams.set(key, { key, active: null, pending: null });
+          group.stream = view.streams.get(key);
+        }
+        const previousPending = group.stream ? group.stream.pending : view.pending;
+        if (previousPending && previousPending !== view.updateJob) {
+          const previous = previousPending.group;
           for (const member of previous.members) settle(member, 'superseded', 'newer-request');
         }
         // Input coalesces only unissued work. Clients explicitly cancel running
         // jobs when necessary; input cadence must not determine render cadence.
         view.pending = record;
+        if (group.stream) { group.stream.pending = record; view.streams.set(group.stream.key, group.stream); }
       }
+      if (!group.stream?.active) record.preparation.resolve(true);
       // Instruments start at most twice a second per view. Continuation batches of
       // that same snapshot are not throttled. No controller-specific cadence exists.
       if (record.instrument) view.instruments.add(record);
@@ -326,7 +372,7 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       // Exactly five priority checks per available slot, independent of backlog.
       for (let slot = state.outstanding; slot < maxOutstanding; slot++) {
         let record;
-        for (const set of ready) if (set.size) { record = set.values().next().value; break; }
+        for (const set of ready) if (set.size) { record = set.first(); break; }
         if (!record) break;
         let admission;
         try {
@@ -351,6 +397,12 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
         // An owner's first auxiliary lease also makes that job running: a later
         // request cannot supersede it merely because its plan has not issued yet.
         const owner = record.group.main;
+        const stream = record.group.stream;
+        if (stream) {
+          stream.active = record.group;
+          if (stream.pending === owner) stream.pending = null;
+          if (stream.pending) for (const member of stream.pending.group.members) queue(member);
+        }
         if (record.view.pending === owner) record.view.pending = null;
         if (owner?.interactive && !owner.result) record.view.running.add(owner);
         armWatchdog(state); syncClock(record);
@@ -433,6 +485,12 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       const record = view.updateJob ?? view.pending ?? view.running.values().next().value ?? null;
       view.paused = true; view.updateJob = record;
       if (view.pending === record) view.pending = null;
+      if (record?.group.stream) {
+        const stream = record.group.stream;
+        if (stream.active && stream.active !== record.group) cancelGroup(stream.active);
+        if (!stream.active) stream.active = record.group;
+        if (stream.active === record.group && stream.pending === record) stream.pending = null;
+      }
       if (record?.interactive) view.running.add(record);
       for (const member of view.members) queue(member);
       emit('view');

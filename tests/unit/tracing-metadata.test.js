@@ -1,3 +1,5 @@
+import { appearancePipelineDescriptors } from '../../src/space/render/webgpu/appearance.js';
+import { stageDraftDiagnostics } from '../support/fake-space-backend.mjs';
 // Plan B10: the tracing, normals and pick metadata (passes.js). Node-only (no GPU); the headed
 // `rendering` group traces against B04's frozen ray strata and anchors.
 import test from 'node:test';
@@ -135,14 +137,14 @@ test('the renderer drives the tracing descriptors through the B09 pass sequence 
   const selfCheck = SELF_CHECK_PIPELINE_SET.descriptors.filter(d => ['probe', 'present'].includes(d.pipelineId));
   const pipelineSet = createPipelineSet({ id: 'b10-renderer', descriptors: [...selfCheck, ...tracePipelineDescriptors().filter(d => !d.pipelineId.endsWith(':menger')),
     fixture('shade', 'shade_band', [read('status'), read('normal'), write('sampleColor'), write('lightingStatus')]),
-    fixture('accumulate', 'accumulate_band', [read('sampleColor'), write('next')]), fixture('display', 'display_band', [read('accumulation'), write('display')])] });
+    ...appearancePipelineDescriptors().filter(d => d.pipelineId === 'display_draft_band'), fixture('accumulate', 'accumulate_band', [read('sampleColor'), write('next')]), fixture('display', 'display_band', [read('accumulation'), write('display')])] });
   const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
   for (const model of ['sphere', 'mandelbulb', 'quaternion-julia']) {
     const clock = createFakeClock(), fake = createFakeBackend({ clock });
     const batches = [], tickets = [];
     const track = (method, desc, options) => { const ticket = fake[method](desc, options); const item = { ticket, pending: true }; tickets.push(item); ticket.done.then(() => { item.pending = false; }); return ticket; };
     const backend = { ...fake,
-      submitBatch(batch, options) { batches.push(batch); return track('submitBatch', batch, options); },
+      submitBatch(batch, options) { stageDraftDiagnostics(fake, batch); batches.push(batch); return track('submitBatch', batch, options); },
       readback(desc, options) { if (desc.fields.includes('probe')) fake.stage(desc.source, new Uint8Array(Uint32Array.of(0x41544c53).buffer)); return track('readback', desc, options); },
       present(desc, options) { return track('present', desc, options); } };
     const scheduler = createScheduler({ clock, makeAdmission: createAdmission, setTimer: clock.schedule, clearTimer: clock.clear });

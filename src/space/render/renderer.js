@@ -110,15 +110,19 @@ function countReadback(counts, field, bytes, region, masks) {
       const { shadow, ao } = unpackLightingStatus(word);
       if (shadow) counts.lightingFailures.shadow++; if (ao) counts.lightingFailures.ao++; if (shadow && ao) counts.lightingFailures.both++;
     } else {
-      const { status, reason, subreason } = unpackStatus(word), rays = counts.rayTermination;
-      if (status === 0) rays.hit++;
-      else if (status === 1) rays.miss++;
-      else if (status === 3) rays.numericalFailure++;
-      else if (status === 2 && reason >= 1 && reason <= 3) rays.unresolved[['', 'pointBudget', 'estimateUnavailable', 'rayStepBudget'][reason]]++;
-      else if (status === 2 && reason === 4 && [1, 2].includes(subreason)) rays.unresolved.stagnation[subreason === 1 ? 'rayParameter' : 'fieldCoordinate']++;
-      else throw new BackendError('invalid-descriptor', 'invalid ray status readback');
+      countStatus(counts, word);
     }
   }
+}
+
+function countStatus(counts, word) {
+  const { status, reason, subreason } = unpackStatus(word), rays = counts.rayTermination;
+  if (status === 0) rays.hit++;
+  else if (status === 1) rays.miss++;
+  else if (status === 3) rays.numericalFailure++;
+  else if (status === 2 && reason >= 1 && reason <= 3) rays.unresolved[['', 'pointBudget', 'estimateUnavailable', 'rayStepBudget'][reason]]++;
+  else if (status === 2 && reason === 4 && [1, 2].includes(subreason)) rays.unresolved.stagnation[subreason === 1 ? 'rayParameter' : 'fieldCoordinate']++;
+  else throw new BackendError('invalid-descriptor', 'invalid ray status readback');
 }
 
 // An injected scheduler is dedicated to Space rendering: every submitting view
@@ -135,7 +139,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   if (!scheduler.snapshot().views.some(view => view.viewId === viewId)) scheduler.registerView(viewId);
   const pipelines = createPipelineSet(pipelineSet);
   const listeners = Object.fromEntries(['Publish', 'Present', 'Report', 'Status'].map(name => [name, new Set()]));
-  const jobs = new Map(), owners = new Map(), auxiliary = new Map();
+  const jobs = new Map(), owners = new Map(), auxiliary = new Map(), tileLearning = new Map();
   const submittedJobs = new Set(), submittedRequests = new Set();
   let current = null, interactive = null, published = null, geometryCache = null, destroyed = false;
   let preparation = null, prepared = null, acquisition = null, acquiring = null, serial = 0, auxSerial = 0;
@@ -199,7 +203,11 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const report = record.builder.finish(result.outcome, { reason: result.reason ?? '', completed: record.samplesCompleted ? {
       ...record.request.quality.internalSize, iteration: record.request.quality.iteration, tracing: record.request.quality.tracing,
       samples: record.samplesCompleted, lighting: record.publishedQuality.lighting,
-    } : null, details: { ...fields, outcomeMasks: record.publishedMasks ?? UNAVAILABLE, geometryRequestId: record.geometryRequestId, appearanceRebound: record.geometryRequestId !== record.request.requestId,
+    } : null, details: { ...fields,
+      diagnosticReadback: record.request.quality.preview ? { format: 'draft-diagnostics-v1', bytesPerPixel: (record.diagnosticStride ?? (RECOVERING_FAMILIES.includes(record.model.id) ? 3 : 2)) * 4,
+        secondaryFlags: 'exactly zero: direct/diagnostic draft shading evaluates no secondary rays' } : { format: 'separate-textures' },
+      operations: { completed: record.completionCount, byPass: structuredClone(record.operationMetrics ?? {}) },
+      outcomeMasks: record.publishedMasks ?? UNAVAILABLE, geometryRequestId: record.geometryRequestId, appearanceRebound: record.geometryRequestId !== record.request.requestId,
       ...(result.continuation ? { continuation: result.continuation } : {}), ...(result.submitted ? { submitted: result.submitted } : {}),
     } });
     record.result = Object.freeze({ ...result, ...(record.error?.code === undefined ? {} : { errorCode: record.error.code }), report });
@@ -214,7 +222,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     if (record.scheduled) scheduler.cancel(record.request.jobId);
   }
   function pipeline(pass, record, stage) {
-    const entry = pass === 'probe' ? 'probe' : pass === 'shade' && stage === 'diagnostic'
+    const entry = pass === 'display' && record.request.quality.preview ? 'display_draft_band' : pass === 'probe' ? 'probe' : pass === 'shade' && stage === 'diagnostic'
       ? `diagnostic_${record.request.sceneSnapshot.appearance.viewMode}` : `${pass}_band`;
     const candidates = pipelines.descriptors.filter(item => item.kind === 'compute' && item.entryPoint === entry);
     // Until the product families are assembled, fixtures may use one descriptor per
@@ -233,7 +241,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const descriptor = pipeline(pass, record, quality.lighting.stage), handles = record.targets?.handles ?? {};
     const alias = { ...handles, probe_target: handles.status,
       previous: handles.accumulation?.[sample & 1], next: handles.accumulation?.[(sample + 1) & 1],
-      accumulation: handles.accumulation?.[(sample + 1) & 1], display: record.displayHandle, menger_boxes: record.mengerBoxes, ...extra.handles };
+      accumulation: handles.accumulation?.[(sample + 1) & 1], display: record.displayHandle, draftDiagnostics: record.draftDiagnostics, menger_boxes: record.mengerBoxes, ...extra.handles };
     const inputs = {}, outputs = {};
     for (const binding of descriptor.bindings) {
       if (binding.type === 'uniform-buffer' && descriptor.uniformLayout.byteLength) continue;
@@ -245,7 +253,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const sampling = quality.sampling, jitter = sampleJitter({ seed: sampling.seed, sampleIndex: sample, pixel: [region.x, region.y] });
     const effective = record.effective ?? {}, camera = record.request.sceneSnapshot.camera;
     const fields = { origin: [region.x, region.y], size: [region.width, region.height], internalSize: Object.values(quality.internalSize),
-      sampleIndex: sample, seed: sampling.seed, lightingStage: quality.lighting.stage === 'full' ? 1 : quality.lighting.stage === 'diagnostic' ? 2 : 0,
+      diagnosticStride: record.diagnosticStride, sampleIndex: sample, seed: sampling.seed, lightingStage: quality.lighting.stage === 'full' ? 1 : quality.lighting.stage === 'diagnostic' ? 2 : 0,
       jitter: [jitter.dx, jitter.dy], maxIterations: quality.iteration.maxIterations, maxSteps: quality.tracing.maxSteps,
       stepMultiplier: quality.tracing.stepMultiplier, toleranceFloor: quality.tracing.toleranceFloor,
       // B10: τ(t) = max(toleranceFloor, toleranceFactor·α·t), and the quaternion's outward-rounded B02 R(C).
@@ -286,7 +294,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     if (meta.last) record.milestones.fullQualityMs = elapsed;
     const appearance = appearanceKey(record.request.sceneSnapshot, meta.quality);
     emit('Publish', { kind: record.request.quality.preview ? 'draft' : meta.ordinal === 0 ? 'settled-first' : 'refinement',
-      requestId: record.request.requestId, identity: identity(record.request), createdAt: record.requestedAt,
+      request: record.request, requestId: record.request.requestId, identity: identity(record.request), createdAt: record.requestedAt,
       sceneHash: record.request.sceneHash, camera: record.request.sceneSnapshot.camera,
       model: record.request.sceneSnapshot.model.id, internalSize: { ...meta.quality.internalSize },
       output: { width: record.request.output.width, height: record.request.output.height },
@@ -309,10 +317,11 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     record.masks = createOutcomeMasks(request.quality.internalSize, { recovery: recovers });
     const full = request.quality.lighting.stage === 'full';
     const sampleCount = full ? target + 1 : target;
-    let ordinal = 0, phaseIndex = 0, x = 0, y = 0, sequence = 0, pixels = INITIAL_PIXELS;
+    let ordinal = 0, phaseIndex = 0, x = 0, y = 0, rowHeight = 0, sequence = 0;
     let windowIds = [], windowLeft = 0, phaseEnded = false, completions = 0, replacements = 0, boundaries = 0, lastReplacement = 0;
     const metadata = new Map(), remaining = new Set();
-    const phases = ['trace', 'normals', 'shade', 'accumulate', 'display', 'status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus', 'present'];
+    const phases = ['trace', 'normals', 'shade', 'accumulate', 'display', ...(request.quality.preview ? ['draftDiagnostics'] : ['status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus']), 'present'];
+    const workload = (phase, quality) => canonicalJson({ epoch: request.generation.deviceEpoch, family: record.model.id, effective: record.effective, profile: quality.profile, phase, iteration: quality.iteration, tracing: quality.tracing, lighting: quality.lighting, viewMode: request.sceneSnapshot.appearance.viewMode });
     function meta() {
       const sample = full && ordinal > 0 ? ordinal - 1 : ordinal;
       return { ordinal, sample, quality: stageQuality(request, ordinal), last: ordinal === sampleCount - 1 };
@@ -334,16 +343,24 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         const id = `${request.jobId}/${++sequence}`;
         let op;
         if (phase === 'present') { op = { id, dependsOn: dependencies, kind: 'presentation', descriptor: { identity: identity(request), display: record.displayHandle } }; phaseEnded = true; }
-        else {
+        else if (phase === 'draftDiagnostics') {
+          op = { id, dependsOn: dependencies, kind: 'readback', descriptor: { identity: identity(request), source: record.draftDiagnostics,
+            region: { x: 0, y: 0, width: size.width * size.height * record.diagnosticStride * 4, height: 1 }, fields: ['draftDiagnostics'] } };
+          phaseEnded = true;
+        } else {
           const readback = ['status', 'recovery', 'normal', 'lightingStatus'].includes(phase), bpt = readback ? TARGET_LAYOUT[phase].bytesPerTexel : 0;
+          // Texture copies retain their separate row/alignment limits. Compute is
+          // sized only from this workload's completed evidence and device limits.
+          const pixels = readback ? INITIAL_PIXELS : tileLearning.get(workload(phase, m.quality))?.pixels ?? INITIAL_PIXELS;
+          const maxComputeSide = (acquisition?.limits?.maxComputeWorkgroupsPerDimension ?? 65535) * 8;
           const maxBuffer = acquisition?.limits?.maxBufferSize ?? 2 ** 28;
-          const maxWidth = readback ? Math.floor(maxBuffer / 256) * 256 / bpt : size.width;
+          const maxWidth = readback ? Math.floor(maxBuffer / 256) * 256 / bpt : maxComputeSide;
           const tileWidth = Math.min(size.width, pixels, maxWidth);
           const width = Math.min(size.width - x, tileWidth);
           if (width < 1) throw new BackendError('allocation-failed', 'a single aligned readback row exceeds maxBufferSize');
-          const rows = Math.min(size.height - y, Math.max(1, Math.floor(pixels / tileWidth)),
-            readback ? Math.min(256, Math.floor(maxBuffer / (Math.ceil(tileWidth * bpt / 256) * 256))) : 256);
-          const region = { x, y, width, height: rows };
+          if (x === 0) rowHeight = Math.min(size.height - y, Math.max(1, Math.floor(pixels / tileWidth)),
+            readback ? Math.min(256, Math.floor(maxBuffer / (Math.ceil(tileWidth * bpt / 256) * 256))) : maxComputeSide);
+          const rows = rowHeight, region = { x, y, width, height: rows };
           op = readback ? { id, dependsOn: dependencies, kind: 'readback', descriptor: { identity: identity(request), source: record.targets.handles[phase], region, fields: [phase] } }
             : { id, dependsOn: dependencies, kind: 'batch', batch: batch(record, phase, region, m.sample, m.quality) };
           x += width;
@@ -375,18 +392,27 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const initial = nextWindow();
     const plan = createJobPlan({ request, operations: initial, onAdvance(operation, evidence, pendingOperations) {
       completions++; remaining.delete(operation.id); windowLeft--;
+      // Learn even at phase boundaries (including an eight-tile phase). Learning
+      // changes future windows/jobs; only the split below replaces pending work.
+      const elapsed = evidence.timestampMs ?? evidence.elapsedMs;
+      if (operation.kind === 'batch') {
+        const m = metadata.get(operation.id), key = workload(m.phase, m.quality), previous = tileLearning.get(key);
+        const cost = Math.max(0.001, elapsed) / operation.batch.bounds.pixels;
+        const msPerPixel = previous ? (previous.msPerPixel + cost) / 2 : cost;
+        const pixels = Math.min(INITIAL_PIXELS * 8, Math.max(MIN_PIXELS, Math.floor(evidence.targetMs / msPerPixel)));
+        tileLearning.delete(key); tileLearning.set(key, { pixels, msPerPixel });
+        if (tileLearning.size > 256) tileLearning.delete(tileLearning.keys().next().value);
+      }
       if (windowLeft === 0) {
         if (phaseEnded) phaseComplete();
         const next = nextWindow(windowIds);
         if (!next.length) return undefined;
         boundaries++; replacements++; lastReplacement = completions; return [...pendingOperations, ...next];
       }
-      if (evidence.elapsedMs >= 0.5 * evidence.targetMs && evidence.elapsedMs <= 2 * evidence.targetMs || completions - lastReplacement < 8) return undefined;
-      if (evidence.elapsedMs < 0.5 * evidence.targetMs) { pixels = Math.min(INITIAL_PIXELS * 8, pixels * 2); return undefined; }
+      if (operation.kind !== 'batch' || elapsed <= 2 * evidence.targetMs || completions - lastReplacement < 8) return undefined;
       // A long slow stream must not recursively reduce every later pass to single
       // pixels. The tile budget bottoms at one quarter of its initial value;
       // row/edge rounding and readback limits may still require smaller regions.
-      pixels = Math.max(MIN_PIXELS, Math.floor(pixels / 2));
       if (pendingOperations.length >= WINDOW_LIMIT - 1) return undefined;
       const candidate = pendingOperations.find(op => {
         if (op.kind !== 'batch') return false;
@@ -416,6 +442,13 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     if (!record) { scheduler.failed(admission, new Error('renderer does not own admitted job')); return; }
     const meta = record.metadata?.get(operation.id);
     record.builder?.mark('admitted'); record.builder?.mark('submitted');
+    if (!record.internal && !aux && !record.result) {
+      const key = operation.kind === 'batch' ? descriptor.pass : operation.kind === 'readback' ? `readback:${descriptor.fields[0]}` : 'present';
+      record.operationMetrics ??= {};
+      const metric = record.operationMetrics[key] ??= { submitted: 0, pixelsOrBytes: 0, maxRegionHeight: 0 };
+      metric.submitted++; metric.pixelsOrBytes += descriptor.region ? descriptor.region.width * descriptor.region.height : 0;
+      metric.maxRegionHeight = Math.max(metric.maxRegionHeight, descriptor.region?.height ?? 0);
+    }
     record.outstanding = (record.outstanding ?? 0) + 1; record.outstandingMax = Math.max(record.outstandingMax ?? 0, record.outstanding);
     let counted = true;
     const retire = () => { if (counted) { counted = false; record.outstanding--; } };
@@ -497,11 +530,22 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           if (record.internal) {
             if (result.data.byteLength !== 4 || new DataView(result.data.buffer, result.data.byteOffset, 4).getUint32(0, true) !== 0x41544c53) throw new BackendError('preparation-failed', 'ATLS probe mismatch');
           } else if (!aux && !record.result) {
-            const field = operation.descriptor.fields[0], expected = operation.descriptor.region.width * operation.descriptor.region.height * TARGET_LAYOUT[field].bytesPerTexel;
-            if (result.data.byteLength !== expected) throw new BackendError('invalid-descriptor', 'incomplete status readback');
-            const region = operation.descriptor.region;
-            record.masks.record(maskIdentity(record, meta), field, region, result.data);
-            countReadback(record.counts, field, result.data, region, record.masks);
+            const field = operation.descriptor.fields[0];
+            if (field === 'draftDiagnostics') {
+              const region = { x: 0, y: 0, ...record.request.quality.internalSize };
+              record.masks.recordDraft(maskIdentity(record, meta), region, result.data);
+              const data = new DataView(result.data.buffer, result.data.byteOffset, result.data.byteLength);
+              for (let k = 0; k < result.data.byteLength; k += record.diagnosticStride * 4) {
+                const word = data.getUint32(k, true); countStatus(record.counts, word);
+                if ((word & 15) === 0 && !(data.getUint32(k + 4, true) & 1)) record.counts.unavailableNormals++;
+              }
+            } else {
+              const expected = operation.descriptor.region.width * operation.descriptor.region.height * TARGET_LAYOUT[field].bytesPerTexel;
+              if (result.data.byteLength !== expected) throw new BackendError('invalid-descriptor', 'incomplete status readback');
+              const region = operation.descriptor.region;
+              record.masks.record(maskIdentity(record, meta), field, region, result.data);
+              countReadback(record.counts, field, result.data, region, record.masks);
+            }
           }
         }
         if (operation.kind === 'presentation' && didPresent && !record.cancelled && executable(record)) emit('Present', { identity: identity(record.request), queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
@@ -521,13 +565,13 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     })();
   }
   const unsubscribeLoss = backend.onLoss(event => {
-    prepared = null; preparation = null; published = null; geometryCache = null; owners.clear();
+    prepared = null; preparation = null; published = null; geometryCache = null; owners.clear(); tileLearning.clear();
     scheduler.interrupted(event.epoch); scheduler.setEpoch(0);
     for (const record of jobs.values()) if (!record.scheduled) finish(record, { outcome: 'interrupted', reason: 'device-lost' });
     emit('Status', { phase: 'interrupted', epoch: event.epoch });
   });
   function schedule(record, plan, priority, kind) {
-    record.scheduled = scheduler.request(viewId, { jobId: record.request.jobId, requestId: record.request.requestId, priority, kind, plan });
+    record.scheduled = scheduler.request(viewId, { jobId: record.request.jobId, requestId: record.request.requestId, priority, kind, plan, navigationStream: record.navigation ?? null });
     record.scheduled.done.then(result => finish(record, result)); pump();
   }
   async function acquire() {
@@ -634,6 +678,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         await acquire(); register();
         if (prepared?.epoch !== backend.currentEpoch()) { record.builder.mark('preparing'); await prepare(); record.builder.mark('prepared'); }
         if (record.result) return;
+        if (!await record.scheduled.preparation || record.result) return;
         if (request.generation.deviceEpoch !== backend.currentEpoch()) throw new BackendError('device-lost');
         // Configuration is the only pre-admission dependency. Never wait for a
         // timer/frame after the resources needed by this immutable plan exist.
@@ -669,6 +714,13 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           const data = mengerBoxData(record.effective.depth);
           const boxes = backend.allocate({ name: `menger-boxes-${record.effective.depth}`, bytes: data.byteLength, usage: 'storage', data });
           hold([boxes]); record.handles.push(boxes); record.mengerBoxes = boxes;
+        }
+        if (request.quality.preview) {
+          if (request.quality.lighting.stage === 'full' || request.quality.lighting.shadowRays || request.quality.lighting.aoSamples) throw new BackendError('invalid-descriptor', 'packed draft diagnostics require zero secondary-ray work');
+          record.diagnosticStride = RECOVERING_FAMILIES.includes(model.id) ? 3 : 2;
+          const bytes = request.quality.internalSize.width * request.quality.internalSize.height * record.diagnosticStride * 4;
+          record.draftDiagnostics = backend.allocate({ name: 'draft-diagnostics-v1', bytes, usage: 'storage' });
+          hold([record.draftDiagnostics]); record.handles.push(record.draftDiagnostics);
         }
         readyPlan = makePlan(record);
         scheduler.ready(request.jobId, { epoch: request.generation.deviceEpoch });

@@ -233,16 +233,18 @@ export function createJobPlan({ request, operations, onAdvance }) {
         if (pending.some(item => !next.some(candidate => candidate.id === item.id))) invalid('subdivision must preserve pending completion barriers');
         const kept = items.filter(item => reserved.has(item.id) || completed.has(item.id));
         const combined = [...kept, ...next], validated = graph(combined);
-        const ancestors = operationId => {
-          const found = new Set(), visit = target => {
-            for (const dependency of validated.get(target).dependsOn) if (!found.has(dependency)) { found.add(dependency); visit(dependency); }
-          };
-          visit(operationId); return found;
+        // Every original dependency must remain an ancestor. The search stops once all
+        // are found, so it does not walk the job's completed history per pending item.
+        const retainsDependencies = previous => {
+          const missing = new Set(previous.dependsOn), seen = new Set(), stack = [previous.id];
+          while (missing.size && stack.length) {
+            for (const dependency of validated.get(stack.pop()).dependsOn) if (!seen.has(dependency)) {
+              seen.add(dependency); missing.delete(dependency); stack.push(dependency);
+            }
+          }
+          return !missing.size;
         };
-        for (const previous of pending) {
-          const dependencies = ancestors(previous.id);
-          if (previous.dependsOn.some(dependency => !dependencies.has(dependency))) invalid('subdivision cannot bypass a dependency');
-        }
+        for (const previous of pending) if (!retainsDependencies(previous)) invalid('subdivision cannot bypass a dependency');
         items = combined; byId = validated;
       }
       reserved.delete(op.id); completed.add(op.id);

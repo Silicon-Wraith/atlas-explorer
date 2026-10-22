@@ -17,7 +17,7 @@ import { APPEARANCE_HASHES } from './appearance-hashes.js';
 
 export { APPEARANCE_HASHES };
 export const APPEARANCE_VERSION = 'space-appearance-v3'; // rev 5.1 (B11c FU1): AO heights 4i·τ; v2 was B11b's lighting-unresolved tint, v1 B11's
-export const PRODUCT_PIPELINE_SET_ID = 'space-product-v4'; // B11c: v3 FU1 appearance, v4 FU2 tracing (recovery binding)
+export const PRODUCT_PIPELINE_SET_ID = 'space-product-v5'; // B15: v5 adds the draft display/diagnostic-buffer variant; colour rules unchanged
 export const DIAGNOSTIC_MODES = Object.freeze(VIEW_MODES.filter(mode => mode !== 'shaded'));
 export const VIEW_MODE_CODES = Object.freeze(Object.fromEntries(VIEW_MODES.map((mode, code) => [mode, code])));
 // The labels a view-mode control shows; step count is computational cost, never estimator error (spec §8.2).
@@ -64,19 +64,22 @@ const ACCUMULATE = { pipelineId: 'accumulate_band', kind: 'compute', sourceIds: 
 const DISPLAY = { pipelineId: 'display_band', kind: 'compute', sourceIds: ['display'], entryPoint: 'display_band', constants: {},
   bindings: [UNIFORM, read('accumulation'), read('accumulationFlags'), write('display')],
   uniformLayout: { byteLength: 32, fields: [field('origin', 'vec2<u32>', 0), field('size', 'vec2<u32>', 8), field('lightingStage', 'u32', 16), field('viewMode', 'u32', 20)] } };
+const DRAFT_DISPLAY = { ...DISPLAY, pipelineId: 'display_draft_band', entryPoint: 'display_draft_band',
+  bindings: [...DISPLAY.bindings, read('status'), read('normal'), read('recovery'), binding('draftDiagnostics', 'storage-buffer', 'read-write')],
+  uniformLayout: { byteLength: 32, fields: [...DISPLAY.uniformLayout.fields, field('diagnosticStride', 'u32', 24)] } };
 const descriptors = () => [...TRACE_FIELD_IDS.map(shadeDescriptor), ...TRACE_FIELD_IDS.map(depthDescriptor),
-  ...DIAGNOSTIC_MODES.filter(mode => mode !== 'depth').map(diagnosticDescriptor), ACCUMULATE, DISPLAY];
+  ...DIAGNOSTIC_MODES.filter(mode => mode !== 'depth').map(diagnosticDescriptor), ACCUMULATE, DISPLAY, DRAFT_DISPLAY];
 export const appearancePipelineDescriptors = () => deepFreeze(structuredClone(descriptors()));
 export const appearancePipelineSet = () => createPipelineSet({ id: APPEARANCE_VERSION, descriptors: appearancePipelineDescriptors() });
 
 // The versioned binding table (ruling (a), as B08 and B10 do): per entry source, slot → WGSL variable; per
 // descriptor, its slots in @binding order. Slots are module-local.
 export const APPEARANCE_BINDINGS = deepFreeze({
-  version: 'space-appearance-bindings-v1',
+  version: 'space-appearance-bindings-v2',
   wgsl: {
     shade: { u: 'u', depth: 'depth_in', status: 'status_in', normal: 'normal_in', sampleColor: 'color_out', lightingStatus: 'lighting_out', menger_boxes: 'menger_boxes' },
     accumulate: { u: 'u', status: 'status_in', normal: 'normal_in', lightingStatus: 'lighting_in', sampleColor: 'color_in', previous: 'previous_in', next: 'next_out', accumulationFlags: 'flags' },
-    display: { u: 'u', accumulation: 'accumulation_in', accumulationFlags: 'flags_in', display: 'display_out' },
+    display: { u: 'u', accumulation: 'accumulation_in', accumulationFlags: 'flags_in', display: 'display_out', status: 'status_in', normal: 'normal_in', recovery: 'recovery_in', draftDiagnostics: 'diagnostics_out' },
   },
   descriptors: Object.fromEntries(descriptors().map(d => [d.pipelineId, d.bindings.map(b => b.slot)])),
 });

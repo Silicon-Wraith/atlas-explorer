@@ -8,6 +8,22 @@ import { createFakeBackend } from './fake-backend.mjs';
 const PROBE_WORD = 0x41544c53;
 const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
+// Explicit scripted diagnostic bytes for orchestration fixtures; this does not
+// emulate or validate GPU shaders. GPU equivalence is checked by the headed suite.
+const stagedDraftBuffers = new WeakSet();
+export function stageDraftDiagnostics(fake, batch, { statusWords = [0], normals = [false], recoveryWords = [0] } = {}) {
+  if (!batch.outputs?.draftDiagnostics || stagedDraftBuffers.has(batch.outputs.draftDiagnostics)) return;
+  const stride = batch.uniforms.diagnosticStride;
+  const bytes = fake.diagnostics().inventory.find(r => r.id === batch.outputs.draftDiagnostics.id).bytes;
+  const packet = new Uint32Array(bytes / 4);
+  for (let k = 0, i = 0; k < packet.length; k += stride, i++) {
+    packet[k] = statusWords[i % statusWords.length]; packet[k + 1] = 0x41540000 | (normals[i % normals.length] ? 1 : 0);
+    if (stride === 3) packet[k + 2] = recoveryWords[i % recoveryWords.length];
+  }
+  fake.stage(batch.outputs.draftDiagnostics, new Uint8Array(packet.buffer));
+  stagedDraftBuffers.add(batch.outputs.draftDiagnostics);
+}
+
 export function createDrivenFakeBackend({ clock = () => performance.now(), limits = {}, schedule = fn => setTimeout(fn, 0) } = {}) {
   const fake = createFakeBackend({ clock, limits });
   let auto = true, acquisitionGate = null, failAcquisition = null, acquisitions = 0, pickDepth = null, holdPresents = false;
@@ -27,7 +43,7 @@ export function createDrivenFakeBackend({ clock = () => performance.now(), limit
       schedule(() => fake.finishPrepare());
       return result;
     },
-    submitBatch: (batch, options) => drive(fake.submitBatch(batch, options)),
+    submitBatch(batch, options) { stageDraftDiagnostics(fake, batch); return drive(fake.submitBatch(batch, options)); },
     readback(desc, options) {
       if (desc.fields.includes('probe')) fake.stage(desc.source, words([PROBE_WORD]));
       // A scripted surface for pick tests: every depth texel reads `pickDepth` (status words stay 0 = hit).

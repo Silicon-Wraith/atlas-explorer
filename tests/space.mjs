@@ -1526,7 +1526,8 @@ async function pickInPage() {
   const layout = { byteLength: 16, fields: [{ name: 'origin', type: 'vec2<u32>', offset: 0 }, { name: 'size', type: 'vec2<u32>', offset: 8 }] };
   const read = slot => ({ slot, type: 'texture', access: 'read' }), write = slot => ({ slot, type: 'storage-texture', access: 'write' });
   const fixture = (id, entryPoint, bindings) => ({ pipelineId: id, kind: 'compute', sourceIds: [id], entryPoint, constants: {}, bindings: [{ slot: 'u', type: 'uniform-buffer', access: 'read' }, ...bindings], uniformLayout: layout });
-  const pipelineSet = createPipelineSet({ id: 'b10-pick', descriptors: [...SELF_CHECK_PIPELINE_SET.descriptors.filter(d => ['probe', 'present'].includes(d.pipelineId)),
+  const { appearancePipelineDescriptors } = await import('/src/space/render/webgpu/appearance.js');
+  const pipelineSet = createPipelineSet({ id: 'b10-pick', descriptors: [...appearancePipelineDescriptors().filter(d => d.pipelineId === 'display_draft_band'), ...SELF_CHECK_PIPELINE_SET.descriptors.filter(d => ['probe', 'present'].includes(d.pipelineId)),
     ...passes.tracePipelineDescriptors().filter(d => !d.pipelineId.endsWith(':menger')),
     fixture('fixture-shade', 'shade_band', [read('status'), read('normal'), write('sampleColor'), write('lightingStatus')]),
     fixture('fixture-accumulate', 'accumulate_band', [read('sampleColor'), write('next')]), fixture('fixture-display', 'display_band', [read('accumulation'), write('display')])] });
@@ -1617,6 +1618,7 @@ export const APPEARANCE_PASSES = Object.freeze([
   'sample 0 after an appearance reset on poisoned accumulation and flag targets equals a fresh allocation, for subdivided regions and the following samples',
   'Known unequal linear samples average before the GPU sRGB transfer',
   'GPU depth normalisation matches independent depths with normals available and unavailable',
+  'Packed draft diagnostics equal independent GPU texture readbacks and preserve display bytes',
 ]);
 // The synthetic geometry classes of fixture-pattern (4-pixel columns): appearance tests predict each pixel's
 // per-sample status word, normal availability and therefore its accumulated flags on the CPU.
@@ -1673,6 +1675,27 @@ fn pattern(@builtin(global_invocation_id) gid: vec3<u32>) {
   textureStore(depth_out, vec2<i32>(p), vec4<f32>(1.5 - 0.01 * f32(kind), 0.0, 0.0, 1.0));
   textureStore(status_out, vec2<i32>(p), vec4<u32>(w, 0u, 0u, 1u));
   textureStore(normal_out, vec2<i32>(p), n);
+}`,
+  // B15-R8-F5: varied valid recovery words for fixture-pattern's statuses; mirrored by
+  // tests/support/packed-diagnostics.mjs patternRecoveryWord.
+  'fixture-recovery': `struct U { origin: vec2<u32>, size: vec2<u32> };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var recovery_out: texture_storage_2d<r32uint, write>;
+fn recovery_word(p: vec2<u32>) -> u32 {
+  switch ((p.x / 4u) % 13u) {
+    case 0u: { if (p.y % 2u == 0u) { return 3u | (2u << 4u) | (1u << 8u); } }
+    case 2u: { return 8u | ((1u + p.x % 4u) << 4u) | (4u << 8u) | ((1u + p.y % 4u) << 12u); }
+    case 3u: { return 2u | (1u << 4u) | (3u << 8u); }
+    case 8u: { return 5u | (3u << 4u) | (2u << 8u); }
+    default: {}
+  }
+  return 0u;
+}
+@compute @workgroup_size(8, 8, 1)
+fn recovery(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = u.origin + gid.xy;
+  textureStore(recovery_out, vec2<i32>(p), vec4<u32>(recovery_word(p), 0u, 0u, 1u));
 }`,
   'fixture-poison': `struct U { origin: vec2<u32>, size: vec2<u32> };
 @group(0) @binding(0) var<uniform> u: U;
@@ -1744,6 +1767,7 @@ async function appearanceSetupInPage() {
   const set = createPipelineSet({ id: 'b11-fixtures', descriptors: [
     fixture('fixture-values', 'values', [b('depth', 'storage-texture', 'write'), b('status', 'storage-texture', 'write'), b('normal', 'storage-texture', 'write'), b('sampleColor', 'storage-texture', 'write')], u([{ name: 'sampleIndex', type: 'u32', offset: 16 }, { name: 'available', type: 'u32', offset: 20 }], 32)),
     fixture('fixture-pattern', 'pattern', [b('depth', 'storage-texture', 'write'), b('status', 'storage-texture', 'write'), b('normal', 'storage-texture', 'write')], u([{ name: 'sampleIndex', type: 'u32', offset: 16 }], 32)),
+    fixture('fixture-recovery', 'recovery', [b('recovery', 'storage-texture', 'write')], u([])),
     fixture('fixture-poison', 'poison', [b('acc0', 'storage-texture', 'write'), b('acc1', 'storage-texture', 'write'), b('flags', 'storage-texture', 'write')], u([])),
     fixture('fixture-capture', 'capture', [b('display', 'texture', 'read'), b('captured', 'storage-buffer', 'read-write')], u([{ name: 'base', type: 'u32', offset: 16 }], 32)),
   ] });
@@ -1878,7 +1902,7 @@ async function passesInPage(spec) {
     const failed = done.filter(d => d.outcome !== 'completed');
     if (failed.length) throw new Error(`${pipelineId} sample ${sample}: ${failed[0].outcome} ${failed[0].reason}`);
   };
-  const out = { perSample: [] };
+  const out = { perSample: [] }; let diagnosticBuffer;
   try {
     for (let sample = 0; sample < spec.samples; sample++) {
       const sampling = { seed: spec.seed, sampleIndex: sample }, common = { modelId: spec.modelId, camera: spec.camera, effective: spec.effective, internalSize: size, sampling, profile };
@@ -1886,6 +1910,7 @@ async function passesInPage(spec) {
         for (const region of bandsFor('values', sample)) await a.fixture(jobId, 'fixture-values', region, {}, { depth: h.depth, status: h.status, normal: h.normal, sampleColor: h.sampleColor }, { sampleIndex: sample, available: spec.normalAvailable ? 1 : 0 });
       } else if (spec.geometry === 'pattern') {
         for (const region of bandsFor('pattern', sample)) await a.fixture(jobId, 'fixture-pattern', region, {}, { depth: h.depth, status: h.status, normal: h.normal }, { sampleIndex: sample });
+        if (spec.recoveryPattern) for (const region of bandsFor('recovery', sample)) await a.fixture(jobId, 'fixture-recovery', region, {}, { recovery: h.recovery }, {});
       } else {
         await run('trace', `trace_band:${spec.modelId}`, sample, region => passes.traceUniforms({ ...common, region }), { ...menger }, { depth: h.depth, status: h.status, recovery: h.recovery });
         await run('normals', `normals_band:${spec.modelId}`, sample, region => passes.normalsUniforms({ ...common, region }), { depth: h.depth, status: h.status, ...menger }, { normal: h.normal });
@@ -1912,8 +1937,18 @@ async function passesInPage(spec) {
     out.display = s.base64(await s.read(h.display, full, 'display', jobId));
     out.accumulation = s.base64(await s.read(accumulation, full, 'accumulation', jobId));
     out.flags = s.base64(await s.read(h.accumulationFlags, full, 'accumulationFlags', jobId));
+    if (spec.packedDiagnostics) {
+      const stride = spec.modelId === 'quaternion-julia' ? 3 : 2, byteLength = W * H * stride * 4;
+      diagnosticBuffer = backend.allocate({ name: 'draft-packet-equivalence', bytes: byteLength, usage: 'storage' });
+      await run('display', 'display_draft_band', last, region => ({ ...appearance.displayUniforms({ region, lightingStage, viewMode: appearance.VIEW_MODE_CODES[spec.viewMode] }), diagnosticStride: stride }),
+        { accumulation, accumulationFlags: h.accumulationFlags, status: h.status, normal: h.normal, recovery: h.recovery, draftDiagnostics: diagnosticBuffer }, { display: h.display, draftDiagnostics: diagnosticBuffer });
+      out.packedDisplay = s.base64(await s.read(h.display, full, 'display', jobId));
+      out.packet = s.base64(await s.read(diagnosticBuffer, { x: 0, y: 0, width: byteLength, height: 1 }, 'draftDiagnostics', jobId));
+      out.independent = {};
+      for (const field of ['status', 'normal', 'lightingStatus', ...(stride === 3 ? ['recovery'] : [])]) out.independent[field] = s.base64(await s.read(h[field], full, field, jobId));
+    }
     return out;
-  } finally { for (const handle of Object.values(h).flat()) backend.release(handle); }
+  } finally { for (const handle of [...Object.values(h).flat(), ...(diagnosticBuffer ? [diagnosticBuffer] : [])]) backend.release(handle); }
 }
 
 // ---- B11b visual acceptance (plan rev 5.0 B11b; tests/support/visual-acceptance.mjs) -------------------------
@@ -2843,6 +2878,17 @@ async function runRendering({ page }) {
   const patternRuns = {};
   const independent = { modelId: 'sphere', camera: camera.lookAt({ ...SPACE_DEFAULTS.camera, positionLocal: [0, 0, 0], focusLocal: [0, 0, -1] }, [0, 0, -1]), effective: {},
     internalSize: { width: 24, height: 8 }, profile: patternProfile, lighting: directLighting, seed: 1, geometry: 'values', bandRows: 3, order: 'permuted' };
+  const packedRuns = [];
+  for (const modelId of ['sphere', 'quaternion-julia']) packedRuns.push(await direct({ ...independent, label: `packed-${modelId}`, modelId, effective: effectiveParameters(modelId, createSpaceScene({ model: modelId }).parameters).effective,
+    geometry: 'pattern', internalSize: patternSize, viewMode: 'shaded', samples: 1, packedDiagnostics: true, recoveryPattern: modelId === 'quaternion-julia' }));
+  const { checkPackedDiagnostics } = await import('./support/packed-diagnostics.mjs');
+  check(APPEARANCE_PASSES[9], () => packedRuns.map((run, index) => {
+    const recovery = index === 1, raw = run.independent;
+    // B15-R8-F5: the quaternion run seeds varied nonzero recovery words (fixture-recovery), so a
+    // packet that omits or misplaces recovery cannot match; counts are asserted exactly.
+    return checkPackedDiagnostics({ size: patternSize, recovery, packet: bytes(run.packet), status: bytes(raw.status), normal: bytes(raw.normal),
+      lightingStatus: bytes(raw.lightingStatus), recoveryWords: recovery ? bytes(raw.recovery) : null, display: bytes(run.display), packedDisplay: bytes(run.packedDisplay) });
+  }));
   const linear = await direct({ ...independent, label: 'known-linear', viewMode: 'shaded', samples: 2, normalAvailable: true });
   check(APPEARANCE_PASSES[7], () => {
     const transfer = x => x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;

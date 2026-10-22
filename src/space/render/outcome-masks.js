@@ -162,6 +162,25 @@ export function createOutcomeMasks({ width, height }, { recovery = false } = {})
         }
       }
     },
+    // Draft-only packet v1: [terminal status, coverage marker | normal availability,
+    // optional quaternion recovery word]. Direct/diagnostic shade evaluates no
+    // secondary rays; its lighting flags are therefore exactly zero, not missing.
+    recordDraft(id, region, bytes) {
+      const { x, y, width: w, height: h } = region ?? {}, stride = recovery ? 12 : 8;
+      if (![x, y, w, h].every(Number.isInteger) || x < 0 || y < 0 || w < 1 || h < 1 || x + w > width || y + h > height) throw new RangeError('outcome-mask region outside the target');
+      if (!(bytes instanceof Uint8Array) || bytes.byteLength !== w * h * stride) throw new RangeError('draft diagnostic bytes do not match the region');
+      enter(id);
+      const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      for (let row = 0, k = 0; row < h; row++) for (let i = (y + row) * width + x, end = i + w; i < end; i++, k += stride) {
+        const word = data.getUint32(k, true), marker = data.getUint32(k + 4, true), status = word & 15;
+        if ((marker & 0xfffffffe) !== 0x41540000) throw new RangeError('missing or invalid draft diagnostic coverage');
+        if (status > RAY_STATUS.numericalFailure) throw new RangeError('invalid ray status in a draft diagnostic');
+        if (seen[i]) throw new RangeError('draft diagnostics recorded twice for one pixel');
+        seen[i] = COMPLETE; current[i] = STATUS_BITS[status] | ((marker & 1) ? NORMAL_RAW : 0);
+        if (status === RAY_STATUS.unresolved) currentReasons[i] = 1 << reasonSlot((word >>> 4) & 15, (word >>> 8) & 15);
+        if (recovery) currentRecovery[i] = data.getUint32(k + 8, true);
+      }
+    },
     // Whether this sample's status at a pixel was recorded and is a hit (for the joint normal count).
     hitAt(index) { return (seen[index] & FIELDS.status.seen) !== 0 && (current[index] & B.hit) !== 0; },
     statusSeen(index) { return (seen[index] & FIELDS.status.seen) !== 0; },

@@ -103,6 +103,9 @@ test('a pending draft retains its own camera size and scene after more than 64 n
     assert.deepEqual(pending.output, { width: first.output.width, height: first.output.height });
     assert.equal(pending.sceneHash, first.sceneHash);
     assert.equal(pending.model, first.sceneSnapshot.model.id);
+    assert.deepEqual(pending.request, first, 'the publication carries its complete immutable request');
+    assert.equal(Object.isFrozen(pending.request.sceneSnapshot.camera), true);
+    assert.throws(() => { pending.request.output.width = 999; }, TypeError);
   } finally { h.backends[0]?.control.resume(); h.space.destroy(); }
 });
 
@@ -311,7 +314,8 @@ test('a pick readback resolving between an edit and the next frame moves nothing
     // Control: without an edit, the scripted surface is a hit and focus moves the camera.
     const start = h.space.inspection.scene.camera;
     h.canvas().dispatchEvent({ type: 'dblclick', clientX: 400, clientY: 300, target: h.canvas() });
-    await sleep(30);
+    const deadline = performance.now() + 1000;
+    while (h.space.inspection.scene.camera === start && performance.now() < deadline) await turn();
     assert.notDeepEqual(h.space.inspection.scene.camera, start, 'a current pick focuses');
     await h.settle();
     const camera = h.space.inspection.scene.camera, cameraHistory = h.space.inspection.history.camera;

@@ -4,12 +4,12 @@ export const APPEARANCE_HASHES = Object.freeze({
   sources: Object.freeze({
     "shade": "62c31af83c8bcdd0e3836f085df10d9503d63acca3f92f02f32c0170cc7362cb",
     "accumulate": "d58c7e0467d12e007f3be6fd4f15e791da8b5234bb1e6da7c051453febd82223",
-    "display": "e53fce263ce9b22bac18ee30eed2211e0142458e411cf625c1f4f4825d122fda"
+    "display": "09065b25530f9072ae073508f0b3d7c635ea20d69ee938d5617bd7e3363e452b"
   }),
   assembled: Object.freeze({
     "fields+menger-absent+trace+shade": "3453f868fe2d5926c74256939e04c952e5fcd57e6aa15fce9bccb0f93cb7413c",
     "fields+menger-sample+trace+shade": "ceaa40ac269bf88a26f228b348058ba7f8623c7f6f9887df96a2d3c715943870",
     "accumulate": "89e8f26b87bfd87704757f2bea09565e918de1bace90691dd5fb7bb59f29d6bd",
-    "display": "2e93fcb80796339a9b0dcb3bf8aa390bfbc36fa79550b50b6500c248d3b9dcd1"
+    "display": "23d847cd1969fdd8032dcbb7256750f2bf88751319b8d27f5d69ae79727237b4"
   }),
 });

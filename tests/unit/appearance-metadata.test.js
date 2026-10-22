@@ -32,7 +32,7 @@ const DEFAULT_LIMITS = { maxStorageBuffersPerShaderStage: 8, maxStorageTexturesP
 
 test('the appearance metadata hashes equal the sources and verifyPrewarm reports a missing variant', async () => {
   assert.equal(APPEARANCE_VERSION, 'space-appearance-v3');
-  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v4');
+  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v5');
   const descriptors = appearancePipelineDescriptors();
   const owned = new Set(descriptors.flatMap(d => d.sourceIds).filter(id => !['fields', 'trace', 'menger-sample', 'menger-absent'].includes(id)));
   assert.deepEqual([...owned].sort(), ['accumulate', 'display', 'shade']);
@@ -51,7 +51,7 @@ test('the appearance metadata hashes equal the sources and verifyPrewarm reports
   const product = productPipelineSet(), ids = product.descriptors.map(d => d.pipelineId);
   assert.equal(product.id, PRODUCT_PIPELINE_SET_ID);
   assert.deepEqual(createPipelineSet(product), product);
-  const required = ['probe', 'present', 'accumulate_band', 'display_band', ...TRACE_FIELD_IDS.flatMap(model => [`points-${model}`, `trace_band:${model}`,
+  const required = ['probe', 'present', 'accumulate_band', 'display_band', 'display_draft_band', ...TRACE_FIELD_IDS.flatMap(model => [`points-${model}`, `trace_band:${model}`,
     `normals_band:${model}`, `shade_band:${model}`, `diagnostic_depth:${model}`]), ...['normals', 'steps', 'termination'].map(mode => `diagnostic_${mode}`)];
   assert.deepEqual([...ids].sort(), [...required].sort());
   assert.equal(new Set(ids).size, ids.length);
@@ -74,8 +74,8 @@ test('the appearance descriptors bind every slot at its WGSL index under the fro
   const descriptors = appearancePipelineDescriptors();
   assert.deepEqual(createPipelineSet(appearancePipelineSet()), appearancePipelineSet());
   assert.deepEqual(descriptors.map(d => d.pipelineId), [...TRACE_FIELD_IDS.map(m => `shade_band:${m}`), ...TRACE_FIELD_IDS.map(m => `diagnostic_depth:${m}`),
-    'diagnostic_normals', 'diagnostic_steps', 'diagnostic_termination', 'accumulate_band', 'display_band']);
-  assert.equal(APPEARANCE_BINDINGS.version, 'space-appearance-bindings-v1');
+    'diagnostic_normals', 'diagnostic_steps', 'diagnostic_termination', 'accumulate_band', 'display_band', 'display_draft_band']);
+  assert.equal(APPEARANCE_BINDINGS.version, 'space-appearance-bindings-v2');
   for (const descriptor of descriptors) {
     assert.deepEqual(validatePipelineDescriptor(descriptor), descriptor);
     const code = await shaderCode(descriptor.sourceIds, loadFromDisk);
@@ -92,7 +92,7 @@ test('the appearance descriptors bind every slot at its WGSL index under the fro
     assert.equal(descriptor.bindings.some(b => b.slot === 'menger_boxes'), descriptor.pipelineId === 'shade_band:menger', descriptor.pipelineId);
   }
   // The renderer's alias names (renderer.js batch()) are the only slots used.
-  const aliases = new Set(['u', 'depth', 'status', 'normal', 'sampleColor', 'lightingStatus', 'accumulationFlags', 'previous', 'next', 'accumulation', 'display', 'menger_boxes']);
+  const aliases = new Set(['u', 'depth', 'status', 'normal', 'sampleColor', 'lightingStatus', 'accumulationFlags', 'previous', 'next', 'accumulation', 'display', 'menger_boxes', 'recovery', 'draftDiagnostics']);
   for (const d of descriptors) for (const b of d.bindings) assert.ok(aliases.has(b.slot), `${d.pipelineId}: ${b.slot}`);
   const flags = descriptors.find(d => d.pipelineId === 'accumulate_band').bindings.find(b => b.slot === 'accumulationFlags');
   assert.deepEqual(flags, { slot: 'accumulationFlags', type: 'storage-texture', access: 'read-write' });
@@ -322,4 +322,17 @@ test('after an appearance reset the renderer starts accumulation at sample 0 ove
   assert.equal([...runs[0].next][0], [...runs[1].next][0]);
   assert.equal([...runs[1].next][0], [...runs[2].previous][0]);
   assert.equal([...runs[2].next][0], [...runs[3].previous][0]);
+});
+
+
+test('draft display packs diagnostics in the same singular display pipeline', () => {
+  const d = appearancePipelineDescriptors().find(d => d.pipelineId === 'display_draft_band');
+  assert.ok(d, 'the prewarmed draft display variant exists');
+  assert.equal(d.kind, 'compute'); assert.equal(d.entryPoint, 'display_draft_band');
+  assert.deepEqual(d.bindings.slice(4).map(b => [b.slot, b.type, b.access]), [['status', 'texture', 'read'], ['normal', 'texture', 'read'], ['recovery', 'texture', 'read'], ['draftDiagnostics', 'storage-buffer', 'read-write']]);
+  assert.ok(d.uniformLayout.fields.some(f => f.name === 'diagnosticStride' && f.offset === 24));
+  const code = readFileSync(shaderPath('display'), 'utf8');
+  assert.match(code, /diagnostics_out\[offset\] = textureLoad\(status_in, p, 0\).x/);
+  assert.match(code, /0x41540000u/);
+  assert.match(code, /diagnostics_out\[offset \+ 2u\] = textureLoad\(recovery_in, p, 0\).x/);
 });

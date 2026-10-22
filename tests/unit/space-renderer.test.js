@@ -9,7 +9,8 @@ import { packStatus, packLightingStatus } from '../../src/space/render/status.js
 import { createSpaceScene, sceneCodec } from '../../src/space/scene-adapter.js';
 import { createSpaceRequest } from '../../src/space/render-adapter.js';
 import { createSpaceRenderer, navigationDraftEligible } from '../../src/space/render/renderer.js';
-import { productPipelineSet } from '../../src/space/render/webgpu/appearance.js';
+import { stageDraftDiagnostics } from '../support/fake-space-backend.mjs';
+import { productPipelineSet, appearancePipelineDescriptors } from '../../src/space/render/webgpu/appearance.js';
 import { FIELD_IDS, POINT_INPUT_BYTES, POINT_RESULT_BYTES, RESULT_SENTINEL, decodePointResults,
   fieldPipelineDescriptors, mengerBoxData } from '../../src/space/render/webgpu/kernels.js';
 import { effectiveParameters, escapeRadius } from '../../src/space/numerics/parameters.js';
@@ -42,13 +43,14 @@ const fixture = createPipelineSet({ id: 'b09-fixture', descriptors: [
   ...['normals', 'depth', 'steps', 'termination'].map(mode => compute(`diagnostic-${mode}`, `diagnostic_${mode}`, [read('depth'), read('status'), read('normal'), write('sampleColor'), write('lightingStatus')])),
   compute('accumulate', 'accumulate_band', [read('sampleColor'), read('lightingStatus'), read('previous'), write('next'), { slot: 'accumulationFlags', type: 'storage-texture', access: 'read-write' }]),
   compute('display', 'display_band', [read('accumulation'), read('accumulationFlags'), write('display')]),
+  ...appearancePipelineDescriptors().filter(d => d.pipelineId === 'display_draft_band'),
   ...fieldPipelineDescriptors(),
   { pipelineId: 'present', kind: 'render', sourceIds: ['fixture-only'], vertexEntryPoint: 'present_vertex', fragmentEntryPoint: 'present_fragment', constants: {}, bindings: [read('display')], uniformLayout: { byteLength: 0, fields: [] } },
 ] });
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
-async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
+async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, recoveryWords, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock, limits });
   const hooks = {}, discarded = [], failed = [], auxiliaryJobs = [];
   const tickets = [], submissions = [], publications = [], presents = [], statuses = [], reports = [], plans = [], targets = [];
@@ -72,6 +74,7 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
     },
   };
   for (const method of ['submitBatch', 'readback', 'present']) backend[method] = (desc, options) => {
+    if (method === 'submitBatch') stageDraftDiagnostics(fake, desc, { statusWords, normals, recoveryWords });
     hooks.before?.(method, desc, options);
     if (method === 'readback' && desc.fields.includes('probe')) fake.stage(desc.source, words([probe]));
     if (method === 'readback' && desc.fields.includes('cameraClassification') && classificationWords) fake.stage(desc.source, words(classificationWords));
@@ -403,7 +406,7 @@ test('job results preserve preparation and copy-out error codes without parsing 
   assert.equal(preparation.outcome, 'failed'); assert.equal(preparation.errorCode, 'preparation-failed');
   bad.renderer.destroy(); bad.fake.destroy();
   const h = await rig();
-  h.hooks.after = (method, desc, ticket) => method === 'readback' && desc.fields[0] === 'status'
+  h.hooks.after = (method, desc, ticket) => method === 'readback' && desc.fields[0] === 'draftDiagnostics'
     ? { ...ticket, result: ticket.result.then(() => { throw new BackendError('invalid-descriptor', 'opaque copy-out failure'); }) } : undefined;
   const result = await h.finish(h.renderer.render(request()));
   assert.equal(result.outcome, 'failed'); assert.equal(result.errorCode, 'invalid-descriptor');
@@ -427,7 +430,7 @@ test('a draft replaces the published image only when complete and the retained i
   const job = h.renderer.render(b); assert.deepEqual(h.statuses.at(-1), { pending: true, since: h.clock.now() });
   await h.complete(); assert.equal(h.publications.length, 1, 'partial trace cannot replace the image');
   assert.ok(!h.fake.log.some(x => x.method === 'release' && x.args[0] === display), 'the published handle remains caller-owned');
-  const result = await h.finish(job); assert.equal(result.outcome, 'completed');
+  const result = await h.finish(job); assert.equal(result.outcome, 'completed', result.reason);
   assert.deepEqual(h.publications.map(x => x.requestId), [a.requestId, b.requestId]);
   assert.equal(h.publications[1].pending, false);
   assert.ok(h.fake.log.some(x => x.method === 'release' && x.args[0] === display));
@@ -1122,13 +1125,13 @@ test('F3 4K phases span bounded windows with exact coverage', async () => {
 });
 
 test('F3 adaptation respects both band edges after eight completions', async () => {
-  for (const [elapsed, replacements, nextPixels] of [[20, 1, 16384], [15.2, 0, 32768], [3.2, 0, 65536], [4.8, 0, 32768]]) {
+  for (const [elapsed, replacements] of [[20, 1], [15.2, 0], [3.2, 0], [4.8, 0]]) {
     const { h, plan } = await structuralPlan({ width: 1024, height: 1024 });
     for (let i = 0; i < 8; i++) advance(plan, plan.next(), i === 7 ? elapsed : 8);
     assert.equal(plan.diagnostics().replacements, replacements, `eighth completion at ${elapsed / 8}x`);
     let next;
     do { next = plan.next(); if (next.batch.pass === 'trace') advance(plan, next); } while (next.batch.pass === 'trace');
-    assert.equal(next.batch.bounds.pixels, nextPixels, `future tiles at ${elapsed / 8}x`);
+    assert.equal(next.batch.bounds.pixels, 32768, 'normal tiles have an independent workload estimate');
     h.renderer.destroy(); h.fake.destroy();
   }
 });
@@ -1137,7 +1140,7 @@ test('F3 fast evidence caps tile growth and narrow readbacks never exceed 256 ro
   const { h, plan } = await structuralPlan({ width: 4096, height: 2048 });
   let op;
   do { op = plan.next(); if (op.batch.pass === 'trace') advance(plan, op, 1); } while (op.batch.pass === 'trace');
-  assert.equal(op.batch.bounds.pixels, 32768 * 8);
+  assert.equal(op.batch.bounds.pixels, 32768, 'fast trace evidence cannot enlarge another pass');
   h.renderer.destroy(); h.fake.destroy();
   const narrow = await rig();
   const r = request(directScene(), generation(), 'settled', { width: 1, height: 1024 });
@@ -1462,4 +1465,73 @@ test('each pending draft guard independently rejects changed content appearance 
     const x=fixture();assert.equal(navigationDraftEligible(x),true,`valid baseline: ${name}`);
     mutate(x);assert.equal(navigationDraftEligible(x),false,name);
   }
+});
+
+
+test('draft diagnostics use one packed readback with exact status normal and recovery counts', async () => {
+  for (const model of ['mandelbulb', 'quaternion-julia', 'menger']) {
+    const status = [0, 1, packStatus({ status: 2, reason: 4, subreason: 2, steps: 9 }), 3];
+    // B15-R8-F5: valid, varied nonzero recovery words (approximate hit at the hit, numerical failure at the failure).
+    const recoveryWords = [3 | 2 << 4 | 1 << 8, 0, 0, 5 | 3 << 4 | 2 << 8];
+    const h = await rig({ statusWords: status, normals: [false, false, true, true], recoveryWords });
+    // The draft profile renders at half resolution: an 8×1 output has 4×1 internal pixels, one per scripted word.
+    const r = request(scene({ model }), generation(), 'draft', { width: 8, height: 1 });
+    assert.equal(pixelsIn(r), status.length, 'one internal pixel per scripted status word');
+    const { report } = await h.finish(h.renderer.render(r)); assert.equal(report.outcome, 'completed', report.reason);
+    const reads = h.submissions.filter(s => s.method === 'readback' && s.desc.identity.jobId === r.jobId);
+    assert.equal(reads.length, 1, 'one buffer transfer replaces every draft diagnostic texture transfer');
+    assert.deepEqual(reads[0].desc.fields, ['draftDiagnostics']);
+    assert.equal(reads[0].desc.region.height, 1); assert.equal(reads[0].desc.region.width, pixelsIn(r) * (model === 'quaternion-julia' ? 12 : 8));
+    assert.deepEqual([report.rayTermination.hit, report.rayTermination.miss, report.rayTermination.numericalFailure, report.rayTermination.unresolved.stagnation.fieldCoordinate], [1, 1, 1, 1]);
+    assert.equal(report.unavailableNormals, 1); assert.equal(report.outcomeMasks.union.hits, 1);
+    assert.deepEqual(report.lightingFailures, { shadow: 0, ao: 0, both: 0 });
+    assert.match(report.diagnosticReadback.secondaryFlags, /zero.*direct|direct.*zero/);
+    if (model !== 'quaternion-julia') assert.equal(report.outcomeMasks.recovery, null);
+    else {
+      assert.deepEqual(report.outcomeMasks.recovery.samples, [{ sample: 0, attempts: 2,
+        outcomes: { 'approximate hit': 1, 'numerical failure': 1, 'estimate-unavailable': 0, 'point-budget': 0 },
+        stops: { 'midpoint-limit': 0, 'parameter-collapse': 0, 'coordinate-collapse': 0, 'evaluation-cap': 0 }, midpoints: 8, encounters: 5 }], 'exact packed recovery values and counts');
+      assert.equal(report.outcomeMasks.recovery.union.attempted, 2);
+      assert.equal(report.outcomeMasks.recovery.union.outcomes['approximate hit'], 1); assert.equal(report.outcomeMasks.recovery.union.outcomes['numerical failure'], 1);
+    }
+    h.renderer.destroy();
+  }
+});
+
+test('tile learning persists by workload and pass and permits compute regions taller than 256 rows', async () => {
+  const h = await rig();
+  async function renderFast(model, revision) {
+    const r = request(scene({ model }), generation(revision), 'draft', { width: 1280, height: 720 });
+    let result; h.renderer.render(r).done.then(value => { result = value; });
+    for (let i = 0; !result && i < 1000; i++) {
+      await flush(); const pending = h.tickets.find(t => t.pending);
+      const work = (pending?.desc.bounds?.pixels ?? 32768) / 32768;
+      await h.complete('oldest', work * (pending?.desc.pass === 'normals' ? 8 : 1));
+    }
+    assert.equal(result?.outcome, 'completed', result?.reason); return r;
+  }
+  await renderFast('mandelbulb', 1);
+  const warm = await renderFast('mandelbulb', 2), warmBatches = batches(h, warm.jobId);
+  assert.ok(warmBatches.some(b => b.pass === 'trace' && b.region.height > 256), 'learning survives phase and job boundaries without a compute row cap');
+  assert.ok(warmBatches.filter(b => b.pass === 'normals').every(b => b.bounds.pixels <= 32768), 'trace evidence never sizes the normal workload');
+  for (const pass of ['trace', 'normals', 'shade', 'accumulate', 'display']) {
+    const covered = new Uint8Array(pixelsIn(warm));
+    for (const b of warmBatches.filter(b => b.pass === pass)) for (let y = b.region.y; y < b.region.y + b.region.height; y++) for (let x = b.region.x; x < b.region.x + b.region.width; x++) covered[y * warm.quality.internalSize.width + x]++;
+    assert.ok(covered.every(n => n === 1), `${pass} covers each pixel once`);
+  }
+  const cold = await renderFast('menger', 3);
+  assert.ok(batches(h, cold.jobId).filter(b => b.pass === 'trace').every(b => b.bounds.pixels <= 32768), 'a different family starts from its own calibration');
+  h.renderer.destroy();
+});
+
+test('pending navigation requests allocate targets only after the active draft retires', async () => {
+  const h = await rig(); let live = generation(); const opts = { currentGeneration: () => live, currentNavigation: () => 1 };
+  const first = h.renderer.render(request(scene(), live), opts);
+  await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === first.jobId));
+  const allocated = h.targets.length, skipped = [];
+  for (let i = 2; i <= 12; i++) { live = generation(i, 1); skipped.push(h.renderer.render(request(scene(), live), opts)); await flush(); }
+  assert.equal(h.targets.length, allocated, 'pending drafts have no working allocations');
+  for (const job of skipped.slice(0, -1)) assert.equal((await job.done).outcome, 'superseded');
+  await h.finish(first); assert.equal((await h.finish(skipped.at(-1))).outcome, 'completed');
+  assert.equal(h.targets.length, allocated + 1); h.renderer.destroy();
 });
