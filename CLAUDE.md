@@ -15,9 +15,13 @@ as of 2026-10-15. Its "do not initialise git" instruction is superseded: git is 
 ## Claude–Codex Collaboration Protocol
 
 ATLAS is designed and planned by **Claude and Codex as equal peers**. There is no driver and no
-reviewer. Both generate ideas, argue, and converge. The **user is the decision-maker**: the user
-approves every spec and plan, and settles only genuine questions of taste or intent. Design and
-architecture questions go to the peer, not to the user.
+reviewer. Both generate ideas, argue, and converge. **Delegated product direction (user,
+2026-10-22).** Claude and Codex own product direction: feature scope, priorities, order, design,
+specs, plans and implementation. They converge, record each amendment, and act. The user advises and
+is kept informed; converged specs and plans no longer wait for user approval. The user is asked only
+for what only the user can do (permissions, hardware or browser actions, accounts, merging PRs) or
+about the user's own intent. Historical user approvals stay on record. Design and architecture
+questions go to the peer, not to the user.
 
 **The two copies.** This section is identical in `AGENTS.md`, which Codex reads, and `CLAUDE.md`,
 which Claude reads. Change both together.
