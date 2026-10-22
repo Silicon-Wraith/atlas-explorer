@@ -1498,8 +1498,8 @@ with the evidence; tolerances and floors are never relaxed.
   rejected), `cancel(jobId) → {accepted, done}`, `resize({width, height})`, `onPublish(listener)`,
   `onPresent(listener)`, `onReport(listener)`, `onStatus(listener)`, `destroy()}`. A job settles
   `{outcome, reason, report}`. Publication events: `{kind: 'draft' | 'settled-first' |
-  'refinement', requestId, geometryRequestId, samples, pending: false}`; a status event `{pending:
-  true, since}` is emitted the moment a new request supersedes the published image. The renderer
+  'refinement', requestId, geometryRequestId, samples, pending: boolean}`; a status event `{pending:
+  true, since}` is emitted the moment a new request supersedes the published image. `pending` is true for a non-current navigation-draft publication permitted by spec §7.2 and B15's B09-F10 rule; otherwise it is false. The renderer
   builds a `JobPlan` per request and walks §8.1 through the scheduler (trace → normals → shade →
   accumulate → display → present), each pass as batches within the §7.5 bounds, every submission
   with its admission lease; it supplies `sampleJitter` to the trace pass before tracing, and
@@ -1514,7 +1514,7 @@ with the evidence; tolerances and floors are never relaxed.
   submissions. If the requested sample target is one, the first settled publication also completes
   the job and both milestone times coincide. Completed geometry is bound to a newer
   request only after key, epoch and resource-lifetime checks; a publication requires request and
-  view identity to match beyond `isPublishable`; partial tiles and mixed generations are never
+  view identity to match beyond `isPublishable`, except for the pending camera-navigation drafts expressly permitted by spec §7.2 and B15's B09-F10 rule; partial tiles and mixed generations are never
   published; a pick is answered only for the current epoch, request, geometry revision, dimensions
   and sample identity, otherwise `{stale: true}`.
 - Report `workspaceFields` (never a replacement `timings` object; the shared lifecycle marks stay
@@ -2032,7 +2032,7 @@ transitively T05, T07, T08, T09b, T10, T11); the dependency table reconciled aga
 - Produces: `createSpaceWorkspace({shell, backendFactory = createWebGPUBackend, clock}) →
   {inspection, activate(token) → Promise<{outcome}>, deactivate(), destroy()}` (`inspection` =
   `window.atlas.space`: `scene`, `history`, `lastReport`, `lastPublication`, `cameraStatus`,
-  `backendDiagnostics`, `whenIdle({timeoutMs})`, the harness commands `requestCamera(pose, {phase = 'commit'} = {})`, `editParameter(path, value)`, and `cancelCurrent()`, and the subscriptions `onRequest(listener)`, `onPublish(listener)`, `onPresent(listener)`, and `onReport(listener)`. `requestCamera` accepts only `phase: 'preview' | 'commit'`. A preview follows the same camera-gesture preview path as a drag, requests draft quality, and creates no camera-history entry. A commit closes an open camera-preview stream at the supplied pose, creates one camera-history entry for the stream, and requests settled quality; without an open stream it retains the existing discrete settled-jump behavior. The default is `commit`. `onRequest` emits `{identity, purpose, createdAt, request}` once for each created request before it is handed to the recovery/render path. `identity` identifies that request, `request` is its immutable snapshot, and `createdAt` uses the same monotonic clock as publication and presentation events. It is the request-creation boundary, not submission, admission, or GPU start. `onReport` emits each completed render report, including superseded work. Each subscription returns an unsubscribe function (Claude/Codex agreed, rev 5.3); and the test seams `setBackend(fake)`, `injectLoss()`,
+  `backendDiagnostics`, `whenIdle({timeoutMs})`, the harness commands `requestCamera(pose, {phase = 'commit'} = {})`, `editParameter(path, value)`, and `cancelCurrent()`, and the subscriptions `onRequest(listener)`, `onPublish(listener)`, `onPresent(listener)`, and `onReport(listener)`. `requestCamera` accepts only `phase: 'preview' | 'commit'`. A preview follows the same camera-gesture preview path as a drag, requests draft quality, and creates no camera-history entry. A commit closes an open camera-preview stream at the supplied pose, creates one camera-history entry for the stream, and requests settled quality; without an open stream it retains the existing discrete settled-jump behavior. The default is `commit`. `onRequest` emits `{identity, purpose, createdAt, request}` once for each created request before it is handed to the recovery/render path. `identity` identifies that request, `request` is its immutable snapshot, and `createdAt` uses the same monotonic clock as publication and presentation events. It is the request-creation boundary, not submission, admission, or GPU start. `onReport` emits each completed render report, including superseded work. Each subscription returns an unsubscribe function. (Claude/Codex agreed, rev 5.3.) The inspection API also exposes the test seams `setBackend(fake)`, `injectLoss()`,
   `injectAllocationFailure()` through the backend's test adapter); `createWorkspaceSwitcher({root,
   workspaces: {plane, space}, initial: 'plane'}) → {switchTo(id) → Promise<{activeId, outcome}>,
   current(), destroy()}` (assigns a monotonically increasing activation token; calls `deactivate()`
