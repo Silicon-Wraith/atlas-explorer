@@ -49,10 +49,10 @@ imported from `spikes/`).
 
 **Builds on 1a:** `feat/project1a` is authoritative for every interface this plan consumes.
 Interfaces 1a has planned but not yet landed are cited from the 1a plan and marked **(1a,
-unlanded)**; this plan does not invent them (see *Dependencies on 1a*). The dependency table is
+unlanded)** (all now merged; see the rev 5.0 note after the table); this plan does not invent them (see *Dependencies on 1a*). The dependency table is
 the `8eeed51` planning snapshot and is reconciled against the accepted 1a commit before B14 starts.
 
-**Revision:** 4.9 — rev 4.9 records the user's approval (2026-10-21) of the following on acceptance gates: full gates on merged feature candidates and on integration boundaries; tree-identical promotions take fast checks; non-promotable WIP; a mechanically checked `docs-fast` allowance; a versioned, fail-closed disposition manifest; and an enumerated retrospective transition (Claude and Codex converged; Codex runs 20261021T212923Z-663c, 20261021T214134Z-fcb2 and 20261021T214354Z-244e). **Rev 4.8** — rev 4.8 records the user's decision of 2026-10-21 on B10 S1: analytic ray depth under `surface-v1` is qualified against a sampling-aware ρ-expanded-object envelope, and relative 10⁻³ accuracy is retained under the new inspection profile `analytic-inspection-v1` (τ×0.1), with a re-freeze, new record IDs and the failed evidence preserved (Claude and Codex independent positions converged; Codex run 20261021T203032Z-7350). **Rev 4.7** — rev 4.7 applies agreed Claude/Codex corrections with no new user decision: (1) B05 — camera interface and rulings (a)–(h) as converged, and the notes for B10, B11, B12 and B14 (B14's initial bulb scene uses `overview(bulb)`; B11 drops the palette allowlist entry) (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee), including the axis-lock heading “forward azimuth minus 90° (modulo 360°)” and the Menger overview radius rule, which supersede rev 4.6's statement that these were not yet in the plan text; (2) B06 — backend plan changes PC1–PC8 (F3 sample-0 initialization owned by B11 with a B06 zero-readback test; F2 probe and `preparation-failed` owned by B09; encode-only presenter; F8 asynchronous creation errors fail their tickets; F9 caller subdivides horizontally with one lease per region; target handles caller-owned until `release()`; frozen 8×8 dispatch ABI; `destroyDevice()` loss semantics) (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca). **Rev 4.6** records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
+**Revision:** 5.0 — rev 5.0 (the design batch; approved by the user 2026-10-22; Codex READY run 20261022T015010Z-c512) records three user decisions of 2026-10-22 and applies accumulated Claude/Codex corrections. **User decisions, 2026-10-22:** (1) visual acceptance, a new required check before B15 on six frozen scenes (new task B11b; fractal lighting-unresolved ceiling 10%, analytic ≤1%; measurement fixes: unavailable normals counted over hits only, numerator and denominator from the same accumulation) (sources codex-B14-visual-fixes.md and claude-B14-visual-debate1.md; Codex run 20261022T010745Z-fca4); (2) lighting-only (AO/shadow) unresolved presentation is a subtle tint, never primary magenta, amending B11's presentation contract, legend tests and appearance identity, with no spec change (§8.2 allows it); (3) a one-sided normal fallback for box and Menger only, at the B10 normal rule, with B03/B08 hashes unchanged and new B10 tracing identity and record IDs. **Claude/Codex agreed corrections, no new user decision:** (4) B07b readiness wake-up text; (5) B07c `discardAuxiliary`, including that a discard is not watchdog progress; (6) new tasks T04a, B09b and B09c, and B09c's added `space-rendering` required pass; (7) B10 errata (D3/D5 interfaces, the F3 interior-detail encoding, the Menger box buffer assigned to B11, the B10-F6 and B11 AO comment fixes deferred); (8) B12 (`getPickContext()`, the "approximate hit" label, the F6 stop-reason note) and B12b (look-rate argument, gamepad allowlist); (9) the B13 → B14 recovery-facade note; (10) B14's new seams and the stale dependency-table rows; (11) B15 notes. **Rev 4.9** — rev 4.9 records the user's approval (2026-10-21) of the following on acceptance gates: full gates on merged feature candidates and on integration boundaries; tree-identical promotions take fast checks; non-promotable WIP; a mechanically checked `docs-fast` allowance; a versioned, fail-closed disposition manifest; and an enumerated retrospective transition (Claude and Codex converged; Codex runs 20261021T212923Z-663c, 20261021T214134Z-fcb2 and 20261021T214354Z-244e). **Rev 4.8** — rev 4.8 records the user's decision of 2026-10-21 on B10 S1: analytic ray depth under `surface-v1` is qualified against a sampling-aware ρ-expanded-object envelope, and relative 10⁻³ accuracy is retained under the new inspection profile `analytic-inspection-v1` (τ×0.1), with a re-freeze, new record IDs and the failed evidence preserved (Claude and Codex independent positions converged; Codex run 20261021T203032Z-7350). **Rev 4.7** — rev 4.7 applies agreed Claude/Codex corrections with no new user decision: (1) B05 — camera interface and rulings (a)–(h) as converged, and the notes for B10, B11, B12 and B14 (B14's initial bulb scene uses `overview(bulb)`; B11 drops the palette allowlist entry) (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee), including the axis-lock heading “forward azimuth minus 90° (modulo 360°)” and the Menger overview radius rule, which supersede rev 4.6's statement that these were not yet in the plan text; (2) B06 — backend plan changes PC1–PC8 (F3 sample-0 initialization owned by B11 with a B06 zero-readback test; F2 probe and `preparation-failed` owned by B09; encode-only presenter; F8 asynchronous creation errors fail their tickets; F9 caller subdivides horizontally with one lease per region; target handles caller-owned until `release()`; frozen 8×8 dispatch ABI; `destroyDevice()` loss semantics) (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca). **Rev 4.6** records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. **Rev 4.5** — applies three Claude/Codex corrections with no new user decision (spec rev 4.5): (1) spec §11 model-record shape, no `validation` field (Codex B03 r1 I4, run 20261021T110320Z-1652); (2) spec §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) B01 M5 served-source provenance wording in the `tests/space.mjs` bullet (Codex B01 r3, run 20261021T110827Z-86bb; accepted in r4). **Rev 4.4** — records rulings agreed between Claude and Codex (no new user decision; spec
 rev 4.4). **B02 rulings 1–10** (Claude's B02 reviews r1/r2 and Codex run 20261021T072056Z-9083):
 (1) decimal grammar with lexical significant-digit counting, explicit exponent bound, signed zero;
 (2) `toDouble`/`toBinary32` reject non-finite results; (3) **AMENDED by Codex, accepted by Claude**
@@ -267,13 +267,17 @@ itself. Each is pinned by named tests in its owning task.
 | B07 | The shared scheduler: admission, coalescing, priorities, pause and one-snapshot update, completed-work adaptation, budgets, watchdog | Codex | B00 | 2 |
 | B08 | WGSL field kernels validated against B04's frozen references; validation records | Claude | B03, B04, B06 | 3 |
 | B09 | Pass orchestration, profiles, keys and revisions, compatible accumulation, complete-image publication, Space reports | Codex | B00, B02, B03, B07 | 3 |
+| B09b | Renderer-owned obsolete geometry release and structured job error codes | Codex | B09, B07 (incl. the incorporated B07c amendment) | follow-up (before B13 integration and B14 allocation acceptance) |
+| B09c | Product camera classification repair and navigation integration (B11-F1); permanent all-family CPU/GPU check | Codex | B08 (point ABI), B09, B10, B11 | follow-up (before B14 enables interaction) |
 | B10 | Primary tracing, normals and pick data; geometric validation (analytic rays, adversarial rays, convergence) before decorative shading | Claude | B04, B05, B08, B09 | 4 |
 | B11 | Lighting, bounded shadows and AO, diagnostic display, seeded jitter, linear accumulation, display mapping; shared palettes | Claude | B09, B10 | 5 |
+| B11b | Visual fixes and visual acceptance: lighting-only tint, one-sided normal fallback (box and Menger), the six-scene acceptance check | Claude | B14; **must merge before B15** | follow-up (after B14) |
 | B12 | Orbit, pan, dolly, orientation control, flight, Space-owned gestures, stale-safe focus, camera-exterior status | Codex | B03, B05, B09, 1a T04 | 4 |
 | B12b | Controller (gamepad) exploration: snapshot decoding, dead zones and response, input state machine, one-entry runs, selection, arming and suspension (standard layout) | Codex | B12 | 5 |
-| B13 | Recovery orchestration: cancellation, failed allocation, stalled work, loss and repeated loss, preserving the investigation | Codex | B06 (contract), B07, B09 | 4 |
-| B14 | **Checkpoint:** the Space workspace, the workspace switcher, the activation contract, panel, indicators, diagnostics, scene files, controller polling and status | Claude | B10–B13, B12b; **1a T12 merged** | 6 |
-| B15 | Headed interaction and recovery acceptance, frozen performance acceptance, the recorded investigation, the commit audit, handoff | Codex | B14; **1a T13** | 7 |
+| T04a | Space semantic camera equality in shared history (`cameraEqual`) | Codex | 1a T04, B05; required by B14 | follow-up (before B14) |
+| B13 | Recovery orchestration: cancellation, failed allocation, stalled work, loss and repeated loss, preserving the investigation | Codex | B06 (contract), B07, B09; B09b (allocation integration) | 4 |
+| B14 | **Checkpoint:** the Space workspace, the workspace switcher, the activation contract, panel, indicators, diagnostics, scene files, controller polling and status | Claude | B10–B13, B12b, T04a, B09b, B09c; **1a T12 merged** | 6 |
+| B15 | Headed interaction and recovery acceptance, frozen performance acceptance, the recorded investigation, the commit audit, handoff | Codex | B14, B11b; **1a T13** | 7 |
 
 Each task has one implementer and the other peer's read-only review; shared ownership is not used.
 The merger records unit counts in the ledger (the 1a baseline is still moving, so this plan gives
@@ -291,11 +295,13 @@ The `8eeed51` planning snapshot; reconciled against the accepted 1a commit befor
 | T04 | merged (Amendment B) | `createHistory({initialScene, codec, undoLimit, cameraLimit, onListenerError})` with `begin/update/commit/cancel/apply/undo/redo/back/forward/snapshot/subscribe`, `reduceCommand`, `COMMAND_TYPES` — B12, B14 |
 | T06 | merged (Amendment C) | `createRenderRequest`, `isPublishable`, `RENDER_OUTCOMES`, `RUNTIME_ID`, `createReportBuilder(request, {implementation, environment, workspaceFields, clock})`, `observed`, `UNAVAILABLE`, `INAPPLICABLE` — B07, B09, B13 |
 | T09 | merged (Amendment D) | B14 preserves the discovery controller and workspace filtering; no Space cards are added |
-| **T05** | in flight | **(1a, unlanded)** `src/plane/gestures.js` (`createGestureArbiter`, `DIRECT_KINDS`) — B14 preserves Plane gesture behaviour; B12 uses its own Space adapter and consumes no Plane kinds |
-| **T07, T08** | in flight / not started | **(1a, unlanded)** `startExport`, the export lease, `atlas.lastReport`, the adapter cadence — B14 preserves Plane export leases, outcomes and rendering cadence (these already serve Plane in 1a; Space equivalents remain deferred) |
-| **T10, T09b, T11** | in flight | transitive through T12 — B14 preserves persistence, reconciliation and the Discoveries control |
-| **T12** | not started | **(1a, unlanded)** `createShell(root) → {$, toast, showDialog}`, `createPlaneWorkspace({shell, discoveries, sourceId?}) → {inspection, destroy()}`, `bindPlaneNavigation(...) → {reset()}`, `createNotifier`, `installDialogs`, `src/app.js` as composition root — **hard dependency for B14**; `activate()`/`deactivate()` are **new B14 methods**, not promised T12 exports |
-| **T13** | not started | **(1a, unlanded)** `scripts/audit-gates.mjs`, `scripts/gate/ledger.mjs` (`auditLedger`, `judgeRecord`, `requiredIdsFromManifest`) — B15 |
+| **T05** | merged | **(1a)** `src/plane/gestures.js` (`createGestureArbiter`, `DIRECT_KINDS`) — B14 preserves Plane gesture behaviour; B12 uses its own Space adapter and consumes no Plane kinds |
+| **T07, T08** | merged | **(1a)** `startExport`, the export lease, `atlas.lastReport`, the adapter cadence — B14 preserves Plane export leases, outcomes and rendering cadence (these already serve Plane in 1a; Space equivalents remain deferred) |
+| **T10, T09b, T11** | merged | transitive through T12 — B14 preserves persistence, reconciliation and the Discoveries control |
+| **T12** | merged (947d41f) | **(1a)** `createShell(root) → {$, toast, showDialog}`, `createPlaneWorkspace({shell, discoveries, sourceId?}) → {inspection, destroy()}`, `bindPlaneNavigation(...) → {reset()}`, `createNotifier`, `installDialogs`, `src/app.js` as composition root — **hard dependency for B14**; `activate()`/`deactivate()` are **new B14 methods**, not promised T12 exports |
+| **T13** | merged (4e58d0e) | **(1a)** `scripts/audit-gates.mjs`, `scripts/gate/ledger.mjs` (`auditLedger`, `judgeRecord`, `requiredIdsFromManifest`) — B15 |
+
+**Rev 5.0 note (2026-10-22; task-B14-report.md "Dependency reconciliation", codex-B14-r1-findings.md B14-F8, Codex run 20261022T005526Z-49f5):** compared with main 9ace5fe, every row above is now merged, including T12 (947d41f) and T13 (4e58d0e); the "in flight / not started / unlanded" states and "(1a, unlanded)" annotations (here, in B14 and in B15) were stale and are updated. Consumed signatures were checked on disk and match; Amendments I–L postdate the 8eeed51 snapshot; `createHistory` has also gained `cameraEqual` (T04a).
 
 ## WebGPU backend annex (spec §9.1; adopted as normative spec text by the user, 2026-10-21)
 
@@ -1328,15 +1334,26 @@ report (B11 records the complete product set's preparation time once it exists).
   auxiliary submissions — probes, readbacks, presentation — take leases from the same pool through
   `requestAuxiliary(viewId, {jobId, priority, operation}) → {done}`), `completed(admission, {epoch, elapsedMs, timestampMs?})` (advances the plan with `{epoch,
   elapsedMs, timestampMs?, targetMs: batchTargetMs}`; the plan's `onAdvance` adapts pending
-  batches; `createBatch` enforces hard bounds), `failed(admission, error)`, `interrupted(epoch)` (observed loss: every lease of
+  batches; `createBatch` enforces hard bounds), `failed(admission, error)`, `discardAuxiliary(admission, {reason}) → boolean` (terminal auxiliary rejection only: before queue entry or after the queue fence; releases exactly that lease without advancing the owner plan or failing/closing its group; outside cancellation an unsettled auxiliary resolves `{outcome: 'failed', reason}`; `reason` must be a nonempty diagnostic string, with no enum; main-job, foreign, retired and non-current admissions return false; invalid reasons on eligible leases throw before mutation; emits `discarded` after accounting; **a discard is not watchdog progress: it releases its lease without resetting the watchdog deadline, while `failed()` releases remain progress**), `interrupted(epoch)` (observed loss: every lease of
   that epoch settles `interrupted`), `pause(viewId)`, `resume(viewId)`, `update(viewId)` (pins the newest pending snapshot already submitted through `request()`, before admission; otherwise selects the running job. With neither, it only pauses. Subsequent requests remain coalesced separately. The selected job runs while other work remains paused, then the view remains paused. Explicit `pause()` or `resume()` during an unadmitted Update cancels its selection when a newer request is pending), `hidden(viewId,
   bool)`, `cancel(jobId) →
   {accepted: true, done: Promise<{outcome: 'cancelled', submitted: 'none' | 'drained' | 'interrupted'}>}
   | {accepted: false, done: Promise<null>}` (stops admission immediately; `done` reports `drained` only
-  after every outstanding lease has terminal evidence—completion or failure—or `interrupted` after observed loss. Watchdog expiry proves neither. Failure before cancellation preserves the job's `failed` outcome; failure during cancellation contributes terminal drain evidence without changing the outcome to `failed`. Unknown or retired jobs return `accepted: false`; their outcomes remain on their own `job.done`), `snapshot()`, `subscribe(listener)}`. The watchdog runs on the
+  after every outstanding lease has terminal evidence—completion, failure or auxiliary discard—or `interrupted` after observed loss. Watchdog expiry proves neither. Failure before cancellation preserves the job's `failed` outcome; failure during cancellation contributes terminal drain evidence without changing the outcome to `failed`. Unknown or retired jobs return `accepted: false`; their outcomes remain on their own `job.done`), `snapshot()`, `subscribe(listener)}`. The watchdog runs on the
   injected timer while leases are outstanding, including for hidden views; it never depends on
-  animation-frame ticks. Expiry stops admission for that epoch and settles only jobs holding outstanding leases as `budget-exceeded`, reason `watchdog`, continuation `lower-cost`. Unissued jobs remain queued. Requests and auxiliary requests received during the stall also queue. The stall clears after every outstanding lease has terminal completion, failure, or loss evidence. Already-settled jobs remain settled. Observed loss still prevents admission until a new epoch is installed. No timeout releases resources or proves cancellation. Elapsed work accrues only while the plan holds at least one admitted operation lease and its view is eligible. Queued, paused and hidden time is excluded; auxiliary leases do not charge this clock. End-to-end latency remains anchored to `requestedAt`. Elapsed-work exhaustion settles `budget-exceeded` with continuation `resume`; watchdog exhaustion uses `lower-cost`. These are recovery offers, not instructions to revive a settled job. Auxiliaries share the lease pool and cancellation ownership by `jobId`, have separate `done` promises, never advance the owner's plan, and are covered by the watchdog but not elapsed-work budgets. Unissued auxiliaries supersede with their pending owner; issued auxiliaries drain through explicit cancellation. An auxiliary request for a job already settled by the watchdog or by failure is rejected. A failure on any lease of a job, auxiliary leases included, fails the whole job when it precedes a cancellation; B09 must therefore report stale picks as stale results, never through `failed()`. Clients call `interrupted(lostEpoch)` on observed loss before calling `setEpoch(nextEpoch)`. A job settles
-  `completed` when its plan is exhausted.
+  animation-frame ticks. Expiry stops admission for that epoch and settles only jobs holding outstanding leases as `budget-exceeded`, reason `watchdog`, continuation `lower-cost`. Unissued jobs remain queued. Requests and auxiliary requests received during the stall also queue. The stall clears after every outstanding lease has terminal completion, failure, auxiliary discard, or loss evidence. Already-settled jobs remain settled. Observed loss still prevents admission until a new epoch is installed. No timeout releases resources or proves cancellation. Elapsed work accrues only while the plan holds at least one admitted operation lease and its view is eligible. Queued, paused and hidden time is excluded; auxiliary leases do not charge this clock. End-to-end latency remains anchored to `requestedAt`. Elapsed-work exhaustion settles `budget-exceeded` with continuation `resume`; watchdog exhaustion uses `lower-cost`. These are recovery offers, not instructions to revive a settled job. Auxiliaries share the lease pool and cancellation ownership by `jobId`, have separate `done` promises, never advance the owner's plan, and are covered by the watchdog but not elapsed-work budgets. Unissued auxiliaries supersede with their pending owner; issued auxiliaries drain through explicit cancellation. An auxiliary request for a job already settled by the watchdog or by failure is rejected. `failed(admission, error)` on any lease of a job, auxiliary leases included, fails the whole job when it precedes a cancellation. Picks retain their existing stale-result contract. Classification replacement, cancellation, loss and identity mismatch remain stale; ordinary descriptor, admission, allocation, copy-out and decode failures return `unresolved` with error code/message under B09c. Terminal auxiliary rejection uses `discardAuxiliary`, never `failed()`. Discard does not close the owner group or alter an already settled render. During cancellation it supplies drain evidence for that lease, with promises awaiting the whole group's drain or loss; observed loss takes precedence over a partially proved drain. Previously settled outcomes remain unchanged, including discard before cancellation and watchdog settlement. Clients call `interrupted(lostEpoch)` on observed loss before calling `setEpoch(nextEpoch)`. A job settles
+  `completed` when its plan is exhausted. `ready(jobId, {epoch}) → boolean` rechecks only
+  that job's plan after asynchronous preparation. A request may register before preparation
+  completes; its immutable identity remains selectable by Update. Until ready, the plan returns
+  `null` from `next()` and `false` from `exhausted()`. Readiness is bounded and idempotent:
+  it preserves an existing reservation and emits a `ready` event only for newly reserved work
+  (or `settled` for exhaustion), returning `true` for either transition and `false` otherwise.
+  Unknown, terminal, cancelling and stale-epoch notifications are ignored, including when the
+  notification epoch differs from either the current epoch or the job's epoch. Readiness never
+  issues a lease, revives a terminal job, changes the Update selection, or bypasses priority,
+  visibility, pause/Update eligibility, instrument cadence, watchdog stalls or the lease limit.
+
+**Rev 5.0 notes (2026-10-22):** B07b and B07c are incorporated B07 amendments, not separate tasks (so B09b's dependency on B07c resolves to this section). (a) the `ready()` text and its tests are B07b's proposed replacements (codex-B07b-notes.md:173, Codex run 20261021T174058Z-73af). (b) `discardAuxiliary` is B07c's old→new text (codex-B07c-report.md, Codex run 20261021T184450Z-7ff7); the fix that a discard is not watchdog progress (`releaseLease` gains `progress = true`, discard passes false) was reviewed READY by Codex (codex-B07c-r2.out, run 20261021T191127Z-99fa).
 
 **Design assertions:** §7.3 (lifecycle and outcomes; cancelling stops future submissions and
 drains; "cancelled" never implies preemption; rejecting a stale result is not cancelling it; pause
@@ -1357,7 +1374,16 @@ view; priority order; hidden views paused; instruments ≤ 2 Hz, used in 1b.2); 
   draft exceeding 1 s of unpaused work settles budget-exceeded with a continuation`; `batch bounds
   adapt toward 8 ms from completion evidence and never exceed the hard bounds`; `a completion from
   an older epoch is ignored`; `a job settles completed when its plan is exhausted`; `shared
-  scheduler imports nothing from src/space`.
+  scheduler imports nothing from src/space`; `a request registered before ready is admitted after
+  ready and retains its Update selection`; `stale-epoch readiness is ignored`; `duplicate
+  readiness causes no double admission`. Also assert bounded per-job rechecking, the lease limit
+  across a readiness burst (including auxiliaries), hidden/paused eligibility, terminal-job
+  rejection, watchdog stalls, instrument cadence and empty-plan completion. B07c tests:
+  auxiliary discard refuses main and stale admissions, preserves normal owner completion and
+  completed owners, drains cancellation only on terminal evidence, gives observed loss precedence,
+  validates reasons, ignores retired duplicates, preserves watchdog outcomes, releases slots
+  safely at both lease limits with synchronous listeners, and `discard: a discarded auxiliary is
+  not watchdog progress`.
 - [ ] **Step 2: Skeleton and RED** — `--expect-fail "at most two leases are outstanding per epoch across views, jobs and auxiliary submissions"`.
 - [ ] **Step 3: Implement** (pure over the injected clock and timers).
 - [ ] **Step 4: GREEN**, `npm test`.
@@ -1540,6 +1566,22 @@ backend.
 
 ---
 
+### Task B09b: Renderer-owned obsolete geometry release and structured job error codes (follow-up to B09; rev 5.0)
+
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B09, B07 (incorporating the B07c amendment). **Precedes:** B13's allocation integration and B14's allocation acceptance.
+
+**Scope** (codex-B09b-report.md, Codex run 20261021T225008Z-03c8; claude-B09b-r1-review.md, APPROVED): files `src/space/render/renderer.js` and `tests/unit/space-renderer.test.js`. Add synchronous `renderer.releaseObsolete() → frozen {freed, retiring}` in bytes, judged against the live viewport request and its current generation (a failed export never evicts compatible viewport geometry; an absent or throwing generation source retains the cache), preserving publication, job and pick ownership and ticket/mapping accounting. Preserve `record.error?.code` as the job result's `errorCode`; untyped failures get no invented code and no message is parsed. B13's follow-on consumes the real hooks, forwards `retiring` separately from `released` and removes its injected seams and `releaseUnavailable` fallback; B14 continues through the recovery facade.
+
+---
+
+### Task B09c: Product camera classification repair and navigation integration (follow-up to B09; B11-F1; rev 5.0)
+
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B08's point ABI, B09's auxiliary and ownership rulings, B10 and B11's product pipeline set. **Required before** B14 enables interaction.
+
+**Scope** (codex-B09c-report.md, Codex runs 20261021T235623Z-d66d and 20261022T001340Z-2963; claude-B09c-r1-review.md): reproduce B11-F1 with real product descriptors; submit and decode B08 point batches (product IDs, 16-byte input, 64-byte sentinel-initialised output, complete uniforms, box binding for every family); report classification failures as `unresolved` with the error code and message rather than hiding them as staleness; pin classification to the resolved iteration budget; preserve auxiliary lease and buffer ownership (`discardAuxiliary`, never `failed()`); verify the B12 focus pick. Files: `src/space/render/renderer.js`, `tests/unit/space-renderer.test.js`, `tests/space.mjs` (`rendering` group) and `tests/suites.manifest.json`. **Adds the required pass "Product camera classification agrees with the CPU at the resolved budget for every model family" to `space-rendering`** (bulb, Menger depths 1 and 2, sphere, box and quaternion Julia, plus the draft-64/settled-128 late-escape case).
+
+---
+
 ### Task B10: Tracing, normals, pick data and geometric validation (spec §11.4, §8.1 steps 2–3, §13.3; P2)
 
 **Owner:** Claude. **Reviewer:** Codex. **Depends on:** B04, B05, B08, B09.
@@ -1560,15 +1602,14 @@ backend.
   `rayDirection`, `encodeOrdinaryOrigin`, `reconstructHit` (B05); the matrix ray strata and
   anchors (B04); Pin the logical `matrixSha256`, the index-file SHA-256 and reference/generator hashes at registration. Load required kinds through the pinned index and verify each loaded shard's byte length, SHA-256 and declared IDs before comparison. B04's full integrity check verifies all shards and the assembled hash; a partial load is not whole-matrix qualification and must not be passed off as such. B08 consumes point strata; B10 consumes ray strata and anchors. Merge common stratum inputs with case overrides and reconstruct integer-pixel rays through `(i+0.5,j+0.5)`. Reports join on logical matrix hash and stratum ID. Re-freezing requires new validation-record IDs; old evidence is not silently retargeted.  the renderer's pass sequence and pick API (B09).
 - Produces: WGSL entries `trace_band` (writes `depth` and the packed `status`), `normals_band`
-  (central differences at ε = 0.5·τ(t); writes `normal` with availability), `pick_readback` (one
+  (central differences at ε = 0.5·τ(t); writes `normal` with availability; **rev 5.0, user decision 2026-10-22: for box and Menger only, the one-sided fallback below applies when exactly one stencil endpoint is analytic-interior**), `pick_readback` [**not built; rev 5.0 erratum below**] (one
   pinned geometry sample's depth and packed status; the CPU reconstructs the anchored hit with
   `reconstructHit` from that sample's camera, pixel and jitter — no absolute world hit is collapsed
   to binary32) **B05 note (Codex run 20261021T123602Z-6e35 and 20261021T170807Z-a7ee):** `reconstructHit` and `toLocal` may return `{unavailable: true, reason: 'precision-limit'}`; B10 preserves that outcome as an unresolved pick and does not assume every call returns an anchored point. Use downward-positive `dy` (j and dy increase downward).; `passes.js`: `TRACING_VERSION = 'surface-v1/space-trace-v1'`, `TRACING_HASHES`,
-  `tracePipelineDescriptors()`, `traceUniforms(request, camera, effective, jitter)` (origin
+  `tracePipelineDescriptors()`, `traceUniforms({modelId, camera, effective, region, internalSize, sampling, profile})` [**rev 5.0 erratum below; jitter is per pixel in the kernel**] (origin
   `highF32` and `lowF32`, basis, α, the τ floor, step multiplier, caps, enclosing-interval
   parameters; the field coordinate's source expression is `(high + t·d) + low`, per B05),
-  `normalsUniforms`,
-  `pickUniforms`.
+  `normalsUniforms`.
 
 **Design assertions:** §11.4 verbatim (starting conditions; outward-safe enclosing volumes; the
 ordered step rules; `0.9·DE`; stagnation by ray parameter or field coordinate compared in
@@ -1578,6 +1619,13 @@ P2's normal rule (all required samples resolved, effective sample positions dist
 finite and nonzero); §13.3 (focus by asynchronous depth readback; a pick rejected when epoch,
 request, geometry revision, dimensions or sample identity no longer match). P2 is the acceptance
 protocol.
+
+**Rev 5.0 notes (2026-10-22):**
+- **One-sided normal fallback (user decision 3; codex-B14-visual-fixes.md B14-B1..B3, claude-B14-visual-debate1.md, Codex run 20261022T010745Z-fca4).** Box and Menger only, at the normal rule (P:1563): keep central differences at ε = 0.5τ wherever both samples resolve; when exactly one endpoint is analytic-interior, take the other endpoint with the resolved centre value f(p) (forward `(f(p+) − f(p))/(p+axis − paxis)`, backward `(f(p) − f(p−))/(paxis − p−axis)`); the interior zero never enters the derivative. Require distinct effective positions, finite resolved values and a finite nonzero gradient; both endpoints interior, non-escape, numerical failure and coordinate collapse stay unavailable. Validate edges, corners and competing nearest faces and verify normal directions, depth preservation and failure behaviour. B03/B08 field semantics and kernel hashes are unchanged; the B10 tracing identity and records get new IDs, and old records are not silently retargeted. B11b implements it.
+- **D3/D5 interface corrections (task-B10-report.md Fix round 1, accepted; Codex run 20261021T203032Z-7350).** `pick_readback` and `pickUniforms` are removed: B09's pinned asynchronous readbacks of the status and depth texels are the pick path (`resolvePick` is the CPU half), and the stale-identity and unavailable-reconstruction requirements stay. The signature is `traceUniforms({modelId, camera, effective, region, internalSize, sampling, profile})`; jitter is computed per pixel in the kernel and the renderer's per-batch `jitter` uniform is unused.
+- **F3 interior detail (task-B10-report.md F3).** B00's status layout is unchanged: under reason `estimate-unavailable` (2) the subreason nibble carries `ESTIMATE_DETAIL` (0 none, 1 interior), so interior is estimate-unavailable subreason 1; under `stagnation` (4) the nibble keeps the stagnation code. `passes.js` decodes by reason; `status.js` and the B08 hashes are untouched.
+- **Menger box buffer goes to B11** (task-B10-report.md): renderer allocation, binding (`menger_boxes`, module-local slots 3/4, in `TRACING_BINDINGS`) and lifetime, covering both depths.
+- **B10-F6 (comment only) is deferred until `trace.wgsl` next changes** (codex-B10-r2-findings2.md, Codex run 20261021T221653Z-a0bc; progress.md): at `trace.wgsl:151–154` replace the chord-margin comparison with `m/4 ≥ R′/1028 > √(6u)R′` using `m ≥ R/256`, and use the conservative bounds `R′ < 2^47` and `dd·R′² < 2^95` (not `2^46`/`2^93`); no algorithm change, and a comment edit would change the shader hash.
 
 - [ ] **Step 1: Headed checks first** (`space-rendering` `requiredPasses`): `Analytic rays trace
   to the oracle depth with exact statuses` (rev 4.8: the surface-v1 envelope and `analytic-inspection-v1` relative 10⁻³, both required; see B04 P1); `The detail ladders record agreement or exceedance per
@@ -1646,6 +1694,11 @@ in linear colour; diagnostic values bypass lighting; antialiasing traces seeded 
 samples); §13.9 (no fog); §4.1 (palette definitions and interpolation shared; Plane's
 `colorPixel` Plane-owned).
 
+**Rev 5.0 notes (2026-10-22):**
+- **Lighting-only unresolved presentation (user decision 2; codex-B14-visual-fixes.md B14-A1..A3, claude-B14-visual-debate1.md, Codex run 20261022T010745Z-fca4).** Where only the shadow or AO evaluation is unresolved, shade from the samples that resolved and apply a faint desaturated tint; never reuse primary-failure magenta. Primary failures keep their legend and precedence; reasons, counts and accumulated flags stay in the diagnostic views and the report; secondary numerical failures stay distinguishable from secondary unresolved results; failed samples are never dropped or their flags averaged away. This amends B11's presentation contract (the "diagnostic presentation" clause above), the legend tests and the appearance identity, with no spec change (§8.2 permits colours or patterns). Unknown occupancy stays unknown (Q2); an unescaped fractal orbit is not occlusion. B11b implements it.
+- **Menger box buffer:** B11 owns the renderer allocation, binding (`menger_boxes`, slots 3/4) and lifetime for both depths (task-B10-report.md Fix round 1).
+- **AO comment fix deferred until `shade.wgsl` next changes** (codex-B11-r1-findings.md, Codex run 20261021T234913Z-9ed0; progress.md): correct the comment claiming the tracer resolves interiors the same way as AO; an analytic interior is proven solid occupancy, distinct from an unescaped fractal orbit.
+
 - [ ] **Step 1: Tests** — Node: `the shared palette bytes equal Plane's former output byte for
   byte` (a fixture of `paletteBytes(PALETTES[i], 1024)` captured from the pre-change module, for
   every palette); `the appearance metadata hashes equal the sources and verifyPrewarm reports a
@@ -1663,6 +1716,31 @@ samples); §13.9 (no fog); §4.1 (palette definitions and interpolation shared; 
 
 **Expected outputs:** six headed passes; the complete pipeline set's preparation time; every
 existing Plane assertion unchanged and green.
+
+---
+
+### Task B11b: Visual fixes and visual acceptance (user decisions 2026-10-22; rev 5.0)
+
+**Owner:** Claude. **Reviewer:** Codex. **Depends on:** B14. **Must merge before B15.** Sources: codex-B14-visual-fixes.md, claude-B14-visual-debate1.md, claude-B14-visual-investigation.md (Codex run 20261022T010745Z-fca4; B14 review run 20261022T005526Z-49f5).
+
+**Scope:** implements the lighting-only tint (B11 note), the one-sided normal fallback (B10 note) and the visual acceptance check below, with new B10 tracing and B11 appearance identities and record IDs.
+
+**Files/interfaces/tests:** Modify `normals.wgsl`, the affected appearance shaders and metadata, `renderer.js`, and their tests. Add frozen visual fixtures and a measurement helper; register "Six frozen scenes meet visual acceptance" in `tests/space.mjs` and `space-rendering.requiredPasses`. Retain identity-, pixel- and sample-indexed status/normal/lighting masks through completed readbacks. Compute per-sample metrics and pixelwise unions from those same eight samples; aggregate counts or the last sample cannot supply union denominators. Test misses, mixed hit/miss samples, isolated failures, reset and stale identities. Correct the product unavailable-normal count using the joint hit/normal mask. Preserve visible lighting-only indication on every flagged pixel, independently of lighting, including after accumulation. Requalify affected tracing/appearance records under new identities, retaining old evidence. B11b follows B14 and therefore B11/B12; B15 starts after its required check passes.
+
+**Visual acceptance (user decision 1, a new required check before B15).** Six frozen scenes: default power-8 bulb; default quaternion Julia (`C = [-0.2, 0.8, 0, 0]`, κ = 0); sphere; rotated box; Menger depth 1; Menger depth 2. Cameras are the actual product overview cameras, stored explicitly in fixtures; 1280×720 internal and output resolution, 128 iterations, 512 steps, eight samples, `atlas-aa-v1` seed 1. Capture direct-only, full lighting, normals and termination views with identical rays, and retain fixed crops covering the reported box bands, the Menger hole walls and the right-face arc. Thresholds are Codex's proposals taken as given except the fractal lighting-unresolved ceiling, set by the user at 10% (analytic stays ≤1%); they are new post-discovery product thresholds, not performance or numerical tolerances:
+
+| Metric | Analytic scenes | Fractal scenes |
+|---|---:|---:|
+| Primary unresolved fraction | 0 | ≤0.1% |
+| Numerical failures, primary or secondary | 0 | 0 |
+| Unavailable normals among hits | ≤0.1% | ≤1% |
+| Lighting-unresolved pixels among hits | ≤1% | ≤10% (user, 2026-10-22) |
+| Lighting-only failures presented as primary magenta | 0 | 0 |
+| Failed outcomes losing their diagnostic indication | 0 | 0 |
+
+**Scene classes:** analytic = sphere, rotated box, Menger depth 1 and Menger depth 2 (spec §11 exact-distance category); fractal = power-8 bulb and quaternion Julia. If Menger edges or corners cannot meet the analytic unavailable-normal limit under the one-sided fallback, B11b reports it as a finding; the limit is not pre-relaxed (Claude, 2026-10-22).
+
+Measure each individual sample and the final union of flags across the eight samples. Primary unresolved fractions use pixels with any non-miss primary outcome as the denominator; normal and lighting fractions use pixels with any primary hit; report numerators and denominators. Also require zero unavailable normals on independently identified smooth analytic face interiors and normal error ≤10⁻³ rad on ≥99% of those eligible hits (eligibility defined geometrically before comparison, excluding stencil neighbourhoods of edges and competing features; the sphere criterion is preserved); the fixed smooth-face crops contain no diagnostic bands or arc. **Measurement fixes:** count unavailable normals over hits only (`src/space/render/renderer.js:69–74` counted the whole buffer including misses: Menger 792,698, of which 781,268 are misses, leaves 11,430 hit pixels), and take numerator and denominator from the same accumulation (5777 / 55079 mixed an accumulated-image numerator with a last-sample denominator); count status masks directly, not exact RGB values; recolouring alone must not conceal the raw failure fraction.
 
 ---
 
@@ -1699,10 +1777,10 @@ existing Plane assertion unchanged and green.
   `flight` gesture; no inertia; `stop` zeroes every velocity immediately; `tick` applies
   `flightStep` with the elapsed time clamped to 100 ms and does nothing when inactive).
 - Produces (`navigation.js`): `bindSpaceNavigation({surface, gestures, flight, getCamera, pick,
-  onStatus}) → {reset() → number of released pointers, destroy()}` (pointer orbit; pan with the
+  getPickContext, onStatus}) → {reset() → number of released pointers, destroy()}` (pointer orbit; pan with the
   secondary button or Shift; wheel dolly grouped; keys for nudge and the flight toggle `F`;
   `Escape` releases input and stops flight; `blur` and `visibilitychange` stop flight and commit an
-  open drag; double-click requests a pick and, on a valid result after rechecking identity,
+  open drag; double-click requests a pick and, on a valid result (`status === STATUS_LABELS.ray[RAY_STATUS.hit]`, the label "approximate hit") after rechecking identity,
   computes `hit = reconstructHit(sample.camera, sample.pixel, sample.jitter, depth,
   sample.dimensions.width, sample.dimensions.height)` and applies `lookAt(currentCamera,
   toLocal(currentCamera, hit))` as one `focus` jump; no gesture starts for a stale result);
@@ -1716,6 +1794,12 @@ dolly, focus by asynchronous depth readback, overview, orientation reset and con
 constraints; flight with explicit speed; Escape releases; blur or visibility loss stops
 immediately; no inertia; camera exterior status); §15 (lost input: overview, reset and history one
 action away). Excludes DOM layout (B14). **B05 note (Codex run 20261021T123602Z-6e35):** B12's "identical camera" check, under which an identical returned camera starts no gesture, uses `equalCameras` (equal values), never `===`: a stalled dolly at the representation floor returns a new object with equal values. **B05 note (Codex run 20261021T123602Z-6e35 and 20261021T170807Z-a7ee):** rename the parameter description to `setSpeed(localUnitsPerSecond)` (camera-local units per second). Check both the `reconstructHit` and `toLocal` outcomes before `lookAt`; an unavailable outcome is an unresolved pick that starts no focus gesture and leaves the camera unchanged. An identical returned camera starts no focus gesture. Offer Overview, not reset, for loaded coincident scenes. Use the tilt/roll/heading labels with the stated coordinate convention (heading is forward azimuth minus 90°, modulo 360°). Do not label a `focus-re-expression` refusal “precision limit reached.”
+
+**Rev 5.0 notes (2026-10-22; codex-B12-fix1-report.md, Codex run 20261021T223701Z-5191; claude-B12-r1-review.md):**
+- **`getPickContext()`.** `getPickContext() → {identity, geometryRevision, dimensions, sampleIndex} | null` describes the eligible published geometry (`createPickRequest` and B09's `pick` require all four), returns null while inactive or pending, and is re-read after the await. B14 supplies it from publication and request metadata.
+- **"Approximate hit".** A valid pick has `status === STATUS_LABELS.ray[RAY_STATUS.hit]` (the label "approximate hit", from B09's `status.js`), with the identity and sample checks.
+- **F6 stop reasons.** `stopNavigation(reason)` receives the gesture kind (`appearance`, `focus`, `overview`, `pointer`, `flight`, action and handoff kinds, `scene-replacement`), wider than `flight.stop`'s enum, which does not validate; B14 maps history actions and scene replacement to flight reason `history`. Every discrete `apply` (content edits and no-ops included) stops flight and settles navigation first.
+- Space history camera equality is T04a, not B12.
 
 - [ ] **Step 1: Write the failing tests** (fake DOM as in 1a's `navigation.test.js`): `an orbit
   drag is one camera-history entry and undo does not move the camera`; `a wheel burst groups within
@@ -1747,17 +1831,17 @@ standard layout; non-standard joysticks and flight sticks stay deferred (§17). 
 
 **Files:**
 - Create: `src/space/gamepad.js`
-- Modify (additive, B12's files): `src/space/gestures.js` (`'gamepad'` in `SPACE_KINDS`),
-  `src/space/flight.js` (`setAnalogInput`; stop reasons `disconnect`, `input-suspended`)
-- Test: `tests/unit/space-gamepad.test.js`; additions to `tests/unit/space-gestures.test.js`
+- Modify (additive, B12's files): `src/space/gestures.js` (`'gamepad'` in `SPACE_KINDS` and in the drag allowlist),
+  `src/space/flight.js` (`setAnalogInput`; stop reasons `disconnect`, `input-suspended`), `src/space/navigation.js` (pointerdown guard; rev 5.0)
+- Test: `tests/unit/space-gamepad.test.js`; additions to `tests/unit/space-gestures.test.js` and `tests/unit/space-navigation.test.js`
 
 **Interfaces:**
 - Consumes: `createSpaceGestures` and `createFlight` (B12); camera functions `orbit`, `pan`,
   `dolly`, `overview`, `resetOrientation` (B05); the speed range validated by B12's speed control.
-- Produces (`gestures.js`, additive): `SPACE_KINDS` gains `'gamepad'`; a `gamepad` run uses the
+- Produces (`gestures.js`, additive): `SPACE_KINDS` and the drag allowlist used by `drag/dragCommit/dragCancel` gain `'gamepad'`; a `gamepad` run uses the
   drag-style path `drag('gamepad', camera)` / `dragCommit('gamepad')` / `dragCancel('gamepad')`,
   never the wheel-burst timer.
-- Produces (`flight.js`, additive): `setAnalogInput({forward, strafe, rise, yaw, pitch})`
+- Produces (`flight.js`, additive): `setAnalogInput({forward, strafe, rise, yaw, pitch}, {lookRadPerSec = Math.PI / 2} = {})`
   (normalized demands in [−1, 1]; non-finite → 0); `tick(now)` stays the sole continuous flight
   camera writer and combines keyboard and analog demands; `stop(reason)` clears analog demands as
   well as keyboard state; `stop` reasons gain `'disconnect' | 'input-suspended'`.
@@ -1824,6 +1908,8 @@ camera-only jumps add one entry; undo never moves the camera); §15 (disconnect 
 movement and commits once). Excludes DOM, polling scheduling and status layout (B14). Nothing
 imports `src/plane/`. Physical devices are unqualified until exercised.
 
+**Rev 5.0 notes (2026-10-22; codex-B12b-report.md, Codex run 20261021T225841Z-e7ee and fix round 20261021T231148Z-8d55; claude-B12b-r1-review.md):** (a) **look rate:** the optional second argument `{lookRadPerSec}` of `setAnalogInput` (finite, ≥0) makes the normalized yaw and pitch demands scale the supplied angular rate independently of translation speed, which is needed because demands are clamped to [−1, 1]. (b) **gamepad allowlist:** `'gamepad'` joins both `SPACE_KINDS` and the drag allowlist (`drag/dragCommit/dragCancel`); controller first-owner arbitration rests on `openKind`, since B12's private `begin` closes the previous gesture. (c) **Pointer ownership:** B12b modifies `navigation.js` to refuse pointerdown during a gamepad run and `gestures.js` to refuse delayed pointer drag delivery during that run. Neither path captures, settles or displaces the controller owner. Add both regressions to `tests/unit/space-navigation.test.js` and include that file in B12b's test scope. (d) **connect status:** controller connect status refreshes on polls even while input is ineligible, without accepting input (F3).
+
 - [ ] **Step 1: Write the failing tests** (fake `Gamepad` snapshots with `mapping`, `connected`,
   `axes`, `buttons[{pressed, value}]`, `timestamp`; fake clock; fake gestures/flight recording
   calls): `inputs inside the dead zone produce no motion`; `the radial curve squares the magnitude
@@ -1850,9 +1936,17 @@ physical controller; seventeen named tests passing.
 
 ---
 
+### Task T04a: Space semantic camera equality in shared history (follow-up to B12; spec §6; rev 5.0)
+
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** 1a T04, B05. **Required by:** B14 (merged before it). Source: codex-T04a-report.md (Codex run 20261021T224551Z-d59b; draft plan entry; B12-F3 ruling in claude-B12-r1-review.md).
+
+**Scope:** `createHistory({..., cameraEqual = (a, b) => canonicalJson(a) === canonicalJson(b)})` in `src/shared/history.js`, used only by `recordCamera`, so every pose comparison (gesture settlement, direct `apply`, whole-scene settlement, undo and redo) uses it; B05's `equalCameras` stays in `src/space/camera.js` and is injected by the caller, so shared history imports no Space arithmetic; Plane keeps the default and its existing history tests unchanged. Files: `src/shared/history.js`, `tests/unit.manifest.json`, new `tests/unit/history-camera-equality.test.js` (sign-negated restore, commit, undo and redo, different poses, forward-branch handling, canonical Plane defaults). **B14 obligation:** pass `cameraEqual: equalCameras` for Space; T04a wires no workspace.
+
+---
+
 ### Task B13: Recovery orchestration (spec §7.3, §14, §15)
 
-**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B06 (contract), B07, B09.
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B06 (contract), B07, B09; B09b (allocation integration).
 
 **Files:**
 - Create: `src/space/recovery.js`
@@ -1878,6 +1972,8 @@ recovery; repeated loss stops automatic retry; allocation failure releases obsol
 offers an explicit lower-cost choice); §15 (every row that applies to 1b.1); §7.3 (outcomes;
 pause); recovery never touches the scene, undo history or camera history.
 
+**Rev 5.0 note (2026-10-22; codex-B13-fix1-reply.md and codex-B13-report.md "B14 note", Codex run 20261021T223901Z-7aab) — recovery facade for B14:** B14 MUST prepare, render and cancel viewport work only through `recovery`, submit `renderer.resize()` requests through `recovery.render`, pass live generation guards without rewriting their epoch, await `recovery.prepare()` while recovering, honour render refusal while recovering or stopped, and submit its current request after `recovered` with `job: null` or after an explicit retry.
+
 - [ ] **Step 1: Write the failing tests** — `a loss during preparation, configuration, tracing
   and readback each settles the job interrupted and triggers one automatic recovery`; `a second
   loss stops automatic recovery even after more than 60 seconds`; `an explicit retry starts a new
@@ -1900,7 +1996,7 @@ pause); recovery never touches the scene, undo history or camera history.
 
 ### Task B14: Checkpoint — the Space workspace, the switcher and the activation contract (spec §13.1–13.3, §14, §15, §4.1)
 
-**Owner:** Claude. **Reviewer:** Codex. **Depends on:** B10–B13, B12b; **1a T12 merged** (and
+**Owner:** Claude. **Reviewer:** Codex. **Depends on:** B10–B13, B12b, T04a, B09b, B09c; **1a T12 merged** (and
 transitively T05, T07, T08, T09b, T10, T11); the dependency table reconciled against the accepted
 1a commit.
 
@@ -1916,7 +2012,7 @@ transitively T05, T07, T08, T09b, T10, T11); the dependency table reconciled aga
   `tests/unit/plane-activation.test.js`; the two browser suites.
 
 **Interfaces:**
-- Consumes: **(1a, unlanded)** `createShell`, `createPlaneWorkspace({shell, discoveries}) →
+- Consumes: **(1a, merged)** `createShell`, `createPlaneWorkspace({shell, discoveries}) →
   {inspection, destroy()}`, `createNotifier`, `installDialogs` (T12); everything above.
 - Produces: `createSpaceWorkspace({shell, backendFactory = createWebGPUBackend, clock}) →
   {inspection, activate(token) → Promise<{outcome}>, deactivate(), destroy()}` (`inspection` =
@@ -1972,6 +2068,12 @@ opens Plane without acquiring a Space device); §13.2 (viewport, parameter panel
 (Space scene files); §15 (first-use compilation visible; lost input one action from overview, reset
 and history); §4.3 (every existing Plane assertion survives). **B05 note (Codex run 20261021T123602Z-6e35 and 20261021T170807Z-a7ee):** a fresh Space investigation and its history are seeded from `overview(bulb)`; any corresponding B02 default/test changes belong to this integration change.
 
+**Rev 5.0 notes (2026-10-22; task-B14-report.md "Deviations" D1–D2 and Fix round 1, codex-B14-r1-findings.md, Codex run 20261022T005526Z-49f5):**
+- **Pick context.** `getPickContext()` returns `{identity, geometryRevision, dimensions: internalSize, sampleIndex}` from the request of the last publication, and null while inactive, unprepared, pending or dirty, or when the publication's generation differs from `liveGeneration()` (fix round F1).
+- **New seams.** The switcher gains `pending()` (the pending workspace, distinct from the visible one; `current()` stays the visible workspace) and Plane gains `isActive()` and `openShareHash(hash)`, used by the new `src/ui/share-link-router.js` (one persistent `hashchange` listener wired in `app.js`; it acts only while Space is active or preparing, so Plane's own listener is not doubled; invalid or unsupported links are reported with the view unchanged). Files added: `src/ui/share-link-router.js`, `tests/unit/share-link-router.test.js`.
+- **Test hooks.** `createSpaceWorkspace` takes an extra `env` (document, window, frames, `getGamepads`, viewport size, flight and gamepad factories); `createWorkspaceSwitcher` takes `toast` and exposes `ready`; workspaces have an optional `focus()`; the inspection object carries harness extras. All are accepted additive seams.
+- **Stale dependency rows (F8).** The table rows for 9ace5fe, T12 (947d41f) and T13 (4e58d0e) are now merged and are updated above.
+
 - [ ] **Step 1: Node tests** (fake DOM, fake backend): `a fresh start activates Plane and never
   calls the Space backend factory`; `switching deactivates the current workspace before activating
   the next and both keep their histories`; `deactivation commits the last preview exactly once and
@@ -2013,7 +2115,7 @@ unchanged assertions.
 
 ### Task B15: Performance acceptance, the recorded investigation, the audit and the handoff (spec §16.4, §3, §16.3; P3)
 
-**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B14; **1a T13** (audit scripts).
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B14, B11b (the visual acceptance check passes before sign-off); **1a T13** (audit scripts).
 
 **Files:**
 - Create: `tests/space-performance.mjs` (headed, `gpu: true`, `benchmark: true`; one manifest
@@ -2029,7 +2131,7 @@ unchanged assertions.
 - Test: `tests/unit/timing.test.js`, `tests/unit/acceptance-audit.test.js` (assertions: WIP cannot satisfy a boundary; stale-target promotions fail; unapproved retrospective classifications fail; missing or invalid fast evidence fails); the performance suites.
 
 **Interfaces:**
-- Consumes: **(1a, unlanded)** `auditLedger`, `judgeRecord`, `requiredIdsFromManifest` (T13;
+- Consumes: **(1a, merged)** `auditLedger`, `judgeRecord`, `requiredIdsFromManifest` (T13;
   gate execution unchanged); `window.atlas.space` harness commands and subscriptions (B14); P3,
   its workload manifest (B00) and `performance-predictions.json` (B04), both by hash; the B08 and
   B10 suite reports (stratum results keyed by matrix hash and stratum id).
@@ -2049,6 +2151,14 @@ unchanged assertions.
   never fill a missing mandatory result.
 
 **Design assertions:** §16.4 verbatim through P3; Project 0's timer requirements; §16.3 (every audited commit is accounted for under the applicable policy; every acceptance boundary has qualifying evidence; WIP remains non-promotable and is never reported as accepted; exception inputs are explicitly scoped); §3 (the 1b.1 release row demonstrated end to end).
+
+**Rev 5.0 notes (2026-10-22):**
+- **Exception inputs.** `scripts/audit-gates.mjs` hard-codes the project1a exceptions path; B15 takes explicitly scoped exception inputs (the B08 exceptions move to a 1b.1-scoped file, or both files are read with explicit ranges) (progress.md; claude-gate-rule-debate1.md item 6 and codex-gate-rule-position.md, Codex run 20261021T212923Z-663c).
+- **B11-F2 and B11-F3** (codex-B11-r1-findings.md, Codex run 20261021T234913Z-9ed0): the sRGB GPU transfer is untested (feed known unequal linear values through the GPU path); depth normalisation is untested (assert independently calculated normalised depths at several positions, identical with normal availability toggled).
+- **Prewarm** is measured cold, with the browser and driver shader caches cleared (recorded from the design-batch brief; no source file states the cache-clearing method. task-B11-report.md D5 measured it on a fresh device; task-B01-report.md left driver-cache state unmeasured).
+- **Memory** (task-B14-report.md, codex-B14-r1-findings.md): 88 B/px per settled request and about 122 B/px at peak at 1280×720 (B14); the 4K figure uses peak concurrent tracked allocation, retained and retiring resources included, not the settled figure or an extrapolated viewport peak.
+- **B09-F9** (claude-B09-r1-review.md): three full-frame readbacks per sample (status, normal, lighting status; 16 B/px, only the last published counts reach the report) are a P3 risk. **Nonzero retiring-allocation coverage:** add an obsolete-cache allocation case with nonzero `released` and `retiring` (B14 never exercised one).
+- **B09-F10** (claude-B09-r1-review.md): under strict `isPublishable`, drafts slower than the input interval publish nothing during continuous orbit (B07 r1 F1: 24 ms gives 0/s) against §16.4's ≥30 drafts/s; B12/B15 must guarantee drafts faster than the input interval, or the plan must let the newest completed interactive draft publish with the pending mark.
 
 - [ ] **Step 1: Tests** — Node: `waits are rounded up and scheduled against absolute targets`;
   `a late issuance is recorded as a timing anomaly and an established application failure stays
@@ -2096,10 +2206,12 @@ serialized (port 5190, one GPU).
 | W3 | B08 ‖ B09 | B08 needs the GPU and the frozen matrix; B09 Node-only |
 | W4 | B10 ‖ B12 ‖ B13 | B10 needs the GPU; B12 and B13 Node-only |
 | W5 | B11 ‖ B12b | B11 GPU, mechanical palette change touches `src/plane/palettes.js`; B12b Node-only (additive to B12's `gestures.js` and `flight.js`) |
+| follow-ups | B09b ‖ T04a ‖ B09c | B09b merges before B13's allocation integration; T04a before B14; B09c after B11 and before B14 enables interaction |
 | W6 | B14 | after 1a T12 is merged and the dependency table is reconciled; alone (touches `src/app.js`, `index.html`) |
+| W6b | B11b | after B14, before B15 (rev 5.0); Claude implements, Codex reviews |
 | W7 | B15 | after 1a T13; alone |
 
-Critical path: B00 → B01 → B06 → B08 → B10 → B11 → B14 → B15 (8 deep). The Node-only chain
+Critical path: B00 → B01 → B06 → B08 → B10 → B11 → B09c → B14 → B11b → B15 (10 deep). The Node-only chain
 B02 → B05/B09 → B12/B13 → B12b runs beside it.
 
 **Hot files (serialized or merged by the merger):**
@@ -2120,6 +2232,8 @@ B02 → B05/B09 → B12/B13 → B12b runs beside it.
 All other files are single-owner.
 
 ## Items for the user
+
+**Decided by the user on 2026-10-22** (rev 5.0): visual acceptance with the 10% fractal lighting-unresolved ceiling (B11b); the lighting-only subtle-tint presentation (B11, B11b); the one-sided normal fallback for box and Menger (B10, B11b).
 
 **Decided by the user on 2026-10-21** (applied in spec rev 4.2 and this revision): (a) ADOPT;
 (b) APPROVE; (c) confirmed, with Q5 extended by "We should support joystick for exploration as
