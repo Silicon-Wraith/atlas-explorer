@@ -191,7 +191,7 @@ on 2026-10-21; the user approved starting 1b.1 on 2026-10-21 and answered Q11 ("
   camera `anchored-perspective-v1`, world Z up; undo and camera history 100 entries each; scene
   schema `atlas.scene` v1; conventions `atlas-space-rh-zup-abcd-v1`; §16.4 targets (B15).
 - **Plan defaults (not spec constants):** default vertical FOV 60° (Project 0 A.1); preparation
-  bound 60 s; lighting bounds six normal samples, one shadow ray of ≤ 64 steps, five AO samples;
+  bound 60 s; lighting bounds seven normal field samples, one shadow ray of ≤ 64 steps, five AO samples;
   the recentre bound 2⁻⁴⁰ × scale (`RECENTRE_BOUND_LOG2 = −40`); `MAX_PARAMETER_DIGITS = 64`;
   camera limits in B02; the neutral
   inspection light ℓ = normalize(1, 0.6, 1.5) with 0.15 + 0.85·max(0, n·ℓ) (Project 0 A.5).
@@ -608,10 +608,10 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   `const` declarations, so kernels and JavaScript share one source).
 - Produces (`backend.js`): `PASSES = ['probe', 'trace', 'normals', 'shade', 'accumulate',
   'display']`, `TARGET_LAYOUT_V1` (the annex table: name → `{format, bytesPerTexel, count}`),
-  `TRACKED_ALLOCATION_CAP = 2 ** 30`, `LIGHTING_BOUNDS_DEFAULT = {normalFieldSamples: 6,
+  `TRACKED_ALLOCATION_CAP = 2 ** 30`, `LIGHTING_BOUNDS_DEFAULT = {normalFieldSamples: 7,
   shadowRays: 1, shadowSteps: 64, aoSamples: 5}` (both the settled defaults and the 1b.1 ceilings;
-  direct lighting retains `normalFieldSamples: 6`, and only `shadowRays`, `shadowSteps` and
-  `aoSamples` become zero; raising a ceiling requires a recorded plan amendment), `createBatch({identity: {requestId, jobId,
+  direct lighting retains `normalFieldSamples: 7`, and only `shadowRays`, `shadowSteps` and
+  `aoSamples` become zero; raising a ceiling requires a recorded plan amendment. Rev 5.1 records the accounting consequence of the approved box/Menger fallback: six endpoints plus at most one lazily evaluated centre. Other families retain six-sample central differences. Shadow and AO ceilings are unchanged.), `createBatch({identity: {requestId, jobId,
   viewId, generation}, pipelineId, pass, region: {x, y, width, height}, sample: {sequence, seed,
   index}, bounds: {pixels, raySteps, iterations, normalFieldSamples, shadowRays, shadowSteps,
   aoSamples}, inputs: {slot: handle}, outputs: {slot: handle}, uniforms}) → frozen Batch`
@@ -1722,9 +1722,17 @@ existing Plane assertion unchanged and green.
 ### Task B11b: Visual fixes and visual acceptance (user decisions 2026-10-22; rev 5.0)
 
 **Rev 5.1 follow-ups, B11c, implemented on the B11b branch (user decisions 2026-10-22; Claude and Codex converged, Codex run 20261022T035651Z-7855; sources codex-B11c-proposals.md and claude-B11b-followups-position.md):**
-- (FU1, plan change) AO sample heights become h_i = 4i·τ(t) for i = 1..5, so the maximum reach is 20τ; the 0.015·t term is removed. The 4 is the existing secondary-ray offset; no constant is fitted, and no calibration set is used. Appearance identity becomes `space-appearance-v3`. Accepted costs: weaker broad-cavity shading, and a reach that depends on resolution.
-- (FU2, spec §11.4 amendment, rev 5.1) quaternion-primary bounded recovery after a point-budget result: at most 8 bisection midpoints between the last resolved point and the failed point; a valid estimate below τ is an approximate hit. Tracing identity becomes `surface-v1/space-trace-v3`, with new record IDs; prior IDs and evidence are preserved. The 0.1% primary-unresolved target is unchanged.
-- Protocol: the rule text, constants and pass criteria are frozen before any acceptance measurement, and the B11b reason-preservation gaps are closed first. The six scenes run in a fixed order: baseline, FU1 alone, FU2 alone, then combined, with no tuning between runs. If acceptance still fails, B15 stays blocked, the failed baseline remains the reference, and the user decides.
+- (FU1, plan change) AO sample heights become h_i = 4i·τ(t) for i = 1..5, so the maximum reach is 20τ; the 0.015·t term is removed. The 4 is the existing secondary-ray offset; no constant is fitted, and no calibration set is used. Apply this rule to every family; retain the existing five samples, weights, strength, point budget, failure semantics and accumulated flags. Appearance identity becomes `space-appearance-v3`. Accepted costs: weaker broad-cavity shading, and a reach that depends on resolution.
+- (FU2, spec §11.4 amendment, rev 5.1) Implement the complete quaternion-primary recovery algorithm in §11.4, including its trigger, endpoint updates, terminal-failure precedence, eight-midpoint limit, collapse guards and shared primary evaluation cap. Retain recovery attempts, successes, midpoint counts, encountered point-budget evidence and recovery-stop details in diagnostics and saved evidence, separately from terminal ray outcomes. Test initial-point exclusion, successful recovery, both endpoint updates, numerical failure, estimate-unavailable, collapse and cap exhaustion, plus unchanged secondary and other-family behavior. Tracing identity becomes `surface-v1/space-trace-v3`, with new record IDs; preserve prior IDs and evidence. The 0.1% primary-unresolved ceiling is unchanged.
+- Protocol: freeze the rule text, constants, recovery semantics, cost accounting and pass criteria before new acceptance measurements. Close B11b's reason-preservation and measurement-test defects first; freeze the corrected baseline while preserving the original failed evidence.
+
+  Retain the six frozen scene parameters and explicit cameras, 1280×720 dimensions, 128 iterations, 512 total primary evaluations including recovery, eight samples, seed 1, normal/shadow policies, lighting settings and every existing threshold. Record effective settings, source hashes, identities and browser/GPU environment.
+
+  Validate synthetic failure paths and requalify affected tracing and appearance identities before visual acceptance; CPU checks do not replace GPU qualification. Run all six scenes at each stage, in this order: corrected baseline, FU1 alone, FU2 alone, combined. No tuning or parameter selection occurs between stages.
+
+  Save the four prescribed views and fixed crops, full product reports, per-sample raw status/reason/subreason evidence, union masks, numerators and denominators, recovery counts and work/timing. Assess all existing gates and review appearance; the combined candidate must satisfy the complete gate.
+
+  If the preregistered AO rule or recovery remains insufficient, preserve the failed results and baseline reference, keep B15 blocked, and report no accepted B11c result. No post-hoc constant, workload, denominator or threshold changes are permitted. Claude and Codex may propose another bounded follow-up; the user decides whether to authorize and approve it.
 - B00 amendment (B11b D1; Codex B11b r1, run 20261022T033656Z-c329): the normal field-sample ceiling `normalFieldSamples` becomes 7, because the approved one-sided fallback needs the centre value f(p). This is implied by the user-approved fallback, so no new user decision is needed.
 
 
@@ -2078,7 +2086,11 @@ and history); §4.3 (every existing Plane assertion survives). **B05 note (Codex
 **Rev 5.0 notes (2026-10-22; task-B14-report.md "Deviations" D1–D2 and Fix round 1, codex-B14-r1-findings.md, Codex run 20261022T005526Z-49f5):**
 - **Pick context.** `getPickContext()` returns `{identity, geometryRevision, dimensions: internalSize, sampleIndex}` from the request of the last publication, and null while inactive, unprepared, pending or dirty, or when the publication's generation differs from `liveGeneration()` (fix round F1).
 - **New seams.** The switcher gains `pending()` (the pending workspace, distinct from the visible one; `current()` stays the visible workspace) and Plane gains `isActive()` and `openShareHash(hash)`, used by the new `src/ui/share-link-router.js` (one persistent `hashchange` listener wired in `app.js`; it acts only while Space is active or preparing, so Plane's own listener is not doubled; invalid or unsupported links are reported with the view unchanged). Files added: `src/ui/share-link-router.js`, `tests/unit/share-link-router.test.js`.
-- **Test hooks.** `createSpaceWorkspace` takes an extra `env` (document, window, frames, `getGamepads`, viewport size, flight and gamepad factories); `createWorkspaceSwitcher` takes `toast` and exposes `ready`; workspaces have an optional `focus()`; the inspection object carries harness extras. All are accepted additive seams.
+
+  **Rev 5.1 activation clarification:** pending Space activation normally retains Plane until a current-token presentation. After successful preparation/prewarm, an allocation failure or budget overrun may instead reveal Space's actionable recovery UI before presentation; this does not establish that an image was rendered. Other activation failures retain or restore Plane. Only the latest activation token may commit visibility.
+
+  Repeated Space selection while awaiting presentation settles the earlier activation as `superseded`; the latest continues waiting. Cancellation of the awaited render without a replacement settles activation as `cancelled`, clears pending/inert state and restores usable Plane without an unavailable-error notification. Replacement rendering continues the activation wait. Retain regression coverage for reselection, cancellation/replacement, and both recovery exceptions before presentation.
+- **Test hooks.** `createSpaceWorkspace` takes an extra `env` (document, window, frames, `getGamepads`, viewport size, flight and gamepad factories, and optional `setTimer`/`clearTimer` scheduler dependencies). Production retains browser timers; the timer seams enable deterministic tests without changing scheduler policy; `createWorkspaceSwitcher` takes `toast` and exposes `ready`; workspaces have an optional `focus()`; the inspection object carries harness extras. All are accepted additive seams.
 - **Stale dependency rows (F8).** The table rows for 9ace5fe, T12 (947d41f) and T13 (4e58d0e) are now merged and are updated above.
 
 - [ ] **Step 1: Node tests** (fake DOM, fake backend): `a fresh start activates Plane and never
