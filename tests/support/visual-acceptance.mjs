@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { boxLocal, ROTATED_BOX } from '../reference/analytic.js';
 import { mengerDistance } from '../reference/menger.js';
+import { RECOVERY_WORD, decodeRecoveryWord } from '../../src/space/render/webgpu/passes.js';
 
 export const VISUAL_FIXTURE_PATH = 'tests/fixtures/visual-acceptance.json';
 export const loadVisualFixture = () => JSON.parse(readFileSync(VISUAL_FIXTURE_PATH, 'utf8'));
@@ -68,6 +69,28 @@ export function vaReasonMetrics(lanes) {
     });
   }
   return out;
+}
+// Recovery (B11c; spec §11.4 rev 5.1), this file's own reading of the raw recovery words: each sample's [pixel, word]
+// pairs (nonzero words only) decode with passes.js decodeRecoveryWord; per sample the attempts, outcomes, stops and the
+// summed midpoints and encounters; over the union of the same samples, the pixels with an attempt and with each outcome
+// or stop in any sample.
+export function vaRecoveryMetrics(frames, pixels) {
+  const outcomes = RECOVERY_WORD.outcomes.slice(1), stops = RECOVERY_WORD.stops.slice(1);
+  const zero = labels => Object.fromEntries(labels.map(label => [label, 0]));
+  const seen = new Map(), perSample = frames.map((pairs, sample) => {
+    const m = { sample, attempts: 0, outcomes: zero(outcomes), stops: zero(stops), midpoints: 0, encounters: 0 };
+    for (let k = 0; k < pairs.length; k += 2) {
+      const pixel = pairs[k], r = decodeRecoveryWord(pairs[k + 1]);
+      if (!r.attempted) throw new RangeError('a recovery pair without an attempt');
+      m.attempts++; m.outcomes[r.outcome]++; if (r.stop !== 'none') m.stops[r.stop]++; m.midpoints += r.midpoints; m.encounters += r.encounters;
+      const entry = seen.get(pixel) ?? { outcomes: new Set(), stops: new Set() };
+      entry.outcomes.add(r.outcome); if (r.stop !== 'none') entry.stops.add(r.stop); seen.set(pixel, entry);
+    }
+    return m;
+  });
+  const union = { samples: frames.length, pixels, attempted: seen.size, outcomes: zero(outcomes), stops: zero(stops) };
+  for (const entry of seen.values()) { for (const o of entry.outcomes) union.outcomes[o]++; for (const k of entry.stops) union.stops[k]++; }
+  return { samples: perSample, union };
 }
 // The one-sided stencil direction check (Codex B11b-F4): an available normal must have finite, nonzero components
 // and a finite angle within `limit` of the prediction. Returns null, or {reason, angle}. (`angle > limit` alone is

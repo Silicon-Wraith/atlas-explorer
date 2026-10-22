@@ -32,7 +32,7 @@ const DEFAULT_LIMITS = { maxStorageBuffersPerShaderStage: 8, maxStorageTexturesP
 
 test('the appearance metadata hashes equal the sources and verifyPrewarm reports a missing variant', async () => {
   assert.equal(APPEARANCE_VERSION, 'space-appearance-v3');
-  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v3');
+  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v4');
   const descriptors = appearancePipelineDescriptors();
   const owned = new Set(descriptors.flatMap(d => d.sourceIds).filter(id => !['fields', 'trace', 'menger-sample', 'menger-absent'].includes(id)));
   assert.deepEqual([...owned].sort(), ['accumulate', 'display', 'shade']);

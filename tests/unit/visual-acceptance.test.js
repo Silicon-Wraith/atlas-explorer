@@ -136,3 +136,24 @@ test('a lighting-only pixel shown magenta counts as magenta as well as a lost in
   // A primary-unresolved pixel is expected magenta: not a lighting-as-magenta failure.
   assert.deepEqual(classifyFlaggedPixel({ got: magenta, expected: magenta, plain, lightingOnly: false }), { lost: false, magenta: false, tinted: false });
 });
+
+// B11c: the page's own recovery metrics (from [pixel, word] pairs) equal the renderer masks' on the same samples.
+test('the visual check reads recovery words independently and agrees with the outcome masks', async () => {
+  const { vaRecoveryMetrics } = await import('../support/visual-acceptance.mjs');
+  const { createOutcomeMasks } = await import('../../src/space/render/outcome-masks.js');
+  const { packRecoveryWord } = await import('../../src/space/render/webgpu/passes.js');
+  const { packStatus } = await import('../../src/space/render/status.js');
+  const word = (outcome, midpoints, encounters, stop = 'none') => packRecoveryWord({ attempted: true, outcome, stop, midpoints, encounters });
+  const HIT = packStatus({ status: 0, reason: 0, subreason: 0, steps: 4 }), POINT = packStatus({ status: 2, reason: 1, subreason: 0, steps: 9 });
+  const frames = [{ status: [HIT, POINT, HIT], recovery: [word('approximate hit', 1, 1), word('point-budget', 3, 2, 'evaluation-cap'), 0] },
+    { status: [POINT, HIT, HIT], recovery: [word('point-budget', 8, 9, 'midpoint-limit'), 0, 0] }];
+  const masks = createOutcomeMasks({ width: 3, height: 1 }, { recovery: true }), region = { x: 0, y: 0, width: 3, height: 1 };
+  const u32 = v => new Uint8Array(Uint32Array.from(v).buffer), normals = new Uint8Array(new Uint16Array([0, 0, 0x3c00, 0x3c00, 0, 0, 0x3c00, 0x3c00, 0, 0, 0x3c00, 0x3c00]).buffer);
+  frames.forEach((f, sample) => {
+    const id = { accumulationKey: 'k', sample };
+    masks.record(id, 'status', region, u32(f.status)); masks.record(id, 'normal', region, normals);
+    masks.record(id, 'lightingStatus', region, u32([0, 0, 0])); masks.record(id, 'recovery', region, u32(f.recovery)); masks.end(id);
+  });
+  const pairs = frames.map(f => Uint32Array.from(f.recovery.flatMap((w, i) => (w ? [i, w] : []))));
+  assert.deepEqual(vaRecoveryMetrics(pairs, 3), masks.snapshot().recovery);
+});

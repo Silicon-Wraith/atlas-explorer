@@ -1,5 +1,5 @@
-// Space tracing core, TRACING_VERSION surface-v1/space-trace-v1 (plan B10; spec §11.4, §8.1 step 2,
-// §10.1). Binary32 sphere tracing of one ray in model-native world coordinates: the ray origin is the
+// Space tracing core, TRACING_VERSION surface-v1/space-trace-v3 (plan B10; spec §11.4, §8.1 step 2,
+// §10.1; spec rev 5.1 quaternion-primary bounded recovery, plan B11b FU2, implemented by B11c). Binary32 sphere tracing of one ray in model-native world coordinates: the ray origin is the
 // B05 transport pair (high, low) and every field input is (high + t·d) + low, so no absolute world
 // position is collapsed to one binary32 value before the field sees it. Statuses and reasons are B00's
 // RAY_STATUS_* / UNRESOLVED_REASON_* / STAGNATION_* constants, which shaders.js prepends to every module.
@@ -8,7 +8,7 @@
 // The Menger branch calls menger_sample(), supplied by menger-sample.wgsl (Menger variants only) or
 // menger-absent.wgsl (every other variant, so they never statically use the box buffer).
 // Every guard precedes the operation it protects (spec §10.2); nothing tests for NaN after the fact.
-override FIELD: u32 = 0u; // passes.js VALIDATION_FIELD_IDS: 0 sphere, 1 box, 2 menger, 3 mandelbulb, 4 quaternion-julia, 5 constant
+override FIELD: u32 = 0u; // passes.js VALIDATION_FIELD_IDS: 0 sphere, 1 box, 2 menger, 3 mandelbulb, 4 quaternion-julia, 5 constant, 6 scripted
 
 const FIELD_SPHERE: u32 = 0u;
 const FIELD_BOX: u32 = 1u;
@@ -16,6 +16,11 @@ const FIELD_MENGER: u32 = 2u;
 const FIELD_BULB: u32 = 3u;
 const FIELD_QUATERNION: u32 = 4u;
 const FIELD_CONSTANT: u32 = 5u; // validation only: a constant exterior distance u.c.x (the stagnation probes)
+// Validation only (B11c): a scripted fractal-like field along the first field-input coordinate, x' = x − u.kappa:
+// x' < u.c.x an exterior estimate 2^(u.c.z); u.c.x <= x' < u.c.y the band u.power (0 an estimate 2^-40, 1 a
+// numerical failure, 2 an escaped orbit without a usable estimate); x' >= u.c.y not escaped within the budget. It
+// recovers like the quaternion, so the synthetic recovery paths run on the GPU (tests/support/primary-recovery.mjs).
+const FIELD_SCRIPTED: u32 = 6u;
 
 const MAX_RAY_STEPS: u32 = 1024u; // B00 batch bound raySteps
 const F32_MAX: f32 = 3.4028234663852886e38;
@@ -56,12 +61,32 @@ struct TraceUniforms {
 };
 
 struct FieldSample { kind: u32, value: f32 }
-struct TraceResult { status: u32, reason: u32, subreason: u32, steps: u32, t: f32, detail: u32 }
+// Spec §11.4 quaternion-primary bounded recovery (rev 5.1, user-approved 2026-10-22). The recovery word
+// (passes.js RECOVERY_WORD) is a diagnostic kept apart from the terminal ray outcome: bits 0–3 midpoints evaluated,
+// 4–7 point-budget encounters (the trigger and every point-budget midpoint), 8–11 the recovery outcome, 12–15 the
+// recovery-stop detail. Zero means no recovery was attempted.
+const RECOVERY_MIDPOINT_LIMIT: u32 = 8u;
+const RECOVERY_OUTCOME_NONE: u32 = 0u;
+const RECOVERY_OUTCOME_HIT: u32 = 1u;
+const RECOVERY_OUTCOME_NUMERICAL_FAILURE: u32 = 2u;
+const RECOVERY_OUTCOME_ESTIMATE_UNAVAILABLE: u32 = 3u;
+const RECOVERY_OUTCOME_POINT_BUDGET: u32 = 4u;
+const RECOVERY_STOP_NONE: u32 = 0u;
+const RECOVERY_STOP_MIDPOINT_LIMIT: u32 = 1u;
+const RECOVERY_STOP_PARAMETER_COLLAPSE: u32 = 2u;
+const RECOVERY_STOP_COORDINATE_COLLAPSE: u32 = 3u;
+const RECOVERY_STOP_EVALUATION_CAP: u32 = 4u;
+
+struct TraceResult { status: u32, reason: u32, subreason: u32, steps: u32, t: f32, detail: u32, recovery: u32 }
 struct Interval { kind: u32, enter: f32, exit: f32 } // kind: 0 ordinary, 1 empty (miss), 2 invalid (numerical failure)
 
 fn trace_result(status: u32, reason: u32, subreason: u32, steps: u32, t: f32, detail: u32) -> TraceResult {
-  return TraceResult(status, reason, subreason, steps, t, detail);
+  return TraceResult(status, reason, subreason, steps, t, detail, 0u);
 }
+fn recovery_word(midpoints: u32, encounters: u32, outcome: u32, stop: u32) -> u32 { return midpoints | (encounters << 4u) | (outcome << 8u) | (stop << 12u); }
+fn with_recovery(r: TraceResult, word: u32) -> TraceResult { var out = r; out.recovery = word; return out; }
+// The recovering family: quaternion Julia (spec §11.4 rev 5.1) and the validation-only scripted field.
+fn recovering_family() -> bool { return FIELD == FIELD_QUATERNION || FIELD == FIELD_SCRIPTED; }
 fn ray_failure(steps: u32, t: f32) -> TraceResult { return trace_result(RAY_STATUS_NUMERICAL_FAILURE, UNRESOLVED_REASON_NONE, STAGNATION_NONE, steps, t, DETAIL_NONE); }
 fn ray_miss(steps: u32, t: f32) -> TraceResult { return trace_result(RAY_STATUS_MISS, UNRESOLVED_REASON_NONE, STAGNATION_NONE, steps, t, DETAIL_NONE); }
 fn ray_hit(steps: u32, t: f32) -> TraceResult { return trace_result(RAY_STATUS_HIT, UNRESOLVED_REASON_NONE, STAGNATION_NONE, steps, t, DETAIL_NONE); }
@@ -131,6 +156,18 @@ fn field_sample(p: vec3<f32>) -> FieldSample {
   if (FIELD == FIELD_CONSTANT) {
     if (!admissible3(p) || !finite_f32(u.c.x) || !(u.c.x >= 0.0)) { return FieldSample(SAMPLE_FAILURE, 0.0); }
     return FieldSample(SAMPLE_DISTANCE, u.c.x);
+  }
+  if (FIELD == FIELD_SCRIPTED) {
+    // guard: p.x and kappa are finite (admissible), so their difference is finite
+    if (!admissible3(p) || !finite_f32(u.kappa)) { return FieldSample(SAMPLE_FAILURE, 0.0); }
+    let x = p.x - u.kappa;
+    if (x < u.c.x) { return FieldSample(SAMPLE_LOG2, u.c.z); }
+    if (x < u.c.y) {
+      if (u.power == 0u) { return FieldSample(SAMPLE_LOG2, -40.0); }
+      if (u.power == 1u) { return FieldSample(SAMPLE_FAILURE, 0.0); }
+      return FieldSample(SAMPLE_UNAVAILABLE, 0.0);
+    }
+    return FieldSample(SAMPLE_NOT_ESCAPED, 0.0);
   }
   return FieldSample(SAMPLE_FAILURE, 0.0);
 }
@@ -213,9 +250,67 @@ fn enclosing_interval(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>) -> Interval
   return enclosing_sphere(high, low, d, 2.0);
 }
 
+// Spec §11.4 quaternion-primary bounded recovery (rev 5.1). Entered only from march(), when an ordinary guarded
+// 0.9·DE advance from a resolved, non-hit exterior point (a, at position pa) reached a point-budget result (b, pb)
+// after `used` primary evaluations. At most RECOVERY_MIDPOINT_LIMIT effective midpoints m = a + (b − a)/2; before
+// each, the remaining primary evaluation budget, a < m < b and an effective field-input position distinct from both
+// endpoints are required. Each evaluated midpoint counts toward the same primary cap and the reported steps. The
+// classification is march()'s: a failure is a numerical failure, an escaped orbit without a usable estimate is
+// estimate-unavailable, a valid estimate strictly below τ(m) is an approximate hit at m; otherwise a resolved non-hit
+// sets a = m and point-budget sets b = m. Recovery never restarts recursively and never advances forward. Any stop
+// returns unresolved (point-budget) at the original failed parameter, with the recovery-stop detail in the word.
+// The interval is not a proven surface bracket, and non-escape establishes no interior occupancy.
+fn recover(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, a0: f32, pa0: vec3<f32>, b0: f32, pb0: vec3<f32>, used: u32) -> TraceResult {
+  var a = a0;
+  var pa = pa0;
+  var b = b0;
+  var pb = pb0;
+  var steps = used;
+  var midpoints = 0u;
+  var encounters = 1u;
+  var stop = RECOVERY_STOP_NONE;
+  loop {
+    if (midpoints >= RECOVERY_MIDPOINT_LIMIT) { stop = RECOVERY_STOP_MIDPOINT_LIMIT; break; }
+    if (steps >= u.max_steps) { stop = RECOVERY_STOP_EVALUATION_CAP; break; }
+    // guard: a and b are admitted ray parameters in [0, 2^100], so b − a and the midpoint are finite
+    let m = a + (b - a) * 0.5;
+    if (!(a < m && m < b)) { stop = RECOVERY_STOP_PARAMETER_COLLAPSE; break; }
+    let pm = field_position(high, low, d, m);
+    if (all(pm == pa) || all(pm == pb)) { stop = RECOVERY_STOP_COORDINATE_COLLAPSE; break; }
+    steps += 1u;
+    midpoints += 1u;
+    if (!admissible3(pm)) { return with_recovery(ray_failure(steps, m), recovery_word(midpoints, encounters, RECOVERY_OUTCOME_NUMERICAL_FAILURE, RECOVERY_STOP_NONE)); }
+    let s = field_sample(pm);
+    if (s.kind == SAMPLE_FAILURE) { return with_recovery(ray_failure(steps, m), recovery_word(midpoints, encounters, RECOVERY_OUTCOME_NUMERICAL_FAILURE, RECOVERY_STOP_NONE)); }
+    if (s.kind == SAMPLE_NOT_ESCAPED) {
+      encounters += 1u;
+      b = m;
+      pb = pm;
+      continue;
+    }
+    let unavailable = with_recovery(ray_unresolved(UNRESOLVED_REASON_ESTIMATE_UNAVAILABLE, STAGNATION_NONE, steps, m, DETAIL_NONE),
+      recovery_word(midpoints, encounters, RECOVERY_OUTCOME_ESTIMATE_UNAVAILABLE, RECOVERY_STOP_NONE));
+    if (s.kind == SAMPLE_INTERIOR || s.kind == SAMPLE_UNAVAILABLE) { return unavailable; }
+    let tolerance = max(u.tolerance_floor, u.tolerance_factor * u.alpha * m);
+    let hit = with_recovery(ray_hit(steps, m), recovery_word(midpoints, encounters, RECOVERY_OUTCOME_HIT, RECOVERY_STOP_NONE));
+    if (s.kind == SAMPLE_DISTANCE) {
+      if (s.value == 0.0 || s.value < tolerance) { return hit; }
+    } else {
+      if (!finite_f32(s.value) || s.value >= LOG2_DE_LIMIT) { return unavailable; }
+      // guard: log2 is applied only to a positive normal tolerance
+      if (tolerance >= SMALLEST_NORMAL && s.value < log2(tolerance)) { return hit; }
+    }
+    a = m;
+    pa = pm;
+  }
+  return with_recovery(ray_unresolved(UNRESOLVED_REASON_POINT_BUDGET, STAGNATION_NONE, steps, b0, DETAIL_NONE),
+    recovery_word(midpoints, encounters, RECOVERY_OUTCOME_POINT_BUDGET, stop));
+}
+
 // Starting conditions and the ordered step rules of spec §11.4. `use_given` replaces the enclosing
 // interval (the validation stagnation probes). No minimum step is forced and no hit is manufactured.
-fn march(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, use_given: bool, given: Interval) -> TraceResult {
+// `primary` is true for camera (primary) rays: only they enter the quaternion recovery; shadow rays never do.
+fn march(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, use_given: bool, given: Interval, primary: bool) -> TraceResult {
   if (!profile_admitted()) { return ray_failure(0u, 0.0); }
   // Invalid ray arithmetic is a numerical failure, never a miss: a finite, admitted origin and a unit direction.
   if (!admissible3(high) || !admissible3(low) || !finite3(d)) { return ray_failure(0u, 0.0); }
@@ -230,11 +325,19 @@ fn march(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, use_given: bool, given: 
   // An explicit (validation) interval may start beyond every reachable parameter.
   if (t > T_REACH) { return ray_failure(0u, t); }
   var p = field_position(high, low, d, t);
+  // The last resolved, non-hit point the march advanced from (the recovery's a); read only when steps >= 2.
+  var t_prev = t;
+  var p_prev = p;
   for (var steps = 1u; steps <= u.max_steps; steps++) {
     if (!admissible3(p)) { return ray_failure(steps, t); }
     let s = field_sample(p);
     if (s.kind == SAMPLE_FAILURE) { return ray_failure(steps, t); }
-    if (s.kind == SAMPLE_NOT_ESCAPED) { return ray_unresolved(UNRESOLVED_REASON_POINT_BUDGET, STAGNATION_NONE, steps, t, DETAIL_NONE); }
+    if (s.kind == SAMPLE_NOT_ESCAPED) {
+      // Spec §11.4 rev 5.1: an initial-point failure (steps == 1) stays terminal; a later one was reached by an ordinary
+      // guarded advance from a resolved, non-hit point.
+      if (primary && recovering_family() && steps >= 2u) { return recover(high, low, d, t_prev, p_prev, t, p, steps); }
+      return ray_unresolved(UNRESOLVED_REASON_POINT_BUDGET, STAGNATION_NONE, steps, t, DETAIL_NONE);
+    }
     // This exterior profile never accepts an interior value as a hit (spec §11.4 "Analytic applicability").
     if (s.kind == SAMPLE_INTERIOR) { return ray_unresolved(UNRESOLVED_REASON_ESTIMATE_UNAVAILABLE, ESTIMATE_DETAIL_INTERIOR, steps, t, DETAIL_INTERIOR); }
     if (s.kind == SAMPLE_UNAVAILABLE) { return ray_unresolved(UNRESOLVED_REASON_ESTIMATE_UNAVAILABLE, STAGNATION_NONE, steps, t, DETAIL_NONE); }
@@ -264,6 +367,8 @@ fn march(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, use_given: bool, given: 
     if (!(candidate > t)) { return ray_unresolved(UNRESOLVED_REASON_STAGNATION, STAGNATION_RAY_PARAMETER, steps, t, DETAIL_NONE); }
     let next = field_position(high, low, d, candidate);
     if (all(next == p)) { return ray_unresolved(UNRESOLVED_REASON_STAGNATION, STAGNATION_FIELD_COORDINATE, steps, t, DETAIL_NONE); }
+    t_prev = t;
+    p_prev = p;
     t = candidate;
     p = next;
   }
@@ -271,5 +376,5 @@ fn march(high: vec3<f32>, low: vec3<f32>, d: vec3<f32>, use_given: bool, given: 
 }
 
 fn trace_pixel(px: vec2<u32>) -> TraceResult {
-  return march(u.origin_high, u.origin_low, pixel_direction(px), false, Interval(0u, 0.0, 0.0));
+  return march(u.origin_high, u.origin_low, pixel_direction(px), false, Interval(0u, 0.0, 0.0), true);
 }

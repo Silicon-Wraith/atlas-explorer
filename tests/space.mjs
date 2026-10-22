@@ -1473,10 +1473,11 @@ async function traceFrameInPage(spec) {
     uniforms: passes.traceUniforms({ modelId: spec.modelId, camera: spec.camera, effective: spec.effective, region: band, internalSize: spec.internalSize, sampling: spec.sampling, profile }) }, s.lease(jobId)).done));
   const tally = list => list.reduce((acc, done) => ({ ...acc, [done.outcome]: (acc[done.outcome] ?? 0) + 1 }), {});
   const started = performance.now();
-  const traced = await submit('trace', spec.traceId ?? `trace_band:${spec.modelId}`, spec.profile, { ...menger }, { depth: handles.depth, status: handles.status });
+  const traced = await submit('trace', spec.traceId ?? `trace_band:${spec.modelId}`, spec.profile, { ...menger }, { depth: handles.depth, status: handles.status, recovery: handles.recovery });
   const out = { bands: bands.length, trace: tally(traced), traceFailures: traced.filter(d => d.outcome !== 'completed').slice(0, 3).map(d => d.reason) };
   out.depth = s.base64(await s.read(handles.depth, region, 'depth', jobId));
   out.status = s.base64(await s.read(handles.status, region, 'status', jobId));
+  out.recovery = s.base64(await s.read(handles.recovery, region, 'recovery', jobId)); // B11c
   if (spec.normals) {
     const normalsDone = await submit('normals', spec.normalsId ?? `normals_band:${spec.modelId}`, spec.normalsProfile ?? spec.profile,
       { depth: handles.depth, status: handles.status, ...menger }, { normal: handles.normal });
@@ -1750,7 +1751,7 @@ async function rendererJobInPage(spec) {
   const { createSpaceRenderer } = await import('/src/space/render/renderer.js');
   const { createSpaceScene, sceneCodec } = await import('/src/space/scene-adapter.js');
   const { createSpaceRequest } = await import('/src/space/render-adapter.js');
-  const { TARGET_LAYOUT_V1 } = await import('/src/space/render/backend.js');
+  const { TARGET_LAYOUT } = await import('/src/space/render/backend.js');
   const appearance = await import('/src/space/render/webgpu/appearance.js');
   const { KERNEL_VERSION } = await import('/src/space/render/webgpu/kernels.js');
   const { TRACING_VERSION } = await import('/src/space/render/webgpu/passes.js');
@@ -1781,7 +1782,7 @@ async function rendererJobInPage(spec) {
       const ticket = backend.readback(desc, options), ordinal = presents, field = desc.fields[0];
       if ((spec.captureFields ?? []).includes(field)) {
         ticket.result.then(result => {
-          const bpt = TARGET_LAYOUT_V1[field].bytesPerTexel, frame = ((frames[ordinal] ??= {})[field] ??= new Uint8Array(pixels * bpt)), r = desc.region;
+          const bpt = TARGET_LAYOUT[field].bytesPerTexel, frame = ((frames[ordinal] ??= {})[field] ??= new Uint8Array(pixels * bpt)), r = desc.region;
           for (let row = 0; row < r.height; row++) frame.set(result.data.subarray(row * r.width * bpt, (row + 1) * r.width * bpt), ((r.y + row) * W + r.x) * bpt);
         }, () => {});
       }
@@ -1862,7 +1863,7 @@ async function passesInPage(spec) {
       if (spec.geometry === 'pattern') {
         for (const region of bandsFor('pattern', sample)) await a.fixture(jobId, 'fixture-pattern', region, {}, { depth: h.depth, status: h.status, normal: h.normal }, { sampleIndex: sample });
       } else {
-        await run('trace', `trace_band:${spec.modelId}`, sample, region => passes.traceUniforms({ ...common, region }), { ...menger }, { depth: h.depth, status: h.status });
+        await run('trace', `trace_band:${spec.modelId}`, sample, region => passes.traceUniforms({ ...common, region }), { ...menger }, { depth: h.depth, status: h.status, recovery: h.recovery });
         await run('normals', `normals_band:${spec.modelId}`, sample, region => passes.normalsUniforms({ ...common, region }), { depth: h.depth, status: h.status, ...menger }, { normal: h.normal });
       }
       const geometryIn = { depth: h.depth, status: h.status, normal: h.normal }, sampleOut = { sampleColor: h.sampleColor, lightingStatus: h.lightingStatus };
@@ -1901,7 +1902,7 @@ async function visualJobInPage(spec) {
   const { createSpaceRenderer } = await import('/src/space/render/renderer.js');
   const { createSpaceScene, sceneCodec } = await import('/src/space/scene-adapter.js');
   const { createSpaceRequest } = await import('/src/space/render-adapter.js');
-  const { TARGET_LAYOUT_V1 } = await import('/src/space/render/backend.js');
+  const { TARGET_LAYOUT } = await import('/src/space/render/backend.js');
   const appearance = await import('/src/space/render/webgpu/appearance.js');
   const { KERNEL_VERSION } = await import('/src/space/render/webgpu/kernels.js');
   const { TRACING_VERSION } = await import('/src/space/render/webgpu/passes.js');
@@ -1910,7 +1911,7 @@ async function visualJobInPage(spec) {
   const scene = sceneCodec.validate({ ...base, appearance: { ...base.appearance, ...spec.appearance } });
   const ordinals = scene.appearance.viewMode === 'shaded' && scene.appearance.lightingQuality === 'full' ? scene.sampling.targetSamples + 1 : scene.sampling.targetSamples;
   const capture = backend.allocate({ name: `b11b-capture-${spec.label}`, bytes: 4 * pixels, usage: 'storage' });
-  const kept = [], masks = [], statusFrames = [], availability = [], reasonCodes = [], copies = [];
+  const kept = [], masks = [], statusFrames = [], availability = [], reasonCodes = [], copies = [], recoveryPairs = [];
   // B11b fix round 1: each unresolved outcome's reason, coded as in tests/support/visual-acceptance.mjs (vaReasonCode).
   const reasonCode = (reason, subreason) => (reason >= 1 && reason <= 3 ? reason : reason === 4 && (subreason === 1 || subreason === 2) ? 3 + subreason : 6);
   let presents = 0, lastAccumulate = null, captured = null;
@@ -1925,10 +1926,21 @@ async function visualJobInPage(spec) {
     },
     readback(desc, options) {
       const ticket = backend.readback(desc, options), ordinal = presents, field = desc.fields[0], r = desc.region;
+      if (field === 'recovery') {
+        // B11c: the raw recovery words of a recovering family, as [pixel, word] pairs of the nonzero words.
+        copies.push(ticket.result.then(result => {
+          const view = new DataView(result.data.buffer, result.data.byteOffset, result.data.byteLength), list = (recoveryPairs[ordinal] ??= []);
+          if (4 * r.width * r.height !== result.data.byteLength) throw new Error('readback length');
+          for (let row = 0; row < r.height; row++) for (let col = 0; col < r.width; col++) {
+            const word = view.getUint32(4 * (row * r.width + col), true);
+            if (word) list.push((r.y + row) * W + r.x + col, word);
+          }
+        }, () => {}));
+      }
       if (['status', 'normal', 'lightingStatus'].includes(field)) {
         copies.push(ticket.result.then(result => {
           ensure(ordinal);
-          const view = new DataView(result.data.buffer, result.data.byteOffset, result.data.byteLength), m = masks[ordinal], bpt = TARGET_LAYOUT_V1[field].bytesPerTexel;
+          const view = new DataView(result.data.buffer, result.data.byteOffset, result.data.byteLength), m = masks[ordinal], bpt = TARGET_LAYOUT[field].bytesPerTexel;
           for (let row = 0; row < r.height; row++) for (let col = 0; col < r.width; col++) {
             const i = (r.y + row) * W + r.x + col, k = row * r.width + col;
             if (field === 'status') {
@@ -1973,7 +1985,8 @@ async function visualJobInPage(spec) {
     const capturedDone = captured && await captured;
     if (capturedDone && capturedDone.outcome !== 'completed') throw new Error(`capture: ${capturedDone.outcome}`);
     const out = { outcome: done.outcome, reason: done.reason ?? null, presents, ordinals, wallMs: performance.now() - started, report: reports.at(-1) ?? null,
-      quality: JSON.parse(JSON.stringify(request.quality)), masks: [], reasons: [], statusSha256: [] };
+      quality: JSON.parse(JSON.stringify(request.quality)), masks: [], reasons: [], statusSha256: [],
+      recovery: masks.map((_, o) => (recoveryPairs[o] ? s.base64(new Uint8Array(Uint32Array.from(recoveryPairs[o] ?? []).buffer)) : null)) };
     for (let o = 0; o < masks.length; o++) {
       if (!masks[o]) { out.masks.push(null); out.reasons.push(null); out.statusSha256.push(null); continue; }
       const pairs = []; for (let i = 0; i < pixels; i++) if (reasonCodes[o][i]) pairs.push(i, reasonCodes[o][i]);
@@ -2011,7 +2024,7 @@ async function visualNormalsInPage(spec) {
       const failed = done.filter(d => d.outcome !== 'completed');
       if (failed.length) throw new Error(`${pipelineId} sample ${sample}: ${failed[0].outcome} ${failed[0].reason}`);
     };
-    await submit('trace', `trace_band:${spec.modelId}`, band => passes.traceUniforms({ ...common, region: band }), { ...menger }, { depth: h.depth, status: h.status });
+    await submit('trace', `trace_band:${spec.modelId}`, band => passes.traceUniforms({ ...common, region: band }), { ...menger }, { depth: h.depth, status: h.status, recovery: h.recovery });
     await submit('normals', `normals_band:${spec.modelId}`, band => passes.normalsUniforms({ ...common, region: band }), { depth: h.depth, status: h.status, ...menger }, { normal: h.normal });
     const full = { x: 0, y: 0, width: W, height: H };
     const status = await s.read(h.status, full, 'status', jobId), depth = await s.read(h.depth, full, 'depth', jobId), normal = await s.read(h.normal, full, 'normal', jobId);
@@ -2086,12 +2099,18 @@ async function runVisualAcceptance({ page, check }) {
     row.reasons = { union: va.vaReasonMetrics(va.orBits32(reasonLanes)), perSample: reasonLanes.map(va.vaReasonMetrics) };
     // The renderer's own outcome masks (B11b) must equal these independent masks.
     const rendererMasks = full.report?.outcomeMasks;
+    // B11c: the recovery diagnostics (spec §11.4 rev 5.1) from the page's own raw recovery readbacks, per sample and over
+    // the union of the same samples; a non-recovering family reads none back.
+    const recoveryFrames = samples.map(sample => full.recovery?.[ordinalOf('shaded-full', sample)] ?? null);
+    row.recovery = recoveryFrames.every(frame => frame === null) ? null : va.vaRecoveryMetrics(recoveryFrames.map(frame => u32(frame ?? '')), pixels);
     row.rendererMasksAgree = !!rendererMasks && isDeepStrictEqual(rendererMasks.samples.map(m => strip(m, 'sample')), row.perSample)
       && isDeepStrictEqual(strip(rendererMasks.union, 'samples'), row.union)
-      && isDeepStrictEqual(rendererMasks.reasons, { samples: row.reasons.perSample, union: row.reasons.union });
+      && isDeepStrictEqual(rendererMasks.reasons, { samples: row.reasons.perSample, union: row.reasons.union })
+      && isDeepStrictEqual(rendererMasks.recovery ?? null, row.recovery);
+    if ((sceneSpec.model === 'quaternion-julia') !== (row.recovery !== null)) fail(`recovery diagnostics ${row.recovery ? 'present' : 'absent'} for ${sceneSpec.model}`);
     // The shaded-full product report itself (its counts and outcome masks with reasons) is saved with the row.
     row.rendererReport = full.report ?? null;
-    if (!row.rendererMasksAgree) fail(`renderer outcome masks disagree: ${JSON.stringify({ union: rendererMasks?.union ?? null, reasons: rendererMasks?.reasons?.union ?? null })} vs ${JSON.stringify({ union: row.union, reasons: row.reasons.union })}`);
+    if (!row.rendererMasksAgree) fail(`renderer outcome masks disagree: ${JSON.stringify({ union: rendererMasks?.union ?? null, reasons: rendererMasks?.reasons?.union ?? null, recovery: rendererMasks?.recovery?.union ?? null })} vs ${JSON.stringify({ union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null })}`);
     // Presentation of every flagged pixel in the full shaded image.
     const display = bytesOf(full.display), sums = (() => { const b = bytesOf(full.accumulation); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); })();
     const flags = (() => { const b = bytesOf(full.flags); return new Uint32Array(b.buffer, b.byteOffset, b.byteLength / 4); })();
@@ -2159,13 +2178,13 @@ async function runVisualAcceptance({ page, check }) {
     }
     row.passed = row.failures.length === 0; row.elapsedMs = Date.now() - started;
     rows.push(row);
-    console.log(`VISUAL ${sceneSpec.id}: ${row.passed ? 'pass' : 'FAIL'} ${JSON.stringify({ union: row.union, reasons: row.reasons.union, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures }).slice(0, 2400)}`);
+    console.log(`VISUAL ${sceneSpec.id}: ${row.passed ? 'pass' : 'FAIL'} ${JSON.stringify({ union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures }).slice(0, 2400)}`);
   }
   report.push({ name: 'Visual acceptance scenes (recorded; plan rev 5.0 B11b)', fixture: fixture.version, settings: fixture.settings, thresholds: va.VISUAL_THRESHOLDS, faceCriterion: va.FACE_NORMAL_CRITERION,
     scenes: rows.map(row => ({ ...row, perSample: row.perSample })) });
   check(va.VISUAL_ACCEPTANCE_PASS, () => {
     for (const row of rows) assert.deepEqual(row.failures, [], `${row.id}: ${row.failures.join('; ')}`);
-    return { scenes: rows.map(row => ({ id: row.id, union: row.union, reasons: row.reasons.union, thresholds: row.thresholds.rows.map(r => `${r.metric} ${r.numerator}/${r.denominator}`), faces: row.faces && strip(row.faces, 'worst') })) };
+    return { scenes: rows.map(row => ({ id: row.id, union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null, thresholds: row.thresholds.rows.map(r => `${r.metric} ${r.numerator}/${r.denominator}`), faces: row.faces && strip(row.faces, 'worst') })) };
   });
   return rows;
 }
@@ -2217,8 +2236,9 @@ async function runRendering({ page }) {
   const check = (name, fn) => { try { const details = fn(); pass(name, details); } catch (error) { failedChecks.push(name); report.push({ name: `FAILED ${name}`, error: String(error?.message ?? error).slice(0, 4000) }); console.log(`FAILED ${name}: ${String(error?.message).slice(0, 600)}`); } };
   const bytes = b64 => new Uint8Array(Buffer.from(b64, 'base64'));
   const decodeFrame = (run, count) => {
-    const statuses = passes.decodeStatusWords(bytes(run.status)), depths = passes.decodeDepths(bytes(run.depth));
-    assert.equal(statuses.length, count); return statuses.map((s, i) => ({ ...s, t: depths[i] }));
+    const statuses = passes.decodeStatusWords(bytes(run.status)), depths = passes.decodeDepths(bytes(run.depth)), recovery = passes.decodeRecoveryWords(bytes(run.recovery));
+    assert.equal(statuses.length, count); assert.equal(recovery.length, count);
+    return statuses.map((s, i) => ({ ...s, t: depths[i], recovery: recovery[i] }));
   };
   const frame = async spec => {
     const run = await ev(page, traceFrameInPage, spec, `trace ${spec.label}`, LIMITS.deep);
@@ -2331,7 +2351,14 @@ async function runRendering({ page }) {
       region: overviewRegion, sampling: { seed: 0, sampleIndex: 0 }, profile: SURFACE_V1 });
     const decoded = decodeFrame(run, 528 * 528);
     const caseResults = row.cases.map(c => decoded[(c.pixel[1] - 96) * 528 + (c.pixel[0] - 376)]);
-    overviewRows.push({ ...tracing.compareOverviewStratum(row, caseResults), wallMs: run.wallMs, terminations: tracing.terminationCounts(caseResults) });
+    // B11c: the recovery diagnostics of the stratum's rays (spec §11.4 rev 5.1), kept apart from the terminations.
+    const recovery = { attempted: 0, outcomes: {}, stops: {}, midpoints: 0 };
+    for (const r of caseResults) if (r.recovery.attempted) {
+      recovery.attempted++; recovery.midpoints += r.recovery.midpoints;
+      recovery.outcomes[r.recovery.outcome] = (recovery.outcomes[r.recovery.outcome] ?? 0) + 1;
+      if (r.recovery.stop !== 'none') recovery.stops[r.recovery.stop] = (recovery.stops[r.recovery.stop] ?? 0) + 1;
+    }
+    overviewRows.push({ ...tracing.compareOverviewStratum(row, caseResults), wallMs: run.wallMs, terminations: tracing.terminationCounts(caseResults), recovery });
   }
   results.push(...overviewRows);
   check(RENDERING_PASSES[3], () => {
@@ -2339,6 +2366,30 @@ async function runRendering({ page }) {
     const failing = overviewRows.filter(row => !row.passed).map(({ disagreementsSample, depthMissesSample, ...row }) => ({ ...row, disagreementsSample, depthMissesSample }));
     assert.deepEqual(failing, [], 'every overview stratum passes');
     return { rows: overviewRows.map(({ disagreementsSample, depthMissesSample, ...row }) => row) };
+  });
+
+  // B11c (spec §11.4 rev 5.1; plan B11b FU2): the quaternion-primary bounded recovery on the GPU. Every scripted case
+  // (tests/support/primary-recovery.mjs: initial-point exclusion, success with each endpoint update, numerical failure,
+  // estimate-unavailable, both collapses, cap exhaustion, the midpoint limit and a secondary ray) must equal the binary32
+  // mirror exactly, recovery word included; no other family's overview ray attempts recovery. Recorded, not a manifest
+  // pass: any failure fails the group.
+  const recoveryModule = await import('./support/primary-recovery.mjs');
+  const scriptedRuns = await ev(page, traceRaysInPage, { label: 'b11c-recovery', batches: recoveryModule.SCRIPTED_RECOVERY_CASES.map(c => ({ modelId: 'scripted',
+    rays: [{ origin: [c.origin, 0, 0], direction: [1, 0, 0], interval: c.interval, secondary: c.secondary === true }],
+    uniforms: passes.traceRaysUniforms({ modelId: 'scripted', effective: c.effective, count: 1, pitch: 1, profile: c.profile }) })) }, 'scripted recovery rays', LIMITS.deep);
+  check('Quaternion-primary recovery: scripted GPU rays equal the binary32 mirror, and other families never recover (recorded, not a manifest pass)', () => {
+    const rows = recoveryModule.SCRIPTED_RECOVERY_CASES.map((c, i) => {
+      const run = scriptedRuns[i];
+      assert.equal(run.outcome, 'completed', `${c.id}: ${run.reason}`);
+      const gpu = passes.decodeRayResults(bytes(run.base64), 1)[0];
+      assert.notEqual(gpu.status, 'invalid', `${c.id}: the result decodes`);
+      const expected = recoveryModule.comparable(recoveryModule.mirrorCase(c)), actual = recoveryModule.comparable(gpu);
+      assert.deepEqual(actual, expected, `${c.id}: the GPU path equals the mirror`);
+      return { id: c.id, ...actual };
+    });
+    const others = overviewRows.filter(row => !row.id.startsWith('overview/quaternion/'));
+    for (const row of others) assert.equal(row.recovery.attempted, 0, `${row.id}: a non-quaternion overview ray attempted recovery`);
+    return { cases: rows, overview: overviewRows.filter(row => row.recovery.attempted).map(row => ({ id: row.id, ...row.recovery })) };
   });
 
   // 5–6. Sphere frame (the default camera, 320 × 180): silhouette, then normals; a jittered sample too.

@@ -6,15 +6,48 @@
 //
 // Per-pixel bits. normalUnavailable is the joint mask "this sample hit and its normal is unavailable"; a miss or a
 // failed primary ray never counts as an unavailable normal. Lighting bits come from B00's packLightingStatus words.
+//
+// Recovery (B11c; spec §11.4 rev 5.1): for a recovering family (`{recovery: true}`, quaternion Julia) each sample also
+// records trace_band's recovery words. They are diagnostics kept apart from the terminal outcomes: per sample, the
+// attempts, outcomes, stop details and the summed midpoints and point-budget encounters; over the union, the pixels
+// that attempted recovery and that reached each outcome or stop in any sample. A word must agree with its pixel's
+// terminal primary status (a recovered hit is a hit, a stopped recovery is a point-budget unresolved ray, and so on).
 import { LIGHTING_FAILURE_FLAGS, RAY_STATUS, STATUS_LABELS } from './status.js';
+import { RECOVERY_WORD } from './webgpu/passes.js';
 
 export const OUTCOME_BITS = Object.freeze({ hit: 1, miss: 2, primaryUnresolved: 4, primaryNumericalFailure: 8, normalUnavailable: 16,
   shadowUnresolved: 32, shadowNumericalFailure: 64, aoUnresolved: 128, aoNumericalFailure: 256 });
 const B = OUTCOME_BITS;
 const STATUS_BITS = [B.hit, B.miss, B.primaryUnresolved, B.primaryNumericalFailure];
 const NUMERICAL = B.primaryNumericalFailure | B.shadowNumericalFailure | B.aoNumericalFailure;
-const FIELDS = Object.freeze({ status: { bytes: 4, seen: 1 }, normal: { bytes: 8, seen: 2 }, lightingStatus: { bytes: 4, seen: 4 } });
-const COMPLETE = 7, NORMAL_RAW = 0x8000; // the raw availability of this sample's normal, folded into normalUnavailable at end()
+const FIELDS = Object.freeze({ status: { bytes: 4, seen: 1 }, normal: { bytes: 8, seen: 2 }, lightingStatus: { bytes: 4, seen: 4 }, recovery: { bytes: 4, seen: 8 } });
+const NORMAL_RAW = 0x8000; // the raw availability of this sample's normal, folded into normalUnavailable at end()
+const RECOVERY_OUTCOME_LABELS = RECOVERY_WORD.outcomes.slice(1), RECOVERY_STOP_LABELS = RECOVERY_WORD.stops.slice(1);
+// The terminal primary status (and unresolved reason code) each recovery outcome must carry (index = outcome code).
+const OUTCOME_STATUS = [null, [B.hit, 0], [B.primaryNumericalFailure, 0], [B.primaryUnresolved, 2], [B.primaryUnresolved, 1]];
+const zeros = labels => Object.fromEntries(labels.map(label => [label, 0]));
+// Metrics over one sample's recovery words.
+export function recoveryMetrics(words) {
+  const m = { attempts: 0, outcomes: zeros(RECOVERY_OUTCOME_LABELS), stops: zeros(RECOVERY_STOP_LABELS), midpoints: 0, encounters: 0 };
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i]; if (!w) continue;
+    const o = (w >>> 8) & 15, k = (w >>> 12) & 15;
+    m.attempts++; m.outcomes[RECOVERY_WORD.outcomes[o]]++; if (k) m.stops[RECOVERY_WORD.stops[k]]++;
+    m.midpoints += w & 15; m.encounters += (w >>> 4) & 15;
+  }
+  return m;
+}
+// Union bits per pixel: bit 0 attempted, bits 1–4 outcome codes 1–4, bits 5–8 stop codes 1–4.
+export function recoveryUnionMetrics(bits, samples) {
+  const m = { samples, pixels: bits.length, attempted: 0, outcomes: zeros(RECOVERY_OUTCOME_LABELS), stops: zeros(RECOVERY_STOP_LABELS) };
+  for (let i = 0; i < bits.length; i++) {
+    const v = bits[i]; if (!v) continue;
+    m.attempted++;
+    RECOVERY_OUTCOME_LABELS.forEach((label, c) => { if (v & (2 << c)) m.outcomes[label]++; });
+    RECOVERY_STOP_LABELS.forEach((label, c) => { if (v & (32 << c)) m.stops[label]++; });
+  }
+  return m;
+}
 
 // Counts over one bit mask (a sample's, or the union's). Denominators: hits (unavailable normals and lighting) and
 // nonMiss, the pixels with any non-miss primary outcome (primary unresolved). numericalFailures counts pixels with any
@@ -65,13 +98,15 @@ export function reasonMetrics(lanes) {
   }));
 }
 
-export function createOutcomeMasks({ width, height }) {
+export function createOutcomeMasks({ width, height }, { recovery = false } = {}) {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) throw new RangeError('outcome masks need a positive integer size');
   const pixels = width * height, current = new Uint16Array(pixels), seen = new Uint8Array(pixels), union = new Uint16Array(pixels);
   const currentReasons = new Uint32Array(pixels), unionReasons = new Uint32Array(pixels);
-  let key = null, open = null, closed = -1, samples = [], sampleReasons = [];
-  function clear() { current.fill(0); seen.fill(0); currentReasons.fill(0); }
-  function reset() { clear(); union.fill(0); unionReasons.fill(0); key = null; open = null; closed = -1; samples = []; sampleReasons = []; }
+  const COMPLETE = recovery ? 15 : 7;
+  const currentRecovery = recovery ? new Uint32Array(pixels) : null, unionRecovery = recovery ? new Uint16Array(pixels) : null;
+  let key = null, open = null, closed = -1, samples = [], sampleReasons = [], sampleRecovery = [];
+  function clear() { current.fill(0); seen.fill(0); currentReasons.fill(0); currentRecovery?.fill(0); }
+  function reset() { clear(); union.fill(0); unionReasons.fill(0); unionRecovery?.fill(0); key = null; open = null; closed = -1; samples = []; sampleReasons = []; sampleRecovery = []; }
   function enter({ accumulationKey, sample }) {
     if (typeof accumulationKey !== 'string' || !Number.isInteger(sample) || sample < 0) throw new TypeError('an outcome-mask identity is {accumulationKey, sample}');
     if (open !== null && accumulationKey === key && sample === open) return;
@@ -87,9 +122,10 @@ export function createOutcomeMasks({ width, height }) {
     width, height,
     // One completed readback tile of `field` for the sample `id`.
     record(id, field, region, bytes) {
-      enter(id);
       const layout = FIELDS[field];
       if (!layout) throw new RangeError(`unknown outcome-mask field ${field}`);
+      if (field === 'recovery' && !recovery) throw new RangeError('recovery words are recorded only for a recovering family');
+      enter(id);
       const { x, y, width: w, height: h } = region ?? {};
       if (![x, y, w, h].every(Number.isInteger) || x < 0 || y < 0 || w < 1 || h < 1 || x + w > width || y + h > height) throw new RangeError('outcome-mask region outside the target');
       if (!(bytes instanceof Uint8Array) || bytes.byteLength !== w * h * layout.bytes) throw new RangeError(`outcome-mask ${field} bytes do not match the region`);
@@ -109,6 +145,7 @@ export function createOutcomeMasks({ width, height }) {
           if (seen[i] & flag) throw new RangeError(`outcome-mask ${field} recorded twice for one pixel`);
           seen[i] |= flag;
           const word = words[k];
+          if (field === 'recovery') { currentRecovery[i] = word; continue; }
           if (field === 'status') {
             const status = word & 15;
             if (status > RAY_STATUS.numericalFailure) throw new RangeError('invalid ray status in an outcome mask');
@@ -136,16 +173,27 @@ export function createOutcomeMasks({ width, height }) {
         let v = current[i];
         if (v & B.hit && !(v & NORMAL_RAW)) v |= B.normalUnavailable;
         current[i] = v & ~NORMAL_RAW;
+        if (recovery && currentRecovery[i]) {
+          const w = currentRecovery[i], o = (w >>> 8) & 15, k = (w >>> 12) & 15, expected = OUTCOME_STATUS[o];
+          const reasonBit = expected?.[1] ? 1 << (expected[1] - 1) : 0;
+          if (w > 0xffff || !expected || !(current[i] & expected[0]) || (reasonBit && !(currentReasons[i] & reasonBit)) || (k !== 0) !== (o === 4) || k > 4 || (w & 15) > RECOVERY_WORD.midpointLimit) {
+            throw new RangeError(`recovery word ${w} disagrees with the primary status at pixel ${i}`);
+          }
+          unionRecovery[i] |= 1 | (2 << (o - 1)) | (k ? 32 << (k - 1) : 0);
+        }
         union[i] |= current[i];
         unionReasons[i] |= currentReasons[i];
       }
       const metrics = { sample: open, ...maskMetrics(current) };
-      samples.push(metrics); sampleReasons.push(reasonMetrics(currentReasons)); closed = open; open = null; clear();
+      samples.push(metrics); sampleReasons.push(reasonMetrics(currentReasons));
+      if (recovery) sampleRecovery.push({ sample: open, ...recoveryMetrics(currentRecovery) });
+      closed = open; open = null; clear();
       return metrics;
     },
     snapshot() {
       if (key === null || !samples.length) return null;
-      return { accumulationKey: key, samples: samples.map(s => ({ ...s })), union: maskMetrics(union, samples.length), reasons: { samples: structuredClone(sampleReasons), union: reasonMetrics(unionReasons) } };
+      return { accumulationKey: key, samples: samples.map(s => ({ ...s })), union: maskMetrics(union, samples.length), reasons: { samples: structuredClone(sampleReasons), union: reasonMetrics(unionReasons) },
+        recovery: recovery ? { samples: structuredClone(sampleRecovery), union: recoveryUnionMetrics(unionRecovery, samples.length) } : null };
     },
     unionBits() { return union.slice(); },
     unionReasons() { return unionReasons.slice(); },

@@ -52,6 +52,7 @@
     "tests/unit/space-workspace.test.js",
     "tests/unit/workspace-switcher.test.js",
     "tests/unit/space-outcome-masks.test.js",
-    "tests/unit/visual-acceptance.test.js"
+    "tests/unit/visual-acceptance.test.js",
+    "tests/unit/primary-recovery.test.js"
   ]
 }

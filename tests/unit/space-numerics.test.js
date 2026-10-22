@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { APPROVED_REFERENCE_IDENTITIES } from '../../scripts/gate/reference-evidence.mjs';
 import { createValidationRegistry, PRECISION_CARRY_FORWARD_LIMITATIONS } from '../../src/space/numerics/validation-records.js';
-import { MATRIX_PINS, POINT_STRATUM_KINDS, ARITHMETIC_RECORD_IDS, QUATERNION_RECORD_ID, buildArithmeticRecords, requiredStrata, PRIOR_MATRIX_PINS, PRIOR_RECORD_IDS, MATRIX_FREEZE, TRACING_RECORD_IDS, TRACING_IDENTITY, PRIOR_TRACING_IDENTITY_RECORD_IDS } from '../../src/space/numerics/validation-records.js';
+import { MATRIX_PINS, POINT_STRATUM_KINDS, ARITHMETIC_RECORD_IDS, QUATERNION_RECORD_ID, buildArithmeticRecords, requiredStrata, PRIOR_MATRIX_PINS, PRIOR_RECORD_IDS, MATRIX_FREEZE, TRACING_RECORD_IDS, TRACING_IDENTITY, PRIOR_TRACING_IDENTITY_RECORD_IDS, PRIOR_TRACING_V2_RECORD_IDS } from '../../src/space/numerics/validation-records.js';
 import { comparePointStratum, loadPinnedPointStrata, verifyMatrixPins } from '../support/space-numerics.mjs';
 
 const index = readFileSync(new URL('../reference/space-matrix.json', import.meta.url));
@@ -35,13 +35,19 @@ test('the rev 4.8 re-freeze gives every repinned record a new ID and keeps the p
   for (const id of TRACING_RECORD_IDS) { assert.ok(id.endsWith(`/${MATRIX_FREEZE}/${TRACING_IDENTITY}`), id); assert.ok(!prior.has(id), id); }
 });
 
-test('the rev 5.0 tracing identity gives tracing and geometric records new IDs and keeps the rev 4.8 ones', () => {
+test('the rev 5.1 tracing identity gives tracing and geometric records new IDs and keeps the rev 4.8 and space-trace-v2 ones', () => {
   // B11b: the one-sided normal fallback changes the tracing hashes (not the kernel hashes), so the records that pin
   // tracing evidence are renamed; arithmetic records keep their IDs; the rev 4.8 tracing evidence is never retargeted.
-  assert.equal(TRACING_IDENTITY, 'space-trace-v2');
+  // B11c (rev 5.1): the quaternion-primary recovery changes the tracing implementation again (space-trace-v3); the
+  // space-trace-v2 IDs and evidence are preserved beside the rev 4.8 ones, and neither is retargeted.
+  assert.equal(TRACING_IDENTITY, 'space-trace-v3');
   assert.deepEqual(PRIOR_TRACING_IDENTITY_RECORD_IDS.tracing, PRIOR_RECORD_IDS.tracing.map(id => `${id}/${MATRIX_FREEZE}`));
   assert.deepEqual(PRIOR_TRACING_IDENTITY_RECORD_IDS.geometric, PRIOR_RECORD_IDS.geometric.map(id => `${id}/${MATRIX_FREEZE}`));
+  assert.deepEqual(PRIOR_TRACING_V2_RECORD_IDS.tracing, PRIOR_TRACING_IDENTITY_RECORD_IDS.tracing.map(id => `${id}/space-trace-v2`));
+  assert.deepEqual(PRIOR_TRACING_V2_RECORD_IDS.geometric, PRIOR_TRACING_IDENTITY_RECORD_IDS.geometric.map(id => `${id}/space-trace-v2`));
+  assert.ok(PRIOR_TRACING_V2_RECORD_IDS.tracing.includes('sphere@1/tracing/matrix-rev4.8/space-trace-v2'));
   assert.deepEqual(TRACING_RECORD_IDS, PRIOR_TRACING_IDENTITY_RECORD_IDS.tracing.map(id => `${id}/${TRACING_IDENTITY}`));
+  for (const id of TRACING_RECORD_IDS) assert.ok(!PRIOR_TRACING_V2_RECORD_IDS.tracing.includes(id), id);
   assert.ok(ARITHMETIC_RECORD_IDS.every(id => !id.includes(TRACING_IDENTITY)));
 });
 

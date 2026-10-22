@@ -10,7 +10,7 @@ import { BackendError, createAdmission, TRACKED_ALLOCATION_CAP } from '../../src
 
 const code = expected => error => error instanceof BackendError && error.code === expected;
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
-const LAYOUT = 'space-targets-v1';
+const LAYOUT = 'space-targets-v2';
 function setup({ gpu: gpuOptions, ...options } = {}) {
   const gpu = createGpuDouble(gpuOptions), clock = createFakeClock(), phases = [];
   const backend = createWebGPUBackend({ canvas: gpu.canvas, clock, acquire: gpu.acquire, loadSource: gpu.loadSource, format: 'bgra8unorm', onPhase: entry => phases.push(entry), ...options });

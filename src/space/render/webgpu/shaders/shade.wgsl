@@ -122,7 +122,7 @@ fn shadow_ray(p: vec3<f32>, n: vec3<f32>, l: vec3<f32>, t: f32, tau: f32) -> Sec
   let volume = enclosing_interval(origin, vec3<f32>(0.0), l);
   if (volume.kind == 2u || !finite_f32(volume.enter) || !finite_f32(volume.exit)) { return Secondary(1.0, numerical_failure()); }
   if (volume.kind == 1u) { return Secondary(1.0, no_failure()); } // the ray never meets the volume
-  let r = march(origin, vec3<f32>(0.0), l, true, Interval(0u, max(t, volume.enter), volume.exit));
+  let r = march(origin, vec3<f32>(0.0), l, true, Interval(0u, max(t, volume.enter), volume.exit), false); // secondary: no recovery
   if (r.status == RAY_STATUS_HIT) { return Secondary(0.0, no_failure()); }
   if (r.status == RAY_STATUS_MISS) { return Secondary(1.0, no_failure()); }
   if (r.status == RAY_STATUS_UNRESOLVED) { return Secondary(1.0, unresolved_failure(r.reason, r.subreason)); }

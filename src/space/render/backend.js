@@ -2,10 +2,13 @@
 import { deepFreeze, isPlainObject } from '../../shared/scene.js';
 
 export const PASSES = Object.freeze(['probe', 'trace', 'normals', 'shade', 'accumulate', 'display']);
-export const TARGET_LAYOUT_ID = 'space-targets-v1';
-export const TARGET_LAYOUT_V1 = deepFreeze({
+// B11c (spec §11.4 rev 5.1): space-targets-v2 adds `recovery`, the per-pixel quaternion-primary recovery word that
+// trace_band writes beside depth and status; it is geometry, kept and reused with them (v1 was B06's layout).
+export const TARGET_LAYOUT_ID = 'space-targets-v2';
+export const TARGET_LAYOUT = deepFreeze({
   depth: { format: 'r32float', bytesPerTexel: 4, count: 1 },
   status: { format: 'r32uint', bytesPerTexel: 4, count: 1 },
+  recovery: { format: 'r32uint', bytesPerTexel: 4, count: 1 },
   normal: { format: 'rgba16float', bytesPerTexel: 8, count: 1 },
   sampleColor: { format: 'rgba16float', bytesPerTexel: 8, count: 1 },
   lightingStatus: { format: 'r32uint', bytesPerTexel: 4, count: 1 },

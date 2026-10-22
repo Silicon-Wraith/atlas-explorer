@@ -1,7 +1,7 @@
 // Deterministic test adapter for the §9 boundary. It performs no rendering and makes no
 // physical-device claims. Queue completion and readback copy-out are separate events.
 import { deepFreeze, isPlainObject } from '../../src/shared/scene.js';
-import { BackendError, createBatch, createPipelineSet, TARGET_LAYOUT_ID, TARGET_LAYOUT_V1, TRACKED_ALLOCATION_CAP } from '../../src/space/render/backend.js';
+import { BackendError, createBatch, createPipelineSet, TARGET_LAYOUT_ID, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../../src/space/render/backend.js';
 
 const invalid = message => { throw new BackendError('invalid-descriptor', message); };
 const count = (value, label, min = 0) => {
@@ -269,7 +269,7 @@ export function createFakeBackend({ clock, cap = TRACKED_ALLOCATION_CAP, limits 
       checkEpoch(requestedEpoch); if (layoutId !== TARGET_LAYOUT_ID) invalid('unknown target layoutId');
       for (const size of [internalSize, outputSize]) { record(size, ['width', 'height'], 'size'); count(size.width, 'width', 1); count(size.height, 'height', 1); }
       const descriptions = {}, flat = [];
-      for (const [name, layout] of Object.entries(TARGET_LAYOUT_V1)) {
+      for (const [name, layout] of Object.entries(TARGET_LAYOUT)) {
         const entries = Array.from({ length: layout.count }, (_, index) => allocationDescription({ name: layout.count === 1 ? name : `${name}-${index}`,
           width: internalSize.width, height: internalSize.height, format: layout.format, bytesPerTexel: layout.bytesPerTexel,
           bytes: internalSize.width * internalSize.height * layout.bytesPerTexel,

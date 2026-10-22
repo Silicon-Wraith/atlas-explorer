@@ -17,7 +17,7 @@ import { APPEARANCE_HASHES } from './appearance-hashes.js';
 
 export { APPEARANCE_HASHES };
 export const APPEARANCE_VERSION = 'space-appearance-v3'; // rev 5.1 (B11c FU1): AO heights 4i·τ; v2 was B11b's lighting-unresolved tint, v1 B11's
-export const PRODUCT_PIPELINE_SET_ID = 'space-product-v3';
+export const PRODUCT_PIPELINE_SET_ID = 'space-product-v4'; // B11c: v3 FU1 appearance, v4 FU2 tracing (recovery binding)
 export const DIAGNOSTIC_MODES = Object.freeze(VIEW_MODES.filter(mode => mode !== 'shaded'));
 export const VIEW_MODE_CODES = Object.freeze(Object.fromEntries(VIEW_MODES.map((mode, code) => [mode, code])));
 // The labels a view-mode control shows; step count is computational cost, never estimator error (spec §8.2).

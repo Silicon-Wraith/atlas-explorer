@@ -97,3 +97,41 @@ test('outcome masks keep reason and subreason bits per pixel class, per sample a
     shadowUnresolved: { ...zero, 'ray-step-budget': 1, 'stagnation/ray-parameter': 1, multiple: 1 }, aoUnresolved: { ...zero, 'point-budget': 2, 'estimate-unavailable': 1, multiple: 1 } });
   assert.deepEqual(reasonMetrics(masks.unionReasons()), reasons.union, 'the union reasons are a pure function of the per-pixel reason bits');
 });
+
+// B11c (spec §11.4 rev 5.1; plan B11b FU2): quaternion-primary recovery diagnostics, per sample and over the union,
+// kept apart from the terminal ray outcomes; a recovery word must agree with its pixel's primary status.
+test('recovery masks count attempts, outcomes, stops, midpoints and encounters per sample and over the union', async () => {
+  const { packRecoveryWord } = await import('../../src/space/render/webgpu/passes.js');
+  const rec = (outcome, midpoints, encounters, stop = 'none') => packRecoveryWord({ attempted: true, outcome, stop, midpoints, encounters });
+  const POINT = packStatus({ status: 2, reason: 1, subreason: 0, steps: 12 }), ESTIMATE = packStatus({ status: 2, reason: 2, subreason: 0, steps: 6 });
+  const masks = createOutcomeMasks({ width: 4, height: 1 }, { recovery: true });
+  const recSample = (id, status, recovery) => {
+    masks.record(id, 'status', full(4), u32(status)); masks.record(id, 'normal', full(4), normals([true, true, true, true]));
+    masks.record(id, 'lightingStatus', full(4), u32([0, 0, 0, 0])); masks.record(id, 'recovery', full(4), u32(recovery));
+    return masks.end(id);
+  };
+  // Sample 0: pixel 0 recovered (2 midpoints, 2 encounters); pixel 1 stopped at the midpoint limit; pixel 2 a plain hit; pixel 3 a miss.
+  recSample(identity(0), [HIT, POINT, HIT, MISS], [rec('approximate hit', 2, 2), rec('point-budget', 8, 6, 'midpoint-limit'), 0, 0]);
+  // Sample 1: pixel 0 an estimate-unavailable midpoint; pixel 1 recovered this time.
+  recSample(identity(1), [ESTIMATE, HIT, HIT, MISS], [rec('estimate-unavailable', 1, 1), rec('approximate hit', 3, 1), 0, 0]);
+  const { recovery } = masks.snapshot();
+  assert.ok(recovery, 'the snapshot keeps the recovery diagnostics');
+  const outcomes = (o = {}) => ({ 'approximate hit': 0, 'numerical failure': 0, 'estimate-unavailable': 0, 'point-budget': 0, ...o });
+  const stops = (o = {}) => ({ 'midpoint-limit': 0, 'parameter-collapse': 0, 'coordinate-collapse': 0, 'evaluation-cap': 0, ...o });
+  assert.deepEqual(recovery.samples[0], { sample: 0, attempts: 2, outcomes: outcomes({ 'approximate hit': 1, 'point-budget': 1 }), stops: stops({ 'midpoint-limit': 1 }), midpoints: 10, encounters: 8 });
+  assert.deepEqual(recovery.samples[1], { sample: 1, attempts: 2, outcomes: outcomes({ 'approximate hit': 1, 'estimate-unavailable': 1 }), stops: stops(), midpoints: 4, encounters: 2 });
+  assert.deepEqual(recovery.union, { samples: 2, pixels: 4, attempted: 2, outcomes: outcomes({ 'approximate hit': 2, 'point-budget': 1, 'estimate-unavailable': 1 }), stops: stops({ 'midpoint-limit': 1 }) });
+  // A recovery word must agree with the terminal status of the same pixel and sample.
+  const bad = createOutcomeMasks({ width: 1, height: 1 }, { recovery: true });
+  bad.record(identity(0), 'status', full(1), u32([MISS])); bad.record(identity(0), 'normal', full(1), normals([false]));
+  bad.record(identity(0), 'lightingStatus', full(1), u32([0])); bad.record(identity(0), 'recovery', full(1), u32([rec('approximate hit', 1, 1)]));
+  assert.throws(() => bad.end(identity(0)), /recovery/);
+  // Without recovery (a non-recovering family) the field is refused and the snapshot has none.
+  const plain = createOutcomeMasks({ width: 1, height: 1 });
+  assert.throws(() => plain.record(identity(0), 'recovery', full(1), u32([0])), /recovery/);
+  sample(plain, identity(0), { status: [HIT], normal: [true] });
+  assert.equal(plain.snapshot().recovery, null);
+  // With recovery, a sample is incomplete until its recovery words arrive.
+  const waiting = createOutcomeMasks({ width: 1, height: 1 }, { recovery: true });
+  assert.throws(() => sample(waiting, identity(0), { status: [HIT], normal: [true] }), /incomplete/);
+});

@@ -14,18 +14,54 @@ import { admitPointModel, FIELD_IDS, KERNEL_HASHES, KERNEL_VERSION } from './ker
 import { TRACING_HASHES } from './tracing-hashes.js';
 
 export { TRACING_HASHES };
-export const TRACING_VERSION = 'surface-v1/space-trace-v2'; // rev 5.0 (B11b): the one-sided normal fallback; space-trace-v1 was B10's
+export const TRACING_VERSION = 'surface-v1/space-trace-v3'; // rev 5.1 (B11c): the §11.4 quaternion-primary bounded recovery; v2 was B11b's one-sided normal fallback, v1 B10's
 export const TRACE_FIELD_IDS = FIELD_IDS; // the product families, FIELD 0–4
-// FIELD 5 is a constant exterior distance (u.c.x): validation only, for B04's two stagnation probes.
-export const VALIDATION_FIELD_IDS = Object.freeze([...FIELD_IDS, 'constant']);
+// FIELD 5 is a constant exterior distance (u.c.x): validation only, for B04's two stagnation probes. FIELD 6 (B11c) is
+// the scripted field of tests/support/primary-recovery.mjs: validation only, recovering like the quaternion.
+export const VALIDATION_FIELD_IDS = Object.freeze([...FIELD_IDS, 'constant', 'scripted']);
 export const TRACE_RAY_BYTES = 64;    // vec4 high (w: explicit-interval flag), vec4 low, vec4 direction, vec4 interval
-export const TRACE_RESULT_BYTES = 16; // packed status, depth bits, detail (1 = interior), steps
+export const TRACE_RESULT_BYTES = 16; // packed status, depth bits, detail (1 = interior) | recovery word << 8, steps
 // B10-F3 (fix round 1): under the estimate-unavailable reason, the B00 subreason nibble carries the
 // applicability detail (0 none, 1 interior); under stagnation it keeps the STAGNATION code. Layout unchanged.
 export const ESTIMATE_DETAIL = Object.freeze({ none: 0, interior: 1 });
 // Central differences take two samples per axis; rev 5.0 (B11b): the box and Menger one-sided fallback adds the centre
 // value, evaluated at most once per pixel, so a normals batch declares at most seven.
 export const NORMAL_FIELD_SAMPLES = 7;
+// Spec §11.4 quaternion-primary bounded recovery (rev 5.1; B11c): trace.wgsl's recovery word, a diagnostic kept apart
+// from the terminal ray outcome. Bits 0–3 midpoints evaluated (<= 8), 4–7 point-budget encounters (the trigger and
+// each point-budget midpoint), 8–11 the recovery outcome, 12–15 the recovery-stop detail (a point-budget outcome only).
+// Zero: no recovery attempted. The codes are trace.wgsl's RECOVERY_OUTCOME_* and RECOVERY_STOP_* literals.
+export const RECOVERY_WORD = deepFreeze({ midpointLimit: 8,
+  outcomes: ['none', 'approximate hit', 'numerical failure', 'estimate-unavailable', 'point-budget'],
+  stops: ['none', 'midpoint-limit', 'parameter-collapse', 'coordinate-collapse', 'evaluation-cap'] });
+// The families whose primary rays recover (spec §11.4 rev 5.1); the renderer reads back their recovery words.
+export const RECOVERING_FAMILIES = Object.freeze(['quaternion-julia']);
+export function packRecoveryWord({ attempted, outcome, stop, midpoints, encounters }) {
+  const o = RECOVERY_WORD.outcomes.indexOf(outcome), k = RECOVERY_WORD.stops.indexOf(stop);
+  if (!attempted) {
+    if (o !== 0 || k !== 0 || midpoints !== 0 || encounters !== 0) refuse('an unattempted recovery has no outcome, stop, midpoints or encounters');
+    return 0;
+  }
+  if (o < 1) refuse(`unknown recovery outcome ${outcome}`);
+  if (k < 0 || (k !== 0) !== (outcome === 'point-budget')) refuse(`a recovery stop detail belongs to a point-budget outcome only (${stop})`);
+  if (!Number.isInteger(midpoints) || midpoints < 0 || midpoints > RECOVERY_WORD.midpointLimit) refuse(`recovery midpoints must be an integer in [0, ${RECOVERY_WORD.midpointLimit}]`);
+  if (!Number.isInteger(encounters) || encounters < 1 || encounters > midpoints + 1) refuse('recovery encounters must be in [1, midpoints + 1]');
+  return (midpoints | encounters << 4 | o << 8 | k << 12) >>> 0;
+}
+export function decodeRecoveryWord(word) {
+  if (!Number.isInteger(word) || word < 0 || word > 0xffff) refuse('a recovery word is a 16-bit integer');
+  const midpoints = word & 15, encounters = word >>> 4 & 15, o = word >>> 8 & 15, k = word >>> 12 & 15;
+  if (o >= RECOVERY_WORD.outcomes.length) refuse(`invalid recovery outcome code ${o}`);
+  if (k >= RECOVERY_WORD.stops.length) refuse(`invalid recovery stop code ${k}`);
+  if (o === 0 && word !== 0) refuse('recovery fields without an attempt');
+  const decoded = { attempted: o !== 0, outcome: RECOVERY_WORD.outcomes[o], stop: RECOVERY_WORD.stops[k], midpoints, encounters };
+  if (decoded.attempted) packRecoveryWord(decoded); // validates the field relations
+  return decoded;
+}
+export function decodeRecoveryWords(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return Array.from({ length: bytes.byteLength / 4 }, (_, i) => decodeRecoveryWord(view.getUint32(4 * i, true)));
+}
 const MAX_RAY_STEPS = 1024, MAX_ITERATIONS = 512;
 const refuse = message => { throw new RangeError(message); };
 
@@ -39,7 +75,7 @@ const COMMON_FIELDS = [
   field('up', 'vec3<f32>', 96), field('stepMultiplier', 'f32', 108), field('toleranceFactor', 'f32', 112),
 ];
 const PARAMETER_FIELDS = { C: field('C', 'vec4<f32>', 128), kappa: field('kappa', 'f32', 144), bound: field('bound', 'f32', 148), power: field('power', 'u32', 152), depth: field('depth', 'u32', 156) };
-const FAMILY_PARAMETERS = deepFreeze({ sphere: [], box: [], menger: ['depth'], mandelbulb: ['power'], 'quaternion-julia': ['C', 'kappa', 'bound'], constant: ['C'] });
+const FAMILY_PARAMETERS = deepFreeze({ sphere: [], box: [], menger: ['depth'], mandelbulb: ['power'], 'quaternion-julia': ['C', 'kappa', 'bound'], constant: ['C'], scripted: ['C', 'kappa', 'power'] });
 export const TRACE_UNIFORM_LAYOUT = deepFreeze({ byteLength: 160, fields: [...COMMON_FIELDS, ...Object.values(PARAMETER_FIELDS)] });
 export function traceLayout(modelId) {
   if (!Object.hasOwn(FAMILY_PARAMETERS, modelId)) refuse(`unknown tracing field ${String(modelId)}`);
@@ -56,7 +92,7 @@ function descriptor(pipelineId, entryPoint, entrySource, modelId, bindings) {
     constants: { FIELD: fieldIndex(modelId) }, bindings: withBoxes(modelId, [UNIFORM, ...bindings]), uniformLayout: structuredClone(traceLayout(modelId)) };
 }
 const traceDescriptor = modelId => descriptor(`trace_band:${modelId}`, 'trace_band', 'trace-band', modelId,
-  [binding('depth', 'storage-texture', 'write'), binding('status', 'storage-texture', 'write')]);
+  [binding('depth', 'storage-texture', 'write'), binding('status', 'storage-texture', 'write'), binding('recovery', 'storage-texture', 'write')]);
 const normalsDescriptor = modelId => descriptor(`normals_band:${modelId}`, 'normals_band', 'normals', modelId,
   [binding('depth', 'texture', 'read'), binding('status', 'texture', 'read'), binding('normal', 'storage-texture', 'write')]);
 const raysDescriptor = modelId => descriptor(`trace-rays:${modelId}`, 'trace_rays', 'trace-rays', modelId,
@@ -75,9 +111,9 @@ export const validationPipelineSet = () => createPipelineSet({ id: `${TRACING_VE
 // last slot, but only the Menger variants statically use it, so only their descriptors list it. Slots are
 // module-local; points.wgsl keeps its own @binding(3) (B08 ruling 3), and B10's slots are its own choice.
 export const TRACING_BINDINGS = deepFreeze({
-  version: 'space-trace-bindings-v1',
+  version: 'space-trace-bindings-v2', // B11c: trace_band writes the recovery word (v1 was B10's)
   wgsl: {
-    trace_band: { u: 'u', depth: 'depth_out', status: 'status_out', menger_boxes: 'menger_boxes' },
+    trace_band: { u: 'u', depth: 'depth_out', status: 'status_out', recovery: 'recovery_out', menger_boxes: 'menger_boxes' },
     normals_band: { u: 'u', depth: 'depth_in', status: 'status_in', normal: 'normal_out', menger_boxes: 'menger_boxes' },
     trace_rays: { u: 'u', rays: 'rays', results: 'ray_results', menger_boxes: 'menger_boxes' },
   },
@@ -95,6 +131,14 @@ function family(modelId, effective, maxIterations) {
     const distance = effective?.distance;
     if (typeof distance !== 'number' || !Number.isFinite(distance) || distance < 0 || Math.fround(distance) !== distance) refuse('the constant field needs a binary32 distance >= 0');
     return { C: [distance, 0, 0, 0] };
+  }
+  if (modelId === 'scripted') {
+    // tests/support/primary-recovery.mjs: C = [s0, s1, log2 DE, 0], kappa the coordinate offset, power the band code.
+    const { C, kappa, power } = effective ?? {};
+    const f32 = v => typeof v === 'number' && Number.isFinite(v) && Math.fround(v) === v;
+    if (!Array.isArray(C) || C.length !== 4 || !C.every(f32) || !(C[0] <= C[1]) || !f32(kappa)) refuse('the scripted field needs binary32 C = [s0 <= s1, log2 DE, 0] and kappa');
+    if (![0, 1, 2].includes(power)) refuse('the scripted band code is 0 (hit), 1 (numerical failure) or 2 (estimate unavailable)');
+    return { C: [...C], kappa, power };
   }
   const model = admitPointModel(modelId, effective, maxIterations);
   return Object.fromEntries(FAMILY_PARAMETERS[modelId].map(name => [name, name === 'C' ? [...model.C] : model[name]]));
@@ -147,11 +191,12 @@ export function traceRaysUniforms({ modelId, effective, count, pitch, profile })
 export function encodeRays(rays) {
   if (!Array.isArray(rays) || !rays.length) refuse('rays must be a nonempty array');
   const data = new Float32Array(rays.length * (TRACE_RAY_BYTES / 4));
-  rays.forEach(({ origin, direction, interval }, i) => {
+  rays.forEach(({ origin, direction, interval, secondary = false }, i) => {
     if (!Array.isArray(origin) || origin.length !== 3 || !Array.isArray(direction) || direction.length !== 3) refuse(`ray ${i} needs a 3-component origin and direction`);
     // A non-finite or invalid ray is encoded as given: the kernel reports it as a numerical failure.
     const high = origin.map(Math.fround), low = origin.map((v, k) => Math.fround(v - high[k]));
-    data.set([...high, interval ? 1 : 0, ...low, 0, ...direction.map(Math.fround), 0, interval ? Math.fround(interval.enter) : 0, interval ? Math.fround(interval.exit) : 0, 0, 0], 16 * i);
+    // low.w = 1 marks a secondary-ray probe (B11c), which never enters the quaternion-primary recovery.
+    data.set([...high, interval ? 1 : 0, ...low, secondary ? 1 : 0, ...direction.map(Math.fround), 0, interval ? Math.fround(interval.enter) : 0, interval ? Math.fround(interval.exit) : 0, 0, 0], 16 * i);
   });
   return new Uint8Array(data.buffer);
 }
@@ -167,9 +212,11 @@ export function decodeRayResults(bytes, count) {
   for (let i = 0; i < count; i++) {
     const word = view.getUint32(16 * i, true);
     if (word === 0xffffffff) { out.push({ status: 'missing' }); continue; }
-    const decoded = decodeWord(word), detail = view.getUint32(16 * i + 8, true) === 1 ? 'interior' : null;
-    // The word's code and the ray list's detail word must agree; a disagreement decodes as invalid.
-    out.push({ ...decoded, t: view.getFloat32(16 * i + 4, true), detail, ...(decoded.detail === detail ? {} : { status: 'invalid' }) });
+    const z = view.getUint32(16 * i + 8, true), detail = (z & 0xff) === 1 ? 'interior' : null, decoded = decodeWord(word);
+    // The word's code and the ray list's detail must agree; a disagreement (or an invalid recovery word) decodes as invalid.
+    let recovery;
+    try { recovery = decodeRecoveryWord(z >>> 8); } catch { recovery = null; }
+    out.push({ ...decoded, t: view.getFloat32(16 * i + 4, true), detail, recovery, ...(decoded.detail === detail && recovery && (z & 0xfe) === 0 ? {} : { status: 'invalid' }) });
   }
   return out;
 }
