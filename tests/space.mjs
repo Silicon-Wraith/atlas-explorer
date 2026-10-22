@@ -1339,6 +1339,7 @@ export const RENDERING_PASSES = Object.freeze([
   'The sphere silhouette equals the analytic disc except within one pixel of the edge',
   "The quaternion default view's termination distribution matches the independently predicted one within 5 points",
   "A pick returns the pinned sample's depth and reconstructs an anchored hit, and a stale pick is rejected",
+  'Product camera classification agrees with the CPU at the resolved budget for every model family',
 ]);
 // Test-only stand-ins for B11's shade/accumulate/display passes, so the B09 pass sequence can publish a
 // frame for the pick check. They are injected through the backend's loadSource and never ship.
@@ -1523,6 +1524,39 @@ async function pickInPage() {
   renderer.destroy();
   const strip = done => ({ outcome: done.outcome, reason: done.reason ?? null });
   return { first: strip(firstDone), second: strip(secondDone), size, camera: scene.camera, fresh, corner, stale, current, publications, reports };
+}
+
+// B09c: the complete product set and real backend, with no synthetic point results.
+// CPU expectations are evaluated in Node at the same effective point and resolved cap.
+async function classifyCamerasInPage(cases) {
+  const { backend } = globalThis.__b10;
+  const { createSpaceRenderer } = await import('/src/space/render/renderer.js');
+  const { productPipelineSet } = await import('/src/space/render/webgpu/appearance.js');
+  const { createSpaceRequest } = await import('/src/space/render-adapter.js');
+  const { KERNEL_VERSION } = await import('/src/space/render/webgpu/kernels.js');
+  const { TRACING_VERSION } = await import('/src/space/render/webgpu/passes.js');
+  const points = [], rows = [], viewId = 'space-b09c-classification';
+  const proxy = { ...backend, submitBatch(batch, options) {
+    if (batch.pipelineId.startsWith('points-')) points.push({ pipelineId: batch.pipelineId,
+      cap: batch.uniforms.cap, iterations: batch.bounds.iterations });
+    return backend.submitBatch(batch, options);
+  } };
+  const renderer = createSpaceRenderer({ backend: proxy, clock: () => performance.now(), viewId,
+    versions: { kernelVersion: KERNEL_VERSION, tracingVersion: TRACING_VERSION }, pipelineSet: productPipelineSet() });
+  try {
+    await renderer.prepare();
+    for (const [index, spec] of cases.entries()) {
+      const revision = index + 1;
+      const request = createSpaceRequest({ scene: spec.scene, purpose: 'interactive', width: 32, height: 18, profile: spec.profile,
+        generation: { deviceEpoch: backend.currentEpoch(), viewRevision: revision, geometryRevision: revision, appearanceRevision: revision },
+        viewId, versions: { kernelVersion: KERNEL_VERSION, tracingVersion: TRACING_VERSION } });
+      const done = await renderer.render(request).done, first = points.length;
+      const result = await renderer.classifyEffectiveCamera(request);
+      rows.push({ label: spec.label, render: done.outcome, renderReason: done.reason ?? null,
+        cap: request.quality.iteration.maxIterations, result, submissions: points.slice(first) });
+    }
+  } finally { renderer.destroy(); }
+  return rows;
 }
 
 async function renderingFinishInPage() {
@@ -2103,6 +2137,56 @@ async function runRendering({ page }) {
   const { effectiveParameters } = await import('../src/space/numerics/parameters.js');
   const appearanceSetup = await ev(page, appearanceSetupInPage, undefined, 'appearance setup', LIMITS.deep);
   report.push({ name: 'Appearance pipelines and fixtures prepared on the rendering backend (recorded)', ...appearanceSetup });
+
+  const { classifyCamera, getModel } = await import('../src/space/models/registry.js');
+  const { encodeOrdinaryOrigin } = await import('../src/space/camera.js');
+  const far = [1.92, -1.44, 0.7], lateEscape = [-0.15, -0.15, -0.45];
+  const classificationCases = [
+    { label: 'bulb-inside', model: 'mandelbulb', point: [0.1, 0.1, 0.1], expected: 'unresolved' },
+    { label: 'bulb-origin', model: 'mandelbulb', point: [0, 0, 0], expected: 'unresolved' },
+    { label: 'bulb-far', model: 'mandelbulb', point: far, expected: 'exterior' },
+    { label: 'menger-solid', model: 'menger', point: [0.8, 0.8, 0.8], expected: 'unresolved' },
+    { label: 'menger-centre-hole', model: 'menger', point: [0, 0, 0], expected: 'exterior' },
+    { label: 'menger-far', model: 'menger', point: far, expected: 'exterior' },
+    { label: 'menger-d2-solid', model: 'menger', parameters: { depth: 2 }, point: [0.9, 0.9, 0.9], expected: 'unresolved' },
+    { label: 'menger-d2-centre-hole', model: 'menger', parameters: { depth: 2 }, point: [0, 0, 0], expected: 'exterior' },
+    { label: 'sphere-inside', model: 'sphere', point: [0, 0, 0.2], expected: 'unresolved' },
+    { label: 'sphere-far', model: 'sphere', point: far, expected: 'exterior' },
+    { label: 'box-inside', model: 'box', point: [0, 0, 0], expected: 'unresolved' },
+    { label: 'box-far', model: 'box', point: far, expected: 'exterior' },
+    { label: 'qjulia-inside', model: 'quaternion-julia', point: [0, 0, 0], expected: 'unresolved' },
+    { label: 'qjulia-far', model: 'quaternion-julia', point: far, expected: 'exterior' },
+    { label: 'bulb-late-escape-draft', model: 'mandelbulb', parameters: { power: '2' }, point: lateEscape, expected: 'unresolved' },
+    { label: 'bulb-late-escape-settled', model: 'mandelbulb', parameters: { power: '2' }, point: lateEscape, profile: 'settled', expected: 'exterior' },
+  ].map(spec => {
+    const base = createSpaceScene({ model: spec.model, ...(spec.parameters ? { parameters: spec.parameters } : {}) });
+    const scene = createSpaceScene({ model: spec.model, parameters: base.parameters,
+      camera: { ...base.camera, positionLocal: spec.point, focusLocal: spec.point.map((value, axis) => value - (axis === 2 ? 1 : 0)) },
+      iteration: { ...base.iteration, maxIterations: 128 }, sampling: { ...base.sampling, targetSamples: 1 },
+      appearance: { ...base.appearance, lightingQuality: 'direct' } });
+    const profile = spec.profile ?? 'draft', cap = resolveQuality(scene, profile, { width: 32, height: 18 }).iteration.maxIterations;
+    const effective = effectiveParameters(spec.model, scene.parameters).effective, point = encodeOrdinaryOrigin(scene.camera).highF32;
+    const cpu = classifyCamera(getModel(spec.model, 1), effective, point, cap);
+    return { ...spec, scene, profile, cap, point, cpu };
+  });
+  const classified = await ev(page, classifyCamerasInPage, classificationCases.map(({ label, scene, profile }) => ({ label, scene, profile })),
+    'product camera classification', LIMITS.deep);
+  check(RENDERING_PASSES[8], () => {
+    assert.equal(classified.length, classificationCases.length);
+    const rows = classified.map((row, index) => {
+      const spec = classificationCases[index];
+      assert.equal(row.label, spec.label); assert.equal(row.render, 'completed', `${row.label}: ${row.renderReason}`);
+      assert.equal(spec.cpu.status, spec.expected, `${row.label}: the CPU fixture must distinguish exterior from unresolved`);
+      assert.equal(row.cap, spec.cap); assert.equal(row.result.stale, undefined, row.label);
+      assert.equal(row.result.detail?.error, undefined, `${row.label}: ${JSON.stringify(row.result)}`);
+      assert.equal(row.result.status, spec.cpu.status, `${row.label}: ${JSON.stringify(row.result)}`);
+      assert.deepEqual(row.submissions, [{ pipelineId: `points-${spec.model}`, cap: spec.cap, iterations: spec.cap }], row.label);
+      assert.ok(row.result.detail?.result, `${row.label}: retain the decoded GPU result`);
+      return { ...row, model: spec.model, profile: spec.profile, point: spec.point, cpu: spec.cpu };
+    });
+    return { rows };
+  });
+
   const u32s = b64 => { const b = bytes(b64); return new Uint32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
   const f32s = b64 => { const b = bytes(b64); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
   const normalAvailability = b64 => passes.decodeNormals(bytes(b64), bytes(b64).byteLength / 8);

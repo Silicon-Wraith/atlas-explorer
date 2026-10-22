@@ -9,6 +9,13 @@ import { packStatus, packLightingStatus } from '../../src/space/render/status.js
 import { createSpaceScene, sceneCodec } from '../../src/space/scene-adapter.js';
 import { createSpaceRequest } from '../../src/space/render-adapter.js';
 import { createSpaceRenderer } from '../../src/space/render/renderer.js';
+import { productPipelineSet } from '../../src/space/render/webgpu/appearance.js';
+import { FIELD_IDS, POINT_INPUT_BYTES, POINT_RESULT_BYTES, RESULT_SENTINEL, decodePointResults,
+  fieldPipelineDescriptors, mengerBoxData } from '../../src/space/render/webgpu/kernels.js';
+import { effectiveParameters, escapeRadius } from '../../src/space/numerics/parameters.js';
+import { encodeOrdinaryOrigin, reconstructHit, toLocal, lookAt } from '../../src/space/camera.js';
+import { classifyCamera, getModel } from '../../src/space/models/registry.js';
+import { bindSpaceNavigation, cameraStatus } from '../../src/space/navigation.js';
 
 const versions = { kernelVersion: 'fixture-kernel-v1', tracingVersion: 'fixture-tracing-v1' };
 const generation = (n = 1, appearanceRevision = n) => ({ deviceEpoch: 1, viewRevision: n, geometryRevision: n, appearanceRevision });
@@ -26,7 +33,7 @@ const uniformLayout = { byteLength: 48, fields: [
   { name: 'lightingStage', type: 'u32', offset: 24 }, { name: 'jitter', type: 'vec2<f32>', offset: 32 },
 ] };
 const compute = (pipelineId, entryPoint, bindings, layout = uniformLayout) => ({ pipelineId, entryPoint, kind: 'compute', sourceIds: ['fixture-only'], constants: {}, bindings: [{ slot: 'u', type: 'uniform-buffer', access: 'read' }, ...bindings], uniformLayout: layout });
-// Descriptors only; the fake backend does not execute shaders. B08 files are not consumed.
+// Render-pass fixtures plus the real B08 point descriptors; the fake backend does not execute shaders.
 const fixture = createPipelineSet({ id: 'b09-fixture', descriptors: [
   compute('probe', 'probe', [write('probe_target')], { byteLength: 16, fields: uniformLayout.fields.slice(0, 2) }),
   compute('trace', 'trace_band', [write('depth'), write('status')]),
@@ -35,13 +42,13 @@ const fixture = createPipelineSet({ id: 'b09-fixture', descriptors: [
   ...['normals', 'depth', 'steps', 'termination'].map(mode => compute(`diagnostic-${mode}`, `diagnostic_${mode}`, [read('depth'), read('status'), read('normal'), write('sampleColor'), write('lightingStatus')])),
   compute('accumulate', 'accumulate_band', [read('sampleColor'), read('lightingStatus'), read('previous'), write('next'), { slot: 'accumulationFlags', type: 'storage-texture', access: 'read-write' }]),
   compute('display', 'display_band', [read('accumulation'), read('accumulationFlags'), write('display')]),
-  compute('evaluate_points', 'evaluate_points', [{ slot: 'points', type: 'storage-buffer', access: 'read' }, { slot: 'results', type: 'storage-buffer', access: 'read-write' }]),
+  ...fieldPipelineDescriptors(),
   { pipelineId: 'present', kind: 'render', sourceIds: ['fixture-only'], vertexEntryPoint: 'present_vertex', fragmentEntryPoint: 'present_fragment', constants: {}, bindings: [read('display')], uniformLayout: { byteLength: 0, fields: [] } },
 ] });
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
-async function rig({ limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
+async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock, limits });
   const hooks = {}, discarded = [], failed = [], auxiliaryJobs = [];
   const tickets = [], submissions = [], publications = [], presents = [], statuses = [], reports = [], plans = [], targets = [];
@@ -94,7 +101,7 @@ async function rig({ limits = {}, probe = 0x41544c53, statusWords, lightingWords
     discarded.push({ admission, reason, accepted }); return accepted;
   };
   let renderer;
-  assert.doesNotThrow(() => { renderer = createSpaceRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet: fixture }); }, 'the importable renderer must implement its constructor');
+  assert.doesNotThrow(() => { renderer = createSpaceRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet }); }, 'the importable renderer must implement its constructor');
   renderer.onPublish(value => publications.push(value)); renderer.onPresent(value => presents.push(value));
   renderer.onStatus(value => statuses.push(value)); renderer.onReport(value => reports.push(value));
   const complete = async (order = 'oldest', elapsedMs = 8) => {
@@ -478,7 +485,7 @@ test('a direct-only one-sample settled request completes at its first image with
 test('classifyEffectiveCamera rejects a stale identity', async () => {
   const h = await rig(), a = request(), b = request(scene({ model: 'box' }), generation(2));
   const first = h.renderer.render(a); await flush(); const second = h.renderer.render(b);
-  const classifications = () => h.submissions.filter(value => value.desc.pipelineId === 'evaluate_points').length;
+  const classifications = () => h.submissions.filter(value => value.desc.pipelineId === 'points-sphere').length;
   const before = classifications(); assert.deepEqual(await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(a)), { stale: true });
   assert.equal(classifications(), before); await h.finish(second); await h.finish(first);
   let classification; h.renderer.classifyEffectiveCamera(b).then(value => { classification = value; });
@@ -645,12 +652,12 @@ test('a fresh pick returns depth and the exact camera, pixel and sample jitter t
 });
 
 test('a fresh effective camera classification evaluates and reads back through auxiliary admission', async () => {
-  const h = await rig({ classificationWords: [1, 17, 0, 0] }), r = request(scene(), generation(), 'settled');
+  const h = await rig({ classificationWords: pointResultWords() }), r = request(scene(), generation(), 'settled');
   const job = h.renderer.render(r); await flush(); let result;
   h.renderer.classifyEffectiveCamera(r).then(value => { result = value; });
   await h.until(() => result);
-  assert.deepEqual(result, { identity: identity(r), status: 'exterior', detail: { source: 'evaluate_points', code: 17 } });
-  const evaluated = h.submissions.find(value => value.desc.pipelineId === 'evaluate_points');
+  assert.deepEqual(result, { identity: identity(r), status: 'exterior', detail: { source: 'evaluate_points', result: { status: 'valid', distance: 1, applicability: 'exterior' } } });
+  const evaluated = h.submissions.find(value => value.desc.pipelineId === 'points-sphere');
   const readback = h.submissions.find(value => value.method === 'readback' && value.desc.fields.includes('cameraClassification'));
   assert.equal(evaluated.admission.consume(), false); assert.equal(readback.admission.consume(), false);
   assert.deepEqual(evaluated.desc.identity, identity(r)); assert.deepEqual(readback.desc.identity, identity(r));
@@ -793,7 +800,7 @@ test('F2 every auxiliary rejection uses discardAuxiliary without failing its own
     const job = h.renderer.render(r); await h.until(() => h.publications.length === 1);
     const isAux = (method, desc) => operation === 'pick'
       ? method === 'readback' && desc.region.width === 1 && desc.region.height === 1
-      : failure === 'copy-out' ? method === 'readback' && desc.fields.includes('cameraClassification') : desc.pipelineId === 'evaluate_points';
+      : failure === 'copy-out' ? method === 'readback' && desc.fields.includes('cameraClassification') : desc.pipelineId === 'points-sphere';
     h.hooks.before = (method, desc) => { if (isAux(method, desc) && failure === 'submit') throw new Error('injected auxiliary rejection'); };
     h.hooks.after = (method, desc, ticket) => {
       if (!isAux(method, desc)) return;
@@ -803,7 +810,12 @@ test('F2 every auxiliary rejection uses discardAuxiliary without failing its own
     let result;
     const pending = operation === 'pick' ? h.renderer.pick(createPickRequest({ identity: identity(r), pixel: [0, 0], dimensions: r.quality.internalSize, geometryRevision: 1, sampleIndex: 0 })) : h.renderer.classifyEffectiveCamera(r);
     pending.then(value => { result = value; }); await h.until(() => result);
-    assert.deepEqual(result, { stale: true }); assert.equal(h.discarded.length, 1, `${operation}/${failure}`);
+    if (operation === 'pick') assert.deepEqual(result, { stale: true });
+    else {
+      assert.equal(result.status, 'unresolved'); assert.equal(result.stale, undefined);
+      assert.match(result.detail.error.message, /injected/);
+    }
+    assert.equal(h.discarded.length, 1, `${operation}/${failure}`);
     assert.equal((await h.auxiliaryJobs.at(-1).done).outcome, 'failed', 'the rejected auxiliary owns the failed outcome');
     assert.equal(h.failed.length, 0); const completed = await h.finish(job); assert.equal(completed.outcome, 'completed');
     const completedFences = h.submissions.filter(value => value.desc.identity.jobId === r.jobId).length - (failure === 'ticket' ? 1 : 0);
@@ -827,14 +839,16 @@ test('F2 discard refuses main-job leases without changing their plan or accounti
 test('F2 discarding an auxiliary does not postpone the outstanding main lease watchdog', async () => {
   const h = await rig(), r = request(directScene(2), generation(), 'settled');
   const job = h.renderer.render(r); await flush();
-  h.hooks.after = (method, desc, ticket) => desc.pipelineId === 'evaluate_points'
+  h.hooks.after = (method, desc, ticket) => desc.pipelineId === 'points-sphere'
     ? { ...ticket, done: ticket.done.then(() => ({ outcome: 'failed', reason: 'auxiliary fence failed' })) } : undefined;
   const pending = h.renderer.classifyEffectiveCamera(r); await flush();
-  const auxiliary = h.tickets.find(value => value.pending && value.desc.pipelineId === 'evaluate_points');
+  const auxiliary = h.tickets.find(value => value.pending && value.desc.pipelineId === 'points-sphere');
   assert.ok(auxiliary); assert.equal(h.scheduler.snapshot().outstanding, 2);
   h.scheduler.pause('space'); // The lease watchdog continues while elapsed-work accounting is paused.
   h.clock.advance(4000); h.fake.complete(auxiliary.ticket, { elapsedMs: 8 }); await flush();
-  assert.deepEqual(await pending, { stale: true }); assert.equal(h.scheduler.snapshot().outstanding, 1);
+  const unresolved = await pending;
+  assert.equal(unresolved.status, 'unresolved'); assert.equal(unresolved.detail.error.message, 'auxiliary fence failed');
+  assert.equal(h.scheduler.snapshot().outstanding, 1);
   h.clock.advance(1000); await flush();
   assert.equal(h.scheduler.snapshot().stalled, true, 'discard is terminal drain evidence, not progress that resets the watchdog');
   const result = await job.done;
@@ -846,10 +860,10 @@ test('F2 discarded auxiliary cancellation waits for the main fence and observed 
   for (const loss of [false, true]) {
     const h = await rig(), r = request(directScene(2), generation(), 'settled');
     const job = h.renderer.render(r); await flush();
-    h.hooks.after = (method, desc, ticket) => desc.pipelineId === 'evaluate_points'
+    h.hooks.after = (method, desc, ticket) => desc.pipelineId === 'points-sphere'
       ? { ...ticket, done: ticket.done.then(() => ({ outcome: 'failed', reason: 'rejected after cancellation' })) } : undefined;
     const pending = h.renderer.classifyEffectiveCamera(r); await flush();
-    const auxiliary = h.tickets.find(value => value.pending && value.desc.pipelineId === 'evaluate_points');
+    const auxiliary = h.tickets.find(value => value.pending && value.desc.pipelineId === 'points-sphere');
     const main = h.tickets.find(value => value.pending && value !== auxiliary);
     assert.ok(auxiliary); assert.ok(main);
     let cancelled, auxiliaryOutcome;
@@ -875,13 +889,15 @@ test('F2 a false discard after duplicate retirement or loss still releases local
     const job = h.renderer.render(r); await flush();
     const buffers = [];
     h.hooks.before = (method, desc, { admission }) => {
-      if (desc.pipelineId !== 'evaluate_points') return;
+      if (desc.pipelineId !== 'points-sphere') return;
       buffers.push(desc.inputs.points, desc.outputs.results);
       if (loss) h.fake.lose({ reason: 'loss before auxiliary submission' });
       else assert.equal(h.scheduler.discardAuxiliary(admission, { reason: 'already rejected' }), true);
       throw new Error('late auxiliary rejection');
     };
-    assert.deepEqual(await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r)), { stale: true });
+    const result = await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r));
+    if (loss) assert.deepEqual(result, { stale: true });
+    else { assert.equal(result.status, 'unresolved'); assert.equal(result.detail.error.message, 'late auxiliary rejection'); }
     assert.equal(h.discarded.at(-1).accepted, false, 'the real scheduler refuses the now-retired lease');
     assert.equal(h.failed.length, 0);
     assert.equal((await h.finish(job)).outcome, loss ? 'interrupted' : 'completed');
@@ -1036,4 +1052,224 @@ test('F8 renderer teardown preserves injected backend and scheduler ownership', 
   assert.ok(!h.fake.log.some(value => value.method === 'destroy'));
   h.scheduler.registerView('external');
   h.backend.release(foreign); h.fake.destroy(); assert.equal(h.fake.diagnostics().tracked, 0);
+});
+
+// B09c uses the complete product descriptors. Only GPU execution is simulated:
+// synthetic PointResult words let us exercise every status, including malformed results.
+function pointResultWords({ status = 0, estimate = 0, log2DE = -2, distance = 1, applicability = 0 } = {}) {
+  const data = new ArrayBuffer(64), u = new Uint32Array(data), f = new Float32Array(data);
+  u[0] = status; u[1] = 17; u[2] = estimate; f[9] = log2DE; f[12] = distance; u[13] = applicability;
+  return [...u];
+}
+const productPoints = h => h.submissions.filter(s => s.desc.pipelineId?.startsWith('points-'));
+const classificationAllocations = h => h.fake.log.filter(e => e.method === 'allocate' && e.args[0].name.startsWith('camera-')).map(e => e.args[0]);
+
+test('B09c every product family submits the B08 point ABI with exact effective camera coordinates', async () => {
+  for (const model of FIELD_IDS) for (const depth of model === 'menger' ? [1, 2] : [null]) {
+    const h = await rig({ pipelineSet: productPipelineSet(), classificationWords: pointResultWords() });
+    const base = scene({ model, ...(depth ? { parameters: { depth } } : {}),
+      ...(model === 'quaternion-julia' ? { parameters: { C: ['0.1', '-0.2', '0.3', '-0.4'], kappa: '0.7' } } : {}) });
+    // Just above an f32 midpoint: collapsing the decimal anchor to Number first loses the side of the tie.
+    const camera = { ...base.camera, anchor: ['1.0000000596046447753906250001', '0', '0'],
+      positionLocal: [0, 0, 0], focusLocal: [0, 0, -1] };
+    const r = request(changed(base, { camera }), generation(), 'settled');
+    assert.equal((await h.finish(h.renderer.render(r))).outcome, 'completed');
+    const result = await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r));
+    assert.equal(result.status, 'exterior', `${model}: classification must submit instead of returning stale`);
+    const [submitted] = productPoints(h), b = submitted.desc, allocations = classificationAllocations(h);
+    assert.equal(productPoints(h).length, 1); assert.equal(b.pipelineId, `points-${model}`); assert.equal(b.pass, 'probe');
+    const descriptor = productPipelineSet().descriptors.find(d => d.pipelineId === b.pipelineId);
+    assert.deepEqual(descriptor.bindings.map(b => b.slot), ['u', 'points', 'results', 'menger_boxes']);
+    assert.deepEqual(Object.keys(b.inputs).sort(), ['menger_boxes', 'points', 'results']);
+    assert.deepEqual(Object.keys(b.outputs), ['results']); assert.equal(b.inputs.results, b.outputs.results);
+    const input = allocations.find(a => a.name === 'camera-points'), output = allocations.find(a => a.name === 'camera-results');
+    assert.equal(input.bytes, POINT_INPUT_BYTES); assert.equal(output.bytes, POINT_RESULT_BYTES);
+    assert.deepEqual([...new Float32Array(input.data.buffer, input.data.byteOffset, 4)], [1 + 2 ** -23, 0, 0, 0]);
+    assert.deepEqual([...new Uint32Array(output.data.buffer, output.data.byteOffset, 16)], Array(16).fill(RESULT_SENTINEL));
+    const effective = effectiveParameters(model, r.sceneSnapshot.parameters).effective;
+    assert.deepEqual(b.uniforms, { origin: [0, 0], size: [1, 1], c: effective.C ?? [0, 0, 0, 0],
+      end: 1, pitch: 1, cap: r.quality.iteration.maxIterations, power: effective.power ?? 0,
+      kappa: effective.kappa ?? 0, bound: effective.C ? escapeRadius(effective.C).bound : 2, depth: effective.depth ?? 0, reserved: 0 });
+    assert.deepEqual(b.bounds, { pixels: 1, iterations: r.quality.iteration.maxIterations, raySteps: 0,
+      normalFieldSamples: 0, shadowRays: 0, shadowSteps: 0, aoSamples: 0 });
+    const boxes = allocations.find(a => a.name === 'camera-menger-boxes');
+    assert.deepEqual(boxes.data, model === 'menger' ? mengerBoxData(depth) : new Uint8Array(32));
+    const readback = h.submissions.find(s => s.desc.fields?.includes('cameraClassification'));
+    assert.deepEqual(readback.desc.region, { x: 0, y: 0, width: 64, height: 1 });
+    assert.notEqual(readback.admission, submitted.admission);
+    assert.equal(submitted.admission.consume(), false); assert.equal(readback.admission.consume(), false);
+    assert.equal(h.scheduler.snapshot().outstanding, 0);
+    h.renderer.destroy();
+    assert.ok(h.fake.diagnostics().inventory.every(entry => !entry.name.startsWith('camera-')), 'classification releases its own buffers');
+    h.fake.destroy(); assert.equal(h.fake.diagnostics().tracked, 0);
+  }
+});
+
+test('B09c product point statuses require usable exterior evidence and retain failure detail', async () => {
+  for (const model of FIELD_IDS) {
+    const h = await rig({ pipelineSet: productPipelineSet() }), r = request(scene({ model }));
+    await h.finish(h.renderer.render(r));
+    const analytic = ['sphere', 'box', 'menger'].includes(model);
+    const cases = [
+      [{}, 'exterior'], [{ status: 1 }, 'unresolved'], [{ status: 2 }, 'unresolved'],
+      [{ status: RESULT_SENTINEL }, 'unresolved'], [{ status: 99 }, 'unresolved'],
+      ...(analytic ? [
+        [{ applicability: 1, distance: 0 }, 'unresolved'], [{ applicability: 2, distance: -1 }, 'unresolved'],
+        [{ applicability: 3 }, 'unresolved'], [{ distance: 0 }, 'unresolved'], [{ distance: -1 }, 'unresolved'],
+        [{ distance: NaN }, 'unresolved'], [{ distance: Infinity }, 'unresolved'],
+      ] : [
+        [{ estimate: 1 }, 'unresolved'], [{ estimate: 2 }, 'unresolved'], [{ estimate: 3 }, 'unresolved'],
+        [{ estimate: 99 }, 'unresolved'], [{ log2DE: NaN }, 'unresolved'], [{ log2DE: Infinity }, 'unresolved'],
+      ]),
+    ];
+    for (const [patch, expected] of cases) {
+      const bytes = words(pointResultWords(patch));
+      h.hooks.before = (method, desc) => { if (method === 'readback' && desc.fields.includes('cameraClassification')) h.fake.stage(desc.source, bytes); };
+      const result = await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r));
+      assert.equal(result.status, expected, `${model}: ${JSON.stringify(patch)}`);
+      assert.deepEqual(result.detail.result, decodePointResults(bytes, 1, model)[0]);
+      assert.deepEqual(result.identity, identity(r));
+      assert.equal(cameraStatus({ cpu: { status: 'exterior' }, effective: result }).status, expected);
+    }
+    // No shader write must remain missing, never a zero-initialized analytic exterior.
+    h.hooks.before = undefined;
+    const missing = await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r));
+    assert.equal(missing.status, 'unresolved'); assert.equal(missing.detail.result.status, 'missing');
+    h.renderer.destroy();
+    assert.ok(h.fake.diagnostics().inventory.every(entry => !entry.name.startsWith('camera-')), 'classification releases its own buffers');
+    h.fake.destroy(); assert.equal(h.fake.diagnostics().tracked, 0);
+  }
+});
+
+test('B09c product classification owns all three buffers through copy-out and replacement', async () => {
+  for (const replace of [false, true]) {
+    const h = await rig({ pipelineSet: productPipelineSet(), classificationWords: pointResultWords() });
+    const r = request(scene({ model: 'menger', parameters: { depth: 2 } }));
+    await h.finish(h.renderer.render(r));
+    const baseline = h.fake.diagnostics().tracked;
+    let releaseCopy, mapping = false;
+    const gate = new Promise(resolve => { releaseCopy = resolve; });
+    h.hooks.after = (method, desc, ticket) => method === 'readback' && desc.fields.includes('cameraClassification')
+      ? { ...ticket, result: ticket.result.then(async value => { mapping = true; await gate; return value; }) } : undefined;
+    let result; h.renderer.classifyEffectiveCamera(r).then(value => { result = value; });
+    await h.until(() => mapping || result !== undefined);
+    assert.equal(mapping, true, 'product classification reaches copy-out');
+    const b = productPoints(h).at(-1).desc, handles = [b.inputs.points, b.outputs.results, b.inputs.menger_boxes];
+    assert.equal(result, undefined); assert.equal(h.scheduler.snapshot().outstanding, 1);
+    assert.ok(handles.every(handle => inventoryEntry(h, handle)?.state === 'live'));
+    let replacement;
+    if (replace) replacement = h.renderer.render(request(scene(), generation(2)));
+    releaseCopy(); await h.until(() => result !== undefined);
+    assert.equal(replace ? result.stale : result.status, replace ? true : 'exterior');
+    for (const handle of handles) assert.equal(inventoryEntry(h, handle), undefined);
+    if (replacement) await h.finish(replacement); else assert.equal(h.fake.diagnostics().tracked, baseline);
+    h.renderer.destroy();
+    assert.ok(h.fake.diagnostics().inventory.every(entry => !entry.name.startsWith('camera-')), 'classification releases its own buffers');
+    h.fake.destroy(); assert.equal(h.fake.diagnostics().tracked, 0);
+  }
+});
+
+test('B09c product classification rejection discards only its auxiliary lease', async () => {
+  for (const stage of ['points', 'readback']) for (const failure of ['submit', 'ticket', 'copy-out']) {
+    if (stage === 'points' && failure === 'copy-out') continue;
+    const h = await rig({ pipelineSet: productPipelineSet(), classificationWords: pointResultWords() });
+    const r = request(scene({ model: 'menger' }), generation(), 'settled'), job = h.renderer.render(r);
+    await h.until(() => h.publications.length === 1);
+    const matches = (method, desc) => stage === 'points' ? desc.pipelineId === 'points-menger' : method === 'readback' && desc.fields.includes('cameraClassification');
+    h.hooks.before = (method, desc) => { if (matches(method, desc) && failure === 'submit') throw new Error('B09c submission rejected'); };
+    h.hooks.after = (method, desc, ticket) => !matches(method, desc) ? undefined : failure === 'ticket'
+      ? { ...ticket, done: ticket.done.then(() => ({ outcome: 'failed', reason: 'B09c ticket rejected' })) }
+      : failure === 'copy-out' ? { ...ticket, result: ticket.result.then(() => { throw new Error('B09c copy-out rejected'); }) } : undefined;
+    const result = await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r));
+    assert.equal(result.status, 'unresolved'); assert.equal(result.stale, undefined);
+    assert.match(result.detail.error.message, /B09c .* rejected/);
+    assert.equal(h.discarded.length, 1, `${stage}/${failure}: the product batch must reach admission`);
+    assert.equal(h.failed.length, 0); assert.equal((await h.finish(job)).outcome, 'completed');
+    assert.equal(h.scheduler.snapshot().outstanding, 0);
+    h.renderer.destroy();
+    assert.ok(h.fake.diagnostics().inventory.every(entry => !entry.name.startsWith('camera-')), 'classification releases its own buffers');
+    h.fake.destroy(); assert.equal(h.fake.diagnostics().tracked, 0);
+  }
+});
+
+test('B09c a product publication supports B12 focus picking and camera exterior status', async () => {
+  const h = await rig({ pipelineSet: productPipelineSet(), classificationWords: pointResultWords(), statusWords: [packStatus({ status: 0, reason: 0, subreason: 0, steps: 5 })], depths: [1.5] });
+  const r = request(directScene(), generation(), 'settled'); await h.finish(h.renderer.render(r));
+  const effective = await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r));
+  const cpu = classifyCamera(getModel('sphere', 1), {}, encodeOrdinaryOrigin(r.sceneSnapshot.camera).highF32, r.quality.iteration.maxIterations);
+  assert.equal(cameraStatus({ cpu, effective }).status, 'exterior');
+  const listeners = new Map(), focus = [], statuses = [], picks = [];
+  const surface = { addEventListener: (type, fn) => listeners.set(type, fn), removeEventListener() {},
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 160, height: 80 }) };
+  const navigation = bindSpaceNavigation({ surface, getCamera: () => r.sceneSnapshot.camera,
+    gestures: { focusApply: camera => focus.push(camera), settle() {} }, flight: { active: false, stop() {} },
+    getPickContext: () => ({ identity: identity(r), dimensions: r.quality.internalSize, geometryRevision: 1, sampleIndex: 0 }),
+    pick: async request => { const value = await h.renderer.pick(request); picks.push(value); return value; }, onStatus: value => statuses.push(value) });
+  await auxiliaryResult(h, listeners.get('dblclick')({ clientX: 81, clientY: 41, target: surface }).then(() => true));
+  assert.equal(picks.length, 1); assert.equal(picks[0].status, 'approximate hit'); assert.equal(picks[0].depth, 1.5);
+  const { camera, pixel, jitter, dimensions } = picks[0].sample;
+  assert.deepEqual(pixel, [8, 4]); assert.deepEqual(jitter, sampleJitter({ seed: r.quality.sampling.seed, sampleIndex: 0, pixel }));
+  const hit = reconstructHit(camera, pixel, jitter, 1.5, dimensions.width, dimensions.height);
+  assert.deepEqual(focus, [lookAt(camera, toLocal(camera, hit))]); assert.deepEqual(statuses, []);
+  const ids = batches(h, r.jobId).map(b => b.pipelineId);
+  for (const id of ['trace_band:sphere', 'normals_band:sphere', 'shade_band:sphere', 'accumulate_band', 'display_band', 'points-sphere']) assert.ok(ids.includes(id), id);
+  navigation.destroy(); h.renderer.destroy();
+  assert.ok(h.fake.diagnostics().inventory.every(entry => !entry.name.startsWith('camera-')), 'classification releases its own buffers');
+  h.fake.destroy(); assert.equal(h.fake.diagnostics().tracked, 0);
+});
+
+test('B09c F1 classification errors are unresolved with their cause instead of stale', async () => {
+  for (const failure of ['descriptor', 'allocation', 'admission', 'copy-out', 'decode']) {
+    const set = productPipelineSet();
+    const pipelineSet = failure === 'descriptor' ? createPipelineSet({ ...set,
+      descriptors: set.descriptors.filter(d => d.pipelineId !== 'points-sphere') }) : set;
+    const h = await rig({ pipelineSet }), r = request();
+    await h.finish(h.renderer.render(r));
+    if (failure === 'allocation') h.backend.allocate = () => { throw new BackendError('allocation-failed', 'classification allocation refused'); };
+    if (failure === 'admission') h.scheduler.requestAuxiliary = () => { throw new RangeError('classification admission refused'); };
+    if (['copy-out', 'decode'].includes(failure)) h.hooks.after = (method, desc, ticket) =>
+      method === 'readback' && desc.fields.includes('cameraClassification') ? { ...ticket, result: ticket.result.then(value => {
+        if (failure === 'copy-out') throw new Error('classification copy-out refused');
+        return { ...value, data: new Uint8Array(16) };
+      }) } : undefined;
+    const result = await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r));
+    assert.equal(result.status, 'unresolved', `${failure} must be visible, not stale`);
+    assert.equal(result.stale, undefined); assert.deepEqual(result.identity, identity(r));
+    assert.equal(result.detail.error.code, { descriptor: 'preparation-failed', allocation: 'allocation-failed',
+      admission: 'RangeError', 'copy-out': 'Error', decode: 'RangeError' }[failure]);
+    assert.match(result.detail.error.message, failure === 'descriptor' ? /pipeline/ : failure === 'decode' ? /shorter/ : /classification .* refused/);
+    assert.equal(h.failed.length, 0); assert.equal(h.scheduler.snapshot().outstanding, 0);
+    assert.ok(h.fake.diagnostics().inventory.every(entry => !entry.name.startsWith('camera-')));
+    h.renderer.destroy(); h.fake.destroy();
+  }
+});
+
+test('B09c F2 draft classification uses 64 iterations when the scene permits an escape at 88', async () => {
+  // B04 bulb/p2/n128/generic/218: independently evaluate the same effective point.
+  const point = [-0.15, -0.15, -0.45].map(Math.fround), model = getModel('mandelbulb', 1), effective = { power: 2 };
+  const limited = classifyCamera(model, effective, point, 64), full = classifyCamera(model, effective, point, 128);
+  assert.equal(limited.status, 'unresolved'); assert.equal(limited.detail.result.index, 64);
+  assert.equal(full.status, 'exterior'); assert.equal(full.detail.result.index, 88);
+  const base = scene({ model: 'mandelbulb', parameters: { power: '2' } });
+  const s = changed(base, { camera: { ...base.camera, positionLocal: point }, iteration: { ...base.iteration, maxIterations: 128 } });
+  const h = await rig({ pipelineSet: productPipelineSet() });
+  h.hooks.before = (method, batch) => {
+    if (method !== 'submitBatch' || batch.pipelineId !== 'points-mandelbulb') return;
+    // Simulate the field at the SUBMITTED cap, so C18 changes the returned status.
+    const evaluation = model.evaluate(effective, point, { maxIterations: batch.uniforms.cap });
+    const result = pointResultWords({ status: evaluation.status === 'escaped' ? 0 : 1,
+      estimate: evaluation.estimate.available ? 0 : 1, log2DE: evaluation.estimate.log2DE ?? 0 });
+    result[1] = evaluation.index; h.fake.stage(batch.outputs.results, words(result));
+  };
+  for (const [i, profile] of ['draft', 'settled'].entries()) {
+    const r = request(s, generation(i + 1), profile); await h.finish(h.renderer.render(r));
+    const result = await auxiliaryResult(h, h.renderer.classifyEffectiveCamera(r));
+    assert.equal(result.status, profile === 'draft' ? 'unresolved' : 'exterior');
+    assert.equal(result.detail.result.index, profile === 'draft' ? 64 : 88);
+    const batch = productPoints(h).at(-1).desc;
+    assert.equal(r.sceneSnapshot.iteration.maxIterations, 128);
+    assert.equal(batch.uniforms.cap, r.quality.iteration.maxIterations);
+    assert.equal(batch.bounds.iterations, r.quality.iteration.maxIterations);
+  }
+  h.renderer.destroy(); h.fake.destroy();
 });
