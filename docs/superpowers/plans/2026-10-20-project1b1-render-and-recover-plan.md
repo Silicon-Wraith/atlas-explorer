@@ -368,9 +368,9 @@ cites from Global Constraints); any later amendment changes both together.
   `accumulationFlags` r32uint (4; diagnostic propagation across samples),
   two ping-pong `accumulation` rgba32float (16 each; sum and count, read previous, write next),
   `display` rgba8unorm (4), `retained` rgba8unorm (4; the previous complete image, shown with the
-  pending mark): 72 bytes per pixel, 597,196,800 B at 3840 × 2160 before staging, uniforms, model
+  pending mark): 76 bytes per pixel, 630,374,400 B at 3840 × 2160 before staging, uniforms, model
   buffers and overlapping generations. Each resource is counted at its actual dimensions. (Project
-  0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.)
+  0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.) `space-targets-v2` adds a tracked `recovery` r32uint geometry target, retained and released with the corresponding geometry. One target set totals 76 B per internal pixel, or 630,374,400 B at 3840×2160, before other allocations. The 1 GiB tracked-allocation cap is unchanged. (Rev 5.2, B11b-F9, Codex run 20261022T060300Z-5ca3; implementation consequence, no new user decision.)
 - **Pipeline descriptors.** B00 freezes the pipeline descriptor schema and binding/uniform
   conventions. B06, B08, B10 and B11 freeze their concrete pipeline IDs, slots and layouts
   alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and
@@ -607,7 +607,7 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   `STATUS_LABELS` (the §11.4 names verbatim), `wgslConstants() → string` (the same enums as WGSL
   `const` declarations, so kernels and JavaScript share one source).
 - Produces (`backend.js`): `PASSES = ['probe', 'trace', 'normals', 'shade', 'accumulate',
-  'display']`, `TARGET_LAYOUT_V1` (the annex table: name → `{format, bytesPerTexel, count}`),
+  'display']`, `TARGET_LAYOUT_V2` (the annex table: name → `{format, bytesPerTexel, count}`),
   `TRACKED_ALLOCATION_CAP = 2 ** 30`, `LIGHTING_BOUNDS_DEFAULT = {normalFieldSamples: 7,
   shadowRays: 1, shadowSteps: 64, aoSamples: 5}` (both the settled defaults and the 1b.1 ceilings;
   direct lighting retains `normalFieldSamples: 7`, and only `shadowRays`, `shadowSteps` and
@@ -663,7 +663,7 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   → Promise<TargetSet>` (`{epoch, layoutId, internalSize, outputSize, handles, descriptions}`;
   `handles[name]` an opaque handle and `descriptions[name]` `{name, width, height, format,
   bytesPerTexel, bytes}` at actual internal dimensions; `layoutId` is the exported
-  `TARGET_LAYOUT_ID = 'space-targets-v1'`; `handles.accumulation` and `descriptions.accumulation`
+  `TARGET_LAYOUT_ID = 'space-targets-v2'`; `handles.accumulation` and `descriptions.accumulation`
   are two-element arrays: for sample index `s`, read `handles.accumulation[s & 1]` and write
   `handles.accumulation[(s + 1) & 1]`; for every accumulation identity, sample 0 initializes the accumulated sum, count and diagnostic propagation from the current sample, without reading previous accumulation values or previous-identity diagnostic flags; physical clearing of the previous accumulation texture is unnecessary; samples after zero use the ping-pong parity above. B09 owns identity changes, sample indices and dependencies; B11 owns this initialization in its shaders (including stale `accumulationFlags` across an appearance reset); B06 owns resource initialization (fresh targets read zero) and lifetime); `submitBatch(batch, {admission})
   → Ticket`; `readback({identity, source, region, fields}, {admission}) → ReadbackTicket`;
@@ -1259,7 +1259,7 @@ picking (B10/B12).
 
 **Interfaces:**
 - Consumes: `acquireDevice` (B01); `BACKEND_METHODS`, `assertBackend`, `createAdmission`,
-  `TARGET_LAYOUT_V1`, the ticket shape (B00).
+  `TARGET_LAYOUT_V2`, the ticket shape (B00).
 - Produces: `createWebGPUBackend({canvas, clock, acquire = acquireDevice, enableTimestamps =
   false}) → backend` (every annex method and semantics; `onLoss` observers attached at
   acquisition; `destroy()` terminal; `allocate({name, bytes, usage: 'storage' | 'uniform', data?:
@@ -1302,7 +1302,7 @@ against the eventual shaders.
   backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a
   new epoch`; `Configuration failure keeps the previous target set usable` (request a target set
   above the cap; the earlier set still presents); `A 4K target set allocates within the cap at
-  72 bytes per pixel and is reclaimed after the last ticket retires`. **F3 zero-readback assertion (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480, 20261021T170126Z-88ca):** a fresh target set reads back as zero in both accumulation textures and `accumulationFlags` at 1024 × 600 with correct byte lengths; B06 owns resource initialization (fresh targets read zero), while per-identity sample-0 initialization belongs to B11's accumulate shader.
+  76 bytes per pixel and is reclaimed after the last ticket retires`. **F3 zero-readback assertion (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480, 20261021T170126Z-88ca):** a fresh target set reads back as zero in both accumulation textures and `accumulationFlags` at 1024 × 600 with correct byte lengths; B06 owns resource initialization (fresh targets read zero), while per-identity sample-0 initialization belongs to B11's accumulate shader.
 - [ ] **Step 3: Implement.** - [ ] **Step 4: GREEN** — Node first, then `flock … npm run test:space -- --group recovery`.
 - [ ] **Step 5: Commit** — `"Add the WebGPU backend with tracked allocation, admission and loss mapping (1b.1 B06)"`, then the gate with `ATLAS_GPU_HANDOFF`.
 
@@ -1467,7 +1467,7 @@ with the evidence; tolerances and floors are never relaxed.
 **Interfaces:**
 - Consumes: `createScheduler` (B07); the fake backend, `createBatch`, `createPickRequest`,
   `createJobPlan`, `sampleJitter`, `createAdmission` (B00; the renderer passes `createAdmission`
-  to the scheduler as `makeAdmission`); `TARGET_LAYOUT_V1`, `LIGHTING_BOUNDS_DEFAULT` (B00);
+  to the scheduler as `makeAdmission`); `TARGET_LAYOUT_V2`, `LIGHTING_BOUNDS_DEFAULT` (B00);
   `createRenderRequest`, `isPublishable`, `createReportBuilder`, `observed`, `UNAVAILABLE` (1a
   T06); `sceneCodec`, `effectiveParameters` (B02); `getModel` (B03, resolved per request from
   `request.sceneSnapshot.model`, never a fixed constructor argument).
