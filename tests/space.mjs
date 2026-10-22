@@ -1912,11 +1912,14 @@ async function visualJobInPage(spec) {
   const ordinals = scene.appearance.viewMode === 'shaded' && scene.appearance.lightingQuality === 'full' ? scene.sampling.targetSamples + 1 : scene.sampling.targetSamples;
   const capture = backend.allocate({ name: `b11b-capture-${spec.label}`, bytes: 4 * pixels, usage: 'storage' });
   const kept = [], masks = [], statusFrames = [], availability = [], reasonCodes = [], copies = [], recoveryPairs = [];
+  // B11c capture (Codex B11b-F7; test harness only): the raw lightingStatus words and normal w halves, and per-field coverage.
+  const lightingFrames = [], normalW = [], coverage = [];
   // B11b fix round 1: each unresolved outcome's reason, coded as in tests/support/visual-acceptance.mjs (vaReasonCode).
   const reasonCode = (reason, subreason) => (reason >= 1 && reason <= 3 ? reason : reason === 4 && (subreason === 1 || subreason === 2) ? 3 + subreason : 6);
   let presents = 0, lastAccumulate = null, captured = null;
   const ensure = ordinal => {
-    if (!masks[ordinal]) { masks[ordinal] = new Uint16Array(pixels); statusFrames[ordinal] = new Uint8Array(pixels * 4); availability[ordinal] = new Uint8Array(pixels); reasonCodes[ordinal] = new Uint16Array(pixels); }
+    if (!masks[ordinal]) { masks[ordinal] = new Uint16Array(pixels); statusFrames[ordinal] = new Uint8Array(pixels * 4); availability[ordinal] = new Uint8Array(pixels); reasonCodes[ordinal] = new Uint16Array(pixels);
+      lightingFrames[ordinal] = new Uint32Array(pixels); normalW[ordinal] = new Uint16Array(pixels); coverage[ordinal] = { status: 0, normal: 0, lightingStatus: 0 }; }
   };
   const proxy = Object.freeze({ ...backend,
     release(handle) { kept.push(handle); },
@@ -1944,12 +1947,12 @@ async function visualJobInPage(spec) {
           for (let row = 0; row < r.height; row++) for (let col = 0; col < r.width; col++) {
             const i = (r.y + row) * W + r.x + col, k = row * r.width + col;
             if (field === 'status') {
-              const word = view.getUint32(4 * k, true); statusFrames[ordinal].set(result.data.subarray(4 * k, 4 * k + 4), 4 * i);
+              const word = view.getUint32(4 * k, true); statusFrames[ordinal].set(result.data.subarray(4 * k, 4 * k + 4), 4 * i); coverage[ordinal].status++;
               m[i] |= [B.hit, B.miss, B.unresolved, B.numerical][word & 15];
               if ((word & 15) === 2) reasonCodes[ordinal][i] |= reasonCode((word >>> 4) & 15, (word >>> 8) & 15);
-            } else if (field === 'normal') availability[ordinal][i] = (view.getUint16(8 * k + 6, true) & 0x7fff) !== 0 ? 1 : 0;
+            } else if (field === 'normal') { availability[ordinal][i] = (view.getUint16(8 * k + 6, true) & 0x7fff) !== 0 ? 1 : 0; normalW[ordinal][i] = view.getUint16(8 * k + 6, true); coverage[ordinal].normal++; }
             else {
-              const word = view.getUint32(4 * k, true);
+              const word = view.getUint32(4 * k, true); lightingFrames[ordinal][i] = word; coverage[ordinal].lightingStatus++;
               if (word & 1) m[i] |= ((word >>> 2) & 3) === 3 ? B.shadowNumerical : B.shadowUnresolved;
               if (word & 2) m[i] |= ((word >>> 12) & 3) === 3 ? B.aoNumerical : B.aoUnresolved;
               if ((word & 1) && ((word >>> 2) & 3) === 2) reasonCodes[ordinal][i] |= reasonCode((word >>> 4) & 15, (word >>> 8) & 15) << 3;
@@ -1995,6 +1998,8 @@ async function visualJobInPage(spec) {
       out.masks.push(s.base64(new Uint8Array(masks[o].buffer)));
       out.statusSha256.push([...new Uint8Array(await crypto.subtle.digest('SHA-256', statusFrames[o]))].map(b => b.toString(16).padStart(2, '0')).join(''));
     }
+    // B11c capture: keep this job's raw frames in the page for visualCaptureFrameInPage (one frame per call).
+    if (spec.capture) { globalThis.__vaCapture = { status: statusFrames, lightingStatus: lightingFrames, normalW }; out.coverage = coverage; }
     if (captured) out.display = s.base64(await s.read(capture, { x: 0, y: 0, width: 4 * pixels, height: 1 }, 'capture', aux));
     if (lastAccumulate && spec.accumulation) {
       out.accumulation = s.base64(await s.read(lastAccumulate.next, { x: 0, y: 0, width: W, height: H }, 'accumulation', aux));
@@ -2005,6 +2010,14 @@ async function visualJobInPage(spec) {
     renderer.destroy();
     for (const handle of new Set([...kept, capture])) { try { backend.release(handle); } catch { /* already released */ } }
   }
+}
+
+// B11c capture (Codex B11b-F7): one raw frame of the last capturing job, base64; `clear` drops them all.
+async function visualCaptureFrameInPage({ field, ordinal, clear }) {
+  if (clear) { delete globalThis.__vaCapture; return null; }
+  const frame = globalThis.__vaCapture?.[field]?.[ordinal];
+  if (!frame) return null;
+  return globalThis.__b10.base64(new Uint8Array(frame.buffer, frame.byteOffset, frame.byteLength));
 }
 
 // The same frozen rays traced directly with the product trace and normals pipelines, one sample at a time: each
@@ -2057,6 +2070,8 @@ async function runVisualAcceptance({ page, check }) {
   const fixture = va.loadVisualFixture(), W = fixture.settings.width, H = fixture.settings.height, size = { width: W, height: H }, pixels = W * H;
   const shots = process.env.ATLAS_VISUAL_SCREENSHOTS || null;
   if (shots) await mkdir(shots, { recursive: true });
+  // B11c (Codex B11b-F7): with ATLAS_VISUAL_CAPTURE=<dir>, every scene is archived losslessly (tests/support/visual-capture.mjs).
+  const captureDir = process.env.ATLAS_VISUAL_CAPTURE || null, capture = captureDir ? await import('./support/visual-capture.mjs') : null, captured = [];
   const VIEWS = { 'shaded-full': { viewMode: 'shaded', lightingQuality: 'full' }, 'shaded-direct': { viewMode: 'shaded', lightingQuality: 'direct' },
     normals: { viewMode: 'normals' }, termination: { viewMode: 'termination' } };
   const B = va.VA_BITS, F = appearance.ACCUMULATION_FLAGS;
@@ -2077,7 +2092,7 @@ async function runVisualAcceptance({ page, check }) {
     const jobs = {};
     for (const view of fixture.views) {
       jobs[view] = await ev(page, visualJobInPage, { label: `${sceneSpec.id}-${view}`, model: sceneSpec.model, parameters: sceneSpec.parameters, camera: sceneSpec.camera,
-        appearance: VIEWS[view], size, bits: B, accumulation: view === 'shaded-full' }, `visual ${sceneSpec.id} ${view}`, 3 * LIMITS.deep);
+        appearance: VIEWS[view], size, bits: B, accumulation: view === 'shaded-full', capture: !!captureDir && view === 'shaded-full' }, `visual ${sceneSpec.id} ${view}`, 3 * LIMITS.deep);
     }
     const row = { id: sceneSpec.id, class: sceneSpec.class, failures: [], diagnosticFailures: [], wallMs: Object.fromEntries(Object.entries(jobs).map(([v, j]) => [v, Math.round(j.wallMs)])) };
     const fail = message => row.failures.push(message);
@@ -2137,10 +2152,12 @@ async function runVisualAcceptance({ page, check }) {
     // Smooth analytic face interiors: the same rays traced directly, sample by sample.
     const cropIndex = (crop, i) => { const x = i % W, y = Math.floor(i / W); return x >= crop.x && x < crop.x + crop.width && y >= crop.y && y < crop.y + crop.height; };
     const cropTallies = Object.fromEntries(sceneSpec.crops.map(crop => [crop.id, []]));
+    let tracedForCapture = null, tracingProfileForCapture = null;
     if (sceneSpec.class === 'analytic') {
       const scene = createSpaceScene({ model: sceneSpec.model, parameters: sceneSpec.parameters, camera: sceneSpec.camera }), quality = resolveQuality(scene, 'settled', size);
       const traced = await ev(page, visualNormalsInPage, { label: sceneSpec.id, modelId: sceneSpec.model, camera: sceneSpec.camera, effective, size, samples: samples.length,
         seed: fixture.settings.seed, profile: { ...quality.iteration, ...quality.tracing } }, `visual normals ${sceneSpec.id}`, 3 * LIMITS.deep);
+      tracedForCapture = traced; tracingProfileForCapture = quality.tracing;
       const { forward, right, up } = cameraModule.basis(sceneSpec.camera), hTan = Math.tan(sceneSpec.camera.verticalFovDegrees * Math.PI / 360), origin = sceneSpec.camera.positionLocal;
       const tallies = [];
       for (const t of traced) {
@@ -2178,8 +2195,37 @@ async function runVisualAcceptance({ page, check }) {
       }
     }
     row.passed = row.failures.length === 0; row.elapsedMs = Date.now() - started;
+    if (captureDir) {
+      const ordinals = [...Array(full.ordinals).keys()], entries = [];
+      const frame = async (field, ordinal) => { const b64 = await ev(page, visualCaptureFrameInPage, { field, ordinal }, `capture ${sceneSpec.id} ${field} ${ordinal}`); return b64 === null ? null : bytesOf(b64); };
+      const typed = (bytes, T) => new T(bytes.buffer, bytes.byteOffset, bytes.byteLength / T.BYTES_PER_ELEMENT);
+      for (const o of ordinals) {
+        for (const [field, name, dtype, T] of [['status', 'status', 'u32', Uint32Array], ['lightingStatus', 'lighting', 'u32', Uint32Array], ['normalW', 'normalw', 'u16', Uint16Array]]) {
+          const bytes = await frame(field, o); if (bytes) entries.push({ name: `${name}-o${o}`, field, ordinal: o, dtype, data: typed(bytes, T) });
+        }
+        if (full.masks[o]) entries.push({ name: `pagebits-o${o}`, field: 'page-mask', ordinal: o, dtype: 'u16', data: u16(full.masks[o]) });
+        if (full.reasons[o] !== null && full.reasons[o] !== undefined) entries.push({ name: `pagereasons-o${o}`, field: 'page-reason-pairs', ordinal: o, dtype: 'u32', data: u32(full.reasons[o]) });
+        if (full.recovery?.[o]) entries.push({ name: `recovery-o${o}`, field: 'recovery-pairs', ordinal: o, dtype: 'u32', data: u32(full.recovery[o]) });
+      }
+      await ev(page, visualCaptureFrameInPage, { clear: true }, 'capture clear');
+      entries.push({ name: 'union-bits', field: 'union-mask', dtype: 'u16', data: union }, { name: 'union-reasons', field: 'union-reason-lanes', dtype: 'u32', data: va.orBits32(reasonLanes) },
+        { name: 'display', field: 'display-rgba8', dtype: 'u8', data: display }, { name: 'accumulation', field: 'accumulation-f32x4', dtype: 'f32', data: sums }, { name: 'flags', field: 'accumulationFlags', dtype: 'u32', data: flags });
+      for (const t of tracedForCapture ?? []) entries.push({ name: `faces-s${t.sample}`, field: 'face-hit-records-16B', sample: t.sample, dtype: 'u8', data: bytesOf(t.records) });
+      const meta = { id: sceneSpec.id, class: sceneSpec.class, model: sceneSpec.model, parameters: sceneSpec.parameters, camera: sceneSpec.camera, effective, crops: sceneSpec.crops,
+        settings: fixture.settings, fixture: fixture.version, views: fixture.views, ordinals, sampleOrdinals: samples.map(sample => ordinalOf('shaded-full', sample)),
+        viewOrdinals: Object.fromEntries(fixture.views.map(view => [view, samples.map(sample => ordinalOf(view, sample))])), viewStatusSha256: Object.fromEntries(fixture.views.map(view => [view, jobs[view].statusSha256])),
+        tracedStatusSha256: tracedForCapture ? tracedForCapture.map(t => t.statusSha256) : null, tracingProfile: tracingProfileForCapture, coverage: full.coverage ?? null,
+        encoding: 'little-endian typed arrays, pixel index y * width + x; *-pairs are [pixel, word] u32 pairs; gzip per file; sha256 over uncompressed bytes', reported: JSON.parse(JSON.stringify(row)) };
+      const written = await capture.writeCaptureScene(`${captureDir}/${sceneSpec.id}`, meta, entries);
+      captured.push({ id: sceneSpec.id, ...written });
+    }
     rows.push(row);
     console.log(`VISUAL ${sceneSpec.id}${va.DIAGNOSTIC_VISUAL_SCENES.includes(sceneSpec.id) ? ` (diagnostic thresholds; ${row.thresholds.passed ? 'within' : 'over'})` : ''}: ${row.passed ? 'pass' : 'FAIL'} ${JSON.stringify({ union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures, diagnosticFailures: row.diagnosticFailures }).slice(0, 2400)}`);
+  }
+  if (captureDir) {
+    const fixtureBytes = await readFile(va.VISUAL_FIXTURE_PATH);
+    await writeFile(`${captureDir}/run.json`, JSON.stringify({ format: capture.CAPTURE_FORMAT, stage: process.env.ATLAS_VISUAL_CAPTURE_STAGE ?? null, source: process.env.ATLAS_VISUAL_CAPTURE_SOURCE ?? null,
+      fixture: fixture.version, fixtureSha256: capture.sha256(fixtureBytes), settings: fixture.settings, scenes: captured }, null, 1));
   }
   const verdict = va.visualVerdict(rows), recorded = new Map(rows.map(row => [row.id, { ...row, perSample: row.perSample }]));
   report.push({ name: 'Visual acceptance scenes (recorded; plan rev 5.0 B11b; rev 5.2 five required)', fixture: fixture.version, settings: fixture.settings, thresholds: va.VISUAL_THRESHOLDS, faceCriterion: va.FACE_NORMAL_CRITERION,
