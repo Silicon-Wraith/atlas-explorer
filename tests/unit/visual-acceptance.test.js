@@ -5,7 +5,9 @@ import { overview } from '../../src/space/camera.js';
 import { getModel } from '../../src/space/models/registry.js';
 import { effectiveParameters } from '../../src/space/numerics/parameters.js';
 import { createSpaceScene } from '../../src/space/scene-adapter.js';
-import { loadVisualFixture, VA_BITS, sampleBits, orBits, vaMetrics, evaluateScene, faceEligibility, angleBetween, faceNormalTally, mergeTallies, VISUAL_THRESHOLDS } from '../support/visual-acceptance.mjs';
+import { loadVisualFixture, VA_BITS, sampleBits, orBits, vaMetrics, evaluateScene, faceEligibility, angleBetween, faceNormalTally, mergeTallies, VISUAL_THRESHOLDS,
+  VISUAL_ACCEPTANCE_PASS, REQUIRED_VISUAL_SCENES, DIAGNOSTIC_VISUAL_SCENES, VISUAL_DIAGNOSTIC_LABEL, visualVerdict } from '../support/visual-acceptance.mjs';
+import { readFileSync } from 'node:fs';
 
 const B = VA_BITS;
 
@@ -156,4 +158,52 @@ test('the visual check reads recovery words independently and agrees with the ou
   });
   const pairs = frames.map(f => Uint32Array.from(f.recovery.flatMap((w, i) => (w ? [i, w] : []))));
   assert.deepEqual(vaRecoveryMetrics(pairs, 3), masks.snapshot().recovery);
+});
+
+// Plan rev 5.2 (user decision 2026-10-22): the quaternion is deferred from required visual acceptance to diagnostic
+// evidence; five scenes gate, and the quaternion's thresholds are unchanged and still reported.
+const vaRow = (id, sceneClass, failures = [], union = { hits: 100, lightingUnresolved: 0 }) => ({
+  id, class: sceneClass, failures, union, reasons: { union: { 'ao:point-budget': failures.length ? 4897 : 0 } }, recovery: id === 'quaternion' ? { union: { attempted: 162, recovered: 162 } } : null,
+  thresholds: evaluateScene({ sceneClass, union: { hits: union.hits, nonMiss: union.hits, primaryUnresolved: 0, numericalFailures: 0, unavailableNormals: 0, lightingUnresolved: union.lightingUnresolved, lightingNumericalFailures: 0 }, lightingAsMagenta: 0, lostIndication: 0 }),
+});
+const clean = () => [vaRow('bulb', 'fractal'), vaRow('sphere', 'analytic'), vaRow('box', 'analytic'), vaRow('menger-1', 'analytic'), vaRow('menger-2', 'analytic')];
+
+test('rev 5.2: five scenes are required and the quaternion is diagnostic, deferred to 1b.2', () => {
+  assert.deepEqual([...REQUIRED_VISUAL_SCENES], ['bulb', 'sphere', 'box', 'menger-1', 'menger-2']);
+  assert.deepEqual([...DIAGNOSTIC_VISUAL_SCENES], ['quaternion']);
+  assert.equal(VISUAL_DIAGNOSTIC_LABEL, 'deferred to 1b.2 (user decision 2026-10-22)');
+  assert.deepEqual([...REQUIRED_VISUAL_SCENES, ...DIAGNOSTIC_VISUAL_SCENES].sort(), loadVisualFixture().scenes.map(s => s.id).sort(), 'every rendered scene is either required or diagnostic');
+  assert.equal(VISUAL_THRESHOLDS.fractal.lightingUnresolved, 0.10, 'the quaternion threshold is not relaxed');
+  const manifest = JSON.parse(readFileSync(new URL('../suites.manifest.json', import.meta.url), 'utf8'));
+  const passes = manifest.suites.find(entry => entry.id === 'space-rendering').requiredPasses;
+  assert.ok(passes.includes(VISUAL_ACCEPTANCE_PASS), 'the manifest names the five-scene pass');
+  assert.equal(VISUAL_ACCEPTANCE_PASS, 'Five frozen scenes meet visual acceptance; the quaternion is reported as diagnostic');
+  assert.ok(!passes.some(name => /^Six frozen scenes/.test(name)));
+});
+
+test('rev 5.2: a quaternion failure does not fail the required pass, and its numbers stay in the report', () => {
+  const quaternion = vaRow('quaternion', 'fractal', ['thresholds: lightingUnresolved 5226/39085'], { hits: 39085, lightingUnresolved: 5226 });
+  assert.equal(quaternion.thresholds.passed, false, 'the quaternion still fails its unchanged 10% ceiling');
+  const verdict = visualVerdict([clean()[0], quaternion, ...clean().slice(1)]);
+  assert.equal(verdict.passed, true);
+  assert.deepEqual(verdict.required.map(s => s.id), ['bulb', 'sphere', 'box', 'menger-1', 'menger-2']);
+  assert.deepEqual(verdict.requiredFailures, []);
+  assert.equal(verdict.diagnostic.label, VISUAL_DIAGNOSTIC_LABEL);
+  assert.deepEqual(verdict.diagnostic.scenes.map(s => s.id), ['quaternion']);
+  const q = verdict.diagnostic.scenes[0];
+  assert.equal(q.passed, false); assert.deepEqual(q.failures, ['thresholds: lightingUnresolved 5226/39085']);
+  const row = q.thresholds.find(r => r.metric === 'lightingUnresolved');
+  assert.deepEqual([row.numerator, row.denominator, row.passed], [5226, 39085, false]);
+  assert.ok(Math.abs(row.fraction - 0.1337) < 5e-5);
+  assert.equal(q.reasons['ao:point-budget'], 4897); assert.deepEqual(q.recovery, { attempted: 162, recovered: 162 });
+  assert.match(JSON.stringify(verdict), /5226\/39085/);
+});
+
+test('rev 5.2: a required-scene failure still fails the pass, and a missing required scene fails closed', () => {
+  const rows = clean(); rows[0] = vaRow('bulb', 'fractal', ['thresholds: lightingUnresolved 20/100'], { hits: 100, lightingUnresolved: 20 });
+  const verdict = visualVerdict(rows);
+  assert.equal(verdict.passed, false); assert.deepEqual(verdict.requiredFailures, ['bulb: thresholds: lightingUnresolved 20/100']);
+  const missing = visualVerdict(clean().slice(1));
+  assert.equal(missing.passed, false); assert.deepEqual(missing.requiredFailures, ['bulb: not measured']);
+  assert.throws(() => visualVerdict([...clean(), vaRow('extra', 'analytic')]), /neither required nor diagnostic/);
 });

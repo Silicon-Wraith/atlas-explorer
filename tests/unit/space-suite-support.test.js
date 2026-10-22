@@ -254,3 +254,13 @@ test('renderSpikeDocument reports the developer-flag experiment with the flag-ab
   assert.throws(() => renderSpikeDocument(sampleReport(), { generatedAt: 'x', commit: 'y', experiment: [...experimentReport(), { name: 'FAIL', error: 'x' }] }), /records a failure/);
   assert.throws(() => renderSpikeDocument(sampleReport(), { generatedAt: 'x', commit: 'y', experiment: experimentReport().slice(0, 2) }), /both launches/);
 });
+
+// space-targets-v2 is 76 B/px (B11c D8): the space-recovery pass name says so, in the manifest and in the check.
+test('the space-recovery 4K pass name states 76 bytes per pixel, in the manifest and in tests/space.mjs', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../suites.manifest.json', import.meta.url), 'utf8'));
+  const passes = manifest.suites.find(entry => entry.id === 'space-recovery').requiredPasses;
+  assert.ok(!passes.some(name => /72 bytes per pixel/.test(name)), 'no stale 72 B/px name');
+  assert.ok(passes.includes('A 4K target set allocates within the cap at 76 bytes per pixel and is reclaimed after the last ticket retires'));
+  const source = readFileSync(new URL('../space.mjs', import.meta.url), 'utf8');
+  for (const name of passes) assert.ok(source.includes(`'${name}'`), `tests/space.mjs names the pass: ${name}`);
+});

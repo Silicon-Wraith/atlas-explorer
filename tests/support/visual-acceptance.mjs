@@ -1,4 +1,5 @@
-// Visual acceptance (plan rev 5.0 B11b; user decisions 2026-10-22): the frozen six-scene fixture, the thresholds,
+// Visual acceptance (plan rev 5.0 B11b; user decisions 2026-10-22): the frozen six-scene fixture (six rendered; five
+// required and the quaternion diagnostic under plan rev 5.2), the thresholds,
 // and the measurement helpers the headed check uses. Pure Node: no browser or GPU.
 //
 // Masks are independent of the renderer's: VA_BITS is this file's own per-pixel layout, filled in the page from
@@ -12,7 +13,12 @@ import { RECOVERY_WORD, decodeRecoveryWord } from '../../src/space/render/webgpu
 
 export const VISUAL_FIXTURE_PATH = 'tests/fixtures/visual-acceptance.json';
 export const loadVisualFixture = () => JSON.parse(readFileSync(VISUAL_FIXTURE_PATH, 'utf8'));
-export const VISUAL_ACCEPTANCE_PASS = 'Six frozen scenes meet visual acceptance';
+export const VISUAL_ACCEPTANCE_PASS = 'Five frozen scenes meet visual acceptance; the quaternion is reported as diagnostic';
+// Plan rev 5.2 (user decision 2026-10-22): the quaternion is deferred from required visual acceptance. It is still
+// rendered, measured and reported against the unchanged thresholds, as diagnostic evidence that never gates.
+export const REQUIRED_VISUAL_SCENES = Object.freeze(['bulb', 'sphere', 'box', 'menger-1', 'menger-2']);
+export const DIAGNOSTIC_VISUAL_SCENES = Object.freeze(['quaternion']);
+export const VISUAL_DIAGNOSTIC_LABEL = 'deferred to 1b.2 (user decision 2026-10-22)';
 
 export const VA_BITS = Object.freeze({ hit: 1, miss: 2, unresolved: 4, numerical: 8, normalUnavailable: 16, shadowUnresolved: 32, shadowNumerical: 64, aoUnresolved: 128, aoNumerical: 256 });
 // New post-discovery product thresholds (plan B11b table), never performance or numerical tolerances.
@@ -253,4 +259,23 @@ export function predictStencilNormal(model, p, eps, depth, tol = 1e-4) {
   const length = Math.hypot(...gradient);
   if (!(length > 1e-6)) return { expected: 'ambiguous' };
   return { expected: 'available', normal: gradient.map(v => v / length), modes };
+}
+
+// Plan rev 5.2: the verdict over measured scene rows. Only required scenes gate (a missing one fails closed); the
+// diagnostic scenes keep every numerator, denominator, reason and recovery count in the report.
+const sceneSummary = row => ({ id: row.id, class: row.class, passed: row.failures.length === 0, failures: [...row.failures], union: row.union,
+  reasons: row.reasons?.union ?? null, recovery: row.recovery?.union ?? null,
+  thresholds: row.thresholds.rows.map(r => ({ metric: r.metric, numerator: r.numerator, denominator: r.denominator, fraction: r.fraction, limit: r.limit, passed: r.passed })),
+  faces: row.faces ?? null });
+export function visualVerdict(rows) {
+  for (const row of rows) if (!REQUIRED_VISUAL_SCENES.includes(row.id) && !DIAGNOSTIC_VISUAL_SCENES.includes(row.id)) throw new RangeError(`scene ${row.id} is neither required nor diagnostic`);
+  const byId = new Map(rows.map(row => [row.id, row])), requiredFailures = [];
+  for (const id of REQUIRED_VISUAL_SCENES) {
+    const row = byId.get(id);
+    if (!row) requiredFailures.push(`${id}: not measured`);
+    else for (const failure of row.failures) requiredFailures.push(`${id}: ${failure}`);
+  }
+  return { passed: requiredFailures.length === 0, requiredFailures,
+    required: REQUIRED_VISUAL_SCENES.filter(id => byId.has(id)).map(id => sceneSummary(byId.get(id))),
+    diagnostic: { label: VISUAL_DIAGNOSTIC_LABEL, gates: false, scenes: DIAGNOSTIC_VISUAL_SCENES.filter(id => byId.has(id)).map(id => sceneSummary(byId.get(id))) } };
 }

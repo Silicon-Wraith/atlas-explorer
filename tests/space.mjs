@@ -11,7 +11,7 @@
 // separately reported portability experiment, never gated); B06 registers `recovery`; B08 registers
 // `numerics` (the field kernels against B04's frozen matrix); B10 registers `rendering` (tracing, normals and
 // picking against B04's ray strata and anchors) and B11 adds its shading, accumulation, display and product-set
-// checks to that group; B11b adds the six-scene visual acceptance to it (and a diagnostic `visual` group that runs it alone, never
+// checks to that group; B11b adds the visual acceptance to it (six scenes rendered; five required and the quaternion diagnostic, plan rev 5.2) (and a diagnostic `visual` group that runs it alone, never
 // gated); B14 registers `shell` (the Space workspace in the application: `space-interaction`). The spike document is written only after the run passed, its report was
 // persisted and every page, context and browser was drained and closed.
 import './support/entry-guard.mjs';
@@ -502,7 +502,7 @@ export const RECOVERY_PASSES = Object.freeze([
   'Presentation renders the display texture to the preferred canvas format at the output size without a second transfer function',
   'A real device loss through the test adapter settles outstanding tickets interrupted, marks the backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a new epoch',
   'Configuration failure keeps the previous target set usable',
-  'A 4K target set allocates within the cap at 72 bytes per pixel and is reclaimed after the last ticket retires',
+  'A 4K target set allocates within the cap at 76 bytes per pixel and is reclaimed after the last ticket retires',
 ]);
 
 async function recoverySetupInPage() {
@@ -2178,13 +2178,19 @@ async function runVisualAcceptance({ page, check }) {
     }
     row.passed = row.failures.length === 0; row.elapsedMs = Date.now() - started;
     rows.push(row);
-    console.log(`VISUAL ${sceneSpec.id}: ${row.passed ? 'pass' : 'FAIL'} ${JSON.stringify({ union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures }).slice(0, 2400)}`);
+    console.log(`VISUAL ${sceneSpec.id}${va.DIAGNOSTIC_VISUAL_SCENES.includes(sceneSpec.id) ? ' (diagnostic)' : ''}: ${row.passed ? 'pass' : va.DIAGNOSTIC_VISUAL_SCENES.includes(sceneSpec.id) ? 'over thresholds' : 'FAIL'} ${JSON.stringify({ union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures }).slice(0, 2400)}`);
   }
-  report.push({ name: 'Visual acceptance scenes (recorded; plan rev 5.0 B11b)', fixture: fixture.version, settings: fixture.settings, thresholds: va.VISUAL_THRESHOLDS, faceCriterion: va.FACE_NORMAL_CRITERION,
-    scenes: rows.map(row => ({ ...row, perSample: row.perSample })) });
+  const verdict = va.visualVerdict(rows), recorded = new Map(rows.map(row => [row.id, { ...row, perSample: row.perSample }]));
+  report.push({ name: 'Visual acceptance scenes (recorded; plan rev 5.0 B11b; rev 5.2 five required)', fixture: fixture.version, settings: fixture.settings, thresholds: va.VISUAL_THRESHOLDS, faceCriterion: va.FACE_NORMAL_CRITERION,
+    required: va.REQUIRED_VISUAL_SCENES, scenes: va.REQUIRED_VISUAL_SCENES.filter(id => recorded.has(id)).map(id => recorded.get(id)) });
+  // Plan rev 5.2 (user decision 2026-10-22): the quaternion, measured against the unchanged thresholds; never gates.
+  report.push({ name: `Visual acceptance diagnostic: quaternion, ${va.VISUAL_DIAGNOSTIC_LABEL} (recorded; never gated)`, label: va.VISUAL_DIAGNOSTIC_LABEL, gates: false,
+    fixture: fixture.version, thresholds: va.VISUAL_THRESHOLDS, summary: verdict.diagnostic.scenes, scenes: va.DIAGNOSTIC_VISUAL_SCENES.filter(id => recorded.has(id)).map(id => recorded.get(id)) });
+  for (const scene of verdict.diagnostic.scenes) console.log(`VISUAL DIAGNOSTIC ${scene.id} (${va.VISUAL_DIAGNOSTIC_LABEL}): ${scene.passed ? 'within thresholds' : 'over thresholds'} ${scene.thresholds.map(r => `${r.metric} ${r.numerator}/${r.denominator} = ${(100 * r.fraction).toFixed(2)}%`).join(', ')}`);
   check(va.VISUAL_ACCEPTANCE_PASS, () => {
-    for (const row of rows) assert.deepEqual(row.failures, [], `${row.id}: ${row.failures.join('; ')}`);
-    return { scenes: rows.map(row => ({ id: row.id, union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null, thresholds: row.thresholds.rows.map(r => `${r.metric} ${r.numerator}/${r.denominator}`), faces: row.faces && strip(row.faces, 'worst') })) };
+    assert.deepEqual(verdict.requiredFailures, [], verdict.requiredFailures.join('; '));
+    const brief = scene => ({ id: scene.id, union: scene.union, reasons: scene.reasons, recovery: scene.recovery, thresholds: scene.thresholds.map(r => `${r.metric} ${r.numerator}/${r.denominator}`), faces: scene.faces && strip(scene.faces, 'worst') });
+    return { scenes: verdict.required.map(brief), diagnostic: { label: verdict.diagnostic.label, gates: false, scenes: verdict.diagnostic.scenes.map(scene => ({ ...brief(scene), passed: scene.passed, failures: scene.failures })) } };
   });
   return rows;
 }
@@ -2901,7 +2907,7 @@ async function runRendering({ page }) {
     return details;
   });
 
-  // B11b: the six frozen scenes (a required pass of this group).
+  // B11b: the six frozen scenes; five gate and the quaternion is diagnostic (plan rev 5.2).
   await runVisualAcceptance({ page, check });
 
   // Representative images for manual review (recorded only; rgba8 display bytes, base64).
