@@ -86,6 +86,9 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   let lastPublication = null, lastReport = null, pendingStatus = false, allocationFailure = null, budgetNotice = null;
   let cost = { scale: 1, sampleCap: null };
   let cpuCamera = null, effectiveCamera = null;
+  // B14-r2 F2: an activation commits only on a presentation of the current generation made while that
+  // activation is current; `reveal` is its waiter, settled by a presentation, a failure or deactivation.
+  let reveal = null, lastPresented = null;
   const requests = new Map(), publishListeners = new Set(), presentListeners = new Set();
   const liveGeneration = () => ({ deviceEpoch: backend?.currentEpoch() ?? 0, viewRevision, geometryRevision, appearanceRevision });
 
@@ -145,7 +148,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     if (requests.size > 64) requests.delete(requests.keys().next().value);
     job.done.then(result => {
       if (currentJob === job) currentJob = null;
-      if (result.outcome === 'failed' && result.errorCode !== 'allocation-failed') showRecovery(`The view could not be rendered: ${result.reason}`);
+      if (result.outcome === 'failed' && result.errorCode !== 'allocation-failed') { failReveal(`the view could not be rendered: ${result.reason}`); showRecovery(`The view could not be rendered: ${result.reason}`); }
       updateIndicators();
     });
   }
@@ -180,11 +183,18 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     scheduler = createScheduler({ clock: now, makeAdmission: createAdmission, setTimer: (fn, ms) => setTimeout(fn, ms), clearTimer: id => clearTimeout(id) });
     renderer = createSpaceRenderer({ backend, scheduler, clock: now, viewId: SPACE_VIEW_ID, versions: VERSIONS, pipelineSet: productPipelineSet() });
     renderer.onPublish(publication => onPublish(publication));
-    renderer.onPresent(event => { for (const listener of presentListeners) { try { listener(event); } catch { /* isolate observers */ } } });
+    renderer.onPresent(event => { onPresentation(event); for (const listener of presentListeners) { try { listener(event); } catch { /* isolate observers */ } } });
     renderer.onReport(report => { lastReport = report; });
     renderer.onStatus(status => { if (typeof status.pending === 'boolean') pendingStatus = status.pending; updateIndicators(); });
     recovery = createRecovery({ backend, renderer, scheduler, clock: now, onNotice: notice => onNotice(notice) });
   }
+  function onPresentation(event) {
+    lastPresented = event.identity ?? null;
+    if (reveal && active && activation === reveal.token && sameGeneration(lastPresented?.generation, liveGeneration())) settleReveal({ outcome: 'activated' });
+  }
+  function settleReveal(result) { const waiter = reveal; reveal = null; waiter?.resolve(Object.freeze(result)); }
+  function failReveal(reason) { if (reveal) settleReveal({ outcome: 'unavailable', reason }); }
+  function presented() { return !dirty && Boolean(lastPresented) && sameGeneration(lastPresented.generation, liveGeneration()); }
   function onPublish(publication) {
     const request = requests.get(publication.requestId);
     lastPublication = Object.freeze({ ...publication, sceneHash: request?.sceneHash ?? null, camera: request?.sceneSnapshot.camera ?? null,
@@ -210,12 +220,14 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
         else { dirty = true; wantFrame(); }
         break;
       case 'stopped':
+        failReveal(`rendering stopped: ${notice.message ?? notice.reason}`);
         if (notice.reason === 'repeated-device-loss') showRecovery('Rendering stopped after repeated graphics device loss. The scene is kept; retry when ready.', true);
         else if (prewarm) showRecovery(`Rendering stopped: ${notice.message ?? notice.reason}`, true);
         break;
-      case 'allocation-failed': showAllocationFailure(notice); break;
-      case 'budget-exceeded': showBudget(notice); break;
-      case 'failed': showRecovery(`The view could not be rendered: ${notice.result?.reason ?? 'failed'}`); break;
+      // Both need the viewer's explicit choice, which lives in the Space panel: Space is shown to offer it.
+      case 'allocation-failed': showAllocationFailure(notice); settleReveal({ outcome: 'activated', presented: false }); break;
+      case 'budget-exceeded': showBudget(notice); settleReveal({ outcome: 'activated', presented: false }); break;
+      case 'failed': failReveal(`the view could not be rendered: ${notice.result?.reason ?? 'failed'}`); showRecovery(`The view could not be rendered: ${notice.result?.reason ?? 'failed'}`); break;
       default: break;
     }
     updateIndicators();
@@ -311,8 +323,18 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     }
     if (activation !== token || destroyed) return Object.freeze({ outcome: 'superseded' });
     if (active) return Object.freeze({ outcome: 'activated' });
-    unavailableReason = null; // B14-F7: a successful activation clears an earlier failure's reason
     enable();
+    // B14-r2 F2: the switcher reveals Space only on this activation's first current presentation.
+    const outcome = presented() ? Object.freeze({ outcome: 'activated' }) : await new Promise(resolve => { reveal = { token, resolve }; });
+    if (activation !== token || destroyed) return Object.freeze({ outcome: 'superseded' });
+    if (outcome.outcome !== 'activated') {
+      deactivate();
+      unavailableReason = outcome.reason;
+      showUnavailable(unavailableReason);
+      return outcome;
+    }
+    unavailableReason = null; // B14-F7: a successful activation clears an earlier failure's reason
+    hideUnavailable();
     return Object.freeze({ outcome: 'activated' });
   }
   // Admission closes first, then picks and pending activation are invalidated; navigation settles
@@ -321,6 +343,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   // is marked hidden in the scheduler, never preempted.
   function deactivate() {
     activation = null;
+    settleReveal({ outcome: 'superseded' });
     if (!active) return;
     active = false;
     if (frame !== null) { cancelFrame(frame); frame = null; }

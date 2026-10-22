@@ -2543,11 +2543,13 @@ async function runShell({ page }) {
       const observer = new MutationObserver(() => { if (!status.hidden && status.textContent) { texts.push(status.textContent); screens.push(screen()); } });
       observer.observe(status, { childList: true, characterData: true, subtree: true, attributes: true });
       const fresh = { factoryUsed: atlas.space.state.backendCreated, workspace: atlas.workspaces.current() };
+      let presents = 0; const unsubscribe = atlas.space.onPresent(() => { presents++; });
       const started = performance.now(), switched = await atlas.workspaces.switchTo('space');
+      const atReveal = { presents, published: Boolean(atlas.space.lastPublication) }; unsubscribe();
       const activatedMs = performance.now() - started;
       observer.disconnect();
       return { fresh, switched, activatedMs, texts, screens, prewarm: atlas.space.state.prewarm, eligible: atlas.space.state.eligible, visible: document.body.dataset.workspace,
-        pendingAfter: document.body.dataset.workspacePending ?? null };
+        pendingAfter: document.body.dataset.workspacePending ?? null, atReveal };
     }, undefined, 'first switch to Space', LIMITS.deep);
     assert.equal(result.fresh.factoryUsed, false, 'a fresh start acquired no Space device');
     assert.equal(result.switched.outcome, 'activated', `Space activated: ${JSON.stringify(result.switched)}`);
@@ -2556,6 +2558,7 @@ async function runShell({ page }) {
     assert.ok(preparing.length > 0 && preparing.every(entry => entry.workspace === 'plane' && entry.pending === 'space' && entry.plane !== 'none' && entry.statusShown),
       `Plane stayed on screen with the preparation status shown over it: ${JSON.stringify(preparing)}`);
     assert.deepEqual([result.visible, result.pendingAfter], ['space', null], 'Space is shown once it can present');
+    assert.ok(result.atReveal.presents >= 1 && result.atReveal.published, `Space was shown only after its first presentation: ${JSON.stringify(result.atReveal)}`);
     assert.equal(result.prewarm?.ok, true, `the product set prewarmed: ${JSON.stringify(result.prewarm)}`);
     await spaceIdle(page, 'bulb overview');
     const after = await ev(page, async () => {

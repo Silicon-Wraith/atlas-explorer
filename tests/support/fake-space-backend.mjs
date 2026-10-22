@@ -10,7 +10,8 @@ const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
 export function createDrivenFakeBackend({ clock = () => performance.now(), limits = {}, schedule = fn => setTimeout(fn, 0) } = {}) {
   const fake = createFakeBackend({ clock, limits });
-  let auto = true, acquisitionGate = null, failAcquisition = null, acquisitions = 0, pickDepth = null;
+  let auto = true, acquisitionGate = null, failAcquisition = null, acquisitions = 0, pickDepth = null, holdPresents = false;
+  const heldPresents = [];
   const held = [];
   const drive = ticket => { if (auto) schedule(() => fake.complete(ticket)); else held.push(ticket); return ticket; };
   const backend = {
@@ -36,7 +37,7 @@ export function createDrivenFakeBackend({ clock = () => performance.now(), limit
       }
       return drive(fake.readback(desc, options));
     },
-    present: (desc, options) => drive(fake.present(desc, options)),
+    present: (desc, options) => { const ticket = fake.present(desc, options); if (holdPresents) { heldPresents.push(ticket); return ticket; } return drive(ticket); },
   };
   // Test controls (outside BACKEND_METHODS).
   backend.control = Object.freeze({
@@ -48,6 +49,11 @@ export function createDrivenFakeBackend({ clock = () => performance.now(), limit
     resume() { auto = true; for (const ticket of held.splice(0)) schedule(() => fake.complete(ticket)); },
     heldTickets: () => held.length,
     setPickDepth(depth) { pickDepth = depth; },
+    // Presentation control (B14-F2): presents are held until released, or a held one is failed.
+    holdPresentation() { holdPresents = true; },
+    releasePresentation() { holdPresents = false; for (const ticket of heldPresents.splice(0)) drive(ticket); },
+    failHeldPresentation(message = 'injected presentation failure') { holdPresents = false; for (const ticket of heldPresents.splice(0)) schedule(() => fake.fail(ticket, new Error(message))); },
+    heldPresentations: () => heldPresents.length,
   });
   return Object.freeze(backend);
 }

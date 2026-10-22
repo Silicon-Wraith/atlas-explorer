@@ -20,9 +20,8 @@
 /* B14: the workspace switcher and the Space workspace. Plane's elements are untouched; the inactive workspace is hidden. */
 .workspace-switcher{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}.workspace-switcher button{font-size:11px;padding:7px 11px;color:var(--muted)}.workspace-switcher button[aria-pressed=true]{color:var(--text);background:rgba(239,190,124,.16)}
 .space-workspace{position:absolute;inset:0;display:none}body[data-workspace=space] .space-workspace{display:block}
-/* B14-F2 (spec §15): while Space prepares, Plane stays visible with its input closed; only the switcher and Space's status are live. */
+/* B14-F2 (spec §15): while Space prepares, Plane stays visible (its regions inert, set by Plane) and Space shows only its status. */
 body[data-workspace-pending=space]:not([data-workspace=space]) .space-workspace{display:block;pointer-events:none}body[data-workspace-pending=space]:not([data-workspace=space]) .space-workspace>:not(.space-status){visibility:hidden}
-body[data-workspace-pending] #observatory>:not(.topbar):not(.space-workspace):not(.toast),body[data-workspace-pending] .header-actions>:not(#workspace-switcher),body[data-workspace-pending] .brand{pointer-events:none}
 body[data-workspace=space] #fractal-surface,body[data-workspace=space] .intro,body[data-workspace=space] #control-panel,body[data-workspace=space] .navigation:not(.space-navigation),body[data-workspace=space] .navigation-hint,body[data-workspace=space] #destinations,body[data-workspace=space] .statusbar,body[data-workspace=space] #tour-status,body[data-workspace=space] #share-button,body[data-workspace=space] #export-button,body[data-workspace=space] #cinema-button,body[data-workspace=space] #settings-button,body[data-workspace=space] .plane-only,body[data-workspace=space] .exit-cinema{display:none!important}
 #space-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;outline:none;background:#05090d}
 .space-workspace .navigation.space-navigation{bottom:48px}

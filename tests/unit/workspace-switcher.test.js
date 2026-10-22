@@ -228,3 +228,105 @@ test('a failed first-use preparation leaves Plane visible and reports the failur
     assert.equal(realPlane.isActive(), true, 'Plane is active again');
   } finally { switcher.destroy(); space.destroy(); realPlane.destroy(); }
 });
+
+// B14-r2 F2 (spec §15): Space becomes the visible workspace only on a presentation from the current
+// activation; until then Plane stays on screen, and cancellation or failure leaves it there.
+function presentingRig({ holdPresents = true } = {}) {
+  const toasts = [], shell = fakeShell(browser.document, { toasts });
+  let backend;
+  const frames = new Map(); let id = 0;
+  const plane = createPlaneWorkspace({ shell, discoveries: stubDiscoveries() });
+  const space = createSpaceWorkspace({ shell, backendFactory: ({ clock }) => { backend = createDrivenFakeBackend({ clock }); if (holdPresents) backend.control.holdPresentation(); return backend; },
+    clock: () => performance.now(), env: { requestFrame: fn => { frames.set(++id, fn); return id; }, cancelFrame: n => frames.delete(n), viewportSize: () => ({ width: 16, height: 8 }), getGamepads: () => [] } });
+  const pump = setInterval(() => { const due = [...frames.values()]; frames.clear(); for (const fn of due) fn(performance.now()); }, 2);
+  const presents = [];
+  space.inspection.onPresent(event => presents.push(event));
+  const switcher = createWorkspaceSwitcher({ root: browser.document, workspaces: { plane, space }, initial: 'plane', toast: shell.toast });
+  const until = async (predicate, ms = 2000) => { const end = performance.now() + ms; while (!predicate()) { if (performance.now() > end) assert.fail('condition not reached'); await sleep(2); } };
+  return { plane, space, switcher, toasts, presents, until, get backend() { return backend; },
+    destroy() { clearInterval(pump); switcher.destroy(); space.destroy(); plane.destroy(); } };
+}
+
+test('Space becomes visible only after a presentation from the current activation', async () => {
+  const h = presentingRig();
+  const body = browser.document.body;
+  try {
+    await h.switcher.ready;
+    let settled = false;
+    const toSpace = h.switcher.switchTo('space').then(result => { settled = true; return result; });
+    await h.until(() => h.backend?.control.heldPresentations() > 0);
+    assert.equal(h.space.inspection.state.prepared, true, 'preparation finished');
+    assert.equal(settled, false, 'the switch waits for the first presentation');
+    assert.equal(body.dataset.workspace, 'plane', 'Plane stays visible until Space presents');
+    assert.equal(h.presents.length, 0);
+    h.backend.control.releasePresentation();
+    assert.deepEqual(await toSpace, { activeId: 'space', outcome: 'activated' });
+    assert.ok(h.presents.length >= 1, 'Space presented before it became visible');
+    assert.equal(body.dataset.workspace, 'space');
+    assert.ok(h.space.inspection.lastPublication, 'Space shows a publication');
+  } finally { h.destroy(); }
+});
+
+test('switching back before the first presentation keeps Plane and a stale presentation never reveals Space', async () => {
+  const h = presentingRig();
+  const body = browser.document.body;
+  try {
+    await h.switcher.ready;
+    const toSpace = h.switcher.switchTo('space');
+    await h.until(() => h.backend?.control.heldPresentations() > 0);
+    assert.deepEqual(await h.switcher.switchTo('plane'), { activeId: 'plane', outcome: 'activated' });
+    h.backend.control.releasePresentation();
+    assert.equal((await toSpace).outcome, 'superseded');
+    await sleep(30);
+    assert.equal(body.dataset.workspace, 'plane', 'the late presentation did not reveal Space');
+    assert.equal(h.switcher.current(), 'plane');
+    assert.equal(h.space.inspection.state.active, false);
+    assert.equal(h.plane.isActive(), true);
+  } finally { h.destroy(); }
+});
+
+test('a render failure before the first presentation leaves Plane visible and reports it', async () => {
+  const h = presentingRig();
+  const body = browser.document.body;
+  try {
+    await h.switcher.ready;
+    const toSpace = h.switcher.switchTo('space');
+    await h.until(() => h.backend?.control.heldPresentations() > 0);
+    h.backend.control.failHeldPresentation('injected presentation failure');
+    const result = await toSpace;
+    assert.deepEqual([result.activeId, result.outcome], ['plane', 'unavailable'], JSON.stringify(result));
+    assert.equal(body.dataset.workspace, 'plane');
+    assert.ok(h.toasts.some(text => /^Space unavailable: .*injected presentation failure/.test(text)), `reported: ${h.toasts.join(' | ')}`);
+    assert.equal(h.plane.isActive(), true);
+    assert.equal(h.space.inspection.state.active, false, 'Space is not left active behind Plane');
+  } finally { h.destroy(); }
+});
+
+// B14-r2 F9: the Plane held on screen during preparation is inert: no keyboard focus, no activation.
+test('the Plane held during Space preparation is inert and releases focus; cancel restores it', async () => {
+  const toasts = [], shell = fakeShell(browser.document, { toasts });
+  let backend;
+  const plane = createPlaneWorkspace({ shell, discoveries: stubDiscoveries() });
+  const space = createSpaceWorkspace({ shell, backendFactory: ({ clock }) => { backend = createDrivenFakeBackend({ clock }); backend.control.holdAcquisition(); return backend; },
+    clock: () => performance.now(), env: { requestFrame: () => 0, cancelFrame() {}, viewportSize: () => ({ width: 8, height: 4 }), getGamepads: () => [] } });
+  const switcher = createWorkspaceSwitcher({ root: browser.document, workspaces: { plane, space }, initial: 'plane', toast: shell.toast });
+  const $ = selector => browser.document.querySelector(selector);
+  try {
+    await switcher.ready;
+    $('#control-panel').append($('#cycle-button'));
+    $('#cycle-button').focus();
+    const toSpace = switcher.switchTo('space');
+    await sleep(5);
+    assert.equal($('#control-panel').inert, true, 'the Plane controls are inert while held');
+    assert.equal($('#fractal-surface').inert, true, 'the Plane surface is inert while held');
+    assert.notEqual(browser.document.activeElement, $('#cycle-button'), 'focus left the held Plane control');
+    globalThis.dispatchEvent({ type: 'keydown', key: 'r', target: browser.document.body, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false });
+    $('#cycle-button').onclick?.();
+    assert.notEqual($('#cycle-button').getAttribute('aria-pressed'), 'true', 'a held Plane control cannot start the palette animation');
+    await switcher.switchTo('plane');
+    backend.control.releaseAcquisition();
+    assert.equal((await toSpace).outcome, 'superseded');
+    assert.equal($('#control-panel').inert, false, 'cancel restores Plane input');
+    assert.equal($('#fractal-surface').inert, false);
+  } finally { switcher.destroy(); space.destroy(); plane.destroy(); }
+});

@@ -290,6 +290,7 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   for (const id of ['#phase', '#frequency', '#detail']) $(id).addEventListener('change', () => commitGesture('slider'));
   $('#relief').addEventListener('change', event => { applyAction([{ type: 'setAppearance', patch: { relief: Number(event.target.checked) } }], 'edit'); });
   $('#cycle-button').onclick = () => {
+    if (!active) return;
     cycle = !cycle; $('#cycle-button').setAttribute('aria-pressed', String(cycle));
     if (!cycle) commitGesture('animation');
     if (cycle && !tour) requestAnimationFrame(animate);
@@ -329,7 +330,8 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
     $('#tour-status').hidden = true;
     $('#tour-button').innerHTML = `${icon('play')} Take a journey <span class="arrow">↗</span>`;
   }
-  $('#tour-button').onclick = startTour;
+  // Automation never starts while Plane is inactive (B14-r2 F9; the regions are also inert then).
+  $('#tour-button').onclick = () => { if (active) startTour(); };
   $('#stop-tour').onclick = stopTour;
 
   // Pointer, wheel, touch and key navigation (identical arithmetic, spec §4.3). The first pointer
@@ -602,9 +604,20 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   // gesture once), forget captured pointers, settle any open gesture, release keyboard focus and
   // detach the global listeners. activate: re-attach them and flush at most one current-state render
   // when the image is stale (an edit or a resize while hidden); stopped automation stays stopped.
+  // B14-r2 F9: Plane's own regions (the ones Space hides). While Plane is inactive, including while it
+  // stays on screen during Space's preparation, they are inert: no focus, keyboard or pointer activation.
+  const PLANE_REGION_IDS = ['#fractal-surface', '#control-panel', '#destinations', '#tour-status', '#share-button', '#export-button', '#cinema-button', '#settings-button', '#exit-cinema'];
+  const PLANE_REGION_CLASSES = '.intro, .navigation:not(.space-navigation), .navigation-hint, .statusbar, .plane-only';
+  function planeRegions() { return [...new Set([...PLANE_REGION_IDS.map(id => $(id)).filter(Boolean), ...(document.querySelectorAll?.(PLANE_REGION_CLASSES) ?? [])])]; }
+  function setInert(value) {
+    const regions = planeRegions(), focused = document.activeElement;
+    if (value && focused && regions.some(region => region === focused || region.contains?.(focused))) focused.blur?.();
+    for (const region of regions) region.inert = value;
+  }
   function deactivate() {
     if (!active) return;
     active = false;
+    setInert(true);
     stopTour();
     if (cycle) { cycle = false; $('#cycle-button').setAttribute('aria-pressed', 'false'); commitGesture('animation'); }
     navigation?.reset();
@@ -616,6 +629,7 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   function activate() {
     if (active) return Object.freeze({ outcome: 'activated' });
     active = true;
+    setInert(false);
     for (const [type, listener] of globalListeners) addEventListener(type, listener);
     if (hiddenSize !== `${innerWidth}x${innerHeight}`) { geometryRevision++; dirty = true; }
     if (dirty) automated(() => requestRender());

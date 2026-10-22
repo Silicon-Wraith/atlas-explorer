@@ -24,6 +24,7 @@ const pass = (name, details = {}) => { report.push({ name, ...details }); consol
 export const PASS_UNAVAILABLE = 'Space reports unavailable without WebGPU and Plane keeps working';
 export const PASS_ROUND_TRIP = 'Switching to Space and back preserves the Plane scene and both histories';
 export const PASS_LINKS = 'A share link received while Space is active restores Plane or is reported';
+export const PASS_HELD = 'Plane held during Space preparation is inert to the keyboard and stays until Space first presents';
 // B14-F2 (spec §15): what is on screen while a switch is pending.
 const SAMPLE_SCREEN = `() => ({ workspace: document.body.dataset.workspace ?? null, pending: document.body.dataset.workspacePending ?? null,
   plane: getComputedStyle(document.querySelector('#fractal-surface')).display,
@@ -188,6 +189,49 @@ try {
     assert.equal(result.invalid.unchanged, true, 'an invalid link changes neither investigation nor any history');
     assert.deepEqual(errors, [], `no runtime errors: ${errors.join(' | ')}`);
     pass(PASS_LINKS, result);
+    await closeDrained(page);
+  }
+
+  {
+    // B14-r2 F2 and F9: the held Plane is inert (no keyboard focus or activation) and Space is shown
+    // only on its first presentation; switching back restores Plane input.
+    const { page, errors } = await openPage(browser);
+    await ev(page, async () => {
+      const { createDrivenFakeBackend } = await import('/tests/support/fake-space-backend.mjs');
+      const fake = createDrivenFakeBackend({ clock: () => performance.now() });
+      fake.control.holdAcquisition(); fake.control.holdPresentation();
+      atlas.space.setBackend(fake); globalThis.__fake = fake;
+      document.querySelector('#cycle-button').focus();
+      globalThis.__toSpace = atlas.workspaces.switchTo('space').then(result => { globalThis.__switched = result; return result; });
+      await new Promise(done => setTimeout(done, 100));
+    }, undefined, 'hold Space preparation', LIMITS.deep);
+    const PLANE = '#fractal-surface, #control-panel, #destinations, #tour-status, #share-button, #export-button, #cinema-button, #settings-button, #exit-cinema, .intro, .navigation:not(.space-navigation), .navigation-hint, .statusbar';
+    const inPlane = () => page.evaluate(selector => { const el = document.activeElement; return el && el !== document.body ? Boolean(el.closest(selector)) : false; }, PLANE);
+    const held = { focusedInPlane: [await inPlane()] };
+    for (let i = 0; i < 12; i++) { await page.keyboard.press('Tab'); held.focusedInPlane.push(await inPlane()); }
+    await page.keyboard.press('Enter'); await page.keyboard.press('Space');
+    Object.assign(held, await ev(page, () => ({ cycle: document.querySelector('#cycle-button').getAttribute('aria-pressed'), inert: document.querySelector('#control-panel').inert,
+      workspace: document.body.dataset.workspace, switched: globalThis.__switched ?? null })));
+    const presenting = await ev(page, async () => {
+      globalThis.__fake.control.releaseAcquisition();
+      const end = performance.now() + 10000;
+      while (globalThis.__fake.control.heldPresentations() === 0 && performance.now() < end) await new Promise(done => setTimeout(done, 20));
+      const before = { workspace: document.body.dataset.workspace, switched: globalThis.__switched ?? null, prepared: atlas.space.state.prepared, held: globalThis.__fake.control.heldPresentations() };
+      globalThis.__fake.control.releasePresentation();
+      const switched = await globalThis.__toSpace;
+      return { before, switched, after: document.body.dataset.workspace, published: Boolean(atlas.space.lastPublication) };
+    }, undefined, 'first Space presentation', LIMITS.deep);
+    const restored = await ev(page, async () => { await atlas.workspaces.switchTo('plane'); return { inert: document.querySelector('#control-panel').inert, workspace: document.body.dataset.workspace }; });
+    assert.deepEqual(held.focusedInPlane.filter(Boolean), [], `keyboard focus never entered the held Plane: ${JSON.stringify(held.focusedInPlane)}`);
+    assert.notEqual(held.cycle, 'true', 'keyboard activation did not start the palette animation');
+    assert.equal(held.inert, true, 'the held Plane controls are inert');
+    assert.deepEqual([held.workspace, held.switched], ['plane', null], 'Plane stays while Space acquires');
+    assert.equal(presenting.before.prepared, true, 'Space finished preparing');
+    assert.deepEqual([presenting.before.workspace, presenting.before.switched], ['plane', null], `Plane stays until Space presents: ${JSON.stringify(presenting.before)}`);
+    assert.deepEqual([presenting.switched.outcome, presenting.after, presenting.published], ['activated', 'space', true], 'Space is shown on its first presentation');
+    assert.deepEqual([restored.inert, restored.workspace], [false, 'plane'], 'returning to Plane restores its input');
+    assert.deepEqual(errors, [], `no runtime errors: ${errors.join(' | ')}`);
+    pass(PASS_HELD, { held, presenting, restored });
     await closeDrained(page);
   }
   await writeReport(report);
