@@ -8,10 +8,11 @@ import { createSpaceRequest, spaceWorkspaceFields } from '../render-adapter.js';
 import { effectiveParameters, escapeRadius } from '../numerics/parameters.js';
 import { getModel } from '../models/registry.js';
 import { VIEW_MODES } from '../scene-adapter.js';
-import { mengerBoxData } from './webgpu/kernels.js';
+import { admitPointModel, decodePointResults, encodePoints, mengerBoxData, pointBounds, pointRegion,
+  pointsPipelineId, pointUniforms, sentinelResults, POINT_BATCH_PASS, POINT_RESULT_BYTES } from './webgpu/kernels.js';
 import { basis, encodeOrdinaryOrigin } from '../camera.js';
 import { appearanceKey, accumulationKey, sampleKey } from './keys.js';
-import { unpackStatus, unpackLightingStatus, STATUS_LABELS } from './status.js';
+import { unpackStatus, unpackLightingStatus, POINT_STATUS, STATUS_LABELS } from './status.js';
 import { assertBackend, BackendError, createAdmission, createBatch, createJobPlan, createPickRequest, createPipelineSet,
   sampleJitter, TARGET_LAYOUT_ID, TARGET_LAYOUT_V1, LIGHTING_BOUNDS_DEFAULT } from './backend.js';
 
@@ -174,7 +175,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     if (record.scheduled) scheduler.cancel(record.request.jobId);
   }
   function pipeline(pass, record, stage) {
-    const entry = pass === 'probe' ? 'probe' : pass === 'classify' ? 'evaluate_points' : pass === 'shade' && stage === 'diagnostic'
+    const entry = pass === 'probe' ? 'probe' : pass === 'shade' && stage === 'diagnostic'
       ? `diagnostic_${record.request.sceneSnapshot.appearance.viewMode}` : `${pass}_band`;
     const candidates = pipelines.descriptors.filter(item => item.kind === 'compute' && item.entryPoint === entry);
     // Until the product families are assembled, fixtures may use one descriptor per
@@ -225,7 +226,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       if (fields[field.name] === undefined) throw new BackendError('invalid-descriptor', `no renderer uniform for ${field.name}`);
       return [field.name, fields[field.name]];
     }));
-    return createBatch({ identity: identity(record.request), pipelineId: descriptor.pipelineId, pass: pass === 'classify' ? 'probe' : pass,
+    return createBatch({ identity: identity(record.request), pipelineId: descriptor.pipelineId, pass,
       region, sample: { sequence: sampling.sequence, seed: sampling.seed, index: sample },
       bounds: { pixels: region.width * region.height, iterations: quality.iteration.maxIterations, raySteps: quality.tracing.maxSteps,
         normalFieldSamples: quality.lighting.normalFieldSamples, shadowRays: quality.lighting.shadowRays,
@@ -363,7 +364,8 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     record.outstanding = (record.outstanding ?? 0) + 1; record.outstandingMax = Math.max(record.outstandingMax ?? 0, record.outstanding);
     let counted = true;
     const retire = () => { if (counted) { counted = false; record.outstanding--; } };
-    const discardAuxiliary = reason => {
+    const discardAuxiliary = error => {
+      const reason = String(error?.message ?? error);
       retire();
       try {
         return scheduler.discardAuxiliary(admission, { reason });
@@ -371,7 +373,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         // A false return means this lease is already retired or stale. Local
         // ownership must still settle; never retry, fabricate completion evidence
         // or fail the main job. Cleanup also covers synchronous notifications.
-        auxiliary.delete(operation.id); aux.done.resolve(stale());
+        auxiliary.delete(operation.id);
+        if (aux.propagateErrors) aux.done.reject(error instanceof Error ? error : new Error(reason));
+        else aux.done.resolve(stale());
       }
     };
     let ticket;
@@ -397,7 +401,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       }
     } catch (error) {
       retire();
-      if (aux) discardAuxiliary(error.message);
+      if (aux) discardAuxiliary(error);
       else { record.error = error; scheduler.failed(admission, error); }
       aux?.done.resolve(stale());
       if (aux) auxiliary.delete(operation.id);
@@ -430,7 +434,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           result = await ticket.result;
           if (!sameIdentity(result.identity, descriptor.identity)) {
             if (aux) {
-              discardAuxiliary('readback identity mismatch'); return;
+              discardAuxiliary(new BackendError('stale-epoch', 'readback identity mismatch')); return;
             }
             else throw new BackendError('invalid-descriptor', 'readback identity mismatch');
           }
@@ -452,7 +456,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         aux?.done.resolve(result ?? completion);
       } catch (error) {
         retire();
-        if (aux) discardAuxiliary(error.message);
+        if (aux) discardAuxiliary(error);
         else { record.error = error; scheduler.failed(admission, error); }
         aux?.done.resolve(stale());
       }
@@ -611,17 +615,26 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     record.cancellation ??= deferred();
     return { accepted: true, done: record.cancellation.promise };
   }
-  async function auxiliaryOperation(record, value, valid) {
+  async function auxiliaryOperation(record, value, valid, propagateErrors = false) {
     // Callers validate immediately before requesting each operation. Dispatch
     // rechecks after any admission wait; it must not submit a replaced snapshot.
     if (!record.scheduled) return stale();
     const operation = { id: `${record.request.jobId}/aux-${++auxSerial}`, dependsOn: [], ...value }, done = deferred();
-    auxiliary.set(operation.id, { done, record, valid });
+    auxiliary.set(operation.id, { done, record, valid, propagateErrors });
     try {
       const submitted = scheduler.requestAuxiliary(viewId, { jobId: record.request.jobId, priority: 'inspection', operation });
-      submitted.done.then(result => { if (result.outcome !== 'completed') { auxiliary.delete(operation.id); done.resolve(stale()); } });
+      submitted.done.then(result => {
+        if (result.outcome === 'completed') return;
+        auxiliary.delete(operation.id);
+        if (propagateErrors && !['cancelled', 'superseded', 'interrupted'].includes(result.outcome)) done.reject(new Error(result.reason ?? result.outcome));
+        else done.resolve(stale());
+      });
       pump(); return await done.promise;
-    } catch { auxiliary.delete(operation.id); return stale(); }
+    } catch (error) {
+      auxiliary.delete(operation.id);
+      if (propagateErrors) throw error;
+      return stale();
+    }
   }
   async function pick(value) {
     let input; try { input = createPickRequest(value); } catch { return stale(); }
@@ -646,23 +659,50 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   async function classifyEffectiveCamera(request) {
     const record = current;
     if (!classifiable(record) || !sameIdentity(identity(request), identity(record.request))) return stale();
-    const origin = encodeOrdinaryOrigin(request.sceneSnapshot.camera);
-    if (origin.unavailable) return { identity: identity(request), status: 'unresolved', detail: origin };
     const handles = [];
     try {
-      // Point transport is high.xyz, low.xyz, kappa, padding. Classification ABI:
-      // result word 0 is 1 only for proven exterior; zero/unknown stays unresolved.
-      const bytes = new Uint8Array(Float32Array.from([...origin.highF32, ...origin.lowF32, record.effective.kappa ?? 0, 0]).buffer);
-      const points = backend.allocate({ name: 'camera-points', bytes: 32, usage: 'storage', data: bytes }); handles.push(points); hold([points]);
-      const results = backend.allocate({ name: 'camera-results', bytes: 16, usage: 'storage' }); handles.push(results); hold([results]);
-      const evaluated = await auxiliaryOperation(record, { kind: 'batch', batch: batch(record, 'classify', { x: 0, y: 0, width: 1, height: 1 }, 0, request.quality, { handles: { points, results } }) }, () => classifiable(record));
+      const origin = encodeOrdinaryOrigin(request.sceneSnapshot.camera);
+      if (origin.unavailable) return { identity: identity(request), status: 'unresolved', detail: origin };
+      const model = admitPointModel(record.model.id, record.effective, record.request.quality.iteration.maxIterations);
+      const span = { first: 0, count: 1, pitch: 1 }, sampling = record.request.quality.sampling;
+      // B08 consumes one vec4<f32>, with kappa in uniforms. highF32 is the
+      // exact represented world position rounded directly to binary32 by B05;
+      // collapsing the anchor to Number or re-adding low can double-round ties.
+      const bytes = encodePoints([origin.highF32]);
+      const allocate = (name, data) => {
+        const handle = backend.allocate({ name, bytes: data.byteLength, usage: 'storage', data });
+        handles.push(handle); hold([handle]); return handle;
+      };
+      const points = allocate('camera-points', bytes), results = allocate('camera-results', sentinelResults(1));
+      // Every points variant statically binds MengerBox (32 bytes minimum).
+      // Classification owns its buffer even after the render job has released
+      // its model resources, and retains all three buffers through copy-out.
+      const boxes = allocate('camera-menger-boxes', model.modelId === 'menger' ? mengerBoxData(model.depth) : new Uint8Array(32));
+      const pointBatch = createBatch({ identity: identity(record.request), pipelineId: pointsPipelineId(model.modelId), pass: POINT_BATCH_PASS,
+        region: pointRegion(span), sample: { sequence: sampling.sequence, seed: sampling.seed, index: 0 },
+        bounds: pointBounds(model, span), uniforms: pointUniforms(model, span),
+        inputs: { points, results, menger_boxes: boxes }, outputs: { results } });
+      const evaluated = await auxiliaryOperation(record, { kind: 'batch', batch: pointBatch }, () => classifiable(record), true);
       if (evaluated.stale || !classifiable(record)) return stale();
       const result = await auxiliaryOperation(record, { kind: 'readback', descriptor: { identity: identity(request), source: results,
-        region: { x: 0, y: 0, width: 16, height: 1 }, fields: ['cameraClassification'] } }, () => classifiable(record));
+        region: { x: 0, y: 0, width: POINT_RESULT_BYTES, height: 1 }, fields: ['cameraClassification'] } }, () => classifiable(record), true);
       if (result.stale || !classifiable(record)) return stale();
       const data = new DataView(result.data.buffer, result.data.byteOffset, result.data.byteLength);
-      return deepFreeze({ identity: identity(request), status: data.getUint32(0, true) === 1 ? 'exterior' : 'unresolved', detail: { source: 'evaluate_points', code: data.getUint32(4, true) } });
-    } catch { return stale(); }
+      const point = decodePointResults(result.data, 1, model.modelId)[0];
+      // Match the CPU camera predicate (§13.3): escape alone is insufficient
+      // without a usable estimate; analytic validity alone does not mean exterior.
+      const exterior = data.getUint32(0, true) === POINT_STATUS.escaped && (point.status === 'valid'
+        ? point.applicability === 'exterior' && Number.isFinite(point.distance) && point.distance > 0
+        : point.status === 'escaped' && point.estimateAvailable && Number.isFinite(point.log2DE));
+      return deepFreeze({ identity: identity(request), status: exterior ? 'exterior' : 'unresolved', detail: { source: 'evaluate_points', result: point } });
+    } catch (error) {
+      // A failed inspection is visible while its snapshot is still current.
+      // Only actual invalidation, loss or backend unavailability is retryable staleness.
+      if (!classifiable(record) || ['stale-epoch', 'device-lost', 'unavailable'].includes(error?.code)) return stale();
+      return deepFreeze({ identity: identity(request), status: 'unresolved', detail: {
+        error: { code: String(error?.code ?? error?.name ?? 'Error'), message: String(error?.message ?? error) },
+      } });
+    }
     finally { release(handles); }
   }
   // Synchronous per-call accounting, in bytes. Consult the live viewport even if
