@@ -9,8 +9,9 @@ const MOVE_KEYS = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'Arro
 export function createFlight({ getCamera, setCamera, clock = () => performance.now(), onStart = () => {}, onStop = () => {} }) {
   const now = typeof clock === 'function' ? clock : () => clock.now();
   const keys = new Set();
+  let analog = {}, analogLookRate = Math.PI / 2;
   let active = false, speed = 1, last = null, lookX = 0, lookY = 0;
-  const clearInput = () => { keys.clear(); lookX = 0; lookY = 0; last = null; };
+  const clearInput = () => { keys.clear(); analog = {}; lookX = 0; lookY = 0; last = null; };
   function start() {
     if (active) return true;
     clearInput();
@@ -18,7 +19,8 @@ export function createFlight({ getCamera, setCamera, clock = () => performance.n
     last = now(); active = true;
     return true;
   }
-  // Flight exit reasons: escape, blur, hidden, stop-key, deactivate, history.
+  // Flight exit reasons: escape, blur, hidden, stop-key, deactivate, history,
+  // disconnect, input-suspended.
   // The workspace maps gestures' richer action kinds to history (gestures.js).
   // The reason is notification metadata, forwarded without runtime validation;
   // every stop clears demands immediately regardless of the supplied reason.
@@ -35,11 +37,11 @@ export function createFlight({ getCamera, setCamera, clock = () => performance.n
     last = Math.max(time, last);
     if (!elapsed) return false;
     const input = {
-      forward: held('KeyW', 'ArrowUp') - held('KeyS', 'ArrowDown'),
-      strafe: held('KeyD', 'ArrowRight') - held('KeyA', 'ArrowLeft'),
-      rise: held('KeyE') - held('KeyQ'),
-      yaw: -lookX * LOOK_RADIANS_PER_PIXEL / elapsed,
-      pitch: -lookY * LOOK_RADIANS_PER_PIXEL / elapsed,
+      forward: held('KeyW', 'ArrowUp') - held('KeyS', 'ArrowDown') + (analog.forward ?? 0),
+      strafe: held('KeyD', 'ArrowRight') - held('KeyA', 'ArrowLeft') + (analog.strafe ?? 0),
+      rise: held('KeyE') - held('KeyQ') + (analog.rise ?? 0),
+      yaw: -lookX * LOOK_RADIANS_PER_PIXEL / elapsed + (analog.yaw ?? 0) * analogLookRate,
+      pitch: -lookY * LOOK_RADIANS_PER_PIXEL / elapsed + (analog.pitch ?? 0) * analogLookRate,
     };
     lookX = 0; lookY = 0;
     if (Object.values(input).every(value => value === 0)) return false;
@@ -62,6 +64,14 @@ export function createFlight({ getCamera, setCamera, clock = () => performance.n
     pointerLook(dx, dy) {
       if (!active || !Number.isFinite(dx) || !Number.isFinite(dy)) return false;
       lookX += dx; lookY += dy; return true;
+    },
+    // Demands remain normalized; the optional angular rate lets the controller
+    // honour lookRadPerSec without coupling turning to translation speed.
+    setAnalogInput(input = {}, { lookRadPerSec = Math.PI / 2 } = {}) {
+      if (!Number.isFinite(lookRadPerSec) || lookRadPerSec < 0) throw new RangeError('analog look rate must be finite and nonnegative');
+      analogLookRate = lookRadPerSec;
+      analog = Object.fromEntries(['forward', 'strafe', 'rise', 'yaw', 'pitch'].map(axis =>
+        [axis, Number.isFinite(input?.[axis]) ? Math.max(-1, Math.min(1, input[axis])) : 0]));
     },
     setSpeed(localUnitsPerSecond) {
       if (!Number.isFinite(localUnitsPerSecond) || localUnitsPerSecond < FLIGHT_SPEED_LIMITS.min || localUnitsPerSecond > FLIGHT_SPEED_LIMITS.max) {
