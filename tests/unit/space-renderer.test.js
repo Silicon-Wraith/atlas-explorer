@@ -436,6 +436,10 @@ test('a report carries per-sample outcome metrics and pixelwise unions from the 
   assert.notEqual(masks.accumulationKey, h.publications[0].accumulationKey, 'the direct sample is a different identity');
   assert.deepEqual(masks.samples.map(x => [x.sample, x.hits, x.unavailableNormals, x.lightingUnresolved]), [[0, 3, 1, 0], [1, 2, 0, 2]]);
   assert.deepEqual(masks.union, { samples: 2, pixels: 4, hits: 3, nonMiss: 3, primaryUnresolved: 0, numericalFailures: 0, unavailableNormals: 1, lightingUnresolved: 2, shadowUnresolved: 1, aoUnresolved: 1, lightingNumericalFailures: 0 });
+  // B11b fix round 1: the reasons survive into the report, per sample and over the union.
+  assert.equal(masks.reasons.samples.length, 2);
+  assert.equal(masks.reasons.union.aoUnresolved.multiple + Object.entries(masks.reasons.union.aoUnresolved).filter(([k]) => k !== 'multiple').reduce((n, [, v]) => n + v, 0) >= 1, true, JSON.stringify(masks.reasons.union));
+  assert.equal(Object.values(masks.reasons.union.shadowUnresolved).reduce((n, v) => n + v, 0) >= 1, true);
   // The legacy last-sample counts use the same joint hit/normal mask.
   assert.equal(report.unavailableNormals, 0); assert.deepEqual(report.lightingFailures, { shadow: 1, ao: 1, both: 0 });
   // A later request starts its own masks: nothing of this job's samples enters it.

@@ -1,7 +1,7 @@
 // B11b: identity-, pixel- and sample-indexed outcome masks (plan rev 5.0 B11b "Files/interfaces/tests").
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createOutcomeMasks, OUTCOME_BITS, maskMetrics } from '../../src/space/render/outcome-masks.js';
+import { createOutcomeMasks, OUTCOME_BITS, maskMetrics, reasonMetrics } from '../../src/space/render/outcome-masks.js';
 import { packStatus, packLightingStatus } from '../../src/space/render/status.js';
 
 const B = OUTCOME_BITS;
@@ -75,4 +75,25 @@ test('a new accumulation identity or sample zero resets the union, and a stale i
   // Reset: an explicit reset forgets everything.
   masks.reset();
   assert.equal(masks.snapshot(), null);
+});
+
+test('outcome masks keep reason and subreason bits per pixel class, per sample and in the union', () => {
+  const masks = createOutcomeMasks({ width: 4, height: 1 });
+  const POINT = packStatus({ status: 2, reason: 1, subreason: 0, steps: 2 }), STAGNANT = packStatus({ status: 2, reason: 4, subreason: 2, steps: 9 });
+  const AO_ESTIMATE = packLightingStatus({ shadow: null, ao: { status: 2, reason: 2, subreason: 0 } });
+  const BOTH = packLightingStatus({ shadow: { status: 2, reason: 4, subreason: 1 }, ao: { status: 2, reason: 1, subreason: 0 } });
+  // Sample 0: pixel 0 point-budget primary; pixel 1 AO point-budget; pixel 2 shadow step-cap; pixel 3 a numerical AO
+  // failure (no reason). Sample 1: pixel 0 stagnation (field coordinate); pixel 1 AO estimate-unavailable; pixel 2
+  // shadow stagnation (ray parameter) and AO point-budget.
+  sample(masks, identity(0), { status: [POINT, HIT, HIT, HIT], normal: [false, true, true, true], lighting: [0, AO_UNRESOLVED, SHADOW_UNRESOLVED, AO_FAILED] });
+  sample(masks, identity(1), { status: [STAGNANT, HIT, HIT, HIT], normal: [false, true, true, true], lighting: [0, AO_ESTIMATE, BOTH, 0] });
+  const zero = { 'point-budget': 0, 'estimate-unavailable': 0, 'ray-step-budget': 0, 'stagnation/ray-parameter': 0, 'stagnation/field-coordinate': 0, unspecified: 0, multiple: 0 };
+  const { reasons } = masks.snapshot();
+  assert.deepEqual(reasons.samples[0], { primaryUnresolved: { ...zero, 'point-budget': 1 }, shadowUnresolved: { ...zero, 'ray-step-budget': 1 }, aoUnresolved: { ...zero, 'point-budget': 1 } });
+  assert.deepEqual(reasons.samples[1], { primaryUnresolved: { ...zero, 'stagnation/field-coordinate': 1 }, shadowUnresolved: { ...zero, 'stagnation/ray-parameter': 1 },
+    aoUnresolved: { ...zero, 'point-budget': 1, 'estimate-unavailable': 1 } });
+  // The union counts pixels per reason (a pixel failing for two reasons counts under both and under `multiple`).
+  assert.deepEqual(reasons.union, { primaryUnresolved: { ...zero, 'point-budget': 1, 'stagnation/field-coordinate': 1, multiple: 1 },
+    shadowUnresolved: { ...zero, 'ray-step-budget': 1, 'stagnation/ray-parameter': 1, multiple: 1 }, aoUnresolved: { ...zero, 'point-budget': 2, 'estimate-unavailable': 1, multiple: 1 } });
+  assert.deepEqual(reasonMetrics(masks.unionReasons()), reasons.union, 'the union reasons are a pure function of the per-pixel reason bits');
 });

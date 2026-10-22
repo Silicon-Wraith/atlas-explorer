@@ -128,7 +128,8 @@ export function traceUniforms({ modelId, camera, effective, region, internalSize
     alpha: 2 * Math.tan(camera.verticalFovDegrees * Math.PI / 360) / internalSize.height, ...limits, ...family(modelId, effective, limits.maxIterations) };
 }
 export const normalsUniforms = traceUniforms;
-// B00 batch bounds: the ray-step and iteration budgets; normals also declare their six field samples.
+// B00 batch bounds: the ray-step and iteration budgets; normals also declare their seven field samples (six stencil
+// endpoints plus the box and Menger one-sided fallback's lazily evaluated centre; rev 5.0 B00 amendment).
 export function traceBounds(region, profile, pass = 'trace') {
   return { pixels: region.width * region.height, raySteps: profile.maxSteps, iterations: profile.maxIterations,
     normalFieldSamples: pass === 'normals' ? NORMAL_FIELD_SAMPLES : 0, shadowRays: 0, shadowSteps: 0, aoSamples: 0 };

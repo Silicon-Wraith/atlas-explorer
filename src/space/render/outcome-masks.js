@@ -6,7 +6,7 @@
 //
 // Per-pixel bits. normalUnavailable is the joint mask "this sample hit and its normal is unavailable"; a miss or a
 // failed primary ray never counts as an unavailable normal. Lighting bits come from B00's packLightingStatus words.
-import { LIGHTING_FAILURE_FLAGS, RAY_STATUS } from './status.js';
+import { LIGHTING_FAILURE_FLAGS, RAY_STATUS, STATUS_LABELS } from './status.js';
 
 export const OUTCOME_BITS = Object.freeze({ hit: 1, miss: 2, primaryUnresolved: 4, primaryNumericalFailure: 8, normalUnavailable: 16,
   shadowUnresolved: 32, shadowNumericalFailure: 64, aoUnresolved: 128, aoNumericalFailure: 256 });
@@ -40,12 +40,38 @@ export function maskMetrics(bits, samples) {
   return m;
 }
 
+// Reasons (B11b fix round 1, Codex B11b-F2): every unresolved primary, shadow and AO outcome keeps its reason and
+// subreason, as one bit per reason in an 8-bit lane per pixel class (primary bits 0-5, shadow 8-13, AO 16-21), so a
+// pixel that fails for different reasons in different samples keeps each of them in the union. Numerical failures
+// carry no reason. Slot 5 ('unspecified') holds any other reason code, which the B00 contract never produces.
+export const REASON_SLOTS = Object.freeze([...STATUS_LABELS.reason.slice(1, 4), ...STATUS_LABELS.subreason.slice(1).map(s => `stagnation/${s}`), 'unspecified']);
+export const REASON_CLASSES = Object.freeze(['primaryUnresolved', 'shadowUnresolved', 'aoUnresolved']);
+const reasonSlot = (reason, subreason) => (reason >= 1 && reason <= 3 ? reason - 1 : reason === 4 && (subreason === 1 || subreason === 2) ? 2 + subreason : 5);
+// Pixels per reason in each class; `multiple` counts pixels with more than one reason (only possible in a union).
+export function reasonMetrics(lanes) {
+  const histograms = REASON_CLASSES.map(() => new Uint32Array(64));
+  for (let i = 0; i < lanes.length; i++) {
+    const v = lanes[i]; if (!v) continue;
+    histograms[0][v & 63]++; histograms[1][(v >>> 8) & 63]++; histograms[2][(v >>> 16) & 63]++;
+  }
+  return Object.fromEntries(REASON_CLASSES.map((name, c) => {
+    const out = Object.fromEntries([...REASON_SLOTS, 'multiple'].map(label => [label, 0]));
+    for (let v = 1; v < 64; v++) {
+      const n = histograms[c][v]; if (!n) continue;
+      REASON_SLOTS.forEach((label, k) => { if (v & (1 << k)) out[label] += n; });
+      if (v & (v - 1)) out.multiple += n;
+    }
+    return [name, out];
+  }));
+}
+
 export function createOutcomeMasks({ width, height }) {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) throw new RangeError('outcome masks need a positive integer size');
   const pixels = width * height, current = new Uint16Array(pixels), seen = new Uint8Array(pixels), union = new Uint16Array(pixels);
-  let key = null, open = null, closed = -1, samples = [];
-  function clear() { current.fill(0); seen.fill(0); }
-  function reset() { clear(); union.fill(0); key = null; open = null; closed = -1; samples = []; }
+  const currentReasons = new Uint32Array(pixels), unionReasons = new Uint32Array(pixels);
+  let key = null, open = null, closed = -1, samples = [], sampleReasons = [];
+  function clear() { current.fill(0); seen.fill(0); currentReasons.fill(0); }
+  function reset() { clear(); union.fill(0); unionReasons.fill(0); key = null; open = null; closed = -1; samples = []; sampleReasons = []; }
   function enter({ accumulationKey, sample }) {
     if (typeof accumulationKey !== 'string' || !Number.isInteger(sample) || sample < 0) throw new TypeError('an outcome-mask identity is {accumulationKey, sample}');
     if (open !== null && accumulationKey === key && sample === open) return;
@@ -87,10 +113,14 @@ export function createOutcomeMasks({ width, height }) {
             const status = word & 15;
             if (status > RAY_STATUS.numericalFailure) throw new RangeError('invalid ray status in an outcome mask');
             current[i] |= STATUS_BITS[status];
+            if (status === RAY_STATUS.unresolved) currentReasons[i] |= 1 << reasonSlot((word >>> 4) & 15, (word >>> 8) & 15);
           } else {
             // B00 packLightingStatus: shadow flag bit 0, status at bit 2; AO flag bit 1, status at bit 12.
             if (word & LIGHTING_FAILURE_FLAGS.shadow) current[i] |= ((word >>> 2) & 3) === RAY_STATUS.numericalFailure ? B.shadowNumericalFailure : B.shadowUnresolved;
             if (word & LIGHTING_FAILURE_FLAGS.ao) current[i] |= ((word >>> 12) & 3) === RAY_STATUS.numericalFailure ? B.aoNumericalFailure : B.aoUnresolved;
+            // Reason at status shift + 2, subreason at + 6 (shadow shift 2, AO shift 12).
+            if (word & LIGHTING_FAILURE_FLAGS.shadow && ((word >>> 2) & 3) === RAY_STATUS.unresolved) currentReasons[i] |= 1 << (8 + reasonSlot((word >>> 4) & 15, (word >>> 8) & 15));
+            if (word & LIGHTING_FAILURE_FLAGS.ao && ((word >>> 12) & 3) === RAY_STATUS.unresolved) currentReasons[i] |= 1 << (16 + reasonSlot((word >>> 14) & 15, (word >>> 18) & 15));
           }
         }
       }
@@ -107,16 +137,18 @@ export function createOutcomeMasks({ width, height }) {
         if (v & B.hit && !(v & NORMAL_RAW)) v |= B.normalUnavailable;
         current[i] = v & ~NORMAL_RAW;
         union[i] |= current[i];
+        unionReasons[i] |= currentReasons[i];
       }
       const metrics = { sample: open, ...maskMetrics(current) };
-      samples.push(metrics); closed = open; open = null; clear();
+      samples.push(metrics); sampleReasons.push(reasonMetrics(currentReasons)); closed = open; open = null; clear();
       return metrics;
     },
     snapshot() {
       if (key === null || !samples.length) return null;
-      return { accumulationKey: key, samples: samples.map(s => ({ ...s })), union: maskMetrics(union, samples.length) };
+      return { accumulationKey: key, samples: samples.map(s => ({ ...s })), union: maskMetrics(union, samples.length), reasons: { samples: structuredClone(sampleReasons), union: reasonMetrics(unionReasons) } };
     },
     unionBits() { return union.slice(); },
+    unionReasons() { return unionReasons.slice(); },
     reset,
   });
 }

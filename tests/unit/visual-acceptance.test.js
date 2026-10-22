@@ -108,3 +108,31 @@ test('the one-sided stencil prediction is central on faces away from edges, one-
   assert.ok(angleBetween(boxFace.normal, [c, s, 0]) < 1e-12);
   assert.equal(predictStencilNormal('box', world([0.5, 0.1, 0.0]), 0.01).expected, 'unavailable');
 });
+
+test('visual reason metrics keep the reason of every unresolved primary, shadow and AO outcome per pixel class', async () => {
+  const { vaReasonCode, vaReasonLanes, vaReasonMetrics, orBits32 } = await import('../support/visual-acceptance.mjs');
+  // Codes per class: primary bits 0-2, shadow 3-5, AO 6-8 (1 point-budget ... 6 unspecified).
+  assert.deepEqual([[1, 0], [2, 0], [3, 0], [4, 1], [4, 2], [4, 0], [0, 0]].map(([r, s]) => vaReasonCode(r, s)), [1, 2, 3, 4, 5, 6, 6]);
+  const s0 = vaReasonLanes(Uint32Array.from([0, 1, 1, 1 << 6, 2, 3 << 3]), 3), s1 = vaReasonLanes(Uint32Array.from([0, 5, 1, 2 << 6]), 3);
+  const zero = { 'point-budget': 0, 'estimate-unavailable': 0, 'ray-step-budget': 0, 'stagnation/ray-parameter': 0, 'stagnation/field-coordinate': 0, unspecified: 0, multiple: 0 };
+  assert.deepEqual(vaReasonMetrics(orBits32([s0, s1])), { primaryUnresolved: { ...zero, 'point-budget': 1, 'stagnation/field-coordinate': 1, multiple: 1 },
+    shadowUnresolved: { ...zero, 'ray-step-budget': 1 }, aoUnresolved: { ...zero, 'point-budget': 1, 'estimate-unavailable': 1, multiple: 1 } });
+});
+
+test('the stencil direction check rejects NaN, infinite and zero normals and NaN angles', async () => {
+  const { stencilDirectionError } = await import('../support/visual-acceptance.mjs');
+  assert.equal(stencilDirectionError([1, 5e-4, 0], [1, 0, 0], 1e-3), null);
+  assert.match(stencilDirectionError([1, 0.01, 0], [1, 0, 0], 1e-3).reason, /angle/);
+  for (const bad of [[NaN, 0, 1], [Infinity, 0, 0], [0, 0, 0]]) assert.match(stencilDirectionError(bad, [1, 0, 0], 1e-3).reason, /non-finite|zero/, JSON.stringify(bad));
+  assert.match(stencilDirectionError([1, 0, 0], [NaN, 0, 0], 1e-3).reason, /angle|non-finite/);
+});
+
+test('a lighting-only pixel shown magenta counts as magenta as well as a lost indication', async () => {
+  const { classifyFlaggedPixel } = await import('../support/visual-acceptance.mjs');
+  const tint = [41, 34, 18, 255], plain = [0, 0, 0, 255], magenta = [255, 0, 255, 255];
+  assert.deepEqual(classifyFlaggedPixel({ got: magenta, expected: tint, plain, lightingOnly: true }), { lost: true, magenta: true, tinted: false });
+  assert.deepEqual(classifyFlaggedPixel({ got: tint, expected: tint, plain, lightingOnly: true }), { lost: false, magenta: false, tinted: true });
+  assert.deepEqual(classifyFlaggedPixel({ got: plain, expected: plain, plain, lightingOnly: true }), { lost: true, magenta: false, tinted: false }, 'an invisible tint is lost');
+  // A primary-unresolved pixel is expected magenta: not a lighting-as-magenta failure.
+  assert.deepEqual(classifyFlaggedPixel({ got: magenta, expected: magenta, plain, lightingOnly: false }), { lost: false, magenta: false, tinted: false });
+});

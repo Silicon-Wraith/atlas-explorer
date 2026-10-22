@@ -37,6 +37,60 @@ export function orBits(list) {
   for (const bits of list) for (let i = 0; i < out.length; i++) out[i] |= bits[i];
   return out;
 }
+// Reasons (B11b fix round 1), this file's own layout. The page codes each unresolved outcome of one sample as
+// 1 point-budget, 2 estimate-unavailable, 3 ray-step-budget, 4 stagnation/ray-parameter, 5 stagnation/field-coordinate
+// or 6 unspecified, in 3 bits per class (primary 0-2, shadow 3-5, AO 6-8), and sends [pixel, codes] pairs for the
+// pixels with any code. Lanes hold one bit per reason, 8 bits per class, so a union keeps every reason of a pixel.
+export const VA_REASON_LABELS = Object.freeze(['point-budget', 'estimate-unavailable', 'ray-step-budget', 'stagnation/ray-parameter', 'stagnation/field-coordinate', 'unspecified']);
+const VA_REASON_CLASSES = ['primaryUnresolved', 'shadowUnresolved', 'aoUnresolved'];
+export const vaReasonCode = (reason, subreason) => (reason >= 1 && reason <= 3 ? reason : reason === 4 && (subreason === 1 || subreason === 2) ? 3 + subreason : 6);
+export function vaReasonLanes(pairs, pixels) {
+  const lanes = new Uint32Array(pixels);
+  for (let k = 0; k < pairs.length; k += 2) {
+    const codes = pairs[k + 1];
+    for (let c = 0; c < 3; c++) { const code = (codes >>> (3 * c)) & 7; if (code) lanes[pairs[k]] |= 1 << (8 * c + code - 1); }
+  }
+  return lanes;
+}
+export function orBits32(list) {
+  const out = new Uint32Array(list[0].length);
+  for (const bits of list) for (let i = 0; i < out.length; i++) out[i] |= bits[i];
+  return out;
+}
+export function vaReasonMetrics(lanes) {
+  const out = Object.fromEntries(VA_REASON_CLASSES.map(name => [name, Object.fromEntries([...VA_REASON_LABELS, 'multiple'].map(label => [label, 0]))]));
+  for (const v of lanes) {
+    if (!v) continue;
+    VA_REASON_CLASSES.forEach((name, c) => {
+      const lane = (v >>> (8 * c)) & 255; if (!lane) return;
+      VA_REASON_LABELS.forEach((label, k) => { if (lane & (1 << k)) out[name][label]++; });
+      if (lane & (lane - 1)) out[name].multiple++;
+    });
+  }
+  return out;
+}
+// The one-sided stencil direction check (Codex B11b-F4): an available normal must have finite, nonzero components
+// and a finite angle within `limit` of the prediction. Returns null, or {reason, angle}. (`angle > limit` alone is
+// false for NaN.)
+export function stencilDirectionError(normal, expected, limit) {
+  const finite = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
+  if (!finite(normal)) return { reason: 'non-finite normal', angle: NaN };
+  if (!(Math.hypot(...normal) > 0)) return { reason: 'zero normal', angle: NaN };
+  const angle = finite(expected) ? angleBetween(normal, expected) : NaN;
+  if (!Number.isFinite(angle)) return { reason: 'non-finite angle', angle };
+  return angle <= limit ? null : { reason: 'angle over the limit', angle };
+}
+const isMagenta = got => got[0] === 255 && got[1] === 0 && got[2] === 255;
+// One flagged pixel of the full shaded image (Codex B11b-F5): `lost` when it differs from its expected display (or,
+// lighting-only, is not visibly tinted); `magenta` when a lighting-only pixel shows primary magenta, counted
+// independently of `lost`; `tinted` when a lighting-only pixel shows its visible tint.
+export function classifyFlaggedPixel({ got, expected, plain, lightingOnly }) {
+  const mismatch = expected.some((v, k) => Math.abs(v - got[k]) > 1);
+  if (!lightingOnly) return { lost: mismatch, magenta: false, tinted: false };
+  const magenta = isMagenta(got), invisible = Math.max(...plain.map((v, k) => Math.abs(v - got[k]))) < 2;
+  const lost = mismatch || magenta || invisible;
+  return { lost, magenta, tinted: !lost };
+}
 // Numerators and denominators over one bit mask.
 export function vaMetrics(bits) {
   const B = VA_BITS, m = { pixels: bits.length, hits: 0, nonMiss: 0, primaryUnresolved: 0, numericalFailures: 0, unavailableNormals: 0, lightingUnresolved: 0, shadowUnresolved: 0, aoUnresolved: 0, lightingNumericalFailures: 0 };

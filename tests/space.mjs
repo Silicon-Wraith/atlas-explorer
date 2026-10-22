@@ -18,6 +18,7 @@ import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { dirname, resolve } from 'node:path';
 import { spawn, execFileSync } from 'node:child_process';
 import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev, CHROME_TMPDIR, chromeLaunchEnv } from './support/bounded.mjs';
@@ -1909,10 +1910,12 @@ async function visualJobInPage(spec) {
   const scene = sceneCodec.validate({ ...base, appearance: { ...base.appearance, ...spec.appearance } });
   const ordinals = scene.appearance.viewMode === 'shaded' && scene.appearance.lightingQuality === 'full' ? scene.sampling.targetSamples + 1 : scene.sampling.targetSamples;
   const capture = backend.allocate({ name: `b11b-capture-${spec.label}`, bytes: 4 * pixels, usage: 'storage' });
-  const kept = [], masks = [], statusFrames = [], availability = [], copies = [];
+  const kept = [], masks = [], statusFrames = [], availability = [], reasonCodes = [], copies = [];
+  // B11b fix round 1: each unresolved outcome's reason, coded as in tests/support/visual-acceptance.mjs (vaReasonCode).
+  const reasonCode = (reason, subreason) => (reason >= 1 && reason <= 3 ? reason : reason === 4 && (subreason === 1 || subreason === 2) ? 3 + subreason : 6);
   let presents = 0, lastAccumulate = null, captured = null;
   const ensure = ordinal => {
-    if (!masks[ordinal]) { masks[ordinal] = new Uint16Array(pixels); statusFrames[ordinal] = new Uint8Array(pixels * 4); availability[ordinal] = new Uint8Array(pixels); }
+    if (!masks[ordinal]) { masks[ordinal] = new Uint16Array(pixels); statusFrames[ordinal] = new Uint8Array(pixels * 4); availability[ordinal] = new Uint8Array(pixels); reasonCodes[ordinal] = new Uint16Array(pixels); }
   };
   const proxy = Object.freeze({ ...backend,
     release(handle) { kept.push(handle); },
@@ -1931,11 +1934,14 @@ async function visualJobInPage(spec) {
             if (field === 'status') {
               const word = view.getUint32(4 * k, true); statusFrames[ordinal].set(result.data.subarray(4 * k, 4 * k + 4), 4 * i);
               m[i] |= [B.hit, B.miss, B.unresolved, B.numerical][word & 15];
+              if ((word & 15) === 2) reasonCodes[ordinal][i] |= reasonCode((word >>> 4) & 15, (word >>> 8) & 15);
             } else if (field === 'normal') availability[ordinal][i] = (view.getUint16(8 * k + 6, true) & 0x7fff) !== 0 ? 1 : 0;
             else {
               const word = view.getUint32(4 * k, true);
               if (word & 1) m[i] |= ((word >>> 2) & 3) === 3 ? B.shadowNumerical : B.shadowUnresolved;
               if (word & 2) m[i] |= ((word >>> 12) & 3) === 3 ? B.aoNumerical : B.aoUnresolved;
+              if ((word & 1) && ((word >>> 2) & 3) === 2) reasonCodes[ordinal][i] |= reasonCode((word >>> 4) & 15, (word >>> 8) & 15) << 3;
+              if ((word & 2) && ((word >>> 12) & 3) === 2) reasonCodes[ordinal][i] |= reasonCode((word >>> 14) & 15, (word >>> 18) & 15) << 6;
             }
           }
           if (bpt * r.width * r.height !== result.data.byteLength) throw new Error('readback length');
@@ -1967,9 +1973,11 @@ async function visualJobInPage(spec) {
     const capturedDone = captured && await captured;
     if (capturedDone && capturedDone.outcome !== 'completed') throw new Error(`capture: ${capturedDone.outcome}`);
     const out = { outcome: done.outcome, reason: done.reason ?? null, presents, ordinals, wallMs: performance.now() - started, report: reports.at(-1) ?? null,
-      quality: JSON.parse(JSON.stringify(request.quality)), masks: [], statusSha256: [] };
+      quality: JSON.parse(JSON.stringify(request.quality)), masks: [], reasons: [], statusSha256: [] };
     for (let o = 0; o < masks.length; o++) {
-      if (!masks[o]) { out.masks.push(null); out.statusSha256.push(null); continue; }
+      if (!masks[o]) { out.masks.push(null); out.reasons.push(null); out.statusSha256.push(null); continue; }
+      const pairs = []; for (let i = 0; i < pixels; i++) if (reasonCodes[o][i]) pairs.push(i, reasonCodes[o][i]);
+      out.reasons.push(s.base64(new Uint8Array(Uint32Array.from(pairs).buffer)));
       for (let i = 0; i < pixels; i++) if ((masks[o][i] & B.hit) && !availability[o][i]) masks[o][i] |= B.normalUnavailable;
       out.masks.push(s.base64(new Uint8Array(masks[o].buffer)));
       out.statusSha256.push([...new Uint8Array(await crypto.subtle.digest('SHA-256', statusFrames[o]))].map(b => b.toString(16).padStart(2, '0')).join(''));
@@ -2071,12 +2079,19 @@ async function runVisualAcceptance({ page, check }) {
     if (!row.identicalRays) fail('the four views do not trace identical rays');
     const full = jobs['shaded-full'], perSample = samples.map(sample => u16(full.masks[ordinalOf('shaded-full', sample)]));
     const union = va.orBits(perSample);
-    row.perSample = perSample.map(va.vaMetrics); row.union = va.vaMetrics(union);
+    row.perSample = perSample.map(bits => va.vaMetrics(bits)); row.union = va.vaMetrics(union);
+    // Reasons (B11b fix round 1, Codex B11b-F2): per pixel class, per sample and over the union, from the same samples.
+    const u32 = b64 => { const b = bytesOf(b64); return new Uint32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
+    const reasonLanes = samples.map(sample => va.vaReasonLanes(u32(full.reasons[ordinalOf('shaded-full', sample)]), pixels));
+    row.reasons = { union: va.vaReasonMetrics(va.orBits32(reasonLanes)), perSample: reasonLanes.map(va.vaReasonMetrics) };
     // The renderer's own outcome masks (B11b) must equal these independent masks.
     const rendererMasks = full.report?.outcomeMasks;
-    row.rendererMasksAgree = !!rendererMasks && JSON.stringify(rendererMasks.samples.map(m => strip(m, 'sample'))) === JSON.stringify(row.perSample)
-      && JSON.stringify(strip(rendererMasks.union, 'samples')) === JSON.stringify(row.union);
-    if (!row.rendererMasksAgree) fail(`renderer outcome masks disagree: ${JSON.stringify(rendererMasks?.union ?? null)} vs ${JSON.stringify(row.union)}`);
+    row.rendererMasksAgree = !!rendererMasks && isDeepStrictEqual(rendererMasks.samples.map(m => strip(m, 'sample')), row.perSample)
+      && isDeepStrictEqual(strip(rendererMasks.union, 'samples'), row.union)
+      && isDeepStrictEqual(rendererMasks.reasons, { samples: row.reasons.perSample, union: row.reasons.union });
+    // The shaded-full product report itself (its counts and outcome masks with reasons) is saved with the row.
+    row.rendererReport = full.report ?? null;
+    if (!row.rendererMasksAgree) fail(`renderer outcome masks disagree: ${JSON.stringify({ union: rendererMasks?.union ?? null, reasons: rendererMasks?.reasons?.union ?? null })} vs ${JSON.stringify({ union: row.union, reasons: row.reasons.union })}`);
     // Presentation of every flagged pixel in the full shaded image.
     const display = bytesOf(full.display), sums = (() => { const b = bytesOf(full.accumulation); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); })();
     const flags = (() => { const b = bytesOf(full.flags); return new Uint32Array(b.buffer, b.byteOffset, b.byteLength / 4); })();
@@ -2087,19 +2102,13 @@ async function runVisualAcceptance({ page, check }) {
       const f = flags[i]; if (!f) continue;
       const sum = [sums[4 * i], sums[4 * i + 1], sums[4 * i + 2], sums[4 * i + 3]], got = display.subarray(4 * i, 4 * i + 4);
       const expected = appearance.expectedDisplay({ sum, flags: f, lightingStage: appearance.LIGHTING_STAGE_CODES.full, viewMode: appearance.VIEW_MODE_CODES.shaded });
-      if (expected.some((v, k) => Math.abs(v - got[k]) > 1)) {
-        lostIndication++;
-        if (lostExamples.length < 6) lostExamples.push({ pixel: i, flags: f, union: union[i], sum, got: [...got], expected });
-        continue;
-      }
-      if ((f & LIGHTING_UNRESOLVED) && !(f & OTHER)) {
-        if (got[0] === 255 && got[1] === 0 && got[2] === 255) { lightingAsMagenta++; continue; }
-        const plain = appearance.expectedDisplay({ sum, flags: 0, lightingStage: appearance.LIGHTING_STAGE_CODES.full, viewMode: appearance.VIEW_MODE_CODES.shaded });
-        if (Math.max(...plain.map((v, k) => Math.abs(v - got[k]))) < 2) {
-          lostIndication++;
-          if (lostExamples.length < 6) lostExamples.push({ pixel: i, flags: f, union: union[i], sum, got: [...got], plain, invisible: true });
-        } else tinted++;
-      }
+      const lightingOnly = (f & LIGHTING_UNRESOLVED) !== 0 && !(f & OTHER);
+      const plain = lightingOnly ? appearance.expectedDisplay({ sum, flags: 0, lightingStage: appearance.LIGHTING_STAGE_CODES.full, viewMode: appearance.VIEW_MODE_CODES.shaded }) : null;
+      // Magenta on a lighting-only pixel is counted on its own, as well as a lost indication (Codex B11b-F5).
+      const c = va.classifyFlaggedPixel({ got, expected, plain, lightingOnly });
+      if (c.magenta) lightingAsMagenta++;
+      if (c.tinted) tinted++;
+      if (c.lost) { lostIndication++; if (lostExamples.length < 6) lostExamples.push({ pixel: i, flags: f, union: union[i], sum, got: [...got], expected, ...(plain ? { plain } : {}), magenta: c.magenta }); }
     }
     if (flagMismatch) fail(`${flagMismatch} accumulated flags differ from the union of the sample masks`);
     Object.assign(row, { lightingAsMagenta, lostIndication, lightingIndicated: tinted, lostExamples });
@@ -2150,13 +2159,13 @@ async function runVisualAcceptance({ page, check }) {
     }
     row.passed = row.failures.length === 0; row.elapsedMs = Date.now() - started;
     rows.push(row);
-    console.log(`VISUAL ${sceneSpec.id}: ${row.passed ? 'pass' : 'FAIL'} ${JSON.stringify({ union: row.union, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures }).slice(0, 1200)}`);
+    console.log(`VISUAL ${sceneSpec.id}: ${row.passed ? 'pass' : 'FAIL'} ${JSON.stringify({ union: row.union, reasons: row.reasons.union, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures }).slice(0, 2400)}`);
   }
   report.push({ name: 'Visual acceptance scenes (recorded; plan rev 5.0 B11b)', fixture: fixture.version, settings: fixture.settings, thresholds: va.VISUAL_THRESHOLDS, faceCriterion: va.FACE_NORMAL_CRITERION,
     scenes: rows.map(row => ({ ...row, perSample: row.perSample })) });
   check(va.VISUAL_ACCEPTANCE_PASS, () => {
     for (const row of rows) assert.deepEqual(row.failures, [], `${row.id}: ${row.failures.join('; ')}`);
-    return { scenes: rows.map(row => ({ id: row.id, union: row.union, thresholds: row.thresholds.rows.map(r => `${r.metric} ${r.numerator}/${r.denominator}`), faces: row.faces && strip(row.faces, 'worst') })) };
+    return { scenes: rows.map(row => ({ id: row.id, union: row.union, reasons: row.reasons.union, thresholds: row.thresholds.rows.map(r => `${r.metric} ${r.numerator}/${r.denominator}`), faces: row.faces && strip(row.faces, 'worst') })) };
   });
   return rows;
 }
@@ -2395,7 +2404,7 @@ async function runRendering({ page }) {
     const profile = { ...SURFACE_V1, toleranceFloor: 2 * probe.epsilon, toleranceFactor: 0 };
     stencilRuns.push({ probe, runs: await ev(page, stencilProbeInPage, { ...probe, size: probeSize, profile }, `stencil ${probe.label}`, LIMITS.deep) });
   }
-  const stencil = { disagreements: [], directionErrors: [], worstRadians: 0, modes: {}, expected: { available: 0, unavailable: 0, ambiguous: 0 }, depthChanged: 0 };
+  const stencil = { disagreements: [], directionErrors: [], directionErrorCount: 0, worstRadians: 0, modes: {}, expected: { available: 0, unavailable: 0, ambiguous: 0 }, depthChanged: 0 };
   for (const { probe, runs } of stencilRuns) for (const run of runs) {
     const normals = passes.decodeNormals(bytes(run.normal), probeSize.width * probeSize.height), depths = passes.decodeDepths(bytes(run.depth));
     normals.forEach((n, k) => {
@@ -2409,11 +2418,14 @@ async function runRendering({ page }) {
       stencil.modes[`${probe.modelId}:${key}`] = (stencil.modes[`${probe.modelId}:${key}`] ?? 0) + 1;
       if (n.available !== (prediction.expected === 'available')) { if (stencil.disagreements.length < 8) stencil.disagreements.push({ probe: probe.label, t: run.t, k, expected: prediction, available: n.available }); return; }
       if (!n.available) return;
-      const angle = va.angleBetween(n.normal, prediction.normal);
-      stencil.worstRadians = Math.max(stencil.worstRadians, angle);
-      if (angle > 1e-3 && stencil.directionErrors.length < 8) stencil.directionErrors.push({ probe: probe.label, t: run.t, k, angle, normal: n.normal, expected: prediction.normal });
+      // Finite, nonzero components and a finite angle within 1e-3 rad (Codex B11b-F4: NaN fails `angle > limit`).
+      const error = va.stencilDirectionError(n.normal, prediction.normal, 1e-3);
+      if (!error) stencil.worstRadians = Math.max(stencil.worstRadians, va.angleBetween(n.normal, prediction.normal));
+      else { stencil.directionErrorCount++; if (stencil.directionErrors.length < 8) stencil.directionErrors.push({ probe: probe.label, t: run.t, k, ...error, normal: n.normal, expected: prediction.normal }); }
     });
   }
+  stencil.positions = stencil.expected.available + stencil.expected.unavailable + stencil.expected.ambiguous;
+  stencil.compared = stencil.positions - stencil.expected.ambiguous;
   report.push({ name: 'B11b one-sided normal stencil probes (recorded; part of the normals pass)', probes: STENCIL_PROBES.map(p => ({ ...p, camera: undefined })), ...stencil });
 
   check(RENDERING_PASSES[4], () => {
@@ -2421,6 +2433,7 @@ async function runRendering({ page }) {
     // one-sided against the resolved centre where exactly one is an analytic interior (edges, corners, tunnel walls),
     // unavailable where both are or the needed centre is interior — in the predicted direction, and depth is kept.
     assert.deepEqual(stencil.disagreements, [], `stencil availability disagrees with the prediction: ${JSON.stringify(stencil.disagreements.slice(0, 3))}`);
+    assert.equal(stencil.directionErrorCount, 0, 'every compared one-sided normal is finite and within 1e-3 rad');
     assert.deepEqual(stencil.directionErrors, [], `one-sided normals off the predicted direction: ${JSON.stringify(stencil.directionErrors.slice(0, 3))}`);
     assert.equal(stencil.depthChanged, 0, 'the normals pass leaves every placed depth unchanged');
     for (const key of ['box:1-one-sided', 'menger:1-one-sided', 'menger:2-one-sided', 'menger:both-interior', 'menger:centre-interior', 'box:0-one-sided', 'menger:0-one-sided']) {
