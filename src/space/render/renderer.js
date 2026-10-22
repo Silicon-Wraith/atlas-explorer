@@ -1,3 +1,4 @@
+import { buildSpaceBatch } from './frame-batch.js';
 // Space pass orchestration. Resource ownership and execution identities stay here;
 // the scheduler owns admission/outcomes and the backend owns queue completion.
 import { deepFreeze, canonicalJson } from '../../shared/scene.js';
@@ -5,16 +6,18 @@ import { createScheduler } from '../../shared/scheduler.js';
 import { createRenderRequest, isPublishable, RENDER_OUTCOMES, RUNTIME_ID } from '../../shared/render-request.js';
 import { createReportBuilder, observed, UNAVAILABLE } from '../../shared/render-report.js';
 import { createSpaceRequest, spaceWorkspaceFields } from '../render-adapter.js';
-import { effectiveParameters, escapeRadius } from '../numerics/parameters.js';
+import { effectiveParameters } from '../numerics/parameters.js';
 import { getModel } from '../models/registry.js';
-import { VIEW_MODES } from '../scene-adapter.js';
 import { admitPointModel, decodePointResults, encodePoints, mengerBoxData, pointBounds, pointRegion,
   pointsPipelineId, pointUniforms, sentinelResults, POINT_BATCH_PASS, POINT_RESULT_BYTES } from './webgpu/kernels.js';
-import { basis, encodeOrdinaryOrigin } from '../camera.js';
+import { encodeOrdinaryOrigin } from '../camera.js';
 import { appearanceKey, accumulationKey, sampleKey } from './keys.js';
 import { unpackStatus, unpackLightingStatus, POINT_STATUS, STATUS_LABELS } from './status.js';
 import { createOutcomeMasks } from './outcome-masks.js';
 import { RECOVERING_FAMILIES } from './webgpu/passes.js';
+import { draftExecution as selectDraftExecution, qualifiedDraft } from './draft-execution.js';
+import { draftSummaryBytes, validateDraftSummary, DRAFT_SUMMARY_VERSION } from './draft-summary.js';
+import { createDraftRecords } from './draft-records.js';
 import { assertBackend, BackendError, createAdmission, createBatch, createBatchGroup, createJobPlan, createPickRequest, createPipelineSet,
   sampleJitter, TARGET_LAYOUT_ID, TARGET_LAYOUT, LIGHTING_BOUNDS_DEFAULT } from './backend.js';
 
@@ -27,7 +30,7 @@ const flatHandles = targets => Object.values(targets.handles).flat();
 const stale = () => ({ stale: true });
 // The per-sample geometry targets, kept, reused and cached together (B11c: the recovery word is geometry).
 const GEOMETRY_TARGETS = Object.freeze(['depth', 'status', 'normal', 'recovery']);
-let preparationId = 0;
+let preparationId = 0, producerToken = 0;
 
 export function navigationContentKey(scene, output) {
   const {camera, ...content} = scene;
@@ -131,7 +134,9 @@ function countStatus(counts, word) {
 // remains caller-owned; destroying this renderer releases only its own resources.
 // groupDrafts=false is an injected diagnostic/test comparison path; product callers
 // use grouping. It changes submission boundaries, never draft quality or diagnostics.
-export function createSpaceRenderer({ backend, scheduler, clock, viewId, versions, pipelineSet, groupDrafts = true }) {
+export function createSpaceRenderer({ backend, scheduler, clock, viewId, versions, pipelineSet, groupDrafts = true, draftExecution }) {
+  const draftConfig = selectDraftExecution(draftExecution);
+  if (!draftConfig.lifecycle) throw new RangeError('L0–L5 use the diagnostic ladder driver; the product renderer supports L6 variants only');
   assertBackend(backend);
   const now = typeof clock === 'function' ? clock : clock?.now;
   if (typeof now !== 'function') throw new TypeError('renderer requires a clock');
@@ -140,14 +145,15 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   scheduler ??= createScheduler({ clock: now, makeAdmission: createAdmission, setTimer, clearTimer });
   if (!scheduler.snapshot().views.some(view => view.viewId === viewId)) scheduler.registerView(viewId);
   const pipelines = createPipelineSet(pipelineSet);
-  const listeners = Object.fromEntries(['Publish', 'Present', 'Report', 'Status'].map(name => [name, new Set()]));
-  const jobs = new Map(), owners = new Map(), auxiliary = new Map(), tileLearning = new Map();
+  const listeners = Object.fromEntries(['Publish', 'Present', 'Report', 'Status', 'PublicationUpdate', 'PublicationRecord', 'Provisional', 'Restoration'].map(name => [name, new Set()]));
+  const jobs = new Map(), owners = new Map(), auxiliary = new Map(), tileLearning = new Map(), excessiveDraftWork = new Set();
   const submittedJobs = new Set(), submittedRequests = new Set();
   let current = null, interactive = null, published = null, geometryCache = null, destroyed = false;
   let preparation = null, prepared = null, acquisition = null, acquiring = null, serial = 0, auxSerial = 0;
-  let requestOrder = 0;
+  let requestOrder = 0, displayOrder = -1;
   const emit = (name, value) => { for (const listener of listeners[name]) { try { listener(deepFreeze(value)); } catch { /* isolate observers */ } } };
   const subscribe = name => listener => { if (typeof listener !== 'function') throw new TypeError('listener must be a function'); listeners[name].add(listener); return () => listeners[name].delete(listener); };
+  const frameRecords = createDraftRecords({ clock: now, onUpdate: update => emit('PublicationUpdate', update) });
   function hold(handles) { for (const handle of handles) owners.set(handle, (owners.get(handle) ?? 0) + 1); }
   function release(handles) {
     for (const handle of handles) {
@@ -175,9 +181,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   // shared isPublishable and all settled/inspection paths remain strict.
   const navigationDraft = record => navigationDraftEligible({record, current, interactive, viewId, epoch: backend.currentEpoch(), destroyed});
   const executable = record => fresh(record) || navigationDraft(record);
-  const publishable = record => executable(record) && (!published || record.order >= published.record.order);
+  const publishable = record => executable(record) && record.order >= displayOrder && (!published || record.order >= published.record.order);
   function publishedCurrent(snapshot) {
-    return !destroyed && snapshot && published === snapshot && snapshot.request.viewId === viewId &&
+    return !destroyed && snapshot && published === snapshot && snapshot.record.order === displayOrder && snapshot.request.viewId === viewId &&
       snapshot.request.generation.deviceEpoch === backend.currentEpoch();
   }
   function classifiable(record) {
@@ -195,6 +201,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       record.result = result; release(record.handles); jobs.delete(record.request.jobId);
       record.done.resolve(result); return;
     }
+    if (record.frame && result.outcome !== 'completed') rejectFrame(record, result.reason ?? result.outcome);
     record.builder.mark('completed');
     const fields = spaceWorkspaceFields({ request: record.request, counts: record.publishedCounts,
       samplesCompleted: record.samplesCompleted, milestones: record.milestones,
@@ -206,10 +213,14 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       ...record.request.quality.internalSize, iteration: record.request.quality.iteration, tracing: record.request.quality.tracing,
       samples: record.samplesCompleted, lighting: record.publishedQuality.lighting,
     } : null, details: { ...fields,
-      diagnosticReadback: record.request.quality.preview ? { format: 'draft-diagnostics-v1', bytesPerPixel: (record.diagnosticStride ?? (RECOVERING_FAMILIES.includes(record.model.id) ? 3 : 2)) * 4,
+      diagnosticReadback: record.request.quality.preview ? { format: record.recg ? DRAFT_SUMMARY_VERSION : 'draft-diagnostics-v1',
+        ...(record.recg ? { bytes: draftSummaryBytes(RECOVERING_FAMILIES.includes(record.model.id)), evidence: 'aggregate; per-pixel masks not retained' } : { bytesPerPixel: (record.diagnosticStride ?? (RECOVERING_FAMILIES.includes(record.model.id) ? 3 : 2)) * 4 }),
         secondaryFlags: 'exactly zero: direct/diagnostic draft shading evaluates no secondary rays' } : { format: 'separate-textures' },
       operations: { completed: record.completionCount, byPass: structuredClone(record.operationMetrics ?? {}) },
       outcomeMasks: record.publishedMasks ?? UNAVAILABLE, geometryRequestId: record.geometryRequestId, appearanceRebound: record.geometryRequestId !== record.request.requestId,
+      ...(record.summary ? { outcomeAggregates: record.summary } : {}),
+      ...(record.frame ? { draftRecord: { frameId: record.frame.frameId, presentationSubmittedAt: record.frame.presentationSubmittedAt,
+        confirmationAt: record.confirmationAt ?? UNAVAILABLE, diagnosticsState: record.diagnosticsState ?? 'pending' } } : {}),
       ...(result.continuation ? { continuation: result.continuation } : {}), ...(result.submitted ? { submitted: result.submitted } : {}),
     } });
     record.result = Object.freeze({ ...result, ...(record.error?.code === undefined ? {} : { errorCode: record.error.code }), report });
@@ -224,7 +235,8 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     if (record.scheduled) scheduler.cancel(record.request.jobId);
   }
   function pipeline(pass, record, stage) {
-    const entry = pass === 'display' && record.request.quality.preview ? 'display_draft_band' : pass === 'probe' ? 'probe' : pass === 'shade' && stage === 'diagnostic'
+    const entry = pass === 'reduce' ? 'reduce_draft_summary' : pass === 'display' && record.recg ? (draftConfig.summary ? 'display_summary_band' : 'display_band')
+      : pass === 'display' && record.request.quality.preview ? 'display_draft_band' : pass === 'probe' ? 'probe' : pass === 'shade' && stage === 'diagnostic'
       ? `diagnostic_${record.request.sceneSnapshot.appearance.viewMode}` : `${pass}_band`;
     const candidates = pipelines.descriptors.filter(item => item.kind === 'compute' && item.entryPoint === entry);
     // Until the product families are assembled, fixtures may use one descriptor per
@@ -241,69 +253,82 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   }
   function batch(record, pass, region, sample, quality, extra = {}) {
     const descriptor = pipeline(pass, record, quality.lighting.stage), handles = record.targets?.handles ?? {};
-    const alias = { ...handles, probe_target: handles.status,
-      previous: handles.accumulation?.[sample & 1], next: handles.accumulation?.[(sample + 1) & 1],
-      accumulation: handles.accumulation?.[(sample + 1) & 1], display: record.displayHandle, draftDiagnostics: record.draftDiagnostics, menger_boxes: record.mengerBoxes, ...extra.handles };
-    const inputs = {}, outputs = {};
-    for (const binding of descriptor.bindings) {
-      if (binding.type === 'uniform-buffer' && descriptor.uniformLayout.byteLength) continue;
-      const handle = alias[binding.slot];
-      if (!handle || Array.isArray(handle)) throw new BackendError('invalid-descriptor', `no renderer binding for ${binding.slot}`);
-      if (binding.access !== 'write') inputs[binding.slot] = handle;
-      if (binding.access !== 'read') outputs[binding.slot] = handle;
-    }
-    const sampling = quality.sampling, jitter = sampleJitter({ seed: sampling.seed, sampleIndex: sample, pixel: [region.x, region.y] });
-    const effective = record.effective ?? {}, camera = record.request.sceneSnapshot.camera;
-    const fields = { origin: [region.x, region.y], size: [region.width, region.height], internalSize: Object.values(quality.internalSize),
-      diagnosticStride: record.diagnosticStride, sampleIndex: sample, seed: sampling.seed, lightingStage: quality.lighting.stage === 'full' ? 1 : quality.lighting.stage === 'diagnostic' ? 2 : 0,
-      jitter: [jitter.dx, jitter.dy], maxIterations: quality.iteration.maxIterations, maxSteps: quality.tracing.maxSteps,
-      stepMultiplier: quality.tracing.stepMultiplier, toleranceFloor: quality.tracing.toleranceFloor,
-      // B10: τ(t) = max(toleranceFloor, toleranceFactor·α·t), and the quaternion's outward-rounded B02 R(C).
-      toleranceFactor: quality.tracing.toleranceFactor, bound: effective.C ? escapeRadius(effective.C).bound : undefined,
-      power: effective.power, C: effective.C, kappa: effective.kappa, depth: effective.depth,
-      // B11: the shading stage's secondary-ray work (B00 bounds) and the view mode code (scene-adapter VIEW_MODES order).
-      shadowSteps: quality.lighting.shadowSteps, shadowRays: quality.lighting.shadowRays, aoSamples: quality.lighting.aoSamples,
-      viewMode: record.request.sceneSnapshot.appearance ? VIEW_MODES.indexOf(record.request.sceneSnapshot.appearance.viewMode) : undefined, ...extra.uniforms };
-    // Camera transport is evaluated only when a descriptor asks for it. No world
-    // position is collapsed into a Number; B05 supplies high/low binary32 parts.
-    if (camera && descriptor.uniformLayout.fields.some(field => ['originHigh', 'originLow', 'forward', 'right', 'up', 'alpha'].includes(field.name))) {
-      const origin = encodeOrdinaryOrigin(camera); if (origin.unavailable) throw new BackendError('invalid-descriptor', origin.reason);
-      Object.assign(fields, { originHigh: origin.highF32, originLow: origin.lowF32, ...basis(camera),
-        alpha: 2 * Math.tan(camera.verticalFovDegrees * Math.PI / 360) / quality.internalSize.height });
-    }
-    const uniforms = Object.fromEntries(descriptor.uniformLayout.fields.map(field => {
-      if (fields[field.name] === undefined) throw new BackendError('invalid-descriptor', `no renderer uniform for ${field.name}`);
-      return [field.name, fields[field.name]];
-    }));
-    return createBatch({ identity: identity(record.request), pipelineId: descriptor.pipelineId, pass,
-      region, sample: { sequence: sampling.sequence, seed: sampling.seed, index: sample },
-      bounds: { pixels: region.width * region.height, iterations: quality.iteration.maxIterations, raySteps: quality.tracing.maxSteps,
-        normalFieldSamples: quality.lighting.normalFieldSamples, shadowRays: quality.lighting.shadowRays,
-        shadowSteps: quality.lighting.shadowSteps, aoSamples: quality.lighting.aoSamples }, inputs, outputs, uniforms });
+    return buildSpaceBatch({ descriptor, record, pass, region, sample, quality, extra });
   }
-  function publish(record, meta, display) {
-    if (!publishable(record)) return false;
-    const pending = !fresh(record);
-    const geometry = { sample: meta.sample, status: record.targets.handles.status, depth: record.targets.handles.depth };
-    const handles = [display, geometry.status, geometry.depth], old = published; hold(handles);
-    published = { request: record.request, record, display, geometry, handles }; if (old) release(old.handles);
+  function validatePublication(record, meta) {
+    if (record.validatedOrdinal === meta.ordinal) return;
+    // End() checks complete coverage and recovery/primary consistency. This must
+    // run before backend.present() can submit anything, including on settled work.
+    if (record.recg) {
+      if (!record.summary) throw new BackendError('invalid-descriptor', 'draft summary not validated');
+      record.validatedMasks = UNAVAILABLE;
+    } else {
+      record.masks.end(maskIdentity(record, meta)); record.validatedMasks = record.masks.snapshot();
+    }
+    record.validatedOrdinal = meta.ordinal;
+  }
+  function acceptPublication(record, meta) {
     record.builder.mark('published'); record.samplesCompleted = meta.sample + 1;
     record.publishedCounts = structuredClone(record.counts); record.publishedQuality = meta.quality;
     // B11b: the sample's outcome masks close here (every readback of this ordinal completed before its presentation).
-    record.masks.end(maskIdentity(record, meta)); record.publishedMasks = record.masks.snapshot();
+    record.publishedMasks = record.validatedMasks;
     const elapsed = now() - record.requestedAt;
     if (!record.request.quality.preview && meta.ordinal === 0) record.milestones.settledFirstImageMs = elapsed;
     if (meta.last) record.milestones.fullQualityMs = elapsed;
+  }
+  function publicationData(record, meta) {
     const appearance = appearanceKey(record.request.sceneSnapshot, meta.quality);
-    emit('Publish', { kind: record.request.quality.preview ? 'draft' : meta.ordinal === 0 ? 'settled-first' : 'refinement',
+    return { kind: record.request.quality.preview ? 'draft' : meta.ordinal === 0 ? 'settled-first' : 'refinement',
       request: record.request, requestId: record.request.requestId, identity: identity(record.request), createdAt: record.requestedAt,
       sceneHash: record.request.sceneHash, camera: record.request.sceneSnapshot.camera,
       model: record.request.sceneSnapshot.model.id, internalSize: { ...meta.quality.internalSize },
       output: { width: record.request.output.width, height: record.request.output.height },
-      geometryRequestId: record.geometryRequestId, samples: meta.sample + 1, sampleIndex: meta.sample, pending,
+      geometryRequestId: record.geometryRequestId, samples: meta.sample + 1, sampleIndex: meta.sample, pending: !fresh(record),
       appearanceKey: appearance, accumulationKey: accumulationKey(record.request.keys.geometryKey, appearance, record.request.quality.sampling),
-      quality: meta.quality, publishedAt: now(), rayTermination: record.publishedCounts.rayTermination });
-    emit('Status', { pending }); return true;
+      quality: meta.quality, publishedAt: now(), rayTermination: record.publishedCounts?.rayTermination ?? null };
+  }
+  function publish(record, meta, display, { emitPublication = true } = {}) {
+    if (!publishable(record)) return false;
+    const geometry = { sample: meta.sample, status: record.targets.handles.status, depth: record.targets.handles.depth };
+    const handles = [display, geometry.status, geometry.depth], old = published; hold(handles);
+    published = { request: record.request, record, display, geometry, handles }; if (old) release(old.handles);
+    acceptPublication(record, meta);
+    if (emitPublication) emit('Publish', publicationData(record, meta));
+    emit('Status', { pending: !fresh(record), diagnosticsState: 'confirmed' }); return true;
+  }
+  function beginFrame(record, meta, ticket) {
+    const event = frameRecords.begin({ ...publicationData(record, meta), presentationSubmittedAt: ticket.presentationSubmittedAt ?? now(), eligible: true });
+    record.frame = event; record.diagnosticsState = 'pending';
+    frameRecords.displayed(event.frameId); displayOrder = record.order;
+    emit('PublicationRecord', event);
+    if (draftConfig.mode === 'async') emit('Publish', event);
+    if (draftConfig.mode === 'provisional') emit('Provisional', event);
+    emit('Status', { diagnosticsState: 'pending', provisional: draftConfig.mode === 'provisional' });
+  }
+  function rejectFrame(record, reason) {
+    if (!record.frame) return;
+    const update = frameRecords.reject(record.frame.frameId, record.frame.identity, String(reason));
+    if (!update) return;
+    record.diagnosticsState = update.diagnosticsState;
+    if (!update.historical && record.order === displayOrder) {
+      emit('Status', { diagnosticsState: 'failed', reason: String(reason) });
+      restoreFrame(record);
+    }
+  }
+  function restoreFrame(record) {
+    const snapshot = published;
+    if (!snapshot || destroyed || record.request.generation.deviceEpoch !== backend.currentEpoch()) return;
+    const frameId = record.frame.frameId, jobId = `${record.request.jobId}/restore-${++auxSerial}`;
+    const id = { ...identity(record.request), jobId, requestId: `${record.request.requestId}/restore` };
+    const operation = { id: jobId, kind: 'presentation', dependsOn: [], descriptor: { identity: id, display: snapshot.display } }, done = deferred();
+    const valid = () => !destroyed && backend.currentEpoch() === id.generation.deviceEpoch && frameRecords.displayedFrame() === frameId && displayOrder === record.order;
+    hold([snapshot.display]);
+    auxiliary.set(operation.id, { record, done, valid, restoration: frameId });
+    try {
+      const job = scheduler.requestAuxiliary(viewId, { jobId, priority: 'inspection', operation });
+      job.done.finally(() => { auxiliary.delete(operation.id); release([snapshot.display]); });
+      pump();
+    } catch { auxiliary.delete(operation.id); release([snapshot.display]); }
   }
 
   // The outcome-mask identity of one ordinal: its accumulation key (the direct sample of a full request has its own)
@@ -312,7 +337,42 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const key = accumulationKey(record.request.keys.geometryKey, appearanceKey(record.request.sceneSnapshot, meta.quality), record.request.quality.sampling);
     return { accumulationKey: key, sample: meta.sample };
   }
+  function draftWorkKey(record) { return canonicalJson({ family: record.model.id, effective: record.effective, quality: record.request.quality }); }
+  function makeDraftPlan(record) {
+    const request = record.request, region = { x: 0, y: 0, ...request.quality.internalSize };
+    const m = { ordinal: 0, sample: 0, quality: request.quality, last: true, phase: 'draft-group' };
+    const reuse = record.geometry?.sample === 0 && record.geometry.sampleKey === sampleKey(request.keys.geometryKey, request.quality.sampling, 0);
+    record.displayHandle = record.targets.handles.display;
+    const passes = [...(reuse ? [] : ['trace', 'normals']), 'shade', 'accumulate', 'display', ...(draftConfig.summary ? ['reduce'] : [])]
+      .map(pass => batch(record, pass, region, 0, request.quality));
+    const grouped = createBatchGroup({ identity: identity(request), region, sample: passes[0].sample, passes,
+      draft: { mode: draftConfig.mode, summary: record.draftSummary ?? null, producerToken: record.producerToken,
+        recovery: record.diagnosticStride === 3, display: record.displayHandle } });
+    const computeId = `${request.jobId}/compute`, presentId = `${request.jobId}/present`;
+    const operations = [{ id: computeId, dependsOn: [], kind: 'batch', batch: grouped },
+      ...(draftConfig.mode === 'compute' ? [{ id: presentId, dependsOn: [computeId], kind: 'presentation', descriptor: { identity: identity(request), display: record.displayHandle } }] : [])];
+    record.metadata = new Map(operations.map(op => [op.id, m]));
+    let completions = 0;
+    const plan = createJobPlan({ request, operations, onAdvance(op, evidence) {
+      completions++;
+      if (op.id !== computeId) return;
+      if (evidence.timestampMs > evidence.targetMs) {
+        excessiveDraftWork.add(draftWorkKey(record));
+        if (excessiveDraftWork.size > 256) excessiveDraftWork.delete(excessiveDraftWork.values().next().value);
+      }
+      if (!reuse) {
+        record.geometry = { sample: 0, sampleKey: sampleKey(request.keys.geometryKey, request.quality.sampling, 0), serial: record.geometrySerial };
+        record.geometryRequestId = request.requestId;
+        if (fresh(record)) {
+          forgetGeometry(); const handles = GEOMETRY_TARGETS.map(name => record.targets.handles[name]); hold(handles);
+          geometryCache = { ...record.geometry, handles, request, geometryRequestId: record.geometryRequestId };
+        }
+      }
+    } });
+    return Object.freeze({ ...plan, diagnostics: () => ({ fixed: true, pendingCount: operations.length - completions, completions, replacements: 0, boundaryReplacements: 0, pendingSamples: completions === operations.length ? [] : ['direct:0'] }) });
+  }
   function makePlan(record) {
+    if (record.recg) return makeDraftPlan(record);
     const request = record.request, target = request.quality.sampling.targetSamples;
     // B11c: a recovering family (spec §11.4 rev 5.1, quaternion Julia) also reads back each sample's recovery words.
     const recovers = RECOVERING_FAMILIES.includes(record.model?.id);
@@ -502,7 +562,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     let ticket, didPresent = false;
     try {
       if (aux && !aux.valid()) throw new BackendError('stale-epoch', 'auxiliary snapshot replaced before submission');
-      if (!record.internal && !aux && (!executable(record) || (operation.kind === 'presentation' && !publishable(record)))) {
+      if (!record.internal && !aux && (!executable(record) || ((operation.kind === 'presentation' || operation.batch?.draft?.mode && operation.batch.draft.mode !== 'compute') && !publishable(record)))) {
         // The lease exists but no backend work has entered the queue. Cancelling
         // first makes a pre-submission rejection terminal drain evidence, without
         // turning the stale job into a failed job or drawing an obsolete image.
@@ -514,11 +574,17 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           record.geometry = null; record.geometrySerial = ++serial;
           if (geometryCache?.handles.some(handle => handle === record.targets.handles.depth)) forgetGeometry();
         }
+        if (operation.batch.draft?.mode === 'provisional') emit('Status', { diagnosticsState: 'pending', provisional: true });
         ticket = backend.submitBatch(operation.batch, { admission });
+        if (operation.batch.draft && operation.batch.draft.mode !== 'compute' && ticket.presentationSubmittedAt !== null) {
+          beginFrame(record, meta, ticket); didPresent = true;
+        }
       } else if (operation.kind === 'readback') ticket = backend.readback(operation.descriptor, { admission });
       else {
+        if (!record.internal && !aux) validatePublication(record, meta);
         ticket = backend.present(operation.descriptor, { admission });
-        if (!record.internal) didPresent = publish(record, meta, operation.descriptor.display);
+        if (aux?.restoration) emit('Restoration', { frameId: aux.restoration, identity: descriptor.identity, submittedAt: now() });
+        else if (!record.internal) { frameRecords.supersedeDisplay(); displayOrder = record.order; didPresent = publish(record, meta, operation.descriptor.display); }
       }
     } catch (error) {
       retire();
@@ -539,10 +605,14 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           aux?.done.resolve(stale()); return;
         }
         if (completion.outcome === 'failed') {
+          if (record.frame) rejectFrame(record, completion.reason);
           retire();
           if (aux) discardAuxiliary(completion.reason);
           else scheduler.failed(admission, new Error(completion.reason));
           aux?.done.resolve(stale()); return;
+        }
+        if (operation.batch?.draft?.mode && operation.batch.draft.mode !== 'compute' && didPresent) {
+          emit('Present', { identity: identity(record.request), frameId: record.frame.frameId, queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
         }
         if (!record.internal && !record.result) {
           // A completed queue fence remains timing evidence even if subsequent
@@ -563,8 +633,12 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           if (record.internal) {
             if (result.data.byteLength !== 4 || new DataView(result.data.buffer, result.data.byteOffset, 4).getUint32(0, true) !== 0x41544c53) throw new BackendError('preparation-failed', 'ATLS probe mismatch');
           } else if (!aux && !record.result) {
-            const field = operation.descriptor.fields[0];
-            if (field === 'draftDiagnostics') {
+            const field = operation.batch?.draft ? 'draftSummary' : operation.descriptor.fields[0];
+            if (field === 'draftSummary') {
+              record.summary = validateDraftSummary(result.data, { pixels: descriptor.region.width * descriptor.region.height,
+                recovery: record.diagnosticStride === 3, producerToken: record.producerToken });
+              record.counts = record.summary.counts;
+            } else if (field === 'draftDiagnostics') {
               const region = { x: 0, y: 0, ...record.request.quality.internalSize };
               record.masks.recordDraft(maskIdentity(record, meta), region, result.data);
               const data = new DataView(result.data.buffer, result.data.byteOffset, result.data.byteLength);
@@ -581,6 +655,16 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
             }
           }
         }
+        if (record.frame && !aux && record.diagnosticsState === 'pending' && record.summary) {
+          validatePublication(record, meta);
+          const update = frameRecords.confirm(record.frame.frameId, record.frame.identity, { rayTermination: record.counts.rayTermination,
+            outcomeAggregates: record.summary, completion: { outcome: 'completed', queueCompletedAt: completion.queueCompletedAt } });
+          if (update) {
+            record.diagnosticsState = 'confirmed'; record.confirmationAt = update.confirmationAt;
+            acceptPublication(record, meta);
+            if (!update.historical && !record.cancelled && !record.result) publish(record, meta, record.displayHandle, { emitPublication: draftConfig.mode !== 'async' });
+          }
+        }
         if (operation.kind === 'presentation' && didPresent && !record.cancelled && executable(record)) emit('Present', { identity: identity(record.request), queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
         // completed() notifies the dispatcher synchronously. Copy-out is finished;
         // remove this ticket before a replacement lease can increment the count.
@@ -589,6 +673,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           ...(completion.timing.timestampMs === undefined ? {} : { timestampMs: completion.timing.timestampMs }) });
         aux?.done.resolve(result ?? completion);
       } catch (error) {
+        if (record.frame) rejectFrame(record, error.message ?? error);
         retire();
         if (aux) discardAuxiliary(error);
         else { record.error = error; scheduler.failed(admission, error); }
@@ -598,7 +683,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     })();
   }
   const unsubscribeLoss = backend.onLoss(event => {
-    prepared = null; preparation = null; published = null; geometryCache = null; owners.clear(); tileLearning.clear();
+    frameRecords.interrupt(event.epoch);
+    for (const record of jobs.values()) if (record.frame && record.diagnosticsState === 'pending' && record.request.generation.deviceEpoch === event.epoch) record.diagnosticsState = 'interrupted';
+    prepared = null; preparation = null; published = null; geometryCache = null; owners.clear(); tileLearning.clear(); excessiveDraftWork.clear();
     scheduler.interrupted(event.epoch); scheduler.setEpoch(0);
     for (const record of jobs.values()) if (!record.scheduled) finish(record, { outcome: 'interrupted', reason: 'device-lost' });
     emit('Status', { phase: 'interrupted', epoch: event.epoch });
@@ -751,6 +838,16 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         if (request.quality.preview) {
           if (request.quality.lighting.stage === 'full' || request.quality.lighting.shadowRays || request.quality.lighting.aoSamples) throw new BackendError('invalid-descriptor', 'packed draft diagnostics require zero secondary-ray work');
           record.diagnosticStride = RECOVERING_FAMILIES.includes(model.id) ? 3 : 2;
+          record.recg = groupDrafts && qualifiedDraft(request, record.effective, acquisition?.limits) && !excessiveDraftWork.has(draftWorkKey(record)) &&
+            pipelines.descriptors.some(d => d.pipelineId === 'reduce_draft_summary');
+          if (record.recg) {
+            if (producerToken >= 0x7fffffff) throw new BackendError('unavailable', 'draft producer token space exhausted');
+            record.producerToken = ++producerToken;
+            if (draftConfig.summary) {
+              record.draftSummary = backend.allocate({ name: DRAFT_SUMMARY_VERSION, bytes: draftSummaryBytes(record.diagnosticStride === 3), usage: 'storage' });
+              hold([record.draftSummary]); record.handles.push(record.draftSummary);
+            }
+          }
           const bytes = request.quality.internalSize.width * request.quality.internalSize.height * record.diagnosticStride * 4;
           record.draftDiagnostics = backend.allocate({ name: 'draft-diagnostics-v1', bytes, usage: 'storage' });
           hold([record.draftDiagnostics]); record.handles.push(record.draftDiagnostics);
@@ -764,6 +861,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   function cancel(jobId) {
     const record = jobs.get(jobId); if (!record || record.internal) return scheduler.cancel(jobId);
     record.cancelled = true;
+    if (draftConfig.mode === 'provisional' && record.frame) rejectFrame(record, 'cancelled');
     if (record.scheduled) return scheduler.cancel(jobId);
     record.cancellation ??= deferred();
     return { accepted: true, done: record.cancellation.promise };
@@ -894,8 +992,10 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       pending(); cancel(previous.jobId); current = null; forgetGeometry(); return next;
     },
     onPublish: subscribe('Publish'), onPresent: subscribe('Present'), onReport: subscribe('Report'), onStatus: subscribe('Status'),
+    onPublicationUpdate: subscribe('PublicationUpdate'), onPublicationRecord: subscribe('PublicationRecord'), onProvisional: subscribe('Provisional'), onRestoration: subscribe('Restoration'),
     destroy() {
       if (destroyed) return; destroyed = true;
+      frameRecords.interrupt(backend.currentEpoch(), 'destroyed');
       unsubscribeLoss();
       for (const record of jobs.values()) { scheduler.cancel(record.request.jobId); finish(record, { outcome: 'interrupted', reason: 'destroyed' }); }
       for (const aux of auxiliary.values()) scheduler.cancel(aux.record.request.jobId);

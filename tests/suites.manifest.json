@@ -110,5 +110,36 @@
     { "id": "acceptance-audit", "gpu": false, "server": false, "timeoutMs": 30000,
       "command": ["tests/audit-acceptance.mjs"], "report": "artifacts/acceptance-audit-report.json", "evidence": "workflow",
       "requiredPasses": ["The audit wrapper validates a real Git range and large shards with pinned evidence"] }
+  ],
+  "diagnostics": [
+    {
+      "id": "space-performance-ladder",
+      "gpu": true,
+      "command": [
+        "tests/space-performance-ladder.mjs",
+        "--cell",
+        "<registered index>"
+      ],
+      "runManifest": "tests/reference/performance-ladder-v1.json",
+      "enumerate": [
+        "tests/space-performance-ladder.mjs",
+        "--list"
+      ],
+      "acceptance": false
+    },
+    {
+      "id": "space-draft-summary",
+      "gpu": true,
+      "command": [
+        "tests/space.mjs",
+        "--group",
+        "draft-summary"
+      ],
+      "report": "artifacts/space-draft-summary-report.json",
+      "requiredPasses": [
+        "REC-G GPU summaries equal full decode of the same packets"
+      ],
+      "acceptance": false
+    }
   ]
 }

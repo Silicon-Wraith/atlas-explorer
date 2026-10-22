@@ -74,3 +74,16 @@ test('cold prewarm acceptance requires first operation empty isolated caches all
   assert.equal(assessColdPrewarm(make()).passed,true);
   for(const change of [x=>x.firstOperation='render',x=>x.cache=null,x=>x.prepared.pop(),x=>x.preparationMs=60001,x=>x.uncaptured.push('GPU error')]){const x=make();change(x);assert.equal(assessColdPrewarm(x).passed,false);}
 });
+
+test('B15-REC-G P3 measurement excludes a pending draft confirmed beyond the orbit window and still checks report throughput',async()=>{
+  const {measureAttempt}=await import('../space-performance.mjs'),{trial,workload}=trialFixture();
+  const first=trial.publications[0],counts=first.rayTermination;
+  Object.assign(first,{frameId:'late-frame',diagnosticsState:'pending',eligible:true,presentationSubmittedAt:first.publishedAt,rayTermination:null});
+  trial.publicationUpdates=[{frameId:first.frameId,identity:first.identity,diagnosticsState:'confirmed',observedAt:30001,confirmationAt:30001,acceptanceAt:30001,historical:true,rayTermination:counts,completion:{outcome:'completed',queueCompletedAt:20}}];
+  trial.reports[0].observedAt=30002;
+  const result=measureAttempt(trial,workload);
+  assert.equal(result.applicationFailure,null);assert.equal(result.metrics.drafts,899);assert.equal(result.metrics.completedDrafts,899);
+  assert.equal(result.targets[0].passed,false);assert.equal(first.rayTermination,null);
+  trial.publicationUpdates=[];
+  assert.match(measureAttempt(trial,workload).applicationFailure,/missing diagnostic confirmation/);
+});

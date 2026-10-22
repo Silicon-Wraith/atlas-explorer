@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import { confirmedPublications, PERFORMANCE_RECORD_VERSION } from './performance-records.mjs';
 import { scheduleAbsolute } from './timing.mjs';
 import { ev, within, LIMITS } from './bounded.mjs';
 
@@ -26,7 +27,7 @@ export function classifyTrials(attempts, required = 3, maximum = 5) {
 }
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const p95 = values => values.length ? [...values].sort((a,b) => a-b)[Math.ceil(values.length * .95)-1] : null;
-const total = r => r.hit + r.miss + r.numericalFailure + r.unresolved.pointBudget + r.unresolved.estimateUnavailable + r.unresolved.rayStepBudget + r.unresolved.stagnation.rayParameter + r.unresolved.stagnation.fieldCoordinate;
+const total = r => { const values=[r?.hit,r?.miss,r?.numericalFailure,r?.unresolved?.pointBudget,r?.unresolved?.estimateUnavailable,r?.unresolved?.rayStepBudget,r?.unresolved?.stagnation?.rayParameter,r?.unresolved?.stagnation?.fieldCoordinate]; return values.every(v=>Number.isSafeInteger(v)&&v>=0)?values.reduce((a,b)=>a+b,0):NaN; };
 function coverageCounts(r) {
   return { hit:r.hit, miss:r.miss, numericalFailure:r.numericalFailure, 'point-budget':r.unresolved.pointBudget,
     'estimate-unavailable':r.unresolved.estimateUnavailable, 'ray-step-budget':r.unresolved.rayStepBudget,
@@ -44,11 +45,11 @@ function installObservation() {
 }
 
 function startAttempt() {
-  const s = atlas.space, trial = { issued:[], requests:[], publications:[], presentations:[], reports:[], phases:{}, timings:[], phase:'restore', input:null };
+  const s = atlas.space, trial = { issued:[], requests:[], publications:[], publicationUpdates:[], presentations:[], reports:[], phases:{}, timings:[], phase:'restore', input:null };
   globalThis.__p3 = trial;
   trial.stop = [s.onRequest(event => trial.requests.push({ identity:event.identity,purpose:event.purpose,createdAt:event.createdAt,
     quality:event.request.quality,sceneHash:event.request.sceneHash,camera:event.request.sceneSnapshot.camera,phase:trial.phase,input:trial.input })),
-  s.onPublish(event => trial.publications.push(event)), s.onPresent(event => trial.presentations.push(event)),
+  s.onPublish(event => trial.publications.push(event)), s.onPublicationUpdate(event => trial.publicationUpdates.push(event)), s.onPresent(event => trial.presentations.push(event)),
   s.onReport(report => { const {outcomeMasks, ...small}=report; trial.reports.push({...small, observedAt:performance.now()}); })];
 }
 
@@ -74,16 +75,17 @@ async function timedStress({alternation,count,spacingMs,durationMs}) {
 
 export function measureAttempt(trial, workload) {
   const valid=[], invalid=[];
+  const confirmation=confirmedPublications(trial.publications,trial.publicationUpdates);
   const byRequest=new Map(trial.requests.map(r=>[r.identity.requestId,r]));
-  for(const publication of trial.publications) {
+  for(const publication of confirmation.publications) {
     const request=byRequest.get(publication.requestId);
     if(!request)continue;
     const expected=request.quality.internalSize;
     const quality=publication.quality;
     const sameIdentity=JSON.stringify(publication.identity)===JSON.stringify(request.identity);
     const correct=publication.internalSize?.width===expected.width&&publication.internalSize?.height===expected.height&&
-      quality.iteration.maxIterations===request.quality.iteration.maxIterations&&quality.tracing.maxSteps===request.quality.tracing.maxSteps&&
-      total(publication.rayTermination)===expected.width*expected.height&&sameIdentity;
+      quality?.iteration?.maxIterations===request.quality.iteration.maxIterations&&quality?.tracing?.maxSteps===request.quality.tracing.maxSteps&&
+      publication.rayTermination && total(publication.rayTermination)===expected.width*expected.height&&sameIdentity;
     (correct?valid:invalid).push({publication,request});
   }
   const first=new Map();for(const entry of valid)if(!first.has(entry.request.identity.requestId))first.set(entry.request.identity.requestId,entry);
@@ -115,7 +117,7 @@ export function measureAttempt(trial, workload) {
     longestMainThreadTaskMs:phaseTasks.length?Math.max(...phaseTasks.map(t=>t.duration)):0,
     firstSettledMs:settled?settled.publication.publishedAt-settled.request.createdAt:null,fullQualityMs:full?full.publication.publishedAt-full.request.createdAt:null,
     publishedInteractionRequests:latencies('interaction').length,publishedStressRequests:latencies('stress').length,
-    invalidPublications:invalid.length,phaseTasks,compositorTime:'unavailable'};
+    invalidPublications:invalid.length,confirmationFailures:confirmation.failures,pendingFrames:confirmation.pending,recordProtocol:PERFORMANCE_RECORD_VERSION,phaseTasks,compositorTime:'unavailable'};
   const t=workload.targets;
   const targets=[
     {name:PERFORMANCE_PASSES[0],value:metrics.draftsPerSecond,limit:t.completedDraftsPerSecondMin,passed:metrics.draftsPerSecond>=t.completedDraftsPerSecondMin&&metrics.completedDraftsPerSecond>=t.completedDraftsPerSecondMin},
@@ -125,7 +127,7 @@ export function measureAttempt(trial, workload) {
     {name:PERFORMANCE_PASSES[4],value:metrics.longestMainThreadTaskMs,limit:t.applicationMainThreadTaskMaxMs,passed:trial.observerError?null:metrics.longestMainThreadTaskMs<=t.applicationMainThreadTaskMaxMs},
     {name:PERFORMANCE_PASSES[5],value:metrics.firstSettledMs,limit:t.firstSettledImageMs,passed:metrics.firstSettledMs!==null&&metrics.firstSettledMs<=t.firstSettledImageMs},
   ];
-  return {metrics,targets,applicationFailure:invalid.length?'publication identity, quality or complete pixel coverage mismatch':!fullBeforeInteraction?'full quality did not complete before interaction':null};
+  return {metrics,targets,applicationFailure:confirmation.failures.length?'invalid diagnostic confirmation':confirmation.pending.length?'missing diagnostic confirmation after drain':invalid.length?'publication identity, quality or complete pixel coverage mismatch':!fullBeforeInteraction?'full quality did not complete before interaction':null};
 }
 
 export async function runPerformance({page,environment,sceneId,url,pass,report}) {
@@ -136,7 +138,7 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
   assert.equal(environment.chromeGpu?.vendorId,0x10de,'physical NVIDIA adapter required');assert.match(environment.webgpuStatus,/Hardware accelerated/i);
   const outputDir=process.env.ATLAS_B15_REPORT_DIR??'docs/reports/project1b';
   const outputPath=`${outputDir}/1b1-performance-${sceneId}.json`,attempts=[];
-  const result={schema:'atlas.performance-evidence',schemaVersion:1,sceneId,environment,workloadSha256:sha256(workloadBytes),predictionSha256:sha256(predictionBytes),attempts};
+  const result={schema:'atlas.performance-evidence',schemaVersion:2,recordProtocol:PERFORMANCE_RECORD_VERSION,sceneId,environment,workloadSha256:sha256(workloadBytes),predictionSha256:sha256(predictionBytes),attempts};
   const persist=async()=>{for(const attempt of attempts)attempt.classification=classifyAttempt(attempt);result.classification=classifyTrials(attempts);await mkdir(outputDir,{recursive:true});await writeFile(outputPath,JSON.stringify(result,null,2)+'\n');};
   await page.addInitScript(installObservation);
   await page.goto(url,{timeout:LIMITS.launch});await page.waitForFunction(()=>Boolean(globalThis.atlas?.space));
@@ -187,15 +189,19 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
           const replay={...selected.scene,camera:other,appearance:{...selected.scene.appearance,lightingQuality:'direct'},sampling:{...selected.scene.sampling,targetSamples:1}};
           await restore(replay);
           await ev(page,async checkpoint=>{
-            globalThis.__p3Replay=null;let requestId=null;
-            const stopRequest=atlas.space.onRequest(event=>{if(!requestId&&event.purpose==='interactive')requestId=event.identity.requestId;});
-            const unsubscribe=atlas.space.onPublish(publication=>{if(publication.requestId===requestId) {__p3Replay=publication;unsubscribe();stopRequest();}});
+            globalThis.__p3Replay=null;let requestId=null,original=null;
+            let stopRequest=()=>{},stopPublish=()=>{},stopUpdate=()=>{};
+            const finish=publication=>{__p3Replay=publication;stopRequest();stopPublish();stopUpdate();};
+            stopRequest=atlas.space.onRequest(event=>{if(!requestId&&event.purpose==='interactive')requestId=event.identity.requestId;});
+            stopPublish=atlas.space.onPublish(publication=>{if(publication.requestId!==requestId)return;if(publication.diagnosticsState==='pending')original=publication;else finish(publication);});
+            stopUpdate=atlas.space.onPublicationUpdate(update=>{if(original?.frameId===update.frameId&&JSON.stringify(original.identity)===JSON.stringify(update.identity))finish({...original,...update});});
             atlas.space.requestCamera(checkpoint.camera,{phase:checkpoint.kind==='orbit'?'preview':'commit'});
           },checkpoint,'replay checkpoint');
           await page.waitForFunction(()=>Boolean(globalThis.__p3Replay),undefined,{timeout:LIMITS.deep});
           const publication=await ev(page,()=>__p3Replay,undefined,'checkpoint publication');
+          assert.ok(publication.rayTermination,'coverage checkpoint requires confirmed diagnostics');
           const expected=predictions.checkpoints.find(p=>p.id===checkpoint.predictionId),counts=coverageCounts(publication.rayTermination);
-          const checked={id:checkpoint.id,counts,expected:expected.acceptance,passed:total(publication.rayTermination)===expected.rays&&Object.entries(expected.acceptance.ranges).every(([key,[lo,hi]])=>counts[key]>=lo&&counts[key]<=hi)};
+          const checked={id:checkpoint.id,counts,expected:expected.acceptance,passed:publication.rayTermination && total(publication.rayTermination)===expected.rays&&Object.entries(expected.acceptance.ranges).every(([key,[lo,hi]])=>counts[key]>=lo&&counts[key]<=hi)};
           if(checkpoint.kind==='settled') {
             await idle();
             await mkdir('artifacts/performance',{recursive:true});const screenshot=`artifacts/performance/${sceneId}-attempt-${index+1}-settled-first.png`;

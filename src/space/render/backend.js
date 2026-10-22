@@ -1,7 +1,7 @@
 // Space-owned portable descriptors. No backend API or GPU handles cross into shared/.
 import { deepFreeze, isPlainObject, canonicalJson } from '../../shared/scene.js';
 
-export const PASSES = Object.freeze(['probe', 'trace', 'normals', 'shade', 'accumulate', 'display']);
+export const PASSES = Object.freeze(['probe', 'trace', 'normals', 'shade', 'accumulate', 'display', 'reduce']);
 // B11c (spec §11.4 rev 5.1): space-targets-v2 adds `recovery`, the per-pixel quaternion-primary recovery word that
 // trace_band writes beside depth and status; it is geometry, kept and reused with them (v1 was B06's layout).
 export const TARGET_LAYOUT_ID = 'space-targets-v2';
@@ -103,18 +103,32 @@ export function createBatch(value) {
 // A draft region is one ordered queue operation. Each member keeps the ordinary
 // Batch contract; opaque handles keep their identity, data and uniforms are copied.
 export function createBatchGroup(value) {
-  object(value, 'batch group', ['identity', 'region', 'sample', 'passes']);
+  object(value, 'batch group', ['identity', 'region', 'sample', 'passes', ...(Object.hasOwn(value, 'draft') ? ['draft'] : [])]);
   const id = identity(value.identity), area = region(value.region), sampling = sample(value.sample);
   if (!Array.isArray(value.passes)) invalid('group passes must be an array');
   const passes = value.passes.map(createBatch);
   const order = passes.map(batch => batch.pass).join(',');
-  if (!['trace,normals,shade,accumulate,display', 'shade,accumulate,display'].includes(order)) invalid('invalid draft group pass order');
+  const orders = ['trace,normals,shade,accumulate,display', 'shade,accumulate,display'];
+  if (!orders.includes(order) && !(value.draft && orders.map(order => `${order},reduce`).includes(order))) invalid('invalid draft group pass order');
   if (sampling.index !== 0) invalid('draft groups require sample zero');
   for (const batch of passes) {
     if (canonicalJson(batch.identity) !== canonicalJson(id) || canonicalJson(batch.region) !== canonicalJson(area) || canonicalJson(batch.sample) !== canonicalJson(sampling)) invalid('group members must share identity, region and sample');
     if (batch.bounds.shadowRays || batch.bounds.shadowSteps || batch.bounds.aoSamples) invalid('draft groups cannot contain secondary-ray work');
   }
-  return deepFreeze({ identity: id, region: area, sample: sampling, passes });
+  let draft;
+  if (value.draft) {
+    object(value.draft, 'draft completion', ['mode', 'summary', 'producerToken', 'recovery', 'display']);
+    const d = value.draft;
+    if (!['compute', 'gated', 'provisional', 'async', 'audit', 'unchecked'].includes(d.mode) || typeof d.recovery !== 'boolean') invalid('invalid draft completion mode');
+    if ((d.mode === 'unchecked') !== (d.summary === null) || (d.summary !== null) !== (passes.at(-1).pass === 'reduce')) invalid('summary reduction and copy must be declared together');
+    const producerToken = count(d.producerToken, 'producerToken', 0x7fffffff, 1);
+    const display = passes.find(batch => batch.pass === 'display');
+    if (display.outputs.display !== d.display || (d.summary && (display.uniforms.producerToken !== producerToken ||
+        passes.at(-1).outputs.summary !== d.summary || passes.at(-1).inputs.draftDiagnostics !== display.outputs.draftDiagnostics ||
+        passes.at(-1).uniforms.producerToken !== producerToken || passes.at(-1).uniforms.diagnosticStride !== (d.recovery ? 3 : 2)))) invalid('draft producer/summary binding mismatch');
+    draft = { mode: d.mode, summary: d.summary === null ? null : handle(d.summary), producerToken, recovery: d.recovery, display: handle(d.display) };
+  }
+  return deepFreeze({ identity: id, region: area, sample: sampling, passes, ...(draft ? { draft } : {}) });
 }
 export const createBatchSubmission = value => Object.hasOwn(value ?? {}, 'passes') ? createBatchGroup(value) : createBatch(value);
 export function createPickRequest(value) {

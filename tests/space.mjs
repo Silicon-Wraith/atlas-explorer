@@ -26,7 +26,7 @@ import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell', 'performance', 'memory', 'prewarm']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell', 'performance', 'performance-ladder', 'draft-summary', 'memory', 'prewarm']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
@@ -3565,7 +3565,7 @@ let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
 const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence, rendering: runRendering, visual: runVisualOnly, shell: runShell };
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
-const coldCaches = process.env.ATLAS_COLD_CACHE_ROOT || ['performance', 'prewarm'].includes(options.group)
+const coldCaches = process.env.ATLAS_COLD_CACHE_ROOT || ['performance', 'performance-ladder', 'prewarm'].includes(options.group)
   ? await (await import('./support/cold-cache.mjs')).coldCacheEnvironment(process.env.ATLAS_COLD_CACHE_ROOT) : null;
 let source = null, serverOwnership = null;
 
@@ -3602,13 +3602,15 @@ try {
   ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
   console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
   assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
-  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell', 'performance', 'memory', 'prewarm'].includes(options.group)) {
+  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell', 'performance', 'performance-ladder', 'draft-summary', 'memory', 'prewarm'].includes(options.group)) {
     // One launch under the complete profile; the application page is a WebGL (Plane) page, so its close
     // in the finally goes through the local expected-backend drain wrapper (drainExpecting).
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });
     const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), options.group === 'prewarm' ? 'none' : 'webgl');
     watchErrors(page);
     if (options.group === 'prewarm') await (await import('./support/space-prewarm.mjs')).runColdPrewarm({ page, url, environment, pass, report });
+    else if (options.group === 'draft-summary') await (await import('./support/space-draft-summary.mjs')).runDraftSummary({ page, url, report, pass });
+    else if (options.group === 'performance-ladder') await (await import('./support/space-performance-ladder.mjs')).runPerformanceLadder({ page, environment, url, pass, report });
     else if (options.group === 'performance') await (await import('./support/space-performance.mjs')).runPerformance({ context, page, environment, sceneId: options.scene, url, pass, report });
     else if (options.group === 'memory') await (await import('./support/space-memory.mjs')).runMemory({ page, url, environment, pass, report });
     else if (options.group === 'shell' && options.investigation) await (await import('./support/space-investigation.mjs')).runInvestigation({ page, url, environment, pass, report });

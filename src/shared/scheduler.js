@@ -72,9 +72,9 @@ function readyQueue() {
  * ready(jobId, {epoch}) when its resources become ready. This rechecks only that
  * job, never issues a lease, and returns true only for newly reserved work or
  * exhaustion. Stale, terminal and duplicate notifications have no effect.
- * An optional navigationStream identifies a per-view/epoch stream: one admitted
- * owner plus the newest pending request, including across dependency waits.
- * job.preparation resolves true when no older owner needs to retire, or false on
+ * An optional navigationStream identifies a per-view/epoch stream: up to two
+ * admitted owners plus the newest pending request, including dependency waits.
+ * job.preparation resolves true when a frame slot is available, or false on
  * supersession/cancellation before selection. It never grants a GPU lease.
  * Update pins its selected request through the old owner's cancellation/drain.
  */
@@ -115,12 +115,19 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
     return index;
   }
   const nextInstrumentAt = view => view.lastInstrumentAt + 1000 / instrumentHz;
+  function streamAvailable(record) {
+    const stream = record.group.stream;
+    if (!stream) return true;
+    // Update still waits for cancellation/drain of every other stream owner.
+    if (record.view.updateJob === record && [...stream.active].some(group => group !== record.group)) return false;
+    return stream.active.has(record.group) || stream.active.size < 2;
+  }
   function eligible(record) {
     // Keep ready entries through a stall: admit() gates the epoch. Clearing a
     // stall therefore needs no backlog scan from completed()/failed().
     return record.group.epoch === epoch && epoch !== 0 && !epochs.get(epoch).lost &&
       !record.result && !record.group.cancellation && !record.view.hidden &&
-      (!record.group.stream?.active || record.group.stream.active === record.group) &&
+      streamAvailable(record) &&
       (!record.view.paused || record.view.updateJob === record) &&
       (!record.instrument || record.admittedAt !== null ||
         (record.view.instruments.values().next().value === record && now() >= nextInstrumentAt(record.view)));
@@ -164,20 +171,19 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
   }
   function cleanupGroup(group) {
     const stream = group.stream;
-    if (stream?.active === group && (!group.main || group.main.result) && !group.outstanding) {
-      stream.active = null;
+    if (stream?.active.has(group) && (!group.main || group.main.result) && !group.outstanding) {
+      stream.active.delete(group);
       // Later inspection auxiliaries no longer own a completed draft's stream.
       group.stream = null;
       const selected = group.view.updateJob;
       const pending = selected?.group.stream === stream && !selected.result ? selected : stream.pending;
       // With no Update selection and no pending request both are null: nothing to pin.
-      if (pending && pending === selected) stream.active = selected.group;
-      if (pending && !pending.result && !pending.group.cancellation) {
+      if (pending && !pending.result && !pending.group.cancellation && streamAvailable(pending)) {
         pending.preparation.resolve(true);
         for (const member of pending.group.members) queue(member);
       }
     }
-    if (stream && !stream.active && !stream.pending && group.view.streams.get(stream.key) === stream) group.view.streams.delete(stream.key);
+    if (stream && !stream.active.size && !stream.pending && group.view.streams.get(stream.key) === stream) group.view.streams.delete(stream.key);
     if (!group.members.size && !group.outstanding) groups.delete(group.jobId);
   }
   function refreshInstruments(view) {
@@ -326,7 +332,7 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       if (interactive) {
         if (navigationStream !== null) {
           const key = `${epoch}/${navigationStream}`;
-          if (!view.streams.has(key)) view.streams.set(key, { key, active: null, pending: null });
+          if (!view.streams.has(key)) view.streams.set(key, { key, active: new Set(), pending: null });
           group.stream = view.streams.get(key);
         }
         const previousPending = group.stream ? group.stream.pending : view.pending;
@@ -339,7 +345,7 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
         view.pending = record;
         if (group.stream) { group.stream.pending = record; view.streams.set(group.stream.key, group.stream); }
       }
-      if (!group.stream?.active) record.preparation.resolve(true);
+      if (streamAvailable(record)) record.preparation.resolve(true);
       // Instruments start at most twice a second per view. Continuation batches of
       // that same snapshot are not throttled. No controller-specific cadence exists.
       if (record.instrument) view.instruments.add(record);
@@ -399,7 +405,7 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
         const owner = record.group.main;
         const stream = record.group.stream;
         if (stream) {
-          stream.active = record.group;
+          stream.active.add(record.group);
           if (stream.pending === owner) stream.pending = null;
           if (stream.pending) for (const member of stream.pending.group.members) queue(member);
         }
@@ -487,9 +493,8 @@ export function createScheduler({ clock, makeAdmission, setTimer, clearTimer,
       if (view.pending === record) view.pending = null;
       if (record?.group.stream) {
         const stream = record.group.stream;
-        if (stream.active && stream.active !== record.group) cancelGroup(stream.active);
-        if (!stream.active) stream.active = record.group;
-        if (stream.active === record.group && stream.pending === record) stream.pending = null;
+        for (const active of [...stream.active]) if (active !== record.group) cancelGroup(active);
+        if (streamAvailable(record)) record.preparation.resolve(true);
       }
       if (record?.interactive) view.running.add(record);
       for (const member of view.members) queue(member);

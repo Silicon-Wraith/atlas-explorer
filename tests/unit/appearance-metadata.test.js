@@ -32,10 +32,10 @@ const DEFAULT_LIMITS = { maxStorageBuffersPerShaderStage: 8, maxStorageTexturesP
 
 test('the appearance metadata hashes equal the sources and verifyPrewarm reports a missing variant', async () => {
   assert.equal(APPEARANCE_VERSION, 'space-appearance-v3');
-  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v5');
-  const descriptors = appearancePipelineDescriptors();
+  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v6');
+  const descriptors = [...appearancePipelineDescriptors(), ...productPipelineDescriptors().filter(d => ['display_summary_band', 'reduce_draft_summary', 'present_draft'].includes(d.pipelineId))];
   const owned = new Set(descriptors.flatMap(d => d.sourceIds).filter(id => !['fields', 'trace', 'menger-sample', 'menger-absent'].includes(id)));
-  assert.deepEqual([...owned].sort(), ['accumulate', 'display', 'shade']);
+  assert.deepEqual([...owned].sort(), ['accumulate', 'display', 'draft-summary', 'present-draft', 'shade']);
   assert.deepEqual(Object.keys(APPEARANCE_HASHES.sources).sort(), [...owned].sort());
   for (const id of owned) assert.equal(APPEARANCE_HASHES.sources[id], sha256(readFileSync(shaderPath(id))), `${id}.wgsl changed: run node scripts/shader-metadata.mjs`);
   assert.deepEqual(Object.keys(APPEARANCE_HASHES.assembled).sort(), [...new Set(descriptors.map(d => d.sourceIds.join('+')))].sort());
@@ -51,7 +51,7 @@ test('the appearance metadata hashes equal the sources and verifyPrewarm reports
   const product = productPipelineSet(), ids = product.descriptors.map(d => d.pipelineId);
   assert.equal(product.id, PRODUCT_PIPELINE_SET_ID);
   assert.deepEqual(createPipelineSet(product), product);
-  const required = ['probe', 'present', 'accumulate_band', 'display_band', 'display_draft_band', ...TRACE_FIELD_IDS.flatMap(model => [`points-${model}`, `trace_band:${model}`,
+  const required = ['display_summary_band', 'reduce_draft_summary', 'present_draft', 'probe', 'present', 'accumulate_band', 'display_band', 'display_draft_band', ...TRACE_FIELD_IDS.flatMap(model => [`points-${model}`, `trace_band:${model}`,
     `normals_band:${model}`, `shade_band:${model}`, `diagnostic_depth:${model}`]), ...['normals', 'steps', 'termination'].map(mode => `diagnostic_${mode}`)];
   assert.deepEqual([...ids].sort(), [...required].sort());
   assert.equal(new Set(ids).size, ids.length);

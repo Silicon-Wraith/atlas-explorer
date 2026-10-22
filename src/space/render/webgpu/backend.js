@@ -20,6 +20,8 @@ import { acquireDevice, IDENTITY_FIELDS } from './device.js';
 import { createTrackedAllocator } from './allocator.js';
 import { packUniforms, preparePipelines, PREPARATION_BOUND_MS, PRESENT_PIPELINE_ID, validateBindings, WORKGROUP_SIZE } from './pipelines.js';
 import { createPresenter } from './present.js';
+import { draftSummaryBytes } from '../draft-summary.js';
+import { draftExecution as selectDraftExecution } from '../draft-execution.js';
 
 const invalid = message => { throw new BackendError('invalid-descriptor', message); };
 const count = (value, label, min = 0) => { if (!Number.isSafeInteger(value) || value < min) invalid(`${label} must be a safe integer >= ${min}`); return value; };
@@ -56,13 +58,14 @@ const message = error => String(error?.message ?? error);
 // readback; staging is map-read; target textures are storage-writable, sampled (read-only inputs use
 // textureLoad, ruling (a)) and copyable to staging.
 const BUFFER_USAGE = {
-  storage: () => GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  storage: () => GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
   uniform: () => GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_SRC,
   staging: () => GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
 };
 const TEXTURE_USAGE = () => GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;
 
-export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, enableTimestamps = false, preparationBoundMs = PREPARATION_BOUND_MS, loadSource, onPhase, cap = TRACKED_ALLOCATION_CAP, format } = {}) {
+export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, enableTimestamps = false, preparationBoundMs = PREPARATION_BOUND_MS, loadSource, onPhase, cap = TRACKED_ALLOCATION_CAP, format, draftExecution } = {}) {
+  const draftConfig = selectDraftExecution(draftExecution);
   const now = typeof clock === 'function' ? clock : clock?.now?.bind(clock);
   if (typeof now !== 'function') throw new TypeError('createWebGPUBackend requires an injected clock');
   if (!canvas) throw new TypeError('createWebGPUBackend requires a canvas');
@@ -72,6 +75,7 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
   // GPU timestamps are a separate measurement (§9.1 Batches); B06 does not implement them and never
   // reports timestampMs. Requesting them is refused rather than silently ignored.
   if (enableTimestamps) throw new BackendError('unavailable', 'GPU timestamp measurement is not implemented in B06');
+  let rawPending = 0;
   let state = 'unavailable', epoch = 0, lastEpoch = 0, attempt = null, acquiring = false, nextTicket = 0;
   const pipelines = new Map(), pending = new Set(), mappings = new Set(), preparations = new Set(), listeners = new Set(), stagingPool = [], errors = [];
   const lostAttempts = new Set(), creations = new WeakMap();
@@ -188,6 +192,7 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       const encoder = device.createCommandEncoder({ label });
       encode(encoder);
       device.queue.submit([encoder.finish()]);
+      item.queuedAt = now();
     });
     if (thrown) { captured.then(() => {}); settle(item, 'failed', `${label}: ${message(thrown)}`); return; }
     let fenceAt = null;
@@ -354,7 +359,10 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       return Object.freeze({ epoch, layoutId, internalSize, outputSize, handles: Object.freeze(handles), descriptions: Object.freeze(descriptions) });
     }),
     submitBatch: (input, options) => timed('submit', () => {
-      const submission = createBatchSubmission(input), consume = admissionFor(submission.identity, options);
+      const submission = createBatchSubmission(input);
+      checkEpoch(submission.identity.generation.deviceEpoch);
+      // Only injected L0/L1 omit application leases; ordinary operations always require one.
+      const consume = submission.draft && !draftConfig.leases ? () => {} : admissionFor(submission.identity, options);
       // Validate every member, including uniform packing, before allocating or
       // consuming the sole lease. A bad final member cannot submit a prefix.
       const members = (submission.passes ?? [submission]).map(batch => {
@@ -375,13 +383,35 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       });
       const uniformDescriptions = members.filter(member => member.layout.byteLength).map(({ batch, layout, data }) =>
         ({ name: `uniforms:${batch.pipelineId}`, bytes: layout.byteLength, usage: 'uniform', data }));
+      const draft = submission.draft, summaryBytes = draft ? draftSummaryBytes(draft.recovery) : 0;
+      let presentation = null, staging = null;
+      if (draft) {
+        if (draft.mode !== draftConfig.mode) invalid('draft submission does not match the injected execution rung');
+        if (submission.region.x || submission.region.y) invalid('combined draft operation requires a complete frame');
+        const display = entry(draft.display);
+        if (display.description.format !== 'rgba8unorm' || display.description.width !== submission.region.width || display.description.height !== submission.region.height) invalid('combined draft display dimensions');
+        if (draft.summary && (entry(draft.summary).description.bytes !== summaryBytes || entry(draft.summary).description.usage !== 'storage')) invalid('draft summary storage size');
+        if (draft.mode !== 'compute') {
+          const prepared = pipelines.get(draft.summary ? 'present_draft' : PRESENT_PIPELINE_ID);
+          if (!prepared) throw new BackendError('preparation-failed', 'draft presentation pipeline missing');
+          const output = attempt.presenter.size(), internal = display.description;
+          const values = { internal_size: [internal.width, internal.height], output_size: [output.width, output.height],
+            producerToken: draft.producerToken, summaryWords: summaryBytes / 4, mode: draft.mode === 'provisional' ? 2 : ['gated', 'async'].includes(draft.mode) ? 1 : 0 };
+          const layout = prepared.descriptor.uniformLayout;
+          uniformDescriptions.push({ name: 'uniforms:present-draft', bytes: layout.byteLength, usage: 'uniform',
+            data: packUniforms(layout, Object.fromEntries(layout.fields.map(field => [field.name, values[field.name]]))) });
+          presentation = { prepared, display };
+        }
+      }
       // Reserve all snapshots transactionally; hold all group resources until its
       // one ticket settles, including creation scopes and cancellation/loss drain.
       const uniforms = uniformDescriptions.length ? createScoped(() => allocator.transaction(uniformDescriptions)).value : [];
-      try { consume(); } catch (error) { uniforms.forEach(handle => allocator.release(handle)); throw error; }
-      const item = makeTicket(submission.identity, [...members.flatMap(member => member.handles), ...uniforms], { batch: submission });
-      uniforms.forEach(handle => allocator.release(handle)); // retiring; the ticket owns them
-      submit(item, submission.passes ? 'draft-group' : submission.pipelineId, encoder => {
+      try { if (draft?.summary) staging = stagingFor(summaryBytes, summaryBytes); consume(); }
+      catch (error) { uniforms.forEach(handle => allocator.release(handle)); throw error; }
+      if (staging) staging.busy = true;
+      const handles = [...members.flatMap(member => member.handles), ...uniforms, ...(draft ? [draft.display] : []), ...(staging ? [staging.handle] : [])];
+      const encode = encoder => {
+        if (draft?.summary) encoder.clearBuffer(entry(draft.summary).native);
         let uniformIndex = 0;
         for (const { batch, prepared, groups, layout } of members) {
           const uniform = layout.byteLength ? uniforms[uniformIndex++] : null;
@@ -394,8 +424,35 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
           const pass = encoder.beginComputePass({ label: batch.pipelineId });
           pass.setPipeline(prepared.pipeline); pass.setBindGroup(0, bindGroup); pass.dispatchWorkgroups(groups[0], groups[1]); pass.end();
         }
-      });
-      return item.ticket;
+        if (staging) encoder.copyBufferToBuffer(entry(draft.summary).native, 0, entry(staging.handle).native, 0, summaryBytes);
+        if (presentation) attempt.presenter.encode(encoder, { pipeline: presentation.prepared.pipeline, display: presentation.display.native,
+          uniforms: entry(uniforms.at(-1), true).native, ...(draft.summary ? { summary: entry(draft.summary).native } : {}) });
+      };
+      if (draft && !draftConfig.tickets) {
+        // Bounded L0 has the common benchmark fence but no application ticket,
+        // scopes, admission or diagnostic readback. The driver owns both frame slots.
+        if (rawPending >= 2) { uniforms.forEach(handle => allocator.release(handle)); invalid('bounded L0 depth exceeded'); }
+        const startedAt = now(), current = attempt; rawPending++;
+        try {
+          const encoder = current.device.createCommandEncoder({ label: 'diagnostic-L0' }); encode(encoder);
+          current.device.queue.submit([encoder.finish()]);
+          const done = current.device.queue.onSubmittedWorkDone().then(() => {
+            if (current !== attempt) throw new BackendError('device-lost');
+            return { outcome: 'completed', queueCompletedAt: now(), timing: { method: 'benchmark-fence', elapsedMs: now() - startedAt } };
+          }).finally(() => { rawPending--; uniforms.forEach(handle => allocator.release(handle)); });
+          return Object.freeze({ identity: submission.identity, diagnostic: 'bounded-L0', done });
+        } catch (error) { rawPending--; uniforms.forEach(handle => allocator.release(handle)); throw error; }
+      }
+      const item = makeTicket(submission.identity, handles, { batch: submission, ...(staging ? {
+        result: deferred(), staging, mapping: {}, region: { x: 0, y: 0, width: summaryBytes, height: 1 }, fields: Object.freeze(['draftSummary']),
+        copy: { staging, bytes: summaryBytes, rowBytes: summaryBytes, bytesPerRow: summaryBytes, rows: 1 },
+      } : {}) });
+      if (staging) {
+        allocator.hold(draft.summary, item.mapping, 'mapping'); allocator.hold(staging.handle, item.mapping, 'mapping'); mappings.add(item);
+      }
+      uniforms.forEach(handle => allocator.release(handle)); // retiring; the ticket owns them
+      submit(item, submission.passes ? 'draft-group' : submission.pipelineId, encode);
+      return draft && draft.mode !== 'compute' ? Object.freeze({ ...item.ticket, presentationSubmittedAt: item.queuedAt ?? null }) : item.ticket;
     }),
     // One bounded region (≤ 256 rows) into a pooled staging buffer (≤ 2) with 256-byte row pitch. A
     // region whose staging would exceed maxBufferSize is refused before its lease is consumed: the

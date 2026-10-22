@@ -98,8 +98,10 @@ export function reasonMetrics(lanes) {
   }));
 }
 
-export function createOutcomeMasks({ width, height }, { recovery = false } = {}) {
+export function createOutcomeMasks({ width, height }, { recovery = false, producerToken = 0 } = {}) {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) throw new RangeError('outcome masks need a positive integer size');
+  if (!Number.isInteger(producerToken) || producerToken < 0 || producerToken > 0x7fffffff) throw new RangeError('invalid draft producer token');
+  const expectedMarker = producerToken ? (producerToken * 2) >>> 0 : 0x41540000;
   const pixels = width * height, current = new Uint16Array(pixels), seen = new Uint8Array(pixels), union = new Uint16Array(pixels);
   const currentReasons = new Uint32Array(pixels), unionReasons = new Uint32Array(pixels);
   const COMPLETE = recovery ? 15 : 7;
@@ -173,7 +175,7 @@ export function createOutcomeMasks({ width, height }, { recovery = false } = {})
       const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       for (let row = 0, k = 0; row < h; row++) for (let i = (y + row) * width + x, end = i + w; i < end; i++, k += stride) {
         const word = data.getUint32(k, true), marker = data.getUint32(k + 4, true), status = word & 15;
-        if ((marker & 0xfffffffe) !== 0x41540000) throw new RangeError('missing or invalid draft diagnostic coverage');
+        if (((marker & 0xfffffffe) >>> 0) !== expectedMarker) throw new RangeError('missing or invalid draft diagnostic coverage');
         if (status > RAY_STATUS.numericalFailure) throw new RangeError('invalid ray status in a draft diagnostic');
         if (seen[i]) throw new RangeError('draft diagnostics recorded twice for one pixel');
         seen[i] = COMPLETE; current[i] = STATUS_BITS[status] | ((marker & 1) ? NORMAL_RAW : 0);

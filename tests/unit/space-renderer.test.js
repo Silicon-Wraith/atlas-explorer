@@ -50,10 +50,10 @@ const fixture = createPipelineSet({ id: 'b09-fixture', descriptors: [
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
-async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, recoveryWords, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
+async function rig({ pipelineSet = fixture, draftExecution, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, recoveryWords, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock, limits });
   const hooks = {}, discarded = [], failed = [], auxiliaryJobs = [];
-  const tickets = [], submissions = [], publications = [], presents = [], statuses = [], reports = [], plans = [], targets = [];
+  const tickets = [], submissions = [], publications = [], publicationUpdates = [], publicationRecords = [], presents = [], statuses = [], reports = [], plans = [], targets = [];
   let prepared = false, releaseConfiguration, releaseReadbacks;
   const readbacksBlocked = new Promise(resolve => { releaseReadbacks = resolve; });
   const blocked = new Promise(resolve => { releaseConfiguration = resolve; });
@@ -85,7 +85,7 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
     ticket.done.then(() => { record.pending = false; });
     if (replacement) return replacement;
     if (stalePickReadback && method === 'readback' && desc.fields.includes('depth')) return { ...ticket, result: ticket.result.then(result => ({ ...result, identity: { ...result.identity, requestId: 'obsolete-request' } })) };
-    return prepared && holdReadbacks && method === 'readback'
+    return prepared && holdReadbacks && ticket.result
       ? { ...ticket, result: ticket.result.then(async result => { await readbacksBlocked; return result; }) } : ticket;
   };
   const rawScheduler = createScheduler({ clock, makeAdmission: createAdmission, setTimer: clock.schedule, clearTimer: clock.clear });
@@ -104,8 +104,9 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
     discarded.push({ admission, reason, accepted }); return accepted;
   };
   let renderer;
-  assert.doesNotThrow(() => { renderer = createSpaceRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet }); }, 'the importable renderer must implement its constructor');
+  assert.doesNotThrow(() => { renderer = createSpaceRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet, draftExecution }); }, 'the importable renderer must implement its constructor');
   renderer.onPublish(value => publications.push(value)); renderer.onPresent(value => presents.push(value));
+  renderer.onPublicationUpdate(value => publicationUpdates.push(value)); renderer.onPublicationRecord(value => publicationRecords.push(value));
   renderer.onStatus(value => statuses.push(value)); renderer.onReport(value => reports.push(value));
   const complete = async (order = 'oldest', elapsedMs = 8) => {
     await flush(); const pending = tickets.filter(item => item.pending);
@@ -124,7 +125,7 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
   let receipt, failure; preparing.then(value => { receipt = value; }, error => { failure = error; });
   await until(() => receipt !== undefined || failure !== undefined);
   prepared = true;
-  return { renderer, fake, backend, scheduler, clock, hooks, discarded, failed, auxiliaryJobs, tickets, submissions, publications, presents, statuses, reports, plans, targets, receipt, failure, complete, until, finish, releaseConfiguration, releaseReadbacks };
+  return { renderer, fake, backend, scheduler, clock, hooks, discarded, failed, auxiliaryJobs, tickets, submissions, publications, publicationUpdates, publicationRecords, presents, statuses, reports, plans, targets, receipt, failure, complete, until, finish, releaseConfiguration, releaseReadbacks };
 }
 const batches = (h, jobId) => h.submissions.filter(x => x.method === 'submitBatch' && x.desc.identity.jobId === jobId).flatMap(x => x.desc.passes ?? [x.desc]);
 const auxiliaryResult = async (h, promise) => { let result; promise.then(value => { result = value; }); await h.until(() => result !== undefined); return result; };
@@ -571,6 +572,16 @@ test('a quaternion report keeps per-sample recovery diagnostics from a recovery 
   const plain = (await h.finish(h.renderer.render(sphere))).report;
   assert.equal(recoveryReads(sphere.jobId), 0); assert.equal(plain.outcomeMasks.recovery, null);
   h.renderer.destroy();
+});
+
+test('B15-REC-G recovery consistency rejection happens before any presentation submission', async () => {
+  const h = await rig({ statusWords: [packStatus({ status: 0, reason: 0, subreason: 0, steps: 1 })], recoveryWords: [0x411], normals: [true] });
+  try {
+    const r = request(scene({ model: 'quaternion-julia' }));
+    const result = await h.finish(h.renderer.render(r));
+    assert.equal(result.outcome, 'failed');
+    assert.equal(h.submissions.filter(s => s.method === 'present' && s.desc.identity.jobId === r.jobId).length, 0, 'masks.end must validate recovery before submitting present');
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
 });
 
 test('the first settled direct-light image and full-quality completion are separate milestones', async () => {
@@ -1526,16 +1537,64 @@ test('tile learning persists by workload and pass and permits compute regions ta
   h.renderer.destroy();
 });
 
-test('pending navigation requests allocate targets only after the active draft retires', async () => {
+test('pending navigation requests allocate targets only after one of two active drafts retires', async () => {
   const h = await rig(); let live = generation(); const opts = { currentGeneration: () => live, currentNavigation: () => 1 };
   const first = h.renderer.render(request(scene(), live), opts);
   await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === first.jobId));
   const allocated = h.targets.length, skipped = [];
   for (let i = 2; i <= 12; i++) { live = generation(i, 1); skipped.push(h.renderer.render(request(scene(), live), opts)); await flush(); }
-  assert.equal(h.targets.length, allocated, 'pending drafts have no working allocations');
-  for (const job of skipped.slice(0, -1)) assert.equal((await job.done).outcome, 'superseded');
-  await h.finish(first); assert.equal((await h.finish(skipped.at(-1))).outcome, 'completed');
-  assert.equal(h.targets.length, allocated + 1); h.renderer.destroy();
+  assert.equal(h.targets.length, allocated + 1, 'the second live draft owns its targets; pending drafts allocate none');
+  for (const job of skipped.slice(1, -1)) assert.equal((await job.done).outcome, 'superseded');
+  await h.finish(first); await h.finish(skipped[0]); assert.equal((await h.finish(skipped.at(-1))).outcome, 'completed');
+  assert.equal(h.targets.length, allocated + 2); h.renderer.destroy();
+});
+
+test('B15-REC-G qualified L6a drafts have a fixed compute reduce copy then present plan with two leases', async () => {
+  const h = await rig({ pipelineSet: productPipelineSet() });
+  try {
+    const r = request(scene(), generation(), 'draft', { width: 1280, height: 720 });
+    assert.equal((await h.finish(h.renderer.render(r))).outcome, 'completed');
+    const submissions = h.submissions.filter(s => s.desc.identity.jobId === r.jobId);
+    assert.equal(submissions.length, 2, 'compute/reduce/copy and presentation each consume one lease');
+    assert.equal(submissions[0].desc.draft.mode, 'compute');
+    assert.equal(submissions[1].method, 'present');
+    assert.deepEqual(submissions[0].desc.region, { x: 0, y: 0, width: 640, height: 360 });
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-REC-G presentation variants use two or one tickets and confirm only after diagnostic resolution', async () => {
+  for (const variant of ['a', 'b', 'c', 'd']) {
+    const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: `L6${variant}`, holdReadbacks: true });
+    try {
+      const r = request(), job = h.renderer.render(r);
+      await h.until(() => h.submissions.some(s => s.desc.identity.jobId === r.jobId));
+      await h.complete(); await flush();
+      assert.equal(h.publicationUpdates.length, 0, 'mapping is not yet confirmation');
+      assert.equal(h.scheduler.snapshot().outstanding, 1, 'the summary lease stays outstanding through copy-out');
+      if (variant === 'a') assert.equal(h.submissions.some(s => s.method === 'present' && s.desc.identity.jobId === r.jobId), false);
+      if (variant === 'd') assert.equal(h.publications[0].diagnosticsState, 'pending');
+      h.releaseReadbacks(); const result = await h.finish(job);
+      assert.equal(result.outcome, 'completed'); assert.equal(result.report.completed?.samples, 1, 'confirmation precedes successful report');
+      assert.equal(h.submissions.filter(s => s.desc.identity.jobId === r.jobId).length, variant === 'a' ? 2 : 1);
+      if (variant !== 'a') assert.equal(h.publicationUpdates[0].diagnosticsState, 'confirmed');
+    } finally { h.renderer.destroy(); h.fake.destroy(); }
+  }
+});
+
+test('B15-REC-G invalid or stale summaries cause zero CPU-gated presentation submissions', async () => {
+  for (const corrupt of ['flags', 'identity', 'coverage']) {
+    const h = await rig({ pipelineSet: productPipelineSet() });
+    try {
+      h.hooks.after = (method, batch, ticket) => batch.pass === 'reduce' ? { ...ticket, result: ticket.result.then(result => {
+        if (corrupt === 'identity') return { ...result, identity: { ...result.identity, requestId: 'stale' } };
+        const data = result.data.slice(); new DataView(data.buffer).setUint32(corrupt === 'flags' ? 8 : 12, 0xffffffff, true);
+        return { ...result, data };
+      }) } : undefined;
+      const r = request(); const result = await h.finish(h.renderer.render(r));
+      assert.equal(result.outcome, 'failed');
+      assert.equal(h.submissions.filter(s => s.method === 'present' && s.desc.identity.jobId === r.jobId).length, 0);
+    } finally { h.renderer.destroy(); h.fake.destroy(); }
+  }
 });
 
 test('B15-R10-F1 constant 4 ms fences and a short tail do not collapse persisted tiles', async () => {
@@ -1667,4 +1726,79 @@ test('B15-R10-F1 clipped tiles and isolated queue delays cannot bias comparable 
       }
     }
   } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-REC-G late draft confirmation is historical and cannot republish or replace newer counts', async () => {
+  const h=await rig({pipelineSet:productPipelineSet(),draftExecution:'L6d',holdReadbacks:true});
+  try {
+    let live=generation(1,1);const options={currentGeneration:()=>live,currentNavigation:()=>1};
+    const first=request(scene(),live),a=h.renderer.render(first,options);
+    await h.until(()=>h.publicationRecords.length===1);
+    live=generation(2,1);const second=request(scene(),live),b=h.renderer.render(second,options);
+    await h.until(()=>h.publicationRecords.length===2);
+    assert.equal(h.scheduler.snapshot().outstanding,2);
+    await h.complete('newest');await h.complete('oldest');h.releaseReadbacks();
+    const rb=await h.finish(b),ra=await h.finish(a);
+    assert.equal(rb.outcome,'completed');assert.equal(ra.outcome,'completed');
+    assert.deepEqual(h.publications.map(p=>p.requestId),[first.requestId,second.requestId],'confirmations do not emit new presentation events');
+    const old=h.publicationUpdates.find(u=>u.identity.requestId===first.requestId);
+    assert.equal(old.diagnosticsState,'confirmed');assert.equal(old.historical,true);
+    assert.equal(h.publicationUpdates.find(u=>u.identity.requestId===second.requestId).historical,false);
+  }finally{h.renderer.destroy();h.fake.destroy();}
+});
+
+test('B15-REC-G loss during summary mapping interrupts pending records and late mapping cannot confirm them', async () => {
+  const h=await rig({pipelineSet:productPipelineSet(),draftExecution:'L6d',holdReadbacks:true});
+  try{
+    const r=request(),job=h.renderer.render(r);await h.until(()=>h.publicationRecords.length===1);await h.complete();
+    h.fake.lose();await flush();h.releaseReadbacks();const result=await h.finish(job);
+    assert.equal(result.outcome,'interrupted');
+    assert.deepEqual(h.publicationUpdates.map(u=>u.diagnosticsState),['interrupted']);
+    assert.equal(result.report.draftRecord.diagnosticsState,'interrupted');
+    assert.equal(h.scheduler.snapshot().outstanding,0);
+  }finally{h.renderer.destroy();h.fake.destroy();}
+});
+
+test('B15-REC-G failure after replacement remains historical and submits no restoration over the newer frame', async () => {
+  const h=await rig({pipelineSet:productPipelineSet(),draftExecution:'L6c'});
+  try{
+    // Retain a validated image, then two eligible navigation drafts.
+    await h.finish(h.renderer.render(request()));let live=generation(2,1);
+    const options={currentGeneration:()=>live,currentNavigation:()=>1};const old=request(scene(),live);
+    h.hooks.after=(method,batch,ticket)=>batch.pass==='reduce'&&batch.identity.requestId===old.requestId?{...ticket,result:ticket.result.then(result=>{const data=result.data.slice();new DataView(data.buffer).setUint32(8,1,true);return {...result,data};})}:undefined;
+    const a=h.renderer.render(old,options);await h.until(()=>h.publicationRecords.length===2);
+    live=generation(3,1);const b=h.renderer.render(request(scene(),live),options);await h.until(()=>h.publicationRecords.length===3);
+    await h.finish(b,'newest');assert.equal((await h.finish(a)).outcome,'failed');
+    assert.equal(h.publicationUpdates.find(u=>u.identity.requestId===old.requestId).historical,true);
+    assert.equal(h.submissions.filter(s=>s.desc.identity.jobId.includes('/restore')).length,0);
+  }finally{h.renderer.destroy();h.fake.destroy();}
+});
+
+test('B15-REC-G provisional cancellation restores retained validation with an ordinary lease', async () => {
+  const h=await rig({pipelineSet:productPipelineSet(),draftExecution:'L6c'});
+  try{
+    await h.finish(h.renderer.render(request()));
+    const r=request(scene(),generation(2)),job=h.renderer.render(r);await h.until(()=>h.publicationRecords.length===2);
+    h.renderer.cancel(r.jobId);await h.finish(job);
+    await h.until(()=>h.submissions.some(s=>s.desc.identity.jobId.includes('/restore')));
+    await h.complete();
+    const restore=h.submissions.find(s=>s.desc.identity.jobId.includes('/restore'));
+    assert.equal(restore.method,'present');assert.equal(restore.admission.consume(),false,'restoration lease was already consumed');
+    assert.equal(h.publicationUpdates.at(-1).diagnosticsState,'failed');
+    assert.ok(h.scheduler.snapshot().outstanding<=2);
+  }finally{h.renderer.destroy();h.fake.destroy();}
+});
+
+test('B15-REC-G only measured active GPU work removes a workload from whole-frame qualification',async()=>{
+  for(const timestampMs of [undefined,12]){
+    const h=await rig({pipelineSet:productPipelineSet()});
+    try{const first=request(scene(),generation(1));const job=h.renderer.render(first);
+      await h.until(()=>h.tickets.some(t=>t.pending&&t.desc.identity.jobId===first.jobId));
+      const compute=h.tickets.find(t=>t.pending&&t.desc.identity.jobId===first.jobId);
+      h.fake.complete(compute.ticket,{elapsedMs:100,...(timestampMs===undefined?{}:{timestampMs})});await h.finish(job);
+      const second=request(scene(),generation(2));await h.finish(h.renderer.render(second));
+      const next=h.submissions.find(s=>s.desc.identity.jobId===second.jobId);
+      assert.equal(Boolean(next.desc.draft),timestampMs===undefined,'raw fence delay does not subdivide; active work beyond 8 ms does');
+    }finally{h.renderer.destroy();h.fake.destroy();}
+  }
 });

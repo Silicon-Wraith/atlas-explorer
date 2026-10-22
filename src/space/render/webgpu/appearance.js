@@ -14,10 +14,11 @@ import { SELF_CHECK_PIPELINE_SET, PRESENT_PIPELINE_ID } from './pipelines.js';
 import { fieldPipelineDescriptors } from './kernels.js';
 import { TRACE_FIELD_IDS, TRACE_UNIFORM_LAYOUT, traceLayout, tracePipelineDescriptors, traceUniforms } from './passes.js';
 import { APPEARANCE_HASHES } from './appearance-hashes.js';
+import { draftPipelineDescriptors } from './draft-pipelines.js';
 
 export { APPEARANCE_HASHES };
 export const APPEARANCE_VERSION = 'space-appearance-v3'; // rev 5.1 (B11c FU1): AO heights 4i·τ; v2 was B11b's lighting-unresolved tint, v1 B11's
-export const PRODUCT_PIPELINE_SET_ID = 'space-product-v5'; // B15: v5 adds the draft display/diagnostic-buffer variant; colour rules unchanged
+export const PRODUCT_PIPELINE_SET_ID = 'space-product-v6'; // REC-G draft summary and gated presenter; settled colour rules unchanged
 export const DIAGNOSTIC_MODES = Object.freeze(VIEW_MODES.filter(mode => mode !== 'shaded'));
 export const VIEW_MODE_CODES = Object.freeze(Object.fromEntries(VIEW_MODES.map((mode, code) => [mode, code])));
 // The labels a view-mode control shows; step count is computational cost, never estimator error (spec §8.2).
@@ -90,7 +91,7 @@ export const APPEARANCE_BINDINGS = deepFreeze({
 export function productPipelineDescriptors() {
   const selfCheck = SELF_CHECK_PIPELINE_SET.descriptors.filter(d => d.pipelineId === 'probe' || d.pipelineId === PRESENT_PIPELINE_ID);
   const points = fieldPipelineDescriptors().filter(d => d.entryPoint === 'evaluate_points');
-  return deepFreeze(structuredClone([...selfCheck, ...points, ...tracePipelineDescriptors(), ...descriptors()]));
+  return deepFreeze(structuredClone([...selfCheck, ...points, ...tracePipelineDescriptors(), ...descriptors(), ...draftPipelineDescriptors(DRAFT_DISPLAY)]));
 }
 export const productPipelineSet = () => createPipelineSet({ id: PRODUCT_PIPELINE_SET_ID, descriptors: productPipelineDescriptors() });
 

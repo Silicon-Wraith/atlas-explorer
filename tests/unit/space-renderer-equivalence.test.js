@@ -70,3 +70,23 @@ test('B15-R11-F4 product renderer grouped and single-pass drafts produce identic
     assert.deepEqual(grouped, singles, `${model}: display, packet and diagnostic evidence`);
   }
 });
+
+async function settledBytes(groupDrafts){
+  const pipelineSet=productPipelineSet(),gpu=createRendererDeviceDouble(pipelineSet),clock=createFakeClock();
+  const backend=createWebGPUBackend({canvas:gpu.canvas,clock,acquire:gpu.acquire,loadSource:gpu.loadSource,format:'bgra8unorm'});
+  const frames=[],passes=[];const proxy={...backend,submitBatch(batch,options){passes.push(batch);return backend.submitBatch(batch,options);}};
+  const renderer=createSpaceRenderer({backend:proxy,clock,pipelineSet,viewId:'settled-equivalence',groupDrafts,versions:{kernelVersion:'fixture',tracingVersion:'fixture'}});
+  try{
+    await renderer.prepare();const scene=createSpaceScene({model:'sphere'});
+    const request=createSpaceRequest({scene:sceneCodec.validate({...scene,sampling:{...scene.sampling,targetSamples:2}}),purpose:'interactive',width:26,height:18,profile:'settled',viewId:'settled-equivalence',generation:{deviceEpoch:backend.currentEpoch(),viewRevision:1,geometryRevision:1,appearanceRevision:1},versions:{kernelVersion:'fixture',tracingVersion:'fixture'}});
+    const result=await renderer.render(request).done;assert.equal(result.outcome,'completed');
+    assert.ok(passes.every(p=>!p.passes),'settled retains single-pass execution');
+    // Capture bytes actually written by the renderer before destruction, across all
+    // samples, including the spare geometry set and the retained display.
+    for(const resource of gpu.control.natives.filter(n=>n.kind==='texture'&&n.data))frames.push({label:resource.descriptor.label,format:resource.descriptor.format,bytes:resource.data.slice()});
+    return {frames,masks:result.report.outcomeMasks,counts:result.report.rayTermination,completed:result.report.completed};
+  }finally{renderer.destroy();backend.destroy();}
+}
+test('B15-REC-G settled display geometry diagnostics and accumulation are byte-identical with draft grouping enabled or disabled',async()=>{
+  assert.deepEqual(await settledBytes(true),await settledBytes(false));
+});

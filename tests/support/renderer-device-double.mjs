@@ -4,11 +4,12 @@
 import assert from 'node:assert/strict';
 import { createGpuDouble } from './gpu-double.mjs';
 import { packStatus } from '../../src/space/render/status.js';
+import { reduceDraftPacket } from '../../src/space/render/draft-summary.js';
 
 const texelBytes = { r32float: 4, r32uint: 4, rgba16float: 8, rgba32float: 16, rgba8unorm: 4 };
 const view = resource => new DataView(resource.data.buffer);
-export function createRendererDeviceDouble(pipelineSet) {
-  const gpu = createGpuDouble({ limits: { maxComputeWorkgroupsPerDimension: 8 } });
+export function createRendererDeviceDouble(pipelineSet, options = {}) {
+  const gpu = createGpuDouble({ limits: { maxComputeWorkgroupsPerDimension: 8, ...options.limits } });
   const descriptors = new Map(pipelineSet.descriptors.map(d => [d.pipelineId, d]));
   const acquire = gpu.acquire;
   gpu.acquire = async options => {
@@ -23,7 +24,8 @@ export function createRendererDeviceDouble(pipelineSet) {
       return texture;
     };
     device.createCommandEncoder = options => {
-      const encoder = createEncoder(options), finish = encoder.finish, copies = [];
+      const encoder = createEncoder(options), finish = encoder.finish, copies = [], clears = [];
+      encoder.clearBuffer = buffer => clears.push(() => buffer.data.fill(0));
       encoder.copyBufferToBuffer = (source, offset, target, dest, bytes) => copies.push(() => target.data.set(source.data.subarray(offset, offset + bytes), dest));
       encoder.copyTextureToBuffer = ({ texture, origin }, { buffer, offset, bytesPerRow }, size) => copies.push(() => {
         for (let y = 0; y < size.height; y++) {
@@ -31,11 +33,12 @@ export function createRendererDeviceDouble(pipelineSet) {
           buffer.data.set(texture.data.subarray(start, start + size.width * texture.bpt), offset + y * bytesPerRow);
         }
       });
-      encoder.finish = () => ({ ...finish(), copies });
+      encoder.finish = () => ({ ...finish(), copies, clears });
       return encoder;
     };
     device.queue.submit = buffers => {
       for (const buffer of buffers) {
+        for (const clear of buffer.clears) clear();
         for (const command of buffer.commands) execute(command);
         for (const copy of buffer.copies) copy();
       }
@@ -57,6 +60,10 @@ export function createRendererDeviceDouble(pipelineSet) {
     }
     const entry = descriptor.entryPoint;
     assert.deepEqual(command.dimensions, u.size.map(size => Math.ceil(size / 8)));
+    if (entry === 'reduce_draft_summary') {
+      resources.summary.data.set(reduceDraftPacket(resources.draftDiagnostics.data, { width: u.internalSize[0], height: u.internalSize[1], recovery: u.diagnosticStride === 3, producerToken: u.producerToken }));
+      return;
+    }
     for (let dy = 0; dy < u.size[1]; dy++) for (let dx = 0; dx < u.size[0]; dx++) {
       const x = u.origin[0] + dx, y = u.origin[1] + dy;
       const offset = name => (y * resources[name].width + x) * resources[name].bpt;
@@ -81,13 +88,14 @@ export function createRendererDeviceDouble(pipelineSet) {
         const colour = view(resources.sampleColor), output = view(resources.next);
         for (let k = 0; k < 4; k++) output.setFloat32(offset('next') + k * 4, colour.getUint16(offset('sampleColor') + k * 2, true) / 16384, true);
         put('accumulationFlags', (word('status') & 15) === 0 && !view(resources.normal).getUint16(offset('normal') + 6, true) ? 4 : 0);
-      } else if (entry === 'display_draft_band') {
+      } else if (entry === 'display_band' || entry === 'display_draft_band' || entry === 'display_summary_band') {
         const accumulation = view(resources.accumulation), at = offset('display');
         for (let k = 0; k < 3; k++) resources.display.data[at + k] = Math.round(accumulation.getFloat32(offset('accumulation') + k * 4, true) * 255) ^ word('accumulationFlags');
         resources.display.data[at + 3] = 255;
+        if (entry === 'display_band') continue;
         const packet = view(resources.draftDiagnostics), index = (y * resources.display.width + x) * u.diagnosticStride * 4;
         packet.setUint32(index, word('status'), true);
-        packet.setUint32(index + 4, 0x41540000 | (view(resources.normal).getUint16(offset('normal') + 6, true) ? 1 : 0), true);
+        packet.setUint32(index + 4, (entry === 'display_summary_band' ? u.producerToken * 2 : 0x41540000) | (view(resources.normal).getUint16(offset('normal') + 6, true) ? 1 : 0), true);
         if (u.diagnosticStride === 3) packet.setUint32(index + 8, word('recovery'), true);
       } else assert.fail(`unexpected fixture entry point ${entry}`);
     }

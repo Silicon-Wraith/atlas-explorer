@@ -302,9 +302,24 @@ export function createFakeBackend({ clock, cap = TRACKED_ALLOCATION_CAP, limits 
         if (bytes) uniformDescriptions.push(allocationDescription({ name: 'uniforms', bytes }));
       }
       reservation(uniformDescriptions.reduce((sum, desc) => sum + desc.bytes, 0));
+      let staging, source;
+      if (submission.draft?.summary) {
+        source = lookup(submission.draft.summary);
+        staging = stagingPool.find(slot => !slot.busy && lookup(slot.handle).bytes >= source.bytes);
+        if (!staging) {
+          const replace = stagingPool.find(slot => !slot.busy);
+          if (!replace && stagingPool.length === 2) throw new BackendError('allocation-failed', 'both staging buffers are busy');
+          reservation(source.bytes);
+          if (replace) { release(replace.handle); stagingPool.splice(stagingPool.indexOf(replace), 1); }
+          staging = { handle: createResource({ name: `readback-staging-${stagingPool.length}`, bytes: source.bytes }), busy: false };
+          stagingPool.push(staging);
+        }
+      }
       consume();
       const uniforms = uniformDescriptions.map(desc => createResource(desc));
-      const item = makeTicket(submission.identity, [...handles, ...uniforms], { batch: submission });
+      const item = makeTicket(submission.identity, [...handles, ...uniforms, ...(staging ? [staging.handle] : [])], { batch: submission,
+        ...(staging ? { result: deferred(), staging, readback: { source, region: { x: 0, y: 0, width: source.bytes, height: 1 }, fields: Object.freeze(['draftSummary']) } } : {}) });
+      if (staging) { staging.busy = true; mappings.add(item); item.resources.forEach(resource => resource.mappings.add(item)); }
       uniforms.forEach(release); return item.ticket;
     },
     readback(desc, options) {

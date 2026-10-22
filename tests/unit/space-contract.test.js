@@ -163,7 +163,7 @@ test('the target layout counts both accumulation images and the recovery word an
   });
   const bytes = Object.values(TARGET_LAYOUT).reduce((sum, item) => sum + item.bytesPerTexel * item.count, 0);
   assert.equal(bytes, 76); assert.equal(bytes * 3840 * 2160, 630374400); assert.equal(TRACKED_ALLOCATION_CAP, 2 ** 30);
-  assert.deepEqual(PASSES, ['probe', 'trace', 'normals', 'shade', 'accumulate', 'display']);
+  assert.deepEqual(PASSES, ['probe', 'trace', 'normals', 'shade', 'accumulate', 'display', 'reduce']);
 });
 
 test('batch snapshots preserve opaque handles and reject malformed identities, slots, samples and uniforms', () => {

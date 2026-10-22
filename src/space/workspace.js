@@ -86,12 +86,13 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   let viewRevision = 0, geometryRevision = 0, appearanceRevision = 0;
   let dirty = true, wantProfile = 'settled', lastProfile = null, lastRequest = null, lastSize = null, currentJob = null, submitted = 0;
   let lastPublication = null, lastReport = null, pendingStatus = false, allocationFailure = null, budgetNotice = null;
+  let diagnosticStatus = null;
   let cost = { scale: 1, sampleCap: null };
   let cpuCamera = null, effectiveCamera = null;
   // B14-r2 F2: an activation commits only on a presentation of the current generation made while that
   // activation is current; `reveal` is its waiter, settled by a presentation, a failure or deactivation.
   let reveal = null, lastPresented = null, revealed = false;
-  const requests = new Map(), renderJobs = new Set(), publishListeners = new Set(), presentListeners = new Set(), requestListeners = new Set(), reportListeners = new Set();
+  const requests = new Map(), renderJobs = new Set(), publishListeners = new Set(), publicationUpdateListeners = new Set(), presentListeners = new Set(), requestListeners = new Set(), reportListeners = new Set();
   let navigationStream = 0, navigationOpen = false, navigationContentCache = null;
   const liveGeneration = () => ({ deviceEpoch: backend?.currentEpoch() ?? 0, viewRevision, geometryRevision, appearanceRevision });
 
@@ -207,14 +208,19 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   // ---- backend, renderer and recovery (first activation only) -------------------------------------
   function ensureStack() {
     if (recovery) return;
-    const raw = backendOverride ?? backendFactory({ canvas, clock: now });
+    const raw = backendOverride ?? backendFactory({ canvas, clock: now, draftExecution: env.draftExecution });
     backend = Object.freeze({ ...raw, async acquire(...args) { const receipt = await raw.acquire(...args); acquisition = receipt; return receipt; } });
     scheduler = createScheduler({ clock: now, makeAdmission: createAdmission, setTimer: env.setTimer ?? ((fn, ms) => setTimeout(fn, ms)), clearTimer: env.clearTimer ?? (id => clearTimeout(id)) });
-    renderer = createSpaceRenderer({ backend, scheduler, clock: now, viewId: SPACE_VIEW_ID, versions: VERSIONS, pipelineSet: productPipelineSet() });
+    renderer = createSpaceRenderer({ backend, scheduler, clock: now, viewId: SPACE_VIEW_ID, versions: VERSIONS, pipelineSet: productPipelineSet(), draftExecution: env.draftExecution });
     renderer.onPublish(publication => onPublish(publication));
+    renderer.onPublicationUpdate(update => {
+      if (lastPublication?.frameId === update.frameId) lastPublication = Object.freeze({ ...lastPublication, ...update });
+      for (const listener of publicationUpdateListeners) { try { listener(update); } catch { /* isolate observers */ } }
+      updateIndicators();
+    });
     renderer.onPresent(event => { onPresentation(event); for (const listener of presentListeners) { try { listener(event); } catch { /* isolate observers */ } } });
     renderer.onReport(report => { lastReport = report; for (const listener of reportListeners) { try { listener(report); } catch { /* isolate observers */ } } });
-    renderer.onStatus(status => { if (typeof status.pending === 'boolean') pendingStatus = status.pending; updateIndicators(); });
+    renderer.onStatus(status => { if (typeof status.pending === 'boolean') pendingStatus = status.pending; if (status.diagnosticsState) diagnosticStatus = status; if (status.phase === 'interrupted') diagnosticStatus = { diagnosticsState: 'interrupted' }; updateIndicators(); });
     recovery = createRecovery({ backend, renderer, scheduler, clock: now, onNotice: notice => onNotice(notice) });
   }
   function onPresentation(event) {
@@ -409,7 +415,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   // B14-F1: a pending scene edit (dirty) or a publication from another generation is not pickable;
   // a pick then reports unavailable instead of hitting superseded geometry.
   function pickContext() {
-    if (!active || !eligibleForPicks() || pendingStatus || dirty || !lastPublication) return null;
+    if (!active || !eligibleForPicks() || pendingStatus || dirty || !lastPublication || lastPublication.diagnosticsState && lastPublication.diagnosticsState !== 'confirmed') return null;
     const request = lastPublication.request;
     if (!request || !sameGeneration(request.generation, liveGeneration())) return null;
     return { identity: identityOf(request), geometryRevision: request.generation.geometryRevision, dimensions: { ...request.quality.internalSize }, sampleIndex: lastPublication.sampleIndex };
@@ -518,6 +524,9 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     box.append(note, button); box.hidden = false;
   }
   function updateIndicators() {
+    const state = diagnosticStatus?.diagnosticsState;
+    text('#space-diagnostics', state === 'pending' ? (diagnosticStatus.provisional ? 'Validating — provisional' : 'Diagnostics pending') : state === 'failed' ? 'Draft validation failed' : state === 'interrupted' ? 'Draft interrupted' : '');
+    setHidden('#space-diagnostics', !active || !state || state === 'confirmed');
     const pending = Boolean(currentJob) || dirty || pendingStatus;
     text('#space-pending', active && pending ? 'refining…' : '');
     setHidden('#space-pending', !(active && pending));
@@ -725,6 +734,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     overview: showOverview, resetOrientation: resetView, undo: () => historyStep('undo'), redo: () => historyStep('redo'), back: () => historyStep('back'), forward: () => historyStep('forward'),
     saveScene, openSceneText, restoreFullCost,
     onPublish(listener) { publishListeners.add(listener); return () => publishListeners.delete(listener); },
+    onPublicationUpdate(listener) { publicationUpdateListeners.add(listener); return () => publicationUpdateListeners.delete(listener); },
     onPresent(listener) { presentListeners.add(listener); return () => presentListeners.delete(listener); },
     // Workspace submissions, including workspace resize requests. Direct renderer
     // calls and internal recovery replays are outside this subscription.
@@ -744,7 +754,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
       deactivate(); destroyed = true;
       gamepad.destroy();
       recovery?.destroy(); renderer?.destroy(); backend?.destroy();
-      publishListeners.clear(); presentListeners.clear(); requestListeners.clear(); reportListeners.clear();
+      publishListeners.clear(); publicationUpdateListeners.clear(); presentListeners.clear(); requestListeners.clear(); reportListeners.clear();
     },
   });
 }

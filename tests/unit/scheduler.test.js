@@ -72,6 +72,32 @@ async function settled(promise) {
 const jobState = (scheduler, jobId) => scheduler.snapshot().jobs.find(job => job.jobId === jobId);
 const viewState = (scheduler, viewId = 'main') => scheduler.snapshot().views.find(view => view.viewId === viewId);
 
+test('B15-REC-G a navigation stream admits two drafts and coalesces only its third pending slot', async () => {
+  const { scheduler } = setup();
+  const first = enqueue(scheduler, 'first', { count: 2, serial: true, navigationStream: 7 });
+  const [a] = scheduler.admit();
+  const second = enqueue(scheduler, 'second', { count: 2, serial: true, navigationStream: 7 });
+  const admitted = scheduler.admit();
+  assert.equal(admitted.length, 1, 'second live draft may run while the first waits on its dependency');
+  const [b] = admitted;
+  assert.equal(scheduler.snapshot().outstanding, 2);
+  const third = enqueue(scheduler, 'third', { navigationStream: 7 });
+  const fourth = enqueue(scheduler, 'fourth', { navigationStream: 7 });
+  assert.equal((await third.job.done).outcome, 'superseded');
+  await pending(fourth.job.preparation);
+  assert.deepEqual(scheduler.admit(), []);
+  finish(scheduler, a);
+  const [present] = scheduler.admit();
+  assert.equal(present.admission.jobId, first.job.jobId);
+  finish(scheduler, present); assert.equal((await first.job.done).outcome, 'completed');
+  assert.equal(await fourth.job.preparation, true);
+  const [latest] = scheduler.admit(); assert.equal(latest.admission.jobId, 'fourth');
+  finish(scheduler, b); finish(scheduler, latest);
+  finish(scheduler, scheduler.admit()[0]);
+  assert.equal((await second.job.done).outcome, 'completed');
+  assert.equal(scheduler.snapshot().outstanding, 0);
+});
+
 test('at most two leases are outstanding per epoch across views, jobs and auxiliary submissions', async () => {
   const { scheduler } = setup();
   const first = enqueue(scheduler, 'first', { count: 2 });
@@ -1030,14 +1056,16 @@ test('discard: releases slots atomically for synchronous listeners at both lease
 });
 
 
-test('navigation admission keeps one active stream draft through dependency waits and supersedes only pending drafts', async () => {
+test('navigation admission keeps two active stream drafts through dependency waits and supersedes only pending drafts', async () => {
   const { scheduler } = setup();
   const active = enqueue(scheduler, 'active', { navigationStream: 7, count: 2, serial: true });
   const [first] = scheduler.admit();
+  const second = enqueue(scheduler, 'second-active', { navigationStream: 7 });
+  const [secondLease] = scheduler.admit();
   const skipped = enqueue(scheduler, 'skipped', { navigationStream: 7 });
   const newest = enqueue(scheduler, 'newest', { navigationStream: 7 });
   assert.equal((await skipped.job.done).outcome, 'superseded');
-  assert.deepEqual(scheduler.admit(), [], 'a dependency wait must not start another draft of this stream');
+  assert.deepEqual(scheduler.admit(), [], 'a dependency wait must not start a third draft of this stream');
   await pending(newest.job.preparation);
   finish(scheduler, first);
   const next = scheduler.admit(); assert.equal(next.length, 1); assert.equal(next[0].admission.jobId, 'active');
@@ -1045,6 +1073,7 @@ test('navigation admission keeps one active stream draft through dependency wait
   assert.equal(await newest.job.preparation, true);
   const [last] = scheduler.admit(); assert.equal(last.admission.jobId, 'newest'); finish(scheduler, last);
   assert.equal((await newest.job.done).outcome, 'completed');
+  finish(scheduler, secondLease); assert.equal((await second.job.done).outcome, 'completed');
 });
 
 test('oldest ready job retains admission precedence within its priority', () => {
@@ -1060,13 +1089,15 @@ test('navigation streams in one view have independent pending slots and cancella
   const { scheduler } = setup();
   const a = enqueue(scheduler, 'a', { navigationStream: 1, count: 2, serial: true });
   const [issued] = scheduler.admit();
-  const newest = enqueue(scheduler, 'pending-a', { navigationStream: 1 });
   const b = enqueue(scheduler, 'b', { navigationStream: 2 });
   const [other] = scheduler.admit(); assert.equal(other.admission.jobId, 'b');
+  const newest = enqueue(scheduler, 'pending-a', { navigationStream: 1 });
   finish(scheduler, other); assert.equal((await b.job.done).outcome, 'completed');
-  const cancel = scheduler.cancel(a.job.jobId); assert.deepEqual(scheduler.admit(), []);
+  const cancel = scheduler.cancel(a.job.jobId);
+  const [last] = scheduler.admit(); assert.equal(last.admission.jobId, newest.job.jobId);
+  await pending(cancel.done);
   finish(scheduler, issued); assert.equal((await cancel.done).submitted, 'drained');
-  const [last] = scheduler.admit(); assert.equal(last.admission.jobId, newest.job.jobId); finish(scheduler, last);
+  finish(scheduler, last);
   assert.equal((await newest.job.done).outcome, 'completed');
 });
 
@@ -1077,7 +1108,8 @@ test('Update pins a waiting stream request through active cancellation and newer
   const selected = preparing(scheduler, 'selected', { navigationStream: 1 });
   scheduler.update('main');
   const latest = enqueue(scheduler, 'latest', { navigationStream: 1 });
-  await pending(selected.job.preparation); assert.deepEqual(scheduler.admit(), []);
+  assert.equal(await selected.job.preparation, true, 'the second frame slot was available before Update');
+  assert.deepEqual(scheduler.admit(), [], 'Update admission still waits for the other owner to drain');
   finish(scheduler, issued);
   assert.equal(await settled(selected.job.preparation), true, 'Update preparation wakes only after the previous lease retires');
   selected.prepare(); scheduler.ready('selected', { epoch: 1 });
