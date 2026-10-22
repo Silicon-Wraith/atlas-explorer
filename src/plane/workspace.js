@@ -20,7 +20,7 @@ export const THUMBNAIL_ENCODE_MS = 5000;
 
 // shell: { $, toast, showDialog } (src/ui/shell.js); discoveries: the headless controller
 // (src/shared/discoveries.js); sourceId: the source this workspace saves to.
-// → { inspection (window.atlas), destroy() }
+// → { inspection (window.atlas), activate(token), deactivate(), destroy() } (B14 activation contract)
 export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' }) {
   const { $, toast, showDialog: openDialog } = shell;
   let canvas = $('#fractal');
@@ -50,6 +50,10 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   let contextLost = false, lossPending = false, recoveryAttempts = 0, renderingPaused = false, automatedRequests = 0;
   function automated(action) { automatedRequests++; try { return action(); } finally { automatedRequests--; } }
   let savedTab = false;
+  // B14 activation: while inactive no interactive render is flushed (the request stays dirty and is
+  // flushed once on activation), the global listeners are detached and automation is stopped. An
+  // export holding its lease completes under T07/T08's rules regardless.
+  let active = true;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function adoptScene(scene) {
@@ -189,7 +193,7 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   // precondition); an export lease, a retired renderer or a lost context defers the flush until the
   // export finishes or the renderer is replaced (both request a render).
   async function flushRender() {
-    if (busy || !dirty || renderingPaused || adapter.reserved || adapter.retired || adapter.unavailable) return;
+    if (!active || busy || !dirty || renderingPaused || adapter.reserved || adapter.retired || adapter.unavailable) return;
     busy = true; dirty = false;
     const version = requestVersion;
     const snapshot = { ...view };
@@ -463,11 +467,11 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   };
   // A link opened during an investigation: a valid scene is a whole-scene restoration;
   // anything else is reported and changes neither the scene nor either history.
-  addEventListener('hashchange', () => {
+  const onHashChange = () => {
     const link = decodeShareHash(location.hash);
     if (link.kind === 'scene' && link.scene.workspace === 'plane') { stopTour(); activePlace = ''; applyAction([{ type: 'restoreScene', scene: link.scene }], 'restore'); renderPlaces(); }
     else if (link.kind === 'unsupported') toast(`${link.error.message[0].toUpperCase()}${link.error.message.slice(1)}. Your view is unchanged.`);
-  });
+  };
 
   function download(blob, name) {
     const url = URL.createObjectURL(blob), link = document.createElement('a');
@@ -570,7 +574,7 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
     runExport(createPlaneRequest({ scene: retained.sceneSnapshot, purpose: 'export', width: retained.output.width, height: retained.output.height, generation: generation() }), { restartOf: retained.requestId });
   };
 
-  addEventListener('keydown', event => {
+  const onKeyDown = event => {
     if (event.target.matches('input, textarea, select') || document.querySelector('dialog[open]')) return;
     const key = event.key.toLowerCase();
     const historyKey = (event.ctrlKey || event.metaKey) && !event.altKey
@@ -585,19 +589,46 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
       escape: () => { document.body.classList.remove('cinema'); stopTour(); },
     };
     if (actions[key]) { event.preventDefault(); actions[key](); }
-  });
+  };
   // A new size is a new geometry dependency: earlier renders are no longer publishable.
-  addEventListener('resize', () => { geometryRevision++; automated(() => requestRender(true)); });
+  const onResize = () => { geometryRevision++; automated(() => requestRender(true)); };
+  const globalListeners = [['keydown', onKeyDown], ['resize', onResize], ['hashchange', onHashChange]];
+  for (const [type, listener] of globalListeners) addEventListener(type, listener);
+  let hiddenSize = null;
+  // Both idempotent. deactivate: stop the tour and the palette animation (each commits its open
+  // gesture once), forget captured pointers, settle any open gesture, release keyboard focus and
+  // detach the global listeners. activate: re-attach them and flush at most one current-state render
+  // when the image is stale (an edit or a resize while hidden); stopped automation stays stopped.
+  function deactivate() {
+    if (!active) return;
+    active = false;
+    stopTour();
+    if (cycle) { cycle = false; $('#cycle-button').setAttribute('aria-pressed', 'false'); commitGesture('animation'); }
+    navigation?.reset();
+    gestures.settle();
+    if (document.activeElement === canvas) canvas.blur?.();
+    for (const [type, listener] of globalListeners) removeEventListener(type, listener);
+    hiddenSize = `${innerWidth}x${innerHeight}`;
+  }
+  function activate() {
+    if (active) return Object.freeze({ outcome: 'activated' });
+    active = true;
+    for (const [type, listener] of globalListeners) addEventListener(type, listener);
+    if (hiddenSize !== `${innerWidth}x${innerHeight}`) { geometryRevision++; dirty = true; }
+    if (dirty) automated(() => requestRender());
+    return Object.freeze({ outcome: 'activated' });
+  }
 
   // Small inspection API for numerical and browser regression tests.
   class IdleTimeoutError extends Error {
     constructor(ms, state) { super(`ATLAS did not become idle within ${ms} ms (${JSON.stringify(state)}).`); this.name = 'IdleTimeoutError'; this.code = 'ATLAS_IDLE_TIMEOUT'; }
   }
   // Application-side idleness: no render in flight, no export lease, a usable renderer, and no
-  // queued work — unless rendering is paused, when queued work waits for the explorer by design.
+  // queued work — unless rendering is paused, or the workspace is hidden (B14), when queued work
+  // waits for the explorer by design.
   async function whenIdle({ timeoutMs = 60000 } = {}) {
     const deadline = performance.now() + timeoutMs;
-    while (busy || (dirty && !renderingPaused) || adapter.reserved || adapter.unavailable) {
+    while (busy || (dirty && !renderingPaused && active) || adapter.reserved || adapter.unavailable) {
       if (performance.now() > deadline) throw new IdleTimeoutError(timeoutMs, { busy, dirty, exporting: adapter.reserved, unavailable: adapter.unavailable });
       await new Promise(resolve => setTimeout(resolve, 30));
     }
@@ -659,5 +690,6 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   syncControls(); renderPlaces(); updateHistoryControls(); requestRender();
   // Teardown order (plan amendment E(1)): the control before the controller that owns it (the
   // composition root destroys the controller after this), then the renderer.
-  return Object.freeze({ inspection, destroy: () => { control.destroy(); adapter.renderer.destroy(); } });
+  return Object.freeze({ inspection, activate, deactivate, focus: () => canvas.focus?.({ preventScroll: true }),
+    destroy: () => { deactivate(); control.destroy(); adapter.renderer.destroy(); } });
 }

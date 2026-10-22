@@ -1,0 +1,215 @@
+// The Space workspace (plan B14): activation, deactivation, scene files and the controller frame
+// order, on a fake DOM and the self-driving fake backend. No browser, GPU or Worker is used.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { installFakeBrowser, fakeShell } from '../support/fake-dom.mjs';
+import { createDrivenFakeBackend } from '../support/fake-space-backend.mjs';
+import { createFlight } from '../../src/space/flight.js';
+import { createGamepadInput } from '../../src/space/gamepad.js';
+import { encodeSceneFile, sceneCodec } from '../../src/space/scene-adapter.js';
+import { orbit, overview } from '../../src/space/camera.js';
+import { getModel } from '../../src/space/models/registry.js';
+import { effectiveParameters } from '../../src/space/numerics/parameters.js';
+
+const browser = installFakeBrowser();
+const { createSpaceWorkspace } = await import('../../src/space/workspace.js');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const turn = () => new Promise(resolve => setImmediate(resolve));
+
+function rig({ hold = false, env = {}, getGamepads = () => [] } = {}) {
+  const document = browser.document, toasts = [], backends = [], frames = new Map();
+  let frameId = 0, factoryCalls = 0;
+  const backendFactory = ({ clock }) => {
+    factoryCalls++;
+    const backend = createDrivenFakeBackend({ clock, schedule: fn => setImmediate(fn) });
+    if (hold) backend.control.holdAcquisition();
+    backends.push(backend); return backend;
+  };
+  const space = createSpaceWorkspace({ shell: fakeShell(document, { toasts }), backendFactory, clock: () => performance.now(), env: {
+    document, window: globalThis, requestFrame: fn => { frames.set(++frameId, fn); return frameId; }, cancelFrame: id => frames.delete(id),
+    viewportSize: () => ({ width: 32, height: 16 }), getGamepads, ...env } });
+  const runFrame = (time = performance.now()) => { const due = [...frames.values()]; frames.clear(); for (const fn of due) fn(time); return due.length; };
+  // Bounded: frames and fake completions alternate until the workspace reports idle.
+  async function settle(ms = 2500) {
+    const deadline = performance.now() + ms;
+    while (performance.now() < deadline) { runFrame(); await turn(); if (space.inspection.idle) return; }
+    assert.fail(`the Space workspace did not settle: ${JSON.stringify(space.inspection.state)}`);
+  }
+  const canvas = () => document.querySelector('#space-canvas');
+  const pointer = (type, values = {}) => canvas().dispatchEvent({ type, button: 0, pointerId: 1, clientX: 400, clientY: 300, target: canvas(), ...values });
+  return { space, toasts, backends, frames, runFrame, settle, canvas, pointer, document, get factoryCalls() { return factoryCalls; } };
+}
+
+test('deactivation commits the last preview exactly once and a later capture-loss callback cannot cancel it', async () => {
+  const h = rig();
+  try {
+    assert.equal((await h.space.activate(1)).outcome, 'activated');
+    await h.settle();
+    const start = h.space.inspection.history, before = h.space.inspection.scene.camera;
+    h.pointer('pointerdown'); h.pointer('pointermove', { clientX: 430 }); h.pointer('pointermove', { clientX: 470, clientY: 320 });
+    const previewed = h.space.inspection.scene.camera;
+    assert.notDeepEqual(previewed, before, 'the drag previewed a new pose');
+    h.space.deactivate();
+    const committed = h.space.inspection.history;
+    assert.equal(committed.camera.length, start.camera.length + 1, 'one camera-history entry');
+    assert.equal(committed.undoDepth, start.undoDepth, 'no undo entry for navigation');
+    assert.equal(committed.gesture, null, 'no gesture remains open');
+    h.pointer('lostpointercapture'); h.pointer('pointercancel'); h.pointer('pointerup');
+    h.space.deactivate();
+    const after = h.space.inspection.history;
+    assert.deepEqual(h.space.inspection.scene.camera, previewed, 'the committed pose is the last preview');
+    assert.equal(after.camera.length, committed.camera.length, 'later capture-loss callbacks change nothing');
+    assert.equal(after.camera.index, committed.camera.index);
+  } finally { h.space.destroy(); }
+});
+
+test('deactivate closes admission and invalidates pending picks and activation', async () => {
+  const pending = rig({ hold: true });
+  try {
+    const activation = pending.space.activate(1);
+    await sleep(5);
+    assert.equal(pending.backends.length, 1, 'activation creates the backend');
+    pending.space.deactivate();
+    pending.backends[0].control.releaseAcquisition();
+    assert.equal((await activation).outcome, 'superseded', 'a pending activation is invalidated');
+    assert.equal(pending.space.inspection.state.active, false);
+    assert.equal(pending.space.inspection.state.eligible, false);
+  } finally { pending.space.destroy(); }
+
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    assert.ok(h.space.inspection.pickContext(), 'a settled publication is pickable while active');
+    const history = h.space.inspection.history, camera = h.space.inspection.scene.camera;
+    h.backends[0].control.pause();
+    h.canvas().dispatchEvent({ type: 'dblclick', clientX: 400, clientY: 300, target: h.canvas() });
+    await sleep(5);
+    h.space.deactivate();
+    assert.equal(h.space.inspection.pickContext(), null, 'no pick context while inactive');
+    h.backends[0].control.resume();
+    await sleep(30);
+    assert.deepEqual(h.space.inspection.scene.camera, camera, 'a pick resolving after deactivation moves nothing');
+    assert.deepEqual(h.space.inspection.history.camera, history.camera);
+    const submitted = h.space.inspection.state.submitted;
+    h.space.inspection.requestCamera(orbit(camera, 0.2, 0));
+    for (let i = 0; i < 5; i++) { h.runFrame(); await sleep(0); }
+    assert.equal(h.space.inspection.state.submitted, submitted, 'no render is admitted while inactive');
+    assert.equal(h.space.inspection.state.hidden, true, 'the view is marked hidden in the scheduler');
+  } finally { h.space.destroy(); }
+});
+
+test('activate issues at most one request when the publication is stale and does not restart a stopped tour', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    h.canvas().dispatchEvent({ type: 'keydown', code: 'KeyF', target: h.canvas() });
+    assert.equal(h.space.inspection.state.flight, true, 'flight started');
+    h.space.deactivate();
+    assert.equal(h.space.inspection.state.flight, false, 'deactivation stopped flight');
+    h.space.inspection.requestCamera(orbit(h.space.inspection.scene.camera, 0.3, 0.1));
+    const submitted = h.space.inspection.state.submitted;
+    assert.equal((await h.space.activate(2)).outcome, 'activated');
+    assert.equal(h.space.inspection.state.submitted, submitted + 1, 'one current-state request for a stale publication');
+    assert.equal(h.space.inspection.state.flight, false, 'activation does not restart flight');
+    await h.settle();
+    h.space.deactivate();
+    const settled = h.space.inspection.state.submitted;
+    await h.space.activate(3);
+    for (let i = 0; i < 5; i++) { h.runFrame(); await sleep(0); }
+    assert.equal(h.space.inspection.state.submitted, settled, 'no request when the publication is current');
+  } finally { h.space.destroy(); }
+});
+
+function openFile(h, text) {
+  const input = h.document.querySelector('#space-open-scene');
+  input.files = [{ size: Buffer.byteLength(text), text: async () => text, name: 'scene.json' }];
+  input.dispatchEvent({ type: 'change', target: input });
+  return sleep(10);
+}
+
+test('opening an invalid scene file reports and changes nothing', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    const scene = h.space.inspection.scene, history = h.space.inspection.history;
+    await openFile(h, '{"application":"atlas","schema":"atlas.scene"');
+    assert.match(h.document.querySelector('#space-file-status').textContent, /\S/, 'the problem is reported');
+    assert.equal(h.space.inspection.scene, scene, 'the scene is unchanged');
+    assert.deepEqual(h.space.inspection.history, history, 'both histories are unchanged');
+    const plane = JSON.stringify({ ...JSON.parse(encodeSceneFile(scene)), workspace: 'plane' });
+    await openFile(h, plane);
+    assert.equal(h.space.inspection.scene, scene, 'a scene for another workspace changes nothing');
+    assert.deepEqual(h.space.inspection.history, history);
+  } finally { h.space.destroy(); }
+});
+
+test('opening a valid file is one undo entry and one camera entry', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    const current = h.space.inspection.scene, history = h.space.inspection.history;
+    const effective = effectiveParameters('mandelbulb', { power: '5' }).effective;
+    const camera = orbit(overview(getModel('mandelbulb', 1), effective), 0.4, 0.1);
+    const target = sceneCodec.validate({ ...current, parameters: { power: '5' }, camera });
+    await openFile(h, encodeSceneFile(target));
+    const after = h.space.inspection.history;
+    assert.equal(sceneCodec.fingerprint(h.space.inspection.scene).sceneHash, sceneCodec.fingerprint(target).sceneHash);
+    assert.equal(after.undoDepth, history.undoDepth + 1, 'one undo entry');
+    assert.equal(after.camera.length, history.camera.length + 1, 'one camera entry');
+    h.space.inspection.undo();
+    assert.equal(sceneCodec.fingerprint(h.space.inspection.scene).sceneHash, sceneCodec.fingerprint(current).sceneHash, 'undo restores the previous scene');
+  } finally { h.space.destroy(); }
+});
+
+test('the frame callback polls the controller once before the flight tick and stops polling when ineligible', async () => {
+  const log = [];
+  const pad = { id: 'Scripted pad', index: 0, connected: true, mapping: 'standard', axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) };
+  const h = rig({
+    getGamepads: () => { log.push('getGamepads'); return [pad]; },
+    env: {
+      createFlight: options => { const flight = createFlight(options); return { ...flight, tick: time => { log.push('tick'); return flight.tick(time); }, get active() { return flight.active; }, get speed() { return flight.speed; } }; },
+      createGamepadInput: options => { const input = createGamepadInput(options); return { ...input, poll: time => { log.push('poll'); return input.poll(time); } }; },
+    },
+  });
+  try {
+    await h.space.activate(1); await h.settle();
+    log.length = 0;
+    h.runFrame(1000);
+    const poll = log.indexOf('poll'), tick = log.indexOf('tick');
+    assert.equal(log.filter(entry => entry === 'poll').length, 1, 'one poll per frame');
+    assert.equal(log.filter(entry => entry === 'tick').length, 1, 'one flight tick per frame');
+    assert.ok(poll >= 0 && poll < tick, `the poll precedes the tick: ${log.join(',')}`);
+    assert.ok(h.frames.size >= 1, 'the frame loop keeps running while controller input is eligible, even when idle');
+    globalThis.dispatchEvent({ type: 'blur' });
+    assert.equal(h.space.inspection.state.eligible, false, 'blur suspends controller input');
+    log.length = 0;
+    for (let i = 0; i < 4; i++) h.runFrame(1100 + i * 16);
+    assert.equal(log.filter(entry => entry === 'poll').length, 0, 'no polling while ineligible');
+  } finally { h.space.destroy(); }
+});
+
+test('a fresh Space investigation opens the bulb overview with its estimator category', () => {
+  const h = rig();
+  try {
+    const scene = h.space.inspection.scene;
+    assert.equal(scene.model.id, 'mandelbulb');
+    assert.deepEqual(scene.camera, overview(getModel('mandelbulb', 1), effectiveParameters('mandelbulb', scene.parameters).effective));
+    assert.equal(h.factoryCalls, 0, 'creating the workspace acquires nothing');
+    assert.equal(h.document.querySelector('#space-estimator').textContent, 'heuristic, exterior-only');
+  } finally { h.space.destroy(); }
+});
+
+test('a device loss before the first publication resubmits the current request once recovered', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    const submitted = h.space.inspection.state.submitted;
+    h.space.inspection.requestCamera(orbit(h.space.inspection.scene.camera, 0.25, 0));
+    h.space.inspection.injectLoss();
+    await h.settle();
+    assert.equal(h.space.inspection.state.phase, 'ready');
+    assert.ok(h.space.inspection.state.submitted >= submitted + 1, 'the current request was submitted after recovery');
+    assert.equal(h.space.inspection.lastPublication.requestId === undefined, false);
+    assert.deepEqual(h.space.inspection.lastPublication.camera, h.space.inspection.scene.camera, 'the publication shows the current camera');
+  } finally { h.space.destroy(); }
+});

@@ -46,6 +46,9 @@
     "tests/unit/space-recovery.test.js",
     "tests/unit/space-gamepad.test.js",
     "tests/unit/shared-palettes.test.js",
-    "tests/unit/appearance-metadata.test.js"
+    "tests/unit/appearance-metadata.test.js",
+    "tests/unit/plane-activation.test.js",
+    "tests/unit/space-workspace.test.js",
+    "tests/unit/workspace-switcher.test.js"
   ]
 }
