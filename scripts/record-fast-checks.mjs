@@ -2,33 +2,43 @@
 // record has the actual current run time; it never impersonates an old run.
 import {execFileSync,spawn} from 'node:child_process';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {readFileSync} from 'node:fs';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {runBounded} from './gate/supervise.mjs';
 import {classifyUnit,parseTapSummary} from './gate/lib.mjs';
 import {readContemporaneousFast} from './gate/fast-evidence.mjs';
-import {judgeFast} from './gate/acceptance.mjs';
+import {judgeFast,approvedRetrospectiveWip,WIP_EVIDENCE_POLICY_SHA256} from './gate/acceptance.mjs';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const readWipPolicy=()=>JSON.parse(readFileSync(new URL('./gate/acceptance-policy-1b1.json',import.meta.url),'utf8')).wipEvidence;
 export function parseFastOptions(args) {
   const result={checkout:'.',outputRoot:'.',retrospective:false};
   const names={'--checkout':'checkout','--expected-commit':'expectedCommit','--ledger-index':'ledgerIndex','--ledger-sha256':'ledgerSha256','--output-root':'outputRoot'};
   for(let i=0;i<args.length;i++) {
     if(args[i]==='--retrospective')result.retrospective=true;
+    else if(args[i]==='--retrospective-wip'){result.retrospective=true;result.retrospectiveWip=true;}
     else if(names[args[i]]&&args[i+1]){const name=names[args[i]];result[name]=args[++i];}
     else throw Error(`unknown or incomplete argument ${args[i]}`);
   }
-  if(result.retrospective&&(!/^[0-9a-f]{40}$/.test(result.expectedCommit??'')||!result.ledgerIndex||!/^[0-9a-f]{64}$/.test(result.ledgerSha256??'')))throw Error('retrospective mode requires expected-commit and pinned ledger input');
+  if(result.retrospectiveWip) {
+    if(!approvedRetrospectiveWip(result.expectedCommit,readWipPolicy()))throw Error('retrospective WIP mode requires an approved full-SHA implementation WIP commit');
+    if(result.ledgerIndex||result.ledgerSha256)throw Error('retrospective WIP mode does not consume a ledger input');
+  } else if(result.retrospective&&(!/^[0-9a-f]{40}$/.test(result.expectedCommit??'')||!result.ledgerIndex||!/^[0-9a-f]{64}$/.test(result.ledgerSha256??'')))throw Error('retrospective mode requires expected-commit and pinned ledger input');
   return result;
 }
 export async function runFastChecks(options) {
   const root=resolve(options.checkout), git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',timeout:10000,maxBuffer:64*1024*1024}).trim();
   const commit=git('rev-parse','HEAD'), tree=git('rev-parse','HEAD^{tree}');
   if(options.expectedCommit&&options.expectedCommit!==commit)throw Error('checkout does not match expected commit');
-  const contemporaneous=options.retrospective?(await readContemporaneousFast([{file:resolve(options.ledgerIndex),sha256:options.ledgerSha256}],{root:dirname(resolve(options.ledgerIndex)),resolveCommit:s=>git('rev-parse',`${s}^{commit}`)})).get(commit):null;
-  if(options.retrospective&&!contemporaneous)throw Error('no contemporaneous fast pass for target SHA');
+  const wipEvidencePolicy=readWipPolicy();
+  if(options.retrospectiveWip&&(!options.retrospective||options.expectedCommit!==commit||!approvedRetrospectiveWip(commit,wipEvidencePolicy)))throw Error('retrospective WIP target is not an approved full SHA');
+  const contemporaneous=options.retrospective&&!options.retrospectiveWip?(await readContemporaneousFast([{file:resolve(options.ledgerIndex),sha256:options.ledgerSha256}],{
+    root:dirname(resolve(options.ledgerIndex)),wipEvidencePolicy,resolveCommit:s=>git('rev-parse',`${s}^{commit}`),commitTimeFor:s=>Number(git('show','-s','--format=%ct',s))})).get(commit):null;
+  if(options.retrospective&&!options.retrospectiveWip&&!contemporaneous)throw Error('no contemporaneous fast pass for target SHA');
   const record={schema:'atlas.fast-check',schemaVersion:1,commit,tree,startedAt:new Date().toISOString(),recordedRetrospectively:options.retrospective,
-    ...(contemporaneous?{contemporaneous}:{}),cleanBefore:git('status','--porcelain').length===0,
+    ...(contemporaneous?{contemporaneous}:{}),
+    ...(options.retrospectiveWip?{evidenceScope:'wip-only',wipEvidencePolicySha256:WIP_EVIDENCE_POLICY_SHA256}:{}),cleanBefore:git('status','--porcelain').length===0,
     manifests:{unit:hash(git('show',`${commit}:tests/unit.manifest.json`)),suites:hash(git('show',`${commit}:tests/suites.manifest.json`))}};
   const output=resolve(options.outputRoot,`artifacts/gates/fast/${commit}.json`);
   await mkdir(dirname(output),{recursive:true});
@@ -48,7 +58,8 @@ export async function runFastChecks(options) {
   }
   record.cleanAfter=git('status','--porcelain').length===0;record.unchanged=git('rev-parse','HEAD')===commit&&git('rev-parse','HEAD^{tree}')===tree;
   record.finishedAt=new Date().toISOString();
-  const result=judgeFast(commit,record,{tree},record.manifests,contemporaneous);
+  const result=judgeFast(commit,record,{tree,committedAt:Number(git('show','-s','--format=%ct',commit))},record.manifests,contemporaneous,
+    {wipEvidencePolicy:options.retrospectiveWip?wipEvidencePolicy:null});
   await writeFile(output,JSON.stringify(record,null,2)+'\n');return {output,result};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)) {

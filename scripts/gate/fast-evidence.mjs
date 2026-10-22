@@ -3,6 +3,7 @@
 import {readFile} from 'node:fs/promises';
 import {resolve,dirname} from 'node:path';
 import {createHash} from 'node:crypto';
+import {approvedWipEvidencePolicy} from './acceptance.mjs';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 // Bind prose to an explicit Commit/Candidate/Promotion owner. Parent/tree SHAs
 // inside that owner's clause are references, not alternative owners. A new
@@ -23,7 +24,8 @@ function ownedClauses(excerpt, commit, resolveCommit) {
   }
   return clauses;
 }
-export async function readContemporaneousFast(inputs, {root, resolveCommit}) {
+export async function readContemporaneousFast(inputs, {root, resolveCommit, commitTimeFor, wipEvidencePolicy}) {
+  if(wipEvidencePolicy && !approvedWipEvidencePolicy(wipEvidencePolicy))throw Error('unapproved contemporaneous timestamp policy');
   const rows=new Map();
   for(const input of inputs ?? []) {
     const indexPath=resolve(root,input.file), bytes=await readFile(indexPath);
@@ -45,7 +47,17 @@ export async function readContemporaneousFast(inputs, {root, resolveCommit}) {
       if(entry.unit!=='passed'||entry.build!=='passed'||!Number.isFinite(Date.parse(entry.recordedAt))||
          !clauses.some(clause=>/fast checks\s+(?:pass(?:ed)?\b|\d+[^\n;.]*\+\s*build\b)/i.test(clause))||
          clauses.some(clause=>/fast checks[^\n;.]*\b(?:fail(?:ed)?|pending|held)\b/i.test(clause)))throw Error('ledger does not explicitly record passing fast checks');
-      rows.set(entry.commit,entry);
+      if(wipEvidencePolicy?.commitTimeLowerBoundCommits.includes(entry.commit)) {
+        const time=commitTimeFor?.(entry.commit);
+        if(!Number.isFinite(time)||!Number.isFinite(new Date(time*1000).getTime())||Date.parse(entry.recordedAt)!==time*1000)
+          throw Error('undated contemporaneous recordedAt must equal the Git commit time');
+        // Keep source/index bytes pinned. Record the explicit interpretation in
+        // the loaded evidence, audit output and newly written fast-check record.
+        rows.set(entry.commit,{...entry,recordedAt:new Date(time*1000).toISOString(),timestampBasis:wipEvidencePolicy.timestampBasis});
+      } else {
+        if(entry.timestampBasis==='commit-time-lower-bound')throw Error('commit-time-lower-bound requires the pinned SHA approval');
+        rows.set(entry.commit,entry);
+      }
     }
   }
   return rows;

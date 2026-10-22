@@ -135,12 +135,12 @@ async function fastLedgerFixture(run) {
   const hash=s=>createHash('sha256').update(s).digest('hex');
   await mkdir('artifacts/runtime',{recursive:true});
   const root=await mkdtemp(resolve('artifacts/runtime/fast-clauses-'));
-  const load=async(text,{commit=promotion,pin}={})=>{
+  const load=async(text,{commit=promotion,pin,recordedAt='2026-10-21T12:00:00Z',...loaderOptions}={})=>{
     await writeFile(resolve(root,'progress.md'),text);
-    const entry={commit,unit:'passed',build:'passed',recordedAt:'2026-10-21T12:00:00Z',source:{file:'progress.md',sha256:hash(text),startLine:1,endLine:text.split('\n').length,excerpt:text}};
+    const entry={commit,unit:'passed',build:'passed',recordedAt,source:{file:'progress.md',sha256:hash(text),startLine:1,endLine:text.split('\n').length,excerpt:text}};
     const bytes=JSON.stringify({schema:'atlas.contemporaneous-fast-index',schemaVersion:1,entries:[entry]});
     await writeFile(resolve(root,'index.json'),bytes);
-    return readContemporaneousFast([{file:'index.json',sha256:pin??hash(bytes)}],{root,resolveCommit:s=>[promotion,candidate].includes(s)?s:null});
+    return readContemporaneousFast([{file:'index.json',sha256:pin??hash(bytes)}],{root,resolveCommit:s=>[promotion,candidate,commit].includes(s)?s:null,...loaderOptions});
   };
   try {await run(load);} finally {await rm(root,{recursive:true,force:true});}
 }
@@ -287,4 +287,114 @@ test('historical-docs-only requires the pinned policy and user approval provenan
   ]){
     const {x,commit}=historicalDocsBaseline();mutate(x);rejects(x,commit,/unapproved historical-docs-only policy/);
   }
+});
+
+const implementationWip='d5fe295c9a6bb85dd46e969b34836e4715d2706b';
+const designWip='35c81df7e5f556605b6b8493369cd54aa6108515';
+const lowerBoundCommit='4693328af8a8f77c0d88b971752d426b644330a9';
+const digestPolicy=p=>createHash('sha256').update(JSON.stringify(p)).digest('hex');
+const wipPolicy=()=>JSON.parse(readFileSync(new URL('../../scripts/gate/acceptance-policy-1b1.json',import.meta.url))).wipEvidence??{};
+function approvedWipFixture({docs=false,commit=docs?designWip:implementationWip,merge=false}={}) {
+  const x=fixture({withWip:true});
+  x.commits[x.commits.indexOf(wip)]=commit;
+  x.facts[commit]=x.facts[wip];delete x.facts[wip];
+  x.facts[candidate].parents=[commit,cutover];
+  if(merge)x.facts[commit].parents=[cutover,sha(6)];
+  const entry=x.manifest.commits.find(e=>e.commit===wip);entry.commit=commit;
+  const record=x.records[entry.fast];record.commit=commit;record.recordedRetrospectively=true;
+  entry.requiresRetrospectiveFast=true;
+  x.wipEvidencePolicy=wipPolicy();x.manifest.wipEvidencePolicySha256=digestPolicy(x.wipEvidencePolicy);
+  if(docs){
+    entry.disposition='docs-only-wip';delete entry.fast;delete entry.requiresRetrospectiveFast;
+    x.facts[commit].paths=['docs/superpowers/specs/design.md','docs/codesign/log.md'];
+    x.facts[commit].pathsByParent=x.facts[commit].parents.map(parent=>({parent,paths:[...x.facts[commit].paths]}));
+  }
+  return {x,commit,entry,record};
+}
+function approvedWipBaseline(options){
+  const f=approvedWipFixture(options);assert.equal(auditAcceptance(f.x).accepted,true,'approved round-9 WIP baseline');return f;
+}
+
+test('approved implementation WIP accepts retrospective fast checks alone and remains non-promotable',()=>{
+  const {x,commit}=approvedWipFixture();const result=auditAcceptance(x);
+  assert.equal(result.accepted,true);assert.equal(row(result,commit).state,'accounted-wip');
+  assert.equal(row(result,commit).promotable,false);
+});
+
+test('a failing approved WIP re-run fails even without a contemporaneous requirement',()=>{
+  for(const check of ['unit','build']) {
+    const {x,commit,record}=approvedWipBaseline();record[check].state='failed';
+    rejects(x,commit,/checks or cleanup did not pass/);
+  }
+});
+
+test('the WIP-only retrospective approval is pinned and does not cover other SHAs or promotions',()=>{
+  const {x,record,commit}=approvedWipBaseline();
+  record.evidenceScope='wip-only';record.wipEvidencePolicySha256=x.manifest.wipEvidencePolicySha256;
+  assert.equal(auditAcceptance(x).accepted,true);
+  assert.equal(judgeFast(commit,record,x.facts[commit],hashes,null).state,'invalid','WIP evidence cannot be used as promotion fast evidence');
+  for(const mutate of [
+    f=>f.x.manifest.wipEvidencePolicySha256='0'.repeat(64),
+    f=>{f.x.wipEvidencePolicy.implementationWipCommits.push(wip);f.x.manifest.wipEvidencePolicySha256=digestPolicy(f.x.wipEvidencePolicy);},
+    f=>f.record.recordedRetrospectively=false,
+    f=>f.record.recordedRetrospectively='true',
+    f=>f.record.startedAt='invalid',
+    f=>f.record.finishedAt='2026-10-21T12:00:00Z',
+    f=>f.record.startedAt='1970-01-01T00:00:00Z',
+  ]) {const f=approvedWipBaseline();mutate(f);assert.equal(auditAcceptance(f.x).accepted,false);}
+  const unlisted=approvedWipFixture({commit:sha(99)});rejects(unlisted.x,unlisted.commit,/contemporaneous/);
+});
+
+test('approved docs-only WIP requires a descendant fully gated merge and remains non-promotable',()=>{
+  const {x,commit}=approvedWipBaseline({docs:true});const result=auditAcceptance(x);
+  assert.equal(row(result,commit).promotable,false);assert.equal(row(result,commit).state,'accounted-wip');
+  for(const mutate of [
+    f=>delete f.x.records[candidate],
+    f=>f.x.facts[candidate].parents=[f.commit],
+    f=>f.entry.boundary=cutover,
+    f=>delete f.entry.boundary,
+  ]){const f=approvedWipBaseline({docs:true});mutate(f);assert.equal(auditAcceptance(f.x).accepted,false);}
+});
+
+test('an unlisted docs-only WIP commit fails and cannot self-enroll or use a SHA prefix',()=>{
+  const f=approvedWipBaseline({docs:true});
+  for(const commit of [sha(99),designWip.slice(0,7)]){
+    const other=approvedWipFixture({docs:true,commit});assert.equal(auditAcceptance(other.x).accepted,false);
+  }
+  f.x.wipEvidencePolicy.docsOnlyWipCommits.push(sha(99));f.x.manifest.wipEvidencePolicySha256=digestPolicy(f.x.wipEvidencePolicy);
+  rejects(f.x,f.commit,/unapproved.*policy/);
+});
+
+test('docs-only WIP checks first-parent paths including code resolved in merges',()=>{
+  const {x,commit}=approvedWipBaseline({docs:true,merge:true});
+  x.facts[commit].pathsByParent[1].paths.push('src/second-parent.js');
+  assert.equal(auditAcceptance(x).accepted,true);
+  x.facts[commit].pathsByParent.reverse();assert.equal(auditAcceptance(x).accepted,true);
+  for(const path of ['src/conflict-resolved.js','docs/reports/a.md','docs/superpowers-other/a.md']){
+    const f=approvedWipBaseline({docs:true,merge:true});f.x.facts[f.commit].pathsByParent[0].paths.push(path);
+    rejects(f.x,f.commit,/outside approved docs directories/);
+  }
+  x.facts[commit].pathsByParent=[];rejects(x,commit,/first.parent/);
+});
+
+test('the retrospective WIP recorder accepts only a pinned approved full SHA without a ledger',async()=>{
+  const {parseFastOptions}=await import('../../scripts/record-fast-checks.mjs');
+  let options,error;
+  try{options=parseFastOptions(['--retrospective-wip','--expected-commit',implementationWip]);}catch(e){error=e;}
+  assert.equal(error,undefined,'approved WIP recorder mode is available');
+  assert.equal(options.retrospective,true);assert.equal(options.retrospectiveWip,true);
+  for(const commit of [sha(99),implementationWip.slice(0,7),designWip,lowerBoundCommit]){
+    assert.throws(()=>parseFastOptions(['--retrospective-wip','--expected-commit',commit]),/approved|full.SHA/);
+  }
+});
+
+test('undated contemporaneous passes record commit time with the explicit lower-bound basis',async()=>{
+  await fastLedgerFixture(async load=>{
+    const recordedAt='2026-10-21T12:00:00.000Z',commit=lowerBoundCommit;
+    const options={commit,recordedAt,wipEvidencePolicy:wipPolicy(),commitTimeFor:()=>Date.parse(recordedAt)/1000};
+    const entry=(await load(`Promotion ${commit}: fast checks 873 + build.`,options)).get(commit);
+    assert.equal(entry.timestampBasis,'commit-time-lower-bound');assert.equal(entry.recordedAt,recordedAt);
+    await assert.rejects(load(`Promotion ${commit}: fast checks 873 + build.`,{...options,commitTimeFor:()=>Date.parse(recordedAt)/1000+1}),/commit time/);
+    await assert.rejects(load(`Promotion ${commit}: fast checks 873 + build.`,{...options,commitTimeFor:undefined}),/commit time/);
+  });
 });

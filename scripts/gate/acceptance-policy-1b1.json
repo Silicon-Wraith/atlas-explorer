@@ -47,5 +47,78 @@
     ],
     "parentComparison": "first-parent",
     "nonDocsRequirement": "Every tree entry outside the allowed paths must have the same path, mode, type and object ID as in the first parent; additions and deletions outside those paths are forbidden."
+  },
+  "wipEvidence": {
+    "approval": {
+      "approvedBy": "user",
+      "date": "2026-10-22",
+      "source": "B15 round 9 user decisions: 27 implementation WIP commits may use retrospective typed fast-check re-runs alone; 10 pinned design-branch commits may be accounted as mechanically verified docs-only WIP through their gated merges; the 12 undated contemporaneous passes use commit time as a lower bound."
+    },
+    "implementationWipCommits": [
+      "d5fe295c9a6bb85dd46e969b34836e4715d2706b",
+      "423775fca2d0b7f13bcc32b033fd52490ce06ccb",
+      "7a0f8caafade040b2b637181c9ba77e511445428",
+      "89fa983e27cedbda82c410b294dda17be737d335",
+      "84e06a6ae1fc55ecd3ed5a2dd287d80be0e0c41c",
+      "474c847ba455d125e3043ddf242817bc1be8a54f",
+      "e555d89c5d1c5e58e0ef6bf8b0dbb29c7951b984",
+      "c71f7e81161edf28c39f1663d77abd280e8ad25e",
+      "2f91343fe82e08a915b7de81bfd87c46baa0e35c",
+      "d7cf20dd35b43e0f01a52ef09293dd1dacc03c0e",
+      "41f26e22fe431572fa665ae732b4159b21ead956",
+      "c044425ad659a2869e01390932eaf15d6317e58e",
+      "d1da1d66283901049e92380b2cea925b86ae3768",
+      "3ef8776d64a57c73d66efbdf3079444dcb76d7f7",
+      "ed1186ed39ddd0cb58a4646ffa45d833b5e1afef",
+      "fdea06ebc7ed6a622ba3ce8a4f6ab494949dcec1",
+      "0fb9fb1aabb84a3fa611482b35c54fe6cae616d7",
+      "d39543f2275f73e882a6091da0b35b7e5b54650b",
+      "7c1f38bd680132284e0409a427fcb071aed37531",
+      "8ffff47b5585398d4e833ee163a71a32eab1cf36",
+      "1f7acd208093f2190d352f8dc449e00b11e63453",
+      "515d2a9a12ba4aba250f89801f2c7559e508593b",
+      "9a58d67a766c7f8dbd0244be53aed9380f9e3944",
+      "ff4d1cb543a7811104d46242505bbbf8a2bd271f",
+      "77867c194429d03eee32bc478ce39cdbdc6d4bae",
+      "ca5343d364ad254cc63f303715784bac06a8f221",
+      "02eb149a1498f4814deb23ce1604d56ee6efa14a"
+    ],
+    "implementationRule": "WIP only, never promotable. Require recordedRetrospectively: true, actual re-run timestamps, the exact clean unchanged commit and its own unit/build checks and manifest hashes. A failing re-run fails. No contemporaneous pass is required for these SHAs only.",
+    "docsOnlyWipCommits": [
+      "35c81df7e5f556605b6b8493369cd54aa6108515",
+      "1833a1892a9a56bd9b207e89ff2e188dc110046f",
+      "e4c53b231753606468f10d65da03704430baddaa",
+      "d02892a00bed6d93a67c30317cb10b7b0d576448",
+      "98586162a4cecbc7f4e848bdd149ebfba071337b",
+      "11497c534f6133c5e783130c72623a26db6a7d4f",
+      "bb4c3bfa11e3a3e05b7070d27e4978c621c3e052",
+      "e7a9db68445193b18421c566dd55ccc1568becfe",
+      "10a919560667d52422263fa3f7dabccfa5959e42",
+      "2907d6c5bd096eda1c96aa20bace9696885ad670"
+    ],
+    "allowedPathPrefixes": [
+      "docs/superpowers/",
+      "docs/codesign/"
+    ],
+    "parentComparison": "first-parent",
+    "nonDocsRequirement": "Every tree entry outside the allowed paths must have the same path, mode, type and object ID as in the first parent; additions and deletions outside those paths are forbidden.",
+    "boundaryRule": "Docs-only WIP requires a fully gated descendant merge that carries the commit. It is accounted-wip and never promotable.",
+    "commitTimeLowerBoundCommits": [
+      "edeb4108672971b76acb1b33b4153ec48afb6539",
+      "5a647b66f1881ba5892d6b045a5ffd702a27468f",
+      "a95c5afd862c3b8a49d0b76ea4feef99b50576d3",
+      "1fe82813576a26464b5088e12547d0bd46cbebf6",
+      "baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4",
+      "f4c19f78e0d1dd96f610ae89f89abb054bc78e3b",
+      "4693328af8a8f77c0d88b971752d426b644330a9",
+      "3992e38adac8c6b19239b3364e2516d4764ef4bb",
+      "197162d1336560452db37c21bdad7d5384e474b0",
+      "579f08457cbab19feae9891506df8043687cde9f",
+      "6fea024e9041e13625c49b841df1f49fb3ad031d",
+      "7aa3dc81ac7f6292cbd41c146ac367dad27a8122"
+    ],
+    "timestampBasis": "commit-time-lower-bound",
+    "timestampRule": "For these 12 undated contemporaneous ledger passes, recordedAt equals the Git committer time. This is a lower bound, not the ledger entry creation time or the retrospective re-run time. Preserve pinned source bytes and exact same-SHA passing clauses.",
+    "scope": "Only the exact full SHAs in these lists. Neither manifest entries nor policies from audited commits can extend them."
   }
 }

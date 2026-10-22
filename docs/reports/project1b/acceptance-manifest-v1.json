@@ -379,7 +379,7 @@
       "disposition": "wip",
       "boundary": "704cf9b9b70026137627651b19287b20713411c6",
       "fast": "artifacts/gates/fast/d5fe295c9a6bb85dd46e969b34836e4715d2706b.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -387,7 +387,7 @@
       "disposition": "wip",
       "boundary": "704cf9b9b70026137627651b19287b20713411c6",
       "fast": "artifacts/gates/fast/423775fca2d0b7f13bcc32b033fd52490ce06ccb.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -439,7 +439,7 @@
       "disposition": "wip",
       "boundary": "31e5c48935944ad4bccad122604aa689d6568510",
       "fast": "artifacts/gates/fast/7a0f8caafade040b2b637181c9ba77e511445428.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -447,7 +447,7 @@
       "disposition": "wip",
       "boundary": "31e5c48935944ad4bccad122604aa689d6568510",
       "fast": "artifacts/gates/fast/89fa983e27cedbda82c410b294dda17be737d335.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -455,7 +455,7 @@
       "disposition": "wip",
       "boundary": "15fe073da3407c1740cec4bcd5095f4b874b2d45",
       "fast": "artifacts/gates/fast/84e06a6ae1fc55ecd3ed5a2dd287d80be0e0c41c.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -486,7 +486,7 @@
       "disposition": "wip",
       "boundary": "b691ffd4f69828fb35a7d32deccea8eb9168eb61",
       "fast": "artifacts/gates/fast/474c847ba455d125e3043ddf242817bc1be8a54f.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -494,7 +494,7 @@
       "disposition": "wip",
       "boundary": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
       "fast": "artifacts/gates/fast/e555d89c5d1c5e58e0ef6bf8b0dbb29c7951b984.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -510,7 +510,7 @@
       "disposition": "wip",
       "boundary": "f80bf6af3b57d737fc7a45458f7084a9929fc45d",
       "fast": "artifacts/gates/fast/c71f7e81161edf28c39f1663d77abd280e8ad25e.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -518,7 +518,7 @@
       "disposition": "wip",
       "boundary": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
       "fast": "artifacts/gates/fast/2f91343fe82e08a915b7de81bfd87c46baa0e35c.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -526,7 +526,7 @@
       "disposition": "wip",
       "boundary": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
       "fast": "artifacts/gates/fast/d7cf20dd35b43e0f01a52ef09293dd1dacc03c0e.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -657,7 +657,7 @@
       "disposition": "wip",
       "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
       "fast": "artifacts/gates/fast/41f26e22fe431572fa665ae732b4159b21ead956.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -665,7 +665,7 @@
       "disposition": "wip",
       "boundary": "676bfc03db7a431ae3c32cc05436c71018ebb778",
       "fast": "artifacts/gates/fast/c044425ad659a2869e01390932eaf15d6317e58e.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -673,7 +673,7 @@
       "disposition": "wip",
       "boundary": "676bfc03db7a431ae3c32cc05436c71018ebb778",
       "fast": "artifacts/gates/fast/d1da1d66283901049e92380b2cea925b86ae3768.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -704,7 +704,7 @@
       "disposition": "wip",
       "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
       "fast": "artifacts/gates/fast/3ef8776d64a57c73d66efbdf3079444dcb76d7f7.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -712,7 +712,7 @@
       "disposition": "wip",
       "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
       "fast": "artifacts/gates/fast/ed1186ed39ddd0cb58a4646ffa45d833b5e1afef.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -720,7 +720,7 @@
       "disposition": "wip",
       "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
       "fast": "artifacts/gates/fast/fdea06ebc7ed6a622ba3ce8a4f6ab494949dcec1.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -728,40 +728,32 @@
       "disposition": "wip",
       "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
       "fast": "artifacts/gates/fast/0fb9fb1aabb84a3fa611482b35c54fe6cae616d7.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
       "commit": "35c81df7e5f556605b6b8493369cd54aa6108515",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
-      "fast": "artifacts/gates/fast/35c81df7e5f556605b6b8493369cd54aa6108515.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "1833a1892a9a56bd9b207e89ff2e188dc110046f",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
-      "fast": "artifacts/gates/fast/1833a1892a9a56bd9b207e89ff2e188dc110046f.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "e4c53b231753606468f10d65da03704430baddaa",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
-      "fast": "artifacts/gates/fast/e4c53b231753606468f10d65da03704430baddaa.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "d02892a00bed6d93a67c30317cb10b7b0d576448",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
-      "fast": "artifacts/gates/fast/d02892a00bed6d93a67c30317cb10b7b0d576448.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
@@ -796,7 +788,7 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/d39543f2275f73e882a6091da0b35b7e5b54650b.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -804,24 +796,20 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/7c1f38bd680132284e0409a427fcb071aed37531.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
       "commit": "98586162a4cecbc7f4e848bdd149ebfba071337b",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "d62b9da9f1e569bee1d1f257121278c8d9e67384",
-      "fast": "artifacts/gates/fast/98586162a4cecbc7f4e848bdd149ebfba071337b.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "11497c534f6133c5e783130c72623a26db6a7d4f",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "d62b9da9f1e569bee1d1f257121278c8d9e67384",
-      "fast": "artifacts/gates/fast/11497c534f6133c5e783130c72623a26db6a7d4f.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "d62b9da9f1e569bee1d1f257121278c8d9e67384",
@@ -833,7 +821,7 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/8ffff47b5585398d4e833ee163a71a32eab1cf36.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -841,7 +829,7 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/1f7acd208093f2190d352f8dc449e00b11e63453.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -849,7 +837,7 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/515d2a9a12ba4aba250f89801f2c7559e508593b.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -857,7 +845,7 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/9a58d67a766c7f8dbd0244be53aed9380f9e3944.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -865,7 +853,7 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/ff4d1cb543a7811104d46242505bbbf8a2bd271f.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -873,7 +861,7 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/77867c194429d03eee32bc478ce39cdbdc6d4bae.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -881,47 +869,39 @@
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/ca5343d364ad254cc63f303715784bac06a8f221.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
       "commit": "bb4c3bfa11e3a3e05b7070d27e4978c621c3e052",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
-      "fast": "artifacts/gates/fast/bb4c3bfa11e3a3e05b7070d27e4978c621c3e052.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "e7a9db68445193b18421c566dd55ccc1568becfe",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
-      "fast": "artifacts/gates/fast/e7a9db68445193b18421c566dd55ccc1568becfe.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "10a919560667d52422263fa3f7dabccfa5959e42",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
-      "fast": "artifacts/gates/fast/10a919560667d52422263fa3f7dabccfa5959e42.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "2907d6c5bd096eda1c96aa20bace9696885ad670",
-      "disposition": "wip",
+      "disposition": "docs-only-wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
-      "fast": "artifacts/gates/fast/2907d6c5bd096eda1c96aa20bace9696885ad670.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
-      "requiresRetrospectiveFast": true
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
     },
     {
       "commit": "02eb149a1498f4814deb23ce1604d56ee6efa14a",
       "disposition": "wip",
       "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
       "fast": "artifacts/gates/fast/02eb149a1498f4814deb23ce1604d56ee6efa14a.json",
-      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
       "requiresRetrospectiveFast": true
     },
     {
@@ -974,7 +954,8 @@
       "group": "rendering"
     }
   ],
-  "note": "Scope is main..implementationHead, with main pinned at base. Controller must reconcile this seed, add byte-pinned contemporaneous ledger references, actual retrospective typed fast evidence, and current full-SHA stratum reports. No record is manufactured by this manifest.",
+  "note": "Scope is main..implementationHead, with main pinned at base. Controller must reconcile this seed, add byte-pinned contemporaneous ledger references, actual retrospective typed fast evidence, and current full-SHA stratum reports. No record is manufactured by this manifest. Round 9 applies only the pinned 27 implementation WIP and 10 docs-only WIP approvals; the 12 contemporaneous passes use the explicit commit-time-lower-bound basis. No passing result is implied; every gate and re-run must still pass.",
   "contemporaneousFastInputs": [],
-  "historicalDocsOnlyPolicySha256": "f10b7531ec9c4bc3d2ef62ea89c7f97b8dda85c3ec218db2a7d15c4aabb0eaaf"
+  "historicalDocsOnlyPolicySha256": "f10b7531ec9c4bc3d2ef62ea89c7f97b8dda85c3ec218db2a7d15c4aabb0eaaf",
+  "wipEvidencePolicySha256": "432605cffc42acb7d6e34623f19a4f4540863bc59934b68a018c7664e177b4cd"
 }

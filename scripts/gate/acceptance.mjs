@@ -7,6 +7,11 @@ const sha = value => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value);
 // 2026-10-22, round 6. Pin the exact 23 full SHAs, refined rule and provenance independently
 // of the live manifest and policies in audited commits. Neither can enroll more.
 const HISTORICAL_DOCS_POLICY_SHA256 = 'f10b7531ec9c4bc3d2ef62ea89c7f97b8dda85c3ec218db2a7d15c4aabb0eaaf';
+// Independently pin the round-9 user approval, including all three exact lists.
+export const WIP_EVIDENCE_POLICY_SHA256 = '432605cffc42acb7d6e34623f19a4f4540863bc59934b68a018c7664e177b4cd';
+export const approvedWipEvidencePolicy = policy => !!policy &&
+  createHash('sha256').update(JSON.stringify(policy)).digest('hex') === WIP_EVIDENCE_POLICY_SHA256;
+export const approvedRetrospectiveWip = (commit, policy) => approvedWipEvidencePolicy(policy) && policy.implementationWipCommits.includes(commit);
 export const TRANSITION = Object.freeze({
   cutover: '76de54b1df64b67a8764b05918671c218df93da0',
   retrospective: [
@@ -15,22 +20,42 @@ export const TRANSITION = Object.freeze({
   ],
 });
 
-export function judgeFast(commit, record, facts, manifests, contemporaneous) {
+export function judgeFast(commit, record, facts, manifests, contemporaneous, { wipEvidencePolicy } = {}) {
   const invalid = reason => ({ state: 'invalid', reason });
   if (!record || record.schema !== 'atlas.fast-check' || record.schemaVersion !== 1) return invalid('missing or incorrectly typed fast evidence');
   if (record.commit !== commit || record.tree !== facts?.tree) return invalid('fast evidence commit/tree mismatch');
   if (record.cleanBefore !== true || record.cleanAfter !== true || record.unchanged !== true) return invalid('fast checks did not verify a clean unchanged tree');
   if (!manifests || !same(record.manifests, manifests)) return invalid('fast checks did not identify the commit manifests');
   if (record.unit?.state !== 'passed' || record.build?.state !== 'passed' || record.cleanup !== 'confirmed') return invalid('fast checks or cleanup did not pass');
+  const wipOnly = approvedRetrospectiveWip(commit, wipEvidencePolicy);
+  if (record.evidenceScope !== undefined && (record.evidenceScope !== 'wip-only' || !wipOnly || record.wipEvidencePolicySha256 !== WIP_EVIDENCE_POLICY_SHA256))
+    return invalid('WIP-only fast evidence requires its approved WIP scope and policy pin');
+  if (wipOnly && record.recordedRetrospectively !== true) return invalid('approved WIP re-run must be recordedRetrospectively: true');
   if (record.recordedRetrospectively) {
     const start = Date.parse(record.startedAt), end = Date.parse(record.finishedAt);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return invalid('retrospective evidence has invalid run timestamps');
+    if (record.recordedRetrospectively !== true || !Number.isFinite(start) || !Number.isFinite(end) || end < start ||
+        wipOnly && (!Number.isFinite(facts?.committedAt) || start < facts.committedAt * 1000)) return invalid('retrospective evidence has invalid run timestamps');
     const then = Date.parse(contemporaneous?.recordedAt);
-    if (contemporaneous?.commit !== commit || contemporaneous.unit !== 'passed' || contemporaneous.build !== 'passed' ||
-        !/^[0-9a-f]{64}$/.test(contemporaneous.source?.sha256 ?? '') || !Number.isFinite(then) || then >= start)
+    if (!wipOnly && (contemporaneous?.commit !== commit || contemporaneous.unit !== 'passed' || contemporaneous.build !== 'passed' ||
+        !/^[0-9a-f]{64}$/.test(contemporaneous.source?.sha256 ?? '') || !Number.isFinite(then) || then >= start))
       return invalid('retrospective fast evidence lacks a same-SHA contemporaneous unit/build pass');
   }
   return { state: 'passed', reason: 'typed fast evidence on the clean unchanged commit' };
+}
+
+function docsFirstParent(fact, policy, disposition) {
+  const diffs = fact.pathsByParent;
+  if (!Array.isArray(fact.parents) || !fact.parents.length || !fact.parents.every(sha) ||
+      new Set(fact.parents).size !== fact.parents.length || !Array.isArray(diffs) ||
+      diffs.filter(diff => diff?.parent === fact.parents[0]).length !== 1)
+    return { error: `${disposition} requires an unambiguous first-parent Git diff` };
+  const diff = diffs.find(diff => diff?.parent === fact.parents[0]);
+  if (!Array.isArray(diff.paths)) return { error: `${disposition} requires first-parent changed paths` };
+  // Complete tree diffs include additions, deletions, mode/type and object
+  // changes. Only docs paths may differ, including code resolved in a merge.
+  if (diff.paths.some(path => typeof path !== 'string' || !policy.allowedPathPrefixes.some(prefix => path.startsWith(prefix))))
+    return { error: `${disposition} changed a path outside approved docs directories` };
+  return { diff };
 }
 
 // Only required rows from the pinned matrix join; diagnostic evidence cannot
@@ -48,7 +73,7 @@ export function joinStrata(mandatory, evidence) {
 }
 
 export function auditAcceptance({ commits, manifest, facts, records, requiredIdsFor, isAncestor, manifestsFor,
-  approvedPolicyFor, historicalDocsPolicy, approvedTransition = TRANSITION, legacyRows = [], corruptLedgerLines = 0, evidenceJoin = null, summaryValidFor = () => false, contemporaneousFastFor = () => null }) {
+  approvedPolicyFor, historicalDocsPolicy, wipEvidencePolicy, approvedTransition = TRANSITION, legacyRows = [], corruptLedgerLines = 0, evidenceJoin = null, summaryValidFor = () => false, contemporaneousFastFor = () => null }) {
   const errors = [], rows = [], entries = new Map();
   if (!manifest || manifest.schema !== 'atlas.acceptance' || manifest.schemaVersion !== 1 || manifest.policyVersion !== 1 ||
       !sha(manifest.base) || !sha(manifest.head) || !sha(manifest.cutover) || manifest.approval?.approvedBy !== 'user' ||
@@ -68,9 +93,15 @@ export function auditAcceptance({ commits, manifest, facts, records, requiredIds
     createHash('sha256').update(JSON.stringify(historicalDocsPolicy)).digest('hex') === HISTORICAL_DOCS_POLICY_SHA256;
   const fullKinds = new Set(['feature-gated', 'merge-gated', 'integration-gated']);
   const full = entry => entry && fullKinds.has(entry.disposition) && judgeRecord(entry.commit, records[entry.gate], requiredIdsFor(entry.commit)).state === 'passed';
+  const wipPolicyApproved = manifest.wipEvidencePolicySha256 === WIP_EVIDENCE_POLICY_SHA256 && approvedWipEvidencePolicy(wipEvidencePolicy);
   const fast = (entry, fact) => entry.requiresRetrospectiveFast && records[entry.fast]?.recordedRetrospectively !== true
     ? {state:'invalid',reason:'historical fast evidence must be recordedRetrospectively'}
-    : judgeFast(entry.commit, records[entry.fast], fact, manifestsFor(entry.commit), contemporaneousFastFor(entry.commit));
+    : judgeFast(entry.commit, records[entry.fast], fact, manifestsFor(entry.commit), contemporaneousFastFor(entry.commit),
+      { wipEvidencePolicy: entry.disposition === 'wip' && wipPolicyApproved ? wipEvidencePolicy : null });
+  const fastProvenance = entry => ({ record: entry.fast, recordedRetrospectively: records[entry.fast]?.recordedRetrospectively === true,
+    ...(entry.disposition === 'wip' && wipPolicyApproved && approvedRetrospectiveWip(entry.commit, wipEvidencePolicy)
+      ? { evidenceScope: 'wip-only', policySha256: WIP_EVIDENCE_POLICY_SHA256, approval: wipEvidencePolicy.approval }
+      : contemporaneousFastFor(entry.commit) ? { contemporaneous: contemporaneousFastFor(entry.commit) } : {}) });
   for (const commit of commits) {
     const entry = entries.get(commit), fact = facts[commit], historical = retrospective.get(commit);
     const fail = reason => rows.push({ commit, disposition: entry?.disposition ?? 'missing', state: 'unaccepted', reason });
@@ -78,23 +109,10 @@ export function auditAcceptance({ commits, manifest, facts, records, requiredIds
     if (entry?.disposition === 'historical-docs-only') {
       if (!historicalDocsPolicyApproved) { fail('unapproved historical-docs-only policy or manifest pin'); continue; }
       if (!historicalDocsPolicy.commits.includes(commit)) { fail('SHA is not approved for historical-docs-only'); continue; }
-      const diffs = fact.pathsByParent;
-      if (!Array.isArray(fact.parents) || !fact.parents.length || !fact.parents.every(sha) ||
-          new Set(fact.parents).size !== fact.parents.length || !Array.isArray(diffs) ||
-          diffs.filter(diff => diff?.parent === fact.parents[0]).length !== 1) {
-        fail('historical-docs-only requires an unambiguous first-parent Git diff'); continue;
-      }
-      const firstParentDiff = diffs.find(diff => diff?.parent === fact.parents[0]);
-      if (!Array.isArray(firstParentDiff.paths)) { fail('historical-docs-only requires first-parent changed paths'); continue; }
-      // A complete tree diff includes additions, deletions, mode/type and object
-      // changes. Allowing only docs paths proves all non-docs entries equal the
-      // first parent's versions, including any code resolved during a merge.
-      if (firstParentDiff.paths.some(path => typeof path !== 'string' ||
-          !historicalDocsPolicy.allowedPathPrefixes.some(prefix => path.startsWith(prefix)))) {
-        fail('historical-docs-only changed a path outside approved docs directories'); continue;
-      }
+      const checked = docsFirstParent(fact, historicalDocsPolicy, entry.disposition);
+      if (checked.error) { fail(checked.error); continue; }
       rows.push({ commit, disposition: entry.disposition, state: 'accepted', approval: historicalDocsPolicy.approval,
-        policySha256: HISTORICAL_DOCS_POLICY_SHA256, pathsByParent: [firstParentDiff],
+        policySha256: HISTORICAL_DOCS_POLICY_SHA256, pathsByParent: [checked.diff],
         reason: 'user-approved historical docs-only classification; first-parent diff verified, non-docs entries unchanged' });
       continue;
     }
@@ -122,13 +140,24 @@ export function auditAcceptance({ commits, manifest, facts, records, requiredIds
         if (!same(fact.parents, [entry.integrationBase, entry.candidate]) || !same(entry.parents, fact.parents) || entry.tree !== fact.tree || entry.candidateTree !== candidateFact.tree || entry.verifiedIntegration !== entry.integrationBase || candidateEntry.integrationBase !== entry.integrationBase) { fail('stale promotion target or mismatched parents/tree evidence'); continue; }
         const checked = fast(entry, fact); if (checked.state !== 'passed') { fail(checked.reason); continue; }
       } else if (!isAncestor(entry.candidate, commit)) { fail('validated-later candidate is not an ancestor'); continue; }
-      rows.push({ commit, disposition: entry.disposition, state: 'accepted', evidenceReuse: { candidate: entry.candidate, gate: approvedLate ? entry.gate : candidateEntry.gate }, chronology: approvedLate ? 'gate ran after promotion; approved transition only' : 'candidate gate reused; promotion fast-checked' });
-    } else if (entry.disposition === 'wip') {
+      rows.push({ commit, disposition: entry.disposition, state: 'accepted', evidenceReuse: { candidate: entry.candidate, gate: approvedLate ? entry.gate : candidateEntry.gate }, ...(!approvedLate ? { fastEvidence: fastProvenance(entry) } : {}), chronology: approvedLate ? 'gate ran after promotion; approved transition only' : 'candidate gate reused; promotion fast-checked' });
+    } else if (entry.disposition === 'wip' || entry.disposition === 'docs-only-wip') {
       if (!sha(entry.boundary)) { fail('WIP boundary SHA is missing or invalid'); continue; }
       if (!isAncestor(commit, entry.boundary)) { fail('WIP boundary is not a descendant'); continue; }
       if (!full(entries.get(entry.boundary))) { fail('WIP boundary is not fully gated'); continue; }
-      if (!historical) { const checked = fast(entry, fact); if (checked.state !== 'passed') { fail(checked.reason); continue; } }
-      rows.push({ commit, disposition: 'wip', state: 'accounted-wip', promotable: false, boundary: entry.boundary });
+      if (entry.disposition === 'docs-only-wip') {
+        if (!wipPolicyApproved) { fail('unapproved docs-only-wip policy or manifest pin'); continue; }
+        if (!wipEvidencePolicy.docsOnlyWipCommits.includes(commit)) { fail('SHA is not approved for docs-only-wip'); continue; }
+        if (!(facts[entry.boundary]?.parents?.length >= 2)) { fail('docs-only-wip boundary must be a fully gated descendant merge'); continue; }
+        const checked = docsFirstParent(fact, wipEvidencePolicy, entry.disposition);
+        if (checked.error) { fail(checked.error); continue; }
+        rows.push({ commit, disposition: entry.disposition, state: 'accounted-wip', promotable: false, boundary: entry.boundary,
+          approval: wipEvidencePolicy.approval, policySha256: WIP_EVIDENCE_POLICY_SHA256, pathsByParent: [checked.diff] });
+      } else {
+        if (!historical) { const checked = fast(entry, fact); if (checked.state !== 'passed') { fail(checked.reason); continue; } }
+        rows.push({ commit, disposition: 'wip', state: 'accounted-wip', promotable: false, boundary: entry.boundary,
+          ...(!historical ? { fastEvidence: fastProvenance(entry) } : {}) });
+      }
     } else if (entry.disposition === 'docs-fast') {
       const policy = approvedPolicyFor(commit);
       const consumed = [...manifest.commits.flatMap(e => [e.gate, e.fast]), ...(manifest.stratumEvidence ?? []).map(e => e.file), ...(manifest.exceptionInputs ?? []).map(e => e.file)];

@@ -37,7 +37,7 @@ export async function runAudit(options, { root = resolve(fileURLToPath(new URL('
   const manifest = await json(resolve(root, options.manifest));
   // This approval travels with the auditor, never with a commit seeking exemption.
   const policyBytes = await readFile(new URL('./gate/acceptance-policy-1b1.json', import.meta.url));
-  const historicalDocsPolicy = JSON.parse(policyBytes).historicalDocsOnly;
+  const { historicalDocsOnly: historicalDocsPolicy, wipEvidence: wipEvidencePolicy } = JSON.parse(policyBytes);
   const roots = options.roots.length ? options.roots.map(path => resolve(root, path)) : [root];
   const errors = [], entries = [], records = {}, facts = {}, evidenceHashes = {};
   const readEvidence = async path => {
@@ -107,8 +107,9 @@ export async function runAudit(options, { root = resolve(fileURLToPath(new URL('
     for (const entry of source) if (entry.matrixSha256) for (const row of entry.rows ?? []) stratumRows.push({ ...row, matrixSha256: entry.matrixSha256 });
   }
   const evidenceJoin = joinStrata(mandatory, stratumRows);
-  const contemporaneous = await readContemporaneousFast(manifest.contemporaneousFastInputs, { root, resolveCommit: value => git('rev-parse', `${value}^{commit}`) });
-  const audit = auditAcceptance({ commits, manifest, facts, records, requiredIdsFor, isAncestor, manifestsFor, historicalDocsPolicy, legacyRows: legacy.rows,
+  const contemporaneous = await readContemporaneousFast(manifest.contemporaneousFastInputs, { root, wipEvidencePolicy,
+    resolveCommit: value => git('rev-parse', `${value}^{commit}`), commitTimeFor: commit => Number(git('show', '-s', '--format=%ct', commit)) });
+  const audit = auditAcceptance({ commits, manifest, facts, records, requiredIdsFor, isAncestor, manifestsFor, historicalDocsPolicy, wipEvidencePolicy, legacyRows: legacy.rows,
     corruptLedgerLines: legacy.corruptLedgerLines, evidenceJoin, contemporaneousFastFor: commit => contemporaneous.get(commit),
     approvedPolicyFor: commit => { try { return JSON.parse(git('show', `${facts[commit].parents[0]}:${POLICY_PATH}`)); } catch { return null; } },
     // Summary exemption is deliberately unavailable until the caller supplies a
