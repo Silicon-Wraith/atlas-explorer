@@ -11,7 +11,7 @@
 // separately reported portability experiment, never gated); B06 registers `recovery`; B08 registers
 // `numerics` (the field kernels against B04's frozen matrix); B10 registers `rendering` (tracing, normals and
 // picking against B04's ray strata and anchors) and B11 adds its shading, accumulation, display and product-set
-// checks to that group; later tasks add shell. The spike document is written only after the run passed, its report was
+// checks to that group; B14 registers `shell` (the Space workspace in the application: `space-interaction`). The spike document is written only after the run passed, its report was
 // persisted and every page, context and browser was drained and closed.
 import './support/entry-guard.mjs';
 import assert from 'node:assert/strict';
@@ -24,7 +24,7 @@ import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'shell']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
@@ -2470,6 +2470,377 @@ async function runRendering({ page }) {
   assert.deepEqual(failedChecks, [], `rendering checks failed: ${failedChecks.join('; ')}`);
 }
 
+// ---- the shell group (plan B14: the Space workspace in the application, `space-interaction`) ---------
+// One application page on the physical GPU. The scripted gamepad replaces navigator.getGamepads before
+// the application runs (no physical controller is a gate dependency). Each check is recorded; failures
+// are collected so later checks still run, and the group fails if any check failed. With
+// ATLAS_SHELL_SCREENSHOTS set, representative screenshots are written there (diagnostic only).
+export const SHELL_PASSES = Object.freeze({
+  prepare: 'The first switch to Space prepares pipelines with visible status and renders the bulb overview',
+  families: 'Each family renders with its estimator category shown',
+  history: 'Orbit, wheel dolly, focus, overview and flight each produce one camera-history entry',
+  undo: 'Undo of a parameter edit restores the scene without moving the camera',
+  file: 'A saved scene file reopens to the same scene hash',
+  loss: 'A device loss during interaction recovers once and a repeated loss stops automatic retry with the scene intact',
+  allocation: 'An allocation failure offers a lower-cost choice and never changes the request',
+  inside: 'A camera inside the set shows the unresolved exterior status with overview and reset available',
+  exportSwitch: 'Switching during a Plane export does not interrupt the export',
+  blur: 'Keyboard focus, capture and flight end on blur and on switching',
+  gamepad: 'A scripted gamepad orbits and flies, each run is one camera-history entry, and a disconnect stops flight',
+});
+const SHELL_IDLE_MS = 180_000;
+const SHELL_EXPECTED_ESTIMATORS = { sphere: 'exact distance', box: 'exact distance', menger: 'exact distance', mandelbulb: 'heuristic, exterior-only', 'quaternion-julia': 'heuristic, exterior-only' };
+
+// Installed before the application: a scripted standard-mapping pad, absent until connect().
+function scriptedGamepadInit() {
+  const buttons = () => Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 }));
+  const pad = { id: 'ATLAS scripted standard pad', index: 0, connected: false, mapping: 'standard', axes: [0, 0, 0, 0], buttons: buttons(), timestamp: 0 };
+  const fire = type => { const event = new Event(type); Object.defineProperty(event, 'gamepad', { value: pad }); window.dispatchEvent(event); };
+  globalThis.__pad = {
+    connect() { pad.connected = true; pad.axes = [0, 0, 0, 0]; pad.buttons = buttons(); fire('gamepadconnected'); },
+    disconnect() { pad.connected = false; fire('gamepaddisconnected'); },
+    axes(values) { pad.axes = [...values]; pad.timestamp = performance.now(); },
+    button(index, pressed) { pad.buttons[index] = { pressed, touched: pressed, value: pressed ? 1 : 0 }; pad.timestamp = performance.now(); },
+  };
+  Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value: function getGamepads() { return [pad.connected ? pad : null, null, null, null]; } });
+}
+
+async function shellScreenshot(page, name, clip) {
+  const dir = process.env.ATLAS_SHELL_SCREENSHOTS;
+  if (!dir) return null;
+  await mkdir(dir, { recursive: true });
+  const path = resolve(dir, `${name}.png`);
+  await within(page.screenshot({ path, ...(clip ? { clip } : {}) }), LIMITS.operation, `screenshot ${name}`);
+  return path;
+}
+const spaceIdle = (page, label) => ev(page, ms => atlas.space.whenIdle({ timeoutMs: ms }), SHELL_IDLE_MS - 5000, `${label}: Space idle`, SHELL_IDLE_MS);
+const spaceState = page => ev(page, () => ({ state: atlas.space.state, history: atlas.space.history, camera: atlas.space.scene.camera,
+  sceneHash: atlas.space.sceneHash, publication: atlas.space.lastPublication }), undefined, 'Space state');
+async function canvasCentre(page) {
+  const box = await within(page.locator('#space-canvas').boundingBox(), LIMITS.operation, 'Space canvas box');
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2, box };
+}
+
+async function runShell({ page }) {
+  await page.addInitScript(scriptedGamepadInit);
+  await page.goto(url, { timeout: LIMITS.launch });
+  await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.deep });
+  await idleWithin(page);
+  const failedChecks = [];
+  async function check(name, fn) {
+    try { pass(name, await fn()); }
+    catch (error) { failedChecks.push(`${name}: ${error.message}`); report.push({ name: `CHECK FAILED: ${name}`, error: error.stack }); console.error(`FAIL ${name}: ${error.message}`); }
+  }
+
+  await check(SHELL_PASSES.prepare, async () => {
+    const result = await ev(page, async () => {
+      const status = document.querySelector('#space-preparation'), texts = [], screens = [];
+      // B14-F2 (spec §15): while preparing, Plane stays on screen and the status is shown over it.
+      const screen = () => { const style = getComputedStyle(status);
+        return { workspace: document.body.dataset.workspace ?? null, pending: document.body.dataset.workspacePending ?? null,
+          plane: getComputedStyle(document.querySelector('#fractal-surface')).display,
+          statusShown: !status.hidden && style.display !== 'none' && style.visibility !== 'hidden' && status.getBoundingClientRect().height > 0 }; };
+      const observer = new MutationObserver(() => { if (!status.hidden && status.textContent) { texts.push(status.textContent); screens.push(screen()); } });
+      observer.observe(status, { childList: true, characterData: true, subtree: true, attributes: true });
+      const fresh = { factoryUsed: atlas.space.state.backendCreated, workspace: atlas.workspaces.current() };
+      let presents = 0; const unsubscribe = atlas.space.onPresent(() => { presents++; });
+      const started = performance.now(), switched = await atlas.workspaces.switchTo('space');
+      const atReveal = { presents, published: Boolean(atlas.space.lastPublication) }; unsubscribe();
+      const activatedMs = performance.now() - started;
+      observer.disconnect();
+      return { fresh, switched, activatedMs, texts, screens, prewarm: atlas.space.state.prewarm, eligible: atlas.space.state.eligible, visible: document.body.dataset.workspace,
+        pendingAfter: document.body.dataset.workspacePending ?? null, atReveal };
+    }, undefined, 'first switch to Space', LIMITS.deep);
+    assert.equal(result.fresh.factoryUsed, false, 'a fresh start acquired no Space device');
+    assert.equal(result.switched.outcome, 'activated', `Space activated: ${JSON.stringify(result.switched)}`);
+    assert.ok(result.texts.some(text => /Preparing/i.test(text)), `preparation status was visible: ${JSON.stringify(result.texts)}`);
+    const preparing = result.screens.filter((_, i) => /Preparing/i.test(result.texts[i]));
+    assert.ok(preparing.length > 0 && preparing.every(entry => entry.workspace === 'plane' && entry.pending === 'space' && entry.plane !== 'none' && entry.statusShown),
+      `Plane stayed on screen with the preparation status shown over it: ${JSON.stringify(preparing)}`);
+    assert.deepEqual([result.visible, result.pendingAfter], ['space', null], 'Space is shown once it can present');
+    assert.ok(result.atReveal.presents >= 1 && result.atReveal.published, `Space was shown only after its first presentation: ${JSON.stringify(result.atReveal)}`);
+    assert.equal(result.prewarm?.ok, true, `the product set prewarmed: ${JSON.stringify(result.prewarm)}`);
+    await spaceIdle(page, 'bulb overview');
+    const after = await ev(page, async () => {
+      const { overview } = await import('/src/space/camera.js'), { getModel } = await import('/src/space/models/registry.js');
+      const { effectiveParameters } = await import('/src/space/numerics/parameters.js');
+      const scene = atlas.space.scene;
+      const expected = overview(getModel('mandelbulb', 1), effectiveParameters('mandelbulb', scene.parameters).effective);
+      return { model: scene.model.id, overview: JSON.stringify(expected) === JSON.stringify(scene.camera), publication: atlas.space.lastPublication, sceneHash: atlas.space.sceneHash,
+        estimator: document.querySelector('#space-estimator').textContent, report: atlas.space.lastReport && { outcome: atlas.space.lastReport.outcome, samples: atlas.space.lastReport.completed?.samples } };
+    }, undefined, 'bulb overview publication');
+    assert.equal(after.model, 'mandelbulb'); assert.equal(after.overview, true, 'the camera is overview(bulb)');
+    assert.equal(after.publication?.sceneHash, after.sceneHash, 'the publication shows the current scene');
+    assert.ok(after.publication.rayTermination.hit > 0, `the surface is hit: ${JSON.stringify(after.publication.rayTermination)}`);
+    const screenshot = await shellScreenshot(page, 'bulb-overview');
+    return { ...result, texts: [...new Set(result.texts)].slice(0, 6), publication: { kind: after.publication.kind, samples: after.publication.samples, rayTermination: after.publication.rayTermination }, report: after.report, estimator: after.estimator, screenshot };
+  });
+
+  await check(SHELL_PASSES.families, async () => {
+    const families = {};
+    for (const family of Object.keys(SHELL_EXPECTED_ESTIMATORS)) {
+      await within(page.selectOption('#space-family', family), LIMITS.operation, `select ${family}`);
+      await spaceIdle(page, family);
+      const seen = await ev(page, () => ({ model: atlas.space.scene.model.id, estimator: document.querySelector('#space-estimator').textContent,
+        published: atlas.space.lastPublication?.sceneHash === atlas.space.sceneHash, hits: atlas.space.lastPublication?.rayTermination.hit ?? 0,
+        camera: atlas.space.history.camera, undoDepth: atlas.space.history.undoDepth }), undefined, `family ${family}`);
+      assert.equal(seen.model, family); assert.equal(seen.estimator, SHELL_EXPECTED_ESTIMATORS[family], `${family} estimator category`);
+      assert.equal(seen.published, true, `${family} rendered`); assert.ok(seen.hits > 0, `${family} surface hit`);
+      if (family === 'menger') seen.screenshot = await shellScreenshot(page, 'menger-view');
+      families[family] = seen;
+    }
+    await within(page.selectOption('#space-family', 'mandelbulb'), LIMITS.operation, 'select mandelbulb');
+    await spaceIdle(page, 'back to the bulb');
+    return { families };
+  });
+
+  await check(SHELL_PASSES.history, async () => {
+    const entries = {};
+    const measure = async (label, action) => {
+      const before = await spaceState(page);
+      await action();
+      await spaceIdle(page, label);
+      const after = await spaceState(page);
+      entries[label] = { added: after.history.camera.length - before.history.camera.length, undo: after.history.undoDepth - before.history.undoDepth, moved: JSON.stringify(after.camera) !== JSON.stringify(before.camera) };
+      assert.deepEqual([entries[label].added, entries[label].undo, entries[label].moved], [1, 0, true], `${label}: ${JSON.stringify(entries[label])}`);
+    };
+    const { x, y } = await canvasCentre(page);
+    await measure('orbit', async () => { await page.mouse.move(x, y); await page.mouse.down(); for (let i = 1; i <= 8; i++) await page.mouse.move(x + i * 12, y + i * 3); await page.mouse.up(); });
+    await measure('wheel dolly', async () => { await page.mouse.move(x, y); for (let i = 0; i < 4; i++) { await page.mouse.wheel(0, -60); await page.waitForTimeout(30); } await page.waitForTimeout(400); });
+    await measure('focus', async () => { await page.mouse.dblclick(x, y); await page.waitForTimeout(500); });
+    await measure('overview', async () => { await page.click('#space-overview'); });
+    await measure('flight', async () => {
+      await page.mouse.click(x, y);
+      await page.keyboard.press('KeyF'); await page.keyboard.down('KeyW'); await page.waitForTimeout(400); await page.keyboard.up('KeyW');
+      await page.keyboard.press('KeyF');
+    });
+    return { entries };
+  });
+
+  await check(SHELL_PASSES.undo, async () => {
+    const before = await spaceState(page);
+    await within(page.fill('#space-power', '6'), LIMITS.operation, 'fill power');
+    await within(page.press('#space-power', 'Enter'), LIMITS.operation, 'commit power');
+    await spaceIdle(page, 'power edit');
+    const edited = await ev(page, () => ({ power: atlas.space.scene.parameters.power, history: atlas.space.history }), undefined, 'edited');
+    assert.equal(edited.power, '6');
+    await page.click('#space-undo');
+    await spaceIdle(page, 'undo');
+    const after = await spaceState(page);
+    const power = await ev(page, () => atlas.space.scene.parameters.power, undefined, 'power after undo');
+    assert.equal(after.sceneHash, before.sceneHash, 'undo restores the scene');
+    assert.equal(power, '8');
+    assert.equal(JSON.stringify(after.camera), JSON.stringify(before.camera), 'the camera did not move');
+    assert.deepEqual(after.history.camera, before.history.camera, 'camera history is unchanged');
+    // Invalid input is reported inline and never clamped.
+    await within(page.fill('#space-power', '11'), LIMITS.operation, 'fill invalid power');
+    await within(page.press('#space-power', 'Enter'), LIMITS.operation, 'commit invalid power');
+    const invalid = await ev(page, () => ({ error: document.querySelector('#space-parameter-error').textContent, power: atlas.space.scene.parameters.power, undoDepth: atlas.space.history.undoDepth }), undefined, 'invalid power');
+    assert.match(invalid.error, /\S/, 'invalid input is reported'); assert.equal(invalid.power, '8', 'invalid input is never clamped');
+    assert.equal(invalid.undoDepth, after.history.undoDepth);
+    return { edited: edited.history.undoDepth, invalid: invalid.error };
+  });
+
+  await check(SHELL_PASSES.file, async () => {
+    const dir = resolve('artifacts/runtime/space-shell'); await mkdir(dir, { recursive: true });
+    const saved = await spaceState(page);
+    const [download] = await within(Promise.all([page.waitForEvent('download', { timeout: LIMITS.operation }), page.click('#space-save-scene')]), LIMITS.operation, 'save scene');
+    const path = resolve(dir, 'saved.scene.json'); await within(download.saveAs(path), LIMITS.operation, 'save download');
+    await within(page.fill('#space-iterations', '96'), LIMITS.operation, 'fill iterations');
+    await within(page.press('#space-iterations', 'Enter'), LIMITS.operation, 'commit iterations');
+    await spaceIdle(page, 'iteration edit');
+    const changed = await spaceState(page);
+    assert.notEqual(changed.sceneHash, saved.sceneHash, 'the scene changed before reopening');
+    await within(page.setInputFiles('#space-open-scene', path), LIMITS.operation, 'open scene');
+    await page.waitForFunction(hash => atlas.space.sceneHash === hash, saved.sceneHash, { timeout: LIMITS.operation });
+    await spaceIdle(page, 'reopened scene');
+    const reopened = await spaceState(page);
+    assert.equal(reopened.sceneHash, saved.sceneHash, 'the reopened scene has the saved hash');
+    assert.equal(reopened.history.undoDepth, changed.history.undoDepth + 1, 'one undo entry');
+    assert.equal(download.suggestedFilename().endsWith('.json'), true);
+    return { file: download.suggestedFilename(), sceneHash: saved.sceneHash, bytes: (await readFile(path)).byteLength };
+  });
+
+  await check(SHELL_PASSES.loss, async () => {
+    const before = await spaceState(page);
+    const { x, y } = await canvasCentre(page);
+    await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 30, y + 5);
+    await ev(page, () => atlas.space.injectLoss(), undefined, 'first loss');
+    await page.mouse.move(x + 60, y + 10); await page.mouse.up();
+    await page.waitForFunction(() => atlas.space.state.phase === 'ready', null, { timeout: LIMITS.deep });
+    await spaceIdle(page, 'first recovery');
+    const recovered = await spaceState(page);
+    assert.equal(recovered.publication?.sceneHash, recovered.sceneHash, 'the current scene is published after recovery');
+    assert.ok(recovered.state.deviceEpoch > before.state.deviceEpoch, 'a fresh device epoch');
+    assert.equal(recovered.history.camera.length, before.history.camera.length + 1, 'the drag committed once');
+    await ev(page, () => atlas.space.injectLoss(), undefined, 'repeated loss');
+    await page.waitForFunction(() => atlas.space.state.phase === 'stopped', null, { timeout: LIMITS.operation });
+    const stopped = await ev(page, () => ({ sceneHash: atlas.space.sceneHash, retry: !document.querySelector('#space-retry').hidden, status: document.querySelector('#space-recovery').textContent, history: atlas.space.history }), undefined, 'stopped');
+    assert.equal(stopped.sceneHash, recovered.sceneHash, 'the scene is intact'); assert.equal(stopped.retry, true, 'retry is offered');
+    await page.waitForTimeout(1500);
+    const still = await ev(page, () => atlas.space.state.phase, undefined, 'still stopped');
+    assert.equal(still, 'stopped', 'no automatic retry after a repeated loss');
+    await page.click('#space-retry');
+    await page.waitForFunction(() => atlas.space.state.phase === 'ready', null, { timeout: LIMITS.deep });
+    await spaceIdle(page, 'explicit retry');
+    const retried = await spaceState(page);
+    assert.equal(retried.publication?.sceneHash, retried.sceneHash, 'the explicit retry publishes the scene');
+    return { epochs: [before.state.deviceEpoch, recovered.state.deviceEpoch, retried.state.deviceEpoch], status: stopped.status };
+  });
+
+  await check(SHELL_PASSES.allocation, async () => {
+    const before = await spaceState(page);
+    const notice = await ev(page, async ms => {
+      atlas.space.injectAllocationFailure();
+      const camera = atlas.space.scene.camera;
+      atlas.space.requestCamera({ ...camera, positionLocal: camera.positionLocal.map(v => v * 1.05) });
+      const deadline = performance.now() + ms;
+      while (!atlas.space.state.allocationFailure && performance.now() < deadline) await new Promise(done => setTimeout(done, 50));
+      return { failure: atlas.space.state.allocationFailure, choices: [...document.querySelectorAll('#space-allocation [data-choice]')].map(b => b.dataset.choice),
+        visible: !document.querySelector('#space-allocation').hidden, sceneHash: atlas.space.sceneHash };
+    }, 60000, 'allocation failure', LIMITS.deep);
+    assert.ok(notice.failure, 'the allocation failure was reported');
+    assert.equal(notice.visible, true); assert.ok(notice.choices.includes('lower-resolution'), `choices: ${notice.choices}`);
+    const requested = await ev(page, () => atlas.space.state.viewport, undefined, 'viewport');
+    assert.deepEqual([notice.failure.request.width, notice.failure.request.height], [requested.width, requested.height], 'the failed request kept its dimensions');
+    assert.equal(notice.failure.request.samples, (await ev(page, () => atlas.space.scene.sampling.targetSamples, undefined, 'samples')), 'the failed request kept its samples');
+    await page.click('#space-allocation [data-choice="lower-resolution"]');
+    await spaceIdle(page, 'lower-cost choice');
+    const after = await ev(page, () => ({ sceneHash: atlas.space.sceneHash, publication: atlas.space.lastPublication, cost: atlas.space.state.cost }), undefined, 'after choice');
+    assert.equal(after.publication.sceneHash, after.sceneHash, 'the chosen lower-cost request rendered the scene unchanged');
+    assert.ok(after.publication.internalSize.width < notice.failure.request.internalWidth, 'the chosen request is smaller');
+    await ev(page, () => atlas.space.restoreFullCost(), undefined, 'restore full cost');
+    await spaceIdle(page, 'full cost');
+    return { failure: notice.failure, choices: notice.choices, chosen: after.publication.internalSize };
+  });
+
+  await check(SHELL_PASSES.inside, async () => {
+    await ev(page, async () => {
+      const { lookAt } = await import('/src/space/camera.js');
+      const camera = atlas.space.scene.camera;
+      atlas.space.requestCamera(lookAt({ ...camera, positionLocal: [0, 0, 0.05], focusLocal: [0.6, 0.2, 0.05] }, [0.6, 0.2, 0.05]));
+    }, undefined, 'camera inside the set');
+    await spaceIdle(page, 'inside camera');
+    const inside = await ev(page, () => ({ status: document.querySelector('#space-camera-status').textContent, cameraStatus: atlas.space.cameraStatus,
+      overview: { hidden: document.querySelector('#space-overview').hidden, disabled: document.querySelector('#space-overview').disabled },
+      reset: { hidden: document.querySelector('#space-reset-orientation').hidden, disabled: document.querySelector('#space-reset-orientation').disabled } }), undefined, 'inside status');
+    assert.match(inside.status, /camera exterior status unresolved/);
+    assert.equal(inside.cameraStatus.status, 'unresolved'); assert.equal(inside.cameraStatus.detail.cpu.status, 'unresolved', 'the CPU classification is unresolved');
+    assert.deepEqual([inside.overview.hidden, inside.overview.disabled, inside.reset.hidden, inside.reset.disabled], [false, false, false, false]);
+    await page.click('#space-overview');
+    await spaceIdle(page, 'overview from inside');
+    const out = await ev(page, () => ({ cpu: atlas.space.cameraStatus.detail.cpu.status, status: document.querySelector('#space-camera-status').textContent }), undefined, 'after overview');
+    assert.equal(out.cpu, 'exterior', 'overview leaves the set (CPU classification)');
+    return { inside: { status: inside.status, cpu: inside.cameraStatus.detail.cpu.detail?.reason }, afterOverview: out };
+  });
+
+  await check(SHELL_PASSES.exportSwitch, async () => {
+    await ev(page, () => atlas.workspaces.switchTo('plane'), undefined, 'to Plane');
+    await idleWithin(page);
+    await page.click('#export-button');
+    await within(page.selectOption('#export-size', '3840'), LIMITS.operation, 'export size');
+    const downloaded = page.waitForEvent('download', { timeout: LIMITS.deep });
+    await page.click('#download-image');
+    const during = await ev(page, async () => {
+      const started = atlas.lastExport?.requestId ?? null;
+      const toSpace = await atlas.workspaces.switchTo('space');
+      await new Promise(done => setTimeout(done, 300));
+      const toPlane = await atlas.workspaces.switchTo('plane');
+      return { started, toSpace, toPlane };
+    }, undefined, 'switch during export', LIMITS.deep);
+    const download = await within(downloaded, LIMITS.deep, 'export download');
+    await page.waitForFunction(() => atlas.lastExport?.outcome, null, { timeout: LIMITS.deep });
+    const exported = await ev(page, () => atlas.lastExport && { outcome: atlas.lastExport.outcome, reason: atlas.lastExport.reason, width: atlas.lastExport.report?.completed?.width }, undefined, 'export result');
+    await page.keyboard.press('Escape');
+    assert.equal(exported.outcome, 'completed', `the export completed: ${JSON.stringify(exported)}`);
+    assert.equal(exported.width, 3840);
+    await ev(page, () => document.querySelector('#capture-dialog').close(), undefined, 'close dialog');
+    const switched = await ev(page, () => atlas.workspaces.switchTo('space'), undefined, 'back to Space', LIMITS.deep);
+    assert.equal(switched.outcome, 'activated');
+    await spaceIdle(page, 'Space after export');
+    return { during, exported, file: download.suggestedFilename() };
+  });
+
+  await check(SHELL_PASSES.blur, async () => {
+    const { x, y } = await canvasCentre(page);
+    const start = await spaceState(page);
+    await page.mouse.click(x, y);
+    await page.keyboard.press('KeyF'); await page.keyboard.down('KeyW'); await page.waitForTimeout(250);
+    const flying = await ev(page, () => atlas.space.state.flight, undefined, 'flying');
+    await ev(page, () => window.dispatchEvent(new Event('blur')), undefined, 'blur');
+    const blurred = await spaceState(page);
+    await page.keyboard.up('KeyW');
+    await page.waitForTimeout(150);
+    const still = await spaceState(page);
+    assert.equal(flying, true, 'flight started'); assert.equal(blurred.state.flight, false, 'blur stopped flight');
+    assert.equal(blurred.history.camera.length, start.history.camera.length + 1, 'the flight run committed once on blur');
+    assert.equal(JSON.stringify(still.camera), JSON.stringify(blurred.camera), 'no movement after blur');
+    await ev(page, () => window.dispatchEvent(new Event('focus')), undefined, 'focus');
+    // A captured drag and keyboard focus end on switching; the drag commits once.
+    await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 40, y);
+    const captured = await ev(page, () => ({ capture: document.querySelector('#space-canvas').hasPointerCapture(1), focused: document.activeElement?.id ?? null }), undefined, 'captured');
+    const switched = await ev(page, async () => { await atlas.workspaces.switchTo('plane'); return { capture: document.querySelector('#space-canvas').hasPointerCapture(1), focused: document.activeElement?.id ?? null, history: atlas.space.history, gesture: atlas.space.history.gesture }; }, undefined, 'switch while captured');
+    await page.mouse.move(x + 80, y); await page.mouse.up();
+    const afterUp = await ev(page, () => atlas.space.history, undefined, 'after release');
+    assert.equal(captured.capture, true, 'the drag held pointer capture');
+    assert.equal(switched.capture, false, 'switching released capture');
+    assert.notEqual(switched.focused, 'space-canvas', 'switching released keyboard focus');
+    assert.equal(switched.gesture, null);
+    assert.equal(switched.history.camera.length, blurred.history.camera.length + 1, 'the drag committed once on switching');
+    assert.deepEqual(afterUp.camera, switched.history.camera, 'the later release changes nothing');
+    await ev(page, () => atlas.workspaces.switchTo('space'), undefined, 'back to Space', LIMITS.deep);
+    await spaceIdle(page, 'after blur checks');
+    return { flying, captured, switched: { capture: switched.capture, focused: switched.focused } };
+  });
+
+  await check(SHELL_PASSES.gamepad, async () => {
+    const statusText = () => ev(page, () => document.querySelector('#space-controller-status').textContent, undefined, 'controller status');
+    const waiting = await statusText();
+    await ev(page, () => window.__pad.connect(), undefined, 'connect pad');
+    await page.waitForFunction(() => /ATLAS scripted standard pad/.test(document.querySelector('#space-controller-status').textContent), null, { timeout: LIMITS.operation });
+    await page.waitForTimeout(100); // neutral samples arm the controller
+    const before = await spaceState(page);
+    await ev(page, () => window.__pad.axes([0.8, 0, 0, 0]), undefined, 'stick');
+    await page.waitForTimeout(400);
+    await ev(page, () => window.__pad.axes([0, 0, 0, 0]), undefined, 'neutral');
+    await page.waitForTimeout(400);
+    await spaceIdle(page, 'gamepad orbit');
+    const orbited = await spaceState(page);
+    assert.match(waiting, /Press a controller button to connect/);
+    assert.equal(orbited.history.camera.length, before.history.camera.length + 1, 'the orbit run is one camera-history entry');
+    assert.notEqual(JSON.stringify(orbited.camera), JSON.stringify(before.camera), 'the controller orbited');
+    await ev(page, () => window.__pad.button(9, true), undefined, 'start press');
+    await page.waitForTimeout(80);
+    await ev(page, () => window.__pad.button(9, false), undefined, 'start release');
+    await page.waitForTimeout(80);
+    const flying = await ev(page, () => atlas.space.state.flight, undefined, 'pad flight');
+    await ev(page, () => window.__pad.axes([0, -0.8, 0, 0]), undefined, 'forward');
+    await page.waitForTimeout(400);
+    await ev(page, () => window.__pad.disconnect(), undefined, 'disconnect');
+    await page.waitForTimeout(200);
+    const disconnected = await spaceState(page);
+    await page.waitForTimeout(200);
+    const still = await spaceState(page);
+    await spaceIdle(page, 'gamepad flight');
+    assert.equal(flying, true, 'Start toggled flight');
+    assert.equal(disconnected.state.flight, false, 'disconnect stopped flight');
+    assert.equal(disconnected.history.camera.length, orbited.history.camera.length + 1, 'the flight run is one camera-history entry');
+    assert.equal(JSON.stringify(still.camera), JSON.stringify(disconnected.camera), 'no movement after the disconnect');
+    const screenshot = await shellScreenshot(page, 'space-switcher');
+    return { waiting, connected: (await statusText()), entries: [before.history.camera.length, orbited.history.camera.length, disconnected.history.camera.length], screenshot };
+  });
+
+  // Leave the page on Plane with Space work settled, so the drain sees only Plane's WebGL context.
+  await ev(page, () => atlas.workspaces.switchTo('plane'), undefined, 'final switch to Plane', LIMITS.deep);
+  await spaceIdle(page, 'final');
+  await idleWithin(page);
+  const switcherShot = await shellScreenshot(page, 'plane-with-switcher', { x: 0, y: 0, width: 1280, height: 120 });
+  report.push({ name: 'Shell screenshots (diagnostic)', dir: process.env.ATLAS_SHELL_SCREENSHOTS ?? null, switcherShot });
+  const memory = await ev(page, () => atlas.space.backendDiagnostics && { peak: atlas.space.backendDiagnostics.peak, tracked: atlas.space.backendDiagnostics.tracked, viewport: atlas.space.state.viewport }, undefined, 'memory');
+  report.push({ name: 'Space memory at the test viewport (recorded)', ...memory });
+  assert.deepEqual(failedChecks, [], `shell checks failed: ${failedChecks.join('; ')}`);
+}
+
 // ---- harness ---------------------------------------------------------------------------------------
 
 async function readEffectiveEnvironment(context) {
@@ -2533,7 +2904,7 @@ async function ensureServer() {
 
 let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
-const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence, rendering: runRendering };
+const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence, rendering: runRendering, shell: runShell };
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
 let source = null, serverOwnership = null;
 
@@ -2570,7 +2941,7 @@ try {
   ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
   console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
   assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
-  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering'].includes(options.group)) {
+  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'shell'].includes(options.group)) {
     // One launch under the complete profile; the application page is a WebGL (Plane) page, so its close
     // in the finally goes through the local expected-backend drain wrapper (drainExpecting).
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });

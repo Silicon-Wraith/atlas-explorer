@@ -13,9 +13,73 @@
   <main id="observatory">
     <div id="fractal-surface"><canvas id="fractal" aria-label="Interactive Mandelbrot fractal. Scroll to zoom, drag to pan, or use the keyboard controls." tabindex="0"></canvas></div>
     <div class="vignette" aria-hidden="true"></div>
+    <section id="space-workspace" class="space-workspace" aria-label="Space workspace">
+      <canvas id="space-canvas" tabindex="0" aria-label="Three-dimensional fractal viewport. Drag to orbit, right-drag or Shift-drag to pan, scroll to dolly, double-click to focus, F to fly."></canvas>
+      <div class="space-status chrome" aria-live="polite">
+        <p id="space-preparation" class="space-preparation" role="status" hidden></p>
+        <p id="space-unavailable" class="space-alert" role="alert" hidden></p>
+        <div id="space-recovery-row"><p id="space-recovery" class="space-alert" role="status" hidden></p><button id="space-retry" class="resume-button" hidden>Retry rendering</button></div>
+        <div id="space-allocation" class="space-choices" role="alert" hidden></div>
+        <div id="space-budget" class="space-choices" role="alert" hidden></div>
+        <div id="space-cost-row" hidden><span id="space-cost"></span> <button id="space-restore-cost" class="mini-button">Restore full quality</button></div>
+      </div>
+      <div class="space-indicators chrome">
+        <span class="space-indicator"><small>ESTIMATOR</small><span id="space-estimator"></span></span>
+        <span class="space-indicator"><small>CAMERA</small><span id="space-camera-status"></span></span>
+        <span class="space-indicator"><small>CONTROLLER</small><span id="space-controller-status"></span></span>
+        <span id="space-pending" class="space-pending" hidden></span>
+        <span id="space-navigation-status" class="space-navigation-status"></span>
+      </div>
+      <aside id="space-panel" class="panel space-panel chrome" aria-label="Space controls">
+        <div class="panel-top"><div><span class="eyebrow">SPACE</span><h2 id="space-family-name">Mandelbulb</h2></div></div>
+        <div class="panel-section">
+          <div class="section-heading"><label for="space-family">Family</label></div>
+          <select id="space-family" class="space-input"></select>
+          <div id="space-params-mandelbulb" class="space-params"><label for="space-power">Power</label><input id="space-power" class="space-input" inputmode="decimal" spellcheck="false"></div>
+          <div id="space-params-menger" class="space-params" hidden><label for="space-depth">Depth</label><input id="space-depth" class="space-input" inputmode="numeric"></div>
+          <div id="space-params-quaternion-julia" class="space-params" hidden>
+            <label for="space-c0">C (a, b, c, d)</label>
+            <div class="space-vector"><input id="space-c0" class="space-input" aria-label="C a" spellcheck="false"><input id="space-c1" class="space-input" aria-label="C b" spellcheck="false"><input id="space-c2" class="space-input" aria-label="C c" spellcheck="false"><input id="space-c3" class="space-input" aria-label="C d" spellcheck="false"></div>
+            <label for="space-kappa">Slice κ</label><input id="space-kappa" class="space-input" spellcheck="false">
+          </div>
+          <div class="space-pair"><span><label for="space-iterations">Iterations</label><input id="space-iterations" class="space-input" inputmode="numeric"></span><span><label for="space-steps">Steps</label><input id="space-steps" class="space-input" inputmode="numeric"></span></div>
+          <p id="space-parameter-error" class="form-error" role="alert"></p>
+        </div>
+        <div class="panel-section">
+          <div class="space-pair"><span><label for="space-view-mode">View</label><select id="space-view-mode" class="space-input"></select></span><span><label for="space-palette">Palette</label><select id="space-palette" class="space-input"></select></span></div>
+          <label class="toggle-row" for="space-lighting"><span>Full lighting <small>Off: direct light only</small></span><input id="space-lighting" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
+          <div class="space-pair"><span><label for="space-flight-speed">Flight speed (local units/s)</label><input id="space-flight-speed" class="space-input" type="number" min="0.000001" step="any" value="1"></span></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-heading"><label>Orientation</label><select id="space-axis-lock" class="space-input space-lock" aria-label="Axis lock"><option value="">No lock</option><option value="x">Lock tilt (X)</option><option value="y">Lock roll (Y)</option><option value="z">Lock heading (Z)</option></select></div>
+          <div class="space-orientation" role="group" aria-label="Orientation control">
+            <button id="space-heading-left" class="mini-button" title="Heading left">⟲ H</button><button id="space-heading-right" class="mini-button" title="Heading right">H ⟳</button>
+            <button id="space-tilt-up" class="mini-button" title="Tilt up">▲ T</button><button id="space-tilt-down" class="mini-button" title="Tilt down">T ▼</button>
+            <button id="space-roll-left" class="mini-button" title="Roll left">↶ R</button><button id="space-roll-right" class="mini-button" title="Roll right">R ↷</button>
+          </div>
+        </div>
+        <div class="panel-section">
+          <button id="space-save-scene" class="bookmark-button"><span data-icon="download"></span> Save scene</button>
+          <label class="import-label space-open" for="space-open-scene">Open scene <span>↗</span></label><input id="space-open-scene" type="file" accept="application/json,.json" hidden>
+          <p id="space-file-status" class="help-note" role="status"></p>
+          <details class="space-mapping"><summary>Controller (standard mapping)</summary><p id="space-mapping" class="help-note"></p></details>
+        </div>
+      </aside>
+      <div class="navigation space-navigation chrome" aria-label="Space navigation">
+        <button id="space-overview" title="Overview" aria-label="Overview"><span data-icon="home"></span></button>
+        <button id="space-reset-orientation" title="Reset orientation" aria-label="Reset orientation"><span data-icon="crosshair"></span></button>
+        <span class="nav-divider"></span>
+        <button id="space-back" title="Previous view (Alt+←)" aria-label="Previous Space view" disabled><span data-icon="back"></span></button>
+        <button id="space-forward" title="Next view (Alt+→)" aria-label="Next Space view" disabled><span data-icon="forward"></span></button>
+        <button id="space-undo" title="Undo (Ctrl+Z)" aria-label="Undo Space edit" disabled><span data-icon="undo"></span></button>
+        <button id="space-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo Space edit" disabled><span data-icon="redo"></span></button>
+      </div>
+    </section>
     <header class="topbar chrome">
       <a class="brand" href="#" id="brand-home" aria-label="Atlas home"><span class="brand-symbol">∞</span><span>ATLAS</span><i></i><small>THE MANDELBROT EXPLORER</small></a>
       <nav class="header-actions" aria-label="View actions">
+        <div id="workspace-switcher" class="workspace-switcher" role="group" aria-label="Workspace"><button id="switch-plane" data-workspace="plane" aria-pressed="true" title="The complex plane (2D)">Plane</button><button id="switch-space" data-workspace="space" aria-pressed="false" title="Three-dimensional fractals">Space</button></div>
+        <span class="action-divider plane-only"></span>
         <button id="settings-button" class="icon-button mobile-only" title="Explorer settings" aria-label="Explorer settings" aria-expanded="false"><span data-icon="sliders"></span></button>
         <button id="help-button" class="icon-button" title="Controls and about (?)" aria-label="Controls and about"><span data-icon="help"></span></button>
         <button id="cinema-button" class="icon-button" title="Cinema mode (H)" aria-label="Cinema mode"><span data-icon="expand"></span></button>
@@ -101,6 +165,8 @@
       <div><dt>Active renderer</dt><dd id="graphics-device"></dd></div>
       <div id="graphics-attempted-row" hidden><dt>Attempted graphics device</dt><dd id="graphics-attempted"></dd></div>
       <div><dt>GPU initialization</dt><dd id="graphics-reason"></dd></div>
+      <div><dt>Space backend</dt><dd id="graphics-space-backend"></dd></div>
+      <div><dt>Space tracked inventory</dt><dd id="graphics-space-inventory"></dd></div>
     </dl>
     <p id="graphics-guidance" class="help-note"></p>
   </dialog>
