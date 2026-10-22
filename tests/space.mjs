@@ -588,7 +588,7 @@ async function selfCheckInPage() {
   const b = globalThis.__b06, { backend } = b;
   const acquired = await backend.acquire();
   const preparation = await b.prepareSelfCheck();
-  const targets = await backend.configureTargets({ epoch: acquired.epoch, layoutId: 'space-targets-v1', internalSize: { width: 1, height: 1 }, outputSize: { width: 1, height: 1 } });
+  const targets = await backend.configureTargets({ epoch: acquired.epoch, layoutId: 'space-targets-v2', internalSize: { width: 1, height: 1 }, outputSize: { width: 1, height: 1 } });
   const probe = b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 1, height: 1 });
   const refusals = {};
   try { backend.submitBatch(probe, {}); } catch (error) { refusals.withoutLease = error.code; }
@@ -606,7 +606,7 @@ async function selfCheckInPage() {
 async function bandedInPage() {
   const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
   const width = 1024, height = 600;
-  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width, height }, outputSize: { width, height } });
+  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v2', internalSize: { width, height }, outputSize: { width, height } });
   // F3 ruling (a): B06 owns resource initialization — both fresh accumulation textures and the flags
   // texture read back as zero through admitted readback (B11 owns sample-0 initialization).
   const zero = {};
@@ -656,7 +656,7 @@ async function bandedInPage() {
 async function presentInPage() {
   const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
   const internal = { width: 320, height: 180 }, output = { width: 640, height: 360 };
-  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: internal, outputSize: output });
+  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v2', internalSize: internal, outputSize: output });
   const { pixels, ...drawn } = await b.drawDisplay(targets);
   const { data: display } = await b.readBands(targets.handles.display, internal.width, internal.height, 4);
   b.releaseSet(targets);
@@ -666,7 +666,7 @@ async function presentInPage() {
 async function lossInPage() {
   const b = globalThis.__b06, { backend } = b;
   const first = { epoch: backend.currentEpoch() };
-  const targets = await backend.configureTargets({ epoch: first.epoch, layoutId: 'space-targets-v1', internalSize: { width: 256, height: 256 }, outputSize: { width: 256, height: 256 } });
+  const targets = await backend.configureTargets({ epoch: first.epoch, layoutId: 'space-targets-v2', internalSize: { width: 256, height: 256 }, outputSize: { width: 256, height: 256 } });
   const seen = [];
   const unsubscribe = backend.onLoss(event => seen.push({ event, epochInCallback: backend.currentEpoch(), stateInCallback: backend.diagnostics().state, trackedInCallback: backend.diagnostics().tracked }));
   const oldLease = b.lease('probe');
@@ -682,7 +682,7 @@ async function lossInPage() {
   const second = await backend.acquire();
   try { backend.submitBatch({ ...b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 1, height: 1 }), identity: { ...b.identity('probe'), generation: { ...b.identity('probe').generation, deviceEpoch: first.epoch } } }, oldLease); } catch (error) { refusals.staleEpoch = error.code; }
   await b.prepareSelfCheck();
-  const probeTargets = await backend.configureTargets({ epoch: second.epoch, layoutId: 'space-targets-v1', internalSize: { width: 1, height: 1 }, outputSize: { width: 1, height: 1 } });
+  const probeTargets = await backend.configureTargets({ epoch: second.epoch, layoutId: 'space-targets-v2', internalSize: { width: 1, height: 1 }, outputSize: { width: 1, height: 1 } });
   try { backend.submitBatch(b.batch('probe', 'probe_target', targets.handles.status, { x: 0, y: 0, width: 1, height: 1 }), b.lease('probe')); } catch (error) { refusals.oldHandle = error.code; }
   const probe = await backend.submitBatch(b.batch('probe', 'probe_target', probeTargets.handles.status, { x: 0, y: 0, width: 1, height: 1 }), b.lease('probe')).done;
   const word = new DataView((await backend.readback({ identity: b.identity('probe'), source: probeTargets.handles.status, region: { x: 0, y: 0, width: 1, height: 1 }, fields: ['status'] }, b.lease('probe')).result).data.buffer).getUint32(0, true);
@@ -700,14 +700,14 @@ async function lossInPage() {
 async function configurationFailureInPage() {
   const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
   const internal = { width: 320, height: 180 }, output = { width: 640, height: 360 };
-  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: internal, outputSize: output });
+  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v2', internalSize: internal, outputSize: output });
   await b.drawDisplay(targets);
   const snapshot = () => { const d = backend.diagnostics(); return { tracked: d.tracked, live: d.inventory.filter(item => item.state === 'live').map(item => item.id).sort() }; };
   const before = snapshot(), failures = {};
-  try { await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width: 8192, height: 8192 }, outputSize: { width: 8192, height: 8192 } }); failures.aboveCap = 'accepted'; } catch (error) { failures.aboveCap = error.code; }
+  try { await backend.configureTargets({ epoch, layoutId: 'space-targets-v2', internalSize: { width: 8192, height: 8192 }, outputSize: { width: 8192, height: 8192 } }); failures.aboveCap = 'accepted'; } catch (error) { failures.aboveCap = error.code; }
   const afterCap = snapshot();
   backend.testAdapter.failNextAllocation();
-  try { await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } }); failures.injected = 'accepted'; } catch (error) { failures.injected = error.code; }
+  try { await backend.configureTargets({ epoch, layoutId: 'space-targets-v2', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } }); failures.injected = 'accepted'; } catch (error) { failures.injected = error.code; }
   const afterInjected = snapshot();
   // The earlier set still presents: redraw and present it, then compare the canvas with its display bytes.
   const { pixels, ...drawn } = await b.drawDisplay(targets);
@@ -720,7 +720,7 @@ async function configurationFailureInPage() {
 async function fourKInPage() {
   const b = globalThis.__b06, { backend } = b, epoch = backend.currentEpoch();
   const internal = { width: 3840, height: 2160 };
-  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: internal, outputSize: { width: 1920, height: 1080 } });
+  const targets = await backend.configureTargets({ epoch, layoutId: 'space-targets-v2', internalSize: internal, outputSize: { width: 1920, height: 1080 } });
   const ids = new Set(Object.values(targets.handles).flat().map(handle => handle.id));
   const inventory = () => backend.diagnostics().inventory.filter(item => ids.has(item.id));
   const allocated = inventory().map(({ name, bytes, width, height, format, state }) => ({ name, bytes, width, height, format, state }));
@@ -730,7 +730,7 @@ async function fourKInPage() {
   const whileHeld = { tracked: backend.diagnostics().tracked, retiring: backend.diagnostics().retiring, status: inventory().find(item => item.name === 'status') };
   const done = await ticket.done;
   const afterTicket = { tracked: backend.diagnostics().tracked, retiring: backend.diagnostics().retiring, statusPresent: inventory().some(item => item.name === 'status') };
-  const replacement = await backend.configureTargets({ epoch, layoutId: 'space-targets-v1', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } });
+  const replacement = await backend.configureTargets({ epoch, layoutId: 'space-targets-v2', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } });
   // Caller-owned: the earlier 4K set survives the replacement and its display can still be presented.
   const keptAfterReplacement = inventory().length;
   const previousPresented = await backend.present({ identity: b.identity('present'), display: targets.handles.display }, b.lease('present')).done;
@@ -783,7 +783,7 @@ async function runRecovery({ page }) {
     assert.equal(selfCheck.word, 0x41544c53, `the probe readback must be ATLS, got 0x${selfCheck.word.toString(16)}`);
     assert.equal(selfCheck.dataLength, 4, 'row padding is stripped on copy-out');
     assert.deepEqual(selfCheck.staging, [{ bytes: 256, bytesPerRow: 256, mappings: 0 }], 'one 256-byte-aligned staging row; mapping ended before the result');
-    assert.equal(selfCheck.targets.layoutId, 'space-targets-v1'); assert.equal(selfCheck.targets.accumulation.length, 2);
+    assert.equal(selfCheck.targets.layoutId, 'space-targets-v2'); assert.equal(selfCheck.targets.accumulation.length, 2);
     pass(RECOVERY_PASSES[0], { acquired, preparationMs: selfCheck.preparationMs, events: selfCheck.events, prepared: selfCheck.prepared, done: selfCheck.done, word: `0x${selfCheck.word.toString(16)}`, refusals: selfCheck.refusals, staging: selfCheck.staging });
 
     const banded = await ev(page, bandedInPage, undefined, 'banded readback', LIMITS.deep);
@@ -847,19 +847,19 @@ async function runRecovery({ page }) {
     pass(RECOVERY_PASSES[4], configuration);
 
     const fourK = await ev(page, fourKInPage, undefined, '4K target set', LIMITS.deep);
-    const bpp = { depth: 4, status: 4, normal: 8, sampleColor: 8, lightingStatus: 4, accumulationFlags: 4, 'accumulation-0': 16, 'accumulation-1': 16, display: 4, retained: 4 };
+    const bpp = { depth: 4, status: 4, recovery: 4, normal: 8, sampleColor: 8, lightingStatus: 4, accumulationFlags: 4, 'accumulation-0': 16, 'accumulation-1': 16, display: 4, retained: 4 };
     assert.deepEqual(fourK.allocated.map(item => item.name).sort(), Object.keys(bpp).sort());
     for (const item of fourK.allocated) { assert.equal(item.bytes, 3840 * 2160 * bpp[item.name], item.name); assert.deepEqual([item.width, item.height, item.state], [3840, 2160, 'live']); }
-    assert.equal(fourK.targetBytes, 597_196_800, '72 bytes per pixel at 3840 × 2160'); assert.equal(3840 * 2160 * 72, 597_196_800);
+    assert.equal(fourK.targetBytes, 630_374_400, '76 bytes per pixel at 3840 × 2160 (space-targets-v2)'); assert.equal(3840 * 2160 * 76, 630_374_400);
     assert.ok(fourK.trackedAtAllocation <= cap);
     assert.equal(fourK.whileHeld.tracked, fourK.trackedAtAllocation + 16, 'released bytes stay tracked while the ticket holds them (plus its counted 16-byte uniform snapshot)');
     assert.equal(fourK.whileHeld.retiring, 3840 * 2160 * 4 + 16, 'the released status target and the uniform snapshot are retiring'); assert.equal(fourK.whileHeld.status.state, 'retiring'); assert.equal(fourK.whileHeld.status.tickets, 1);
     assert.equal(fourK.done.outcome, 'completed');
     assert.deepEqual(fourK.afterTicket, { tracked: fourK.trackedAtAllocation - 3840 * 2160 * 4, retiring: 0, statusPresent: false }, 'reclaimed once the last ticket retires');
-    assert.equal(fourK.keptAfterReplacement, 9, 'reconfiguration keeps the earlier set caller-owned (status was already released)');
+    assert.equal(fourK.keptAfterReplacement, 10, 'reconfiguration keeps the earlier set caller-owned (status was already released)');
     assert.equal(fourK.previousPresented.outcome, 'completed', 'the previous image can still be presented after reconfiguration');
     assert.equal(fourK.afterReplacement.remaining4K, 0, 'the earlier 4K set is reclaimed after its explicit release');
-    assert.equal(fourK.afterReplacement.tracked, fourK.trackedAtAllocation - fourK.targetBytes + 64 * 64 * 72);
+    assert.equal(fourK.afterReplacement.tracked, fourK.trackedAtAllocation - fourK.targetBytes + 64 * 64 * 76);
     pass(RECOVERY_PASSES[5], fourK);
   } finally { await recordRecoveryLongTasks(page); }
 
