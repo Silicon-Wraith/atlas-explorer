@@ -1,0 +1,51 @@
+{
+  "schema": "atlas.acceptance-policy",
+  "schemaVersion": 1,
+  "policyVersion": 1,
+  "approval": {
+    "approvedBy": "user",
+    "date": "2026-10-21",
+    "source": "Project 1b.1 plan rev 4.9 Acceptance gates"
+  },
+  "docsFastAllowlist": [],
+  "outputSummaries": [],
+  "note": "No exact docs-fast paths have been approved in a prior versioned policy yet. Adding paths cannot exempt the commit that adds them.",
+  "historicalDocsOnly": {
+    "approval": {
+      "approvedBy": "user",
+      "date": "2026-10-22",
+      "source": "B15 round 6 user decision (2026-10-22): same 23 full SHAs; docs/superpowers/ and docs/codesign/ only; compare merges against the first parent; every non-docs tree entry must equal the first parent (no conflict-resolved code changes)"
+    },
+    "commits": [
+      "f8d73e1a2a350e8056e29f9aae4c728daeee68e0",
+      "2097c07e6e3c7ac93823b418c5296249cec6f92f",
+      "c6fb8f15ab570c17a77f77722434334bedc8e0b5",
+      "6f06bcbc38856fa061b3fd15048d55b2b5398aac",
+      "081e74e63a38014a44b3c8c7062c100dacad329c",
+      "5914fc9294b4cffcdc5e47b299d8b99638606030",
+      "5ce1dbcbdf5f4395ada97e94d907ad6b64f039cd",
+      "39571aaeec56fcf220baef2def14d41de3c41205",
+      "01395c38982e08376dd8af7525769fc01373f27c",
+      "683183c33d7728ffaa563c62ebfde7ce5404ea88",
+      "f8f07ebec152731eabc3e02006b677af8d892d9e",
+      "82ba41d07f344a6ffa3d2db1a0ead4246d227319",
+      "7b8b31c195344364bd70a640a34e0800fffd82f7",
+      "25595ac2b30880bcc48734767bda05fbc52c6755",
+      "fffd490be15ffebbd6aa4b54f2206b3d8c9853bc",
+      "4df8c4b5ee5fb929db5b99521d328836fc35fa32",
+      "8175e7313c480e61b27a19de0b7ac63c4e8b1593",
+      "7062c728685e0a6f5efecaff9934f6b3992f2b55",
+      "6f9d384375d6de526cba42a0cebe0670b299c257",
+      "e2d424415969a39b3151464b3722dee44f396d8b",
+      "86c65761e59653d3154355cf1984c07514492ce8",
+      "dc51d130f675a81710e47f67ea5a3af2edba1e71",
+      "526d1b769d8832f2bf7a8445e26a6034521c8a95"
+    ],
+    "allowedPathPrefixes": [
+      "docs/superpowers/",
+      "docs/codesign/"
+    ],
+    "parentComparison": "first-parent",
+    "nonDocsRequirement": "Every tree entry outside the allowed paths must have the same path, mode, type and object ID as in the first parent; additions and deletions outside those paths are forbidden."
+  }
+}

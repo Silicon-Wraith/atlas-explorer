@@ -40,6 +40,41 @@ function rig({ hold = false, env = {}, getGamepads = () => [] } = {}) {
   return { space, toasts, backends, frames, runFrame, settle, canvas, pointer, document, get factoryCalls() { return factoryCalls; } };
 }
 
+test('harness previews request drafts and commit closes one camera history entry with request creation evidence', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    const requests = [], frames = [], before = h.space.inspection.history.camera.length;
+    assert.equal(typeof h.space.inspection.onRequest, 'function');
+    const stop = h.space.inspection.onRequest(event => requests.push(event));
+    h.space.inspection.onPublish(event => frames.push(event));
+    const camera = h.space.inspection.scene.camera;
+    h.space.inspection.requestCamera(orbit(camera, 0.1, 0), { phase: 'preview' });
+    for (let i = 0; i < 80 && !frames.length; i++) { h.runFrame(); await turn(); }
+    assert.equal(h.space.inspection.history.camera.length, before);
+    assert.equal(frames[0]?.kind, 'draft');
+    h.space.inspection.requestCamera(orbit(camera, 0.2, 0), { phase: 'commit' });
+    await h.settle();
+    assert.equal(h.space.inspection.history.camera.length, before + 1);
+    assert.equal(h.space.inspection.history.gesture, null);
+    assert.equal(requests.at(-1).request.quality.profile, 'settled');
+    for (const event of requests) {
+      assert.ok(Number.isFinite(event.createdAt));
+      assert.equal(event.purpose, 'interactive');
+      assert.equal(event.identity.requestId, event.request.requestId);
+      assert.ok(Object.isFrozen(event));
+      const publication = frames.find(frame => frame.requestId === event.identity.requestId);
+      if (publication) assert.ok(event.createdAt <= publication.publishedAt);
+    }
+    stop();
+    const count = requests.length;
+    h.space.inspection.requestCamera(orbit(camera, 0.3, 0)); await h.settle();
+    assert.equal(requests.length, count);
+    assert.equal(h.space.inspection.lastPublication.quality.profile, 'settled');
+    assert.throws(() => h.space.inspection.requestCamera(camera, { phase: 'typo' }), /phase/);
+  } finally { h.space.destroy(); }
+});
+
 test('deactivation commits the last preview exactly once and a later capture-loss callback cannot cancel it', async () => {
   const h = rig();
   try {
@@ -272,4 +307,22 @@ test('a successful activation after a failed one clears the unavailable reason',
     assert.equal(h.space.inspection.state.unavailable, null, 'no stale unavailable reason after success');
     assert.equal(h.space.inspection.state.phase, 'ready');
   } finally { h.space.destroy(); }
+});
+
+
+test('the unavailable UI adds enablement guidance only for absent WebGPU or adapter', async () => {
+  for (const code of ['no-webgpu', 'no-adapter', 'device-refused']) {
+    const h = rig();
+    try {
+      const activating = h.space.activate(1);
+      h.backends[0].control.failNextAcquisition(Object.assign(new Error('original acquisition reason'), {code}));
+      assert.equal((await activating).outcome, 'unavailable');
+      const text = h.document.querySelector('#space-unavailable').textContent;
+      assert.match(text, /original acquisition reason/);
+      if (code === 'device-refused') assert.doesNotMatch(text, /graphics acceleration|dev:gpu/);
+      else { assert.match(text, /npm run dev:gpu/); assert.match(text, /chrome:\/\/gpu/); }
+      assert.doesNotMatch(text, /5195|this Linux workstation/);
+      assert.equal(h.space.inspection.state.active, false);
+    } finally { h.space.destroy(); }
+  }
 });

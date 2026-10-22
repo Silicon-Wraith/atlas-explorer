@@ -26,7 +26,7 @@ import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
 export const PREPARATION_BOUND_MS = 60_000; // plan default: preparation is bounded per attempt
-export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell']);
+export const GROUP_NAMES = Object.freeze(['coexistence', 'developer-flag-experiment', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell', 'performance', 'memory', 'prewarm']);
 const PASS_COEXIST = 'WebGL 2 and WebGPU contexts coexist in one page';
 const PASS_IDENTITY = 'Adapter identity reports observed or unavailable fields truthfully';
 const PASS_PREPARE = 'A representative pipeline set prepares within the bound with progress events';
@@ -35,6 +35,8 @@ function parseArgs(argv) {
   const options = { group: null, writeSpike: false, includeRuns: [], includeExperiment: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--group') options.group = argv[++i];
+    else if (argv[i] === '--scene') options.scene = argv[++i];
+    else if (argv[i] === '--investigation') options.investigation = true;
     else if (argv[i] === '--write-spike') options.writeSpike = true;
     else if (argv[i] === '--include-run') options.includeRuns.push(argv[++i]);
     else if (argv[i] === '--include-experiment') options.includeExperiment = argv[++i];
@@ -43,6 +45,7 @@ function parseArgs(argv) {
   }
   if (!options.group) throw new Error(`--group is required (one of ${GROUP_NAMES.join(', ')})`);
   if (!GROUP_NAMES.includes(options.group)) throw new Error(`unknown group ${options.group} (one of ${GROUP_NAMES.join(', ')})`);
+  if (options.group === 'performance' && !['bulb', 'quaternion', 'menger'].includes(options.scene)) throw new Error('performance requires --scene bulb|quaternion|menger');
   return options;
 }
 
@@ -53,7 +56,7 @@ await mkdir('artifacts/runtime', { recursive: true });
 process.env.TMPDIR = resolve('artifacts/runtime');
 await mkdir(CHROME_TMPDIR, { recursive: true }); // installed Chrome's socket path must fit (bounded.mjs)
 const url = process.env.ATLAS_URL || 'http://127.0.0.1:5173';
-const reportPath = `artifacts/space-${options.group}-report.json`;
+const reportPath = `artifacts/space-${options.group}${options.group === 'performance' ? `-${options.scene}` : ''}-report.json`;
 const report = [], errors = [];
 const writeReport = entries => writeFile(reportPath, JSON.stringify(entries, null, 2));
 const pass = (name, details = {}) => { report.push({ name, ...details }); console.log(`PASS ${name}`, JSON.stringify(details).slice(0, 400)); };
@@ -475,7 +478,7 @@ async function runDeveloperFlagExperiment({ launchProfile }) {
   for (const [launch, args] of [['with-developer-flag', [...PROJECT0_LAUNCH_ARGS]], ['without-developer-flag', PROJECT0_LAUNCH_ARGS.filter(flag => flag !== DEVELOPER_FLAG)]]) {
     const { context, environment } = await launchProfile({ label: launch, args });
     assert.equal(environment.effectiveArguments.developerFeatures, launch === 'with-developer-flag', `the developer flag must be effective only in the flagged launch (${launch})`);
-    const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl');
+    const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), options.group === 'prewarm' ? 'none' : 'webgl');
     watchErrors(page);
     await page.goto(url, { timeout: LIMITS.launch });
     await page.waitForFunction(() => document.body.dataset.ready === 'true', null, { timeout: LIMITS.operation });
@@ -1612,12 +1615,30 @@ export const APPEARANCE_PASSES = Object.freeze([
   'Diagnostic outcomes survive accumulation',
   'The complete product pipeline set prewarms within the bound and its preparation time is recorded',
   'sample 0 after an appearance reset on poisoned accumulation and flag targets equals a fresh allocation, for subdivided regions and the following samples',
+  'Known unequal linear samples average before the GPU sRGB transfer',
+  'GPU depth normalisation matches independent depths with normals available and unavailable',
 ]);
 // The synthetic geometry classes of fixture-pattern (4-pixel columns): appearance tests predict each pixel's
 // per-sample status word, normal availability and therefore its accumulated flags on the CPU.
 export const PATTERN_CLASSES = Object.freeze(['hit', 'miss', 'point-budget', 'estimate-unavailable', 'interior', 'ray-step-budget', 'stagnation-ray',
   'stagnation-field', 'numerical-failure', 'unavailable-normal', 'unresolved-in-one-sample', 'numerical-in-one-sample', 'unavailable-normal-in-one-sample']);
 const APPEARANCE_FIXTURES = {
+  'fixture-values': `struct U { origin: vec2<u32>, size: vec2<u32>, sample_index: u32, available: u32 };
+@group(0) @binding(0) var<uniform> u: U;
+@group(0) @binding(1) var depth_out: texture_storage_2d<r32float, write>;
+@group(0) @binding(2) var status_out: texture_storage_2d<r32uint, write>;
+@group(0) @binding(3) var normal_out: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(4) var colour_out: texture_storage_2d<rgba16float, write>;
+@compute @workgroup_size(8, 8, 1)
+fn values(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let p = u.origin + gid.xy;
+  textureStore(depth_out, vec2<i32>(p), vec4<f32>(0.25 * f32(1u + p.x % 3u), 0.0, 0.0, 1.0));
+  textureStore(status_out, vec2<i32>(p), vec4<u32>(0u));
+  textureStore(normal_out, vec2<i32>(p), vec4<f32>(0.0, 0.0, 1.0, f32(u.available)));
+  let colour = select(vec3<f32>(0.125, 0.25, 0.5), vec3<f32>(0.5, 0.125, 0.25), u.sample_index == 1u);
+  textureStore(colour_out, vec2<i32>(p), vec4<f32>(colour, 1.0));
+}`,
   'fixture-pattern': `struct U { origin: vec2<u32>, size: vec2<u32>, sample_index: u32 };
 @group(0) @binding(0) var<uniform> u: U;
 @group(0) @binding(1) var depth_out: texture_storage_2d<r32float, write>;
@@ -1721,6 +1742,7 @@ async function appearanceSetupInPage() {
   const b = (slot, type, access) => ({ slot, type, access });
   const fixture = (pipelineId, entryPoint, bindings, layout) => ({ pipelineId, kind: 'compute', sourceIds: [pipelineId], entryPoint, constants: {}, bindings: [b('u', 'uniform-buffer', 'read'), ...bindings], uniformLayout: layout });
   const set = createPipelineSet({ id: 'b11-fixtures', descriptors: [
+    fixture('fixture-values', 'values', [b('depth', 'storage-texture', 'write'), b('status', 'storage-texture', 'write'), b('normal', 'storage-texture', 'write'), b('sampleColor', 'storage-texture', 'write')], u([{ name: 'sampleIndex', type: 'u32', offset: 16 }, { name: 'available', type: 'u32', offset: 20 }], 32)),
     fixture('fixture-pattern', 'pattern', [b('depth', 'storage-texture', 'write'), b('status', 'storage-texture', 'write'), b('normal', 'storage-texture', 'write')], u([{ name: 'sampleIndex', type: 'u32', offset: 16 }], 32)),
     fixture('fixture-poison', 'poison', [b('acc0', 'storage-texture', 'write'), b('acc1', 'storage-texture', 'write'), b('flags', 'storage-texture', 'write')], u([])),
     fixture('fixture-capture', 'capture', [b('display', 'texture', 'read'), b('captured', 'storage-buffer', 'read-write')], u([{ name: 'base', type: 'u32', offset: 16 }], 32)),
@@ -1860,14 +1882,17 @@ async function passesInPage(spec) {
   try {
     for (let sample = 0; sample < spec.samples; sample++) {
       const sampling = { seed: spec.seed, sampleIndex: sample }, common = { modelId: spec.modelId, camera: spec.camera, effective: spec.effective, internalSize: size, sampling, profile };
-      if (spec.geometry === 'pattern') {
+      if (spec.geometry === 'values') {
+        for (const region of bandsFor('values', sample)) await a.fixture(jobId, 'fixture-values', region, {}, { depth: h.depth, status: h.status, normal: h.normal, sampleColor: h.sampleColor }, { sampleIndex: sample, available: spec.normalAvailable ? 1 : 0 });
+      } else if (spec.geometry === 'pattern') {
         for (const region of bandsFor('pattern', sample)) await a.fixture(jobId, 'fixture-pattern', region, {}, { depth: h.depth, status: h.status, normal: h.normal }, { sampleIndex: sample });
       } else {
         await run('trace', `trace_band:${spec.modelId}`, sample, region => passes.traceUniforms({ ...common, region }), { ...menger }, { depth: h.depth, status: h.status, recovery: h.recovery });
         await run('normals', `normals_band:${spec.modelId}`, sample, region => passes.normalsUniforms({ ...common, region }), { depth: h.depth, status: h.status, ...menger }, { normal: h.normal });
       }
       const geometryIn = { depth: h.depth, status: h.status, normal: h.normal }, sampleOut = { sampleColor: h.sampleColor, lightingStatus: h.lightingStatus };
-      if (spec.viewMode === 'shaded') await run('shade', `shade_band:${spec.modelId}`, sample, region => appearance.shadeUniforms({ ...common, region, lighting }), { ...geometryIn, ...menger }, sampleOut);
+      if (spec.viewMode === 'shaded' && spec.geometry === 'values') { /* fixture supplied known linear samples */ }
+      else if (spec.viewMode === 'shaded') await run('shade', `shade_band:${spec.modelId}`, sample, region => appearance.shadeUniforms({ ...common, region, lighting }), { ...geometryIn, ...menger }, sampleOut);
       else await run('shade', spec.viewMode === 'depth' ? `diagnostic_depth:${spec.modelId}` : `diagnostic_${spec.viewMode}`, sample,
         region => appearance.diagnosticUniforms({ ...common, viewMode: spec.viewMode, region }), geometryIn, sampleOut);
       const previous = h.accumulation[sample & 1], next = h.accumulation[(sample + 1) & 1];
@@ -2816,6 +2841,30 @@ async function runRendering({ page }) {
   const patternProfile = { maxIterations: 128, maxSteps: 512, stepMultiplier: 0.9, toleranceFloor: 1e-6, toleranceFactor: 0.5 };
   const directLighting = { stage: 'direct', normalFieldSamples: 6, shadowRays: 0, shadowSteps: 0, aoSamples: 0 };
   const patternRuns = {};
+  const independent = { modelId: 'sphere', camera: camera.lookAt({ ...SPACE_DEFAULTS.camera, positionLocal: [0, 0, 0], focusLocal: [0, 0, -1] }, [0, 0, -1]), effective: {},
+    internalSize: { width: 24, height: 8 }, profile: patternProfile, lighting: directLighting, seed: 1, geometry: 'values', bandRows: 3, order: 'permuted' };
+  const linear = await direct({ ...independent, label: 'known-linear', viewMode: 'shaded', samples: 2, normalAvailable: true });
+  check(APPEARANCE_PASSES[7], () => {
+    const transfer = x => x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
+    const expected = [0.3125, 0.1875, 0.375].map(x => Math.round(255 * transfer(x))), output = bytes(linear.display);
+    for (let i = 0; i < output.length; i += 4) {
+      expected.forEach((value, channel) => assert.ok(Math.abs(output[i + channel] - value) <= 1, `pixel ${i / 4}, channel ${channel}: ${output[i + channel]} vs ${value}`));
+      assert.equal(output[i + 3], 255);
+    }
+    return { samples: [[0.125, 0.25, 0.5], [0.5, 0.125, 0.25]], expected, pixels: output.length / 4 };
+  });
+  const depths = await Promise.all([true, false].map(normalAvailable => direct({ ...independent, label: `known-depth-${normalAvailable}`, viewMode: 'depth', samples: 1, normalAvailable })));
+  check(APPEARANCE_PASSES[8], () => {
+    const available = bytes(depths[0].display), unavailable = bytes(depths[1].display);
+    assert.deepEqual(available, unavailable, 'normal availability cannot affect depth');
+    // A unit sphere viewed from its centre has interval [0, 1] on every unit ray.
+    // Placed depths .25/.5/.75 therefore map to .75/.5/.25, without sRGB encoding.
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 24; x++) {
+      const expected = 255 * (1 - 0.25 * (1 + x % 3));
+      for (let c = 0; c < 3; c++) assert.ok(Math.abs(available[4 * (y * 24 + x) + c] - expected) <= 1);
+    }
+    return { origin: [0, 0, 0], enclosingRadius: 1, depths: [0.25, 0.5, 0.75], expected: [0.75, 0.5, 0.25], identicalWithNormalsToggled: true };
+  });
   for (const samples of [1, 8]) for (const viewMode of VIEW_MODE_LIST) {
     patternRuns[`${viewMode}/${samples}`] = await direct({ label: `pattern-${viewMode}-${samples}`, modelId: 'sphere', camera: interior, effective: {}, internalSize: patternSize,
       profile: patternProfile, lighting: directLighting, viewMode, samples, seed: 1, geometry: 'pattern', bandRows: 5, order: 'permuted' });
@@ -2976,6 +3025,8 @@ async function runRendering({ page }) {
   for (const recordId of records.TRACING_RECORD_IDS) assert.equal(tracingRecords.records.some(r => r.recordId === recordId), records.requiredTracingStrata(recordId).every(id => passedIds.has(id)), `${recordId} is registered iff its strata passed`);
   report.push({ name: 'Tracing and geometric validation records (recorded; registered iff their strata passed)', registered: registry.list().map(r => r.recordId),
     withheld: [...tracingRecords.withheld, ...geometric.withheld], records: registry.list() });
+  report.push({ name: 'Per-stratum tracing qualification (B15 evidence join)', matrixSha256: view.matrixSha256,
+    rows: results.map(({ failures, disagreementsSample, depthMissesSample, ...row }) => row) });
 
   const finish = await ev(page, renderingFinishInPage, undefined, 'rendering teardown');
   report.push({ name: 'Rendering teardown (recorded)', ...finish });
@@ -3393,7 +3444,7 @@ async function readEffectiveEnvironment(context) {
 // copies) with what the server serves. Called only after server readiness (startupSequence).
 async function sourceIdentity() {
   const git = args => { try { return execFileSync('git', args, { encoding: 'utf8', timeout: 10_000 }).trim(); } catch { return null; } };
-  const commit = git(['rev-parse', '--short', 'HEAD']) ?? 'unknown';
+  const commit = git(['rev-parse', 'HEAD']) ?? 'unknown';
   const porcelain = git(['status', '--porcelain']);
   const files = (git(['ls-files', '--', 'index.html', 'src', 'assets']) ?? '').split('\n').filter(Boolean);
   const servedSource = await within(verifyServedSource({
@@ -3419,6 +3470,8 @@ let server;
 const launched = []; // every browser launched by this run, closed through the drain wrapper in the finally
 const groups = { coexistence: runCoexistence, 'developer-flag-experiment': runDeveloperFlagExperiment, recovery: runRecovery, numerics: runNumerics, 'numerics-divergence': runNumericsDivergence, rendering: runRendering, visual: runVisualOnly, shell: runShell };
 const handoff = process.env.ATLAS_GPU_HANDOFF ?? null;
+const coldCaches = process.env.ATLAS_COLD_CACHE_ROOT || ['performance', 'prewarm'].includes(options.group)
+  ? await (await import('./support/cold-cache.mjs')).coldCacheEnvironment(process.env.ATLAS_COLD_CACHE_ROOT) : null;
 let source = null, serverOwnership = null;
 
 // Launch installed Chrome headed with `args` in a fresh profile, read its effective environment and
@@ -3426,7 +3479,7 @@ let source = null, serverOwnership = null;
 async function launchProfile({ label, args }) {
   const requestedArgs = ['--disable-dev-shm-usage', ...args];
   const startedAt = new Date().toISOString();
-  const browser = await chromium.launch({ channel: 'chrome', chromiumSandbox: true, headless: false, env: chromeLaunchEnv(), timeout: LIMITS.launch, args: requestedArgs });
+  const browser = await chromium.launch({ channel: 'chrome', chromiumSandbox: true, headless: false, env: { ...chromeLaunchEnv(), ...coldCaches?.env }, timeout: LIMITS.launch, args: requestedArgs });
   launched.push(browser);
   const viewport = { width: 1280, height: 720, deviceScaleFactor: 1 };
   const context = boundContext(await within(browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1 }), LIMITS.launch, 'newContext'));
@@ -3435,7 +3488,7 @@ async function launchProfile({ label, args }) {
   const environment = {
     name: 'environment', group: options.group, launch: label, startedAt, browser: 'installed Chrome', browserVersion: browser.version(), chromeVersion: effective.chromeVersion,
     userAgent: effective.userAgent,
-    headed: true, chromiumSandbox: true, viewport, requestedArgs, effectiveCommandLine: effective.effectiveCommandLine, effectiveArguments,
+    headed: true, chromiumSandbox: true, viewport, requestedArgs, effectiveCommandLine: effective.effectiveCommandLine, effectiveArguments, coldCache: coldCaches?.evidence ?? null,
     chromeGpu: effective.chromeGpu, webgpuStatus: effective.webgpuStatus, display: process.env.DISPLAY ?? null, url, handoff, serverOwnership, source,
   };
   report.push(environment);
@@ -3454,13 +3507,17 @@ try {
   ({ serverOwnership, source } = await startupSequence({ ensureServer, identifySource: sourceIdentity }));
   console.log(`source ${JSON.stringify({ serverOwnership, ...source })}`);
   assert.equal(source.servedSource.matches, true, `the served source set does not match this checkout: ${JSON.stringify(source.servedSource)}`);
-  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell'].includes(options.group)) {
+  if (['coexistence', 'recovery', 'numerics', 'numerics-divergence', 'rendering', 'visual', 'shell', 'performance', 'memory', 'prewarm'].includes(options.group)) {
     // One launch under the complete profile; the application page is a WebGL (Plane) page, so its close
     // in the finally goes through the local expected-backend drain wrapper (drainExpecting).
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });
-    const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), 'webgl');
+    const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), options.group === 'prewarm' ? 'none' : 'webgl');
     watchErrors(page);
-    await groups[options.group]({ context, page, environment });
+    if (options.group === 'prewarm') await (await import('./support/space-prewarm.mjs')).runColdPrewarm({ page, url, environment, pass, report });
+    else if (options.group === 'performance') await (await import('./space-performance.mjs')).runPerformance({ context, page, environment, sceneId: options.scene, url, pass, report });
+    else if (options.group === 'memory') await (await import('./support/space-memory.mjs')).runMemory({ page, url, environment, pass, report });
+    else if (options.group === 'shell' && options.investigation) await (await import('./support/space-investigation.mjs')).runInvestigation({ page, url, environment, pass, report });
+    else await groups[options.group]({ context, page, environment });
   } else await groups[options.group]({ launchProfile });
   assert.deepEqual(errors, []);
   pass('No browser runtime errors');

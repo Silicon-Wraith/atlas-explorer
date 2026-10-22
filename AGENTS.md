@@ -10,6 +10,7 @@ The layout follows the Project 1 spec (`docs/superpowers/specs/2026-10-19-projec
 
 - `src/app.js`: the small composition root.
 - `src/plane/`: the 2D Plane workspace (coordinates, perturbation, renderers, shaders, places, palettes).
+- `src/space/`: the 3D Space workspace, model/numerical/camera contracts, navigation, recovery and WebGPU renderer.
 - `src/shared/`: workspace-independent contracts (scenes, commands and histories, render requests and reports, discoveries, persistence). It never holds BigInt coordinates, perturbation or GPU handles.
 - `src/ui/`: the shell (dialogs, notifications, icons, styles, the Discoveries control).
 - `tests/`: unit tests (`tests/unit/`, listed in `tests/unit.manifest.json`), browser suites (`tests/*.mjs`, listed in `tests/suites.manifest.json`) and test support (`tests/support/`).
@@ -37,6 +38,14 @@ Git has been in use since 2026-10-18, on branch `main`. This supersedes `HANDOFF
 ## Agent-Specific Instructions
 
 Check existing files before editing and avoid inventing project tooling. For library, framework, SDK, API, CLI, or cloud-service documentation, use Context7: resolve the library ID first unless an exact ID is supplied, then query documentation for each distinct concept. This is unnecessary for general programming, business logic, or routine code review.
+
+## Space implementation and verification
+
+Space source lives in `src/space/`, with GPU-independent models/numerics/camera code and the WebGPU backend confined to `src/space/render/webgpu/`. `src/space/workspace.js` owns its scene, histories, gestures and recovery; `src/ui/workspace-switcher.js` owns activation between retained Plane and Space workspaces.
+
+`npm run test:space -- --group shell` runs guarded Node units then the headed Space shell suite. Every browser/GPU run takes `flock /mnt/ml_storage/scratch/atlas-gpu.lock` and exactly one handoff/deferral declaration as required by the gate. Acceptance requires installed Chrome headed with the recorded Vulkan/WebGPU profile and confirmed cleanup. Standalone measurements use a private port such as 5195; the gate owns 5190. Cold-prewarm and P3 launches require `ATLAS_COLD_CACHE_ROOT` under scratch. Never substitute software/headless results or diagnostic captures for Space acceptance.
+
+Promote to `main` only through a reviewed PR. The 1b.1 audit uses pinned `main..implementationHead`, with full-gate, typed fast-check, WIP and exception evidence kept distinct. See README for commands and HANDOFF for current acceptance status.
 
 ## Claude–Codex Collaboration Protocol
 

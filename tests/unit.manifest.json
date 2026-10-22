@@ -54,6 +54,9 @@
     "tests/unit/space-outcome-masks.test.js",
     "tests/unit/visual-acceptance.test.js",
     "tests/unit/primary-recovery.test.js",
-    "tests/unit/visual-capture.test.js"
+    "tests/unit/visual-capture.test.js",
+    "tests/unit/gpu-preview.test.js",
+    "tests/unit/timing.test.js",
+    "tests/unit/acceptance-audit.test.js"
   ]
 }

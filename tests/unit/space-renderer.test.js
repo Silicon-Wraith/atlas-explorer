@@ -8,7 +8,7 @@ import { BackendError, createAdmission, createPipelineSet, createPickRequest, sa
 import { packStatus, packLightingStatus } from '../../src/space/render/status.js';
 import { createSpaceScene, sceneCodec } from '../../src/space/scene-adapter.js';
 import { createSpaceRequest } from '../../src/space/render-adapter.js';
-import { createSpaceRenderer } from '../../src/space/render/renderer.js';
+import { createSpaceRenderer, navigationDraftEligible } from '../../src/space/render/renderer.js';
 import { productPipelineSet } from '../../src/space/render/webgpu/appearance.js';
 import { FIELD_IDS, POINT_INPUT_BYTES, POINT_RESULT_BYTES, RESULT_SENTINEL, decodePointResults,
   fieldPipelineDescriptors, mengerBoxData } from '../../src/space/render/webgpu/kernels.js';
@@ -128,6 +128,93 @@ const auxiliaryResult = async (h, promise) => { let result; promise.then(value =
 
 const inventoryEntry = (h, handle) => h.fake.diagnostics().inventory.find(entry => entry.id === handle.id && entry.epoch === handle.epoch);
 const pixelsIn = r => r.quality.internalSize.width * r.quality.internalSize.height;
+
+test('a completed navigation draft publishes pending while a newer camera request waits', async () => {
+  const h = await rig();
+  let live = generation(), stream = 1;
+  const options = { currentGeneration: () => live, currentNavigation: () => stream };
+  const a = request(scene(), live), ja = h.renderer.render(a, options);
+  await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === ja.jobId));
+  live = { ...live, viewRevision: live.viewRevision + 1, geometryRevision: live.geometryRevision + 1 };
+  const b = request(scene(), live), jb = h.renderer.render(b, options);
+  await h.until(() => h.publications.some(p => p.requestId === a.requestId));
+  const old = h.publications.find(p => p.requestId === a.requestId);
+  assert.equal(old.pending, true);
+  assert.equal(old.kind, 'draft');
+  assert.equal(old.identity.requestId, a.requestId);
+  await h.finish(jb);
+  assert.equal(h.publications.at(-1).requestId, b.requestId);
+  assert.equal(h.publications.at(-1).pending, false);
+  assert.equal((await ja.done).outcome, 'completed');
+  h.renderer.destroy();
+});
+
+test('navigation invalidation rejects old drafts even when content returns to A', async () => {
+  const h = await rig(); let live = generation(), stream = 1;
+  const options = { currentGeneration: () => live, currentNavigation: () => stream };
+  const a = request(scene(), live), job = h.renderer.render(a, options);
+  await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === job.jobId));
+  stream += 2; live = { ...live, viewRevision: live.viewRevision + 2, geometryRevision: live.geometryRevision + 2 };
+  const replacement = h.renderer.render(request(scene(), live), options);
+  await h.finish(replacement);
+  assert.equal(h.publications.some(p => p.requestId === a.requestId), false);
+  h.renderer.destroy();
+});
+
+test('an older draft cannot overwrite a newer settled publication', async () => {
+  const h = await rig(); let live = generation();
+  const options = { currentGeneration: () => live, currentNavigation: () => 1 };
+  const a = request(scene(), live), old = h.renderer.render(a, options);
+  await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === old.jobId));
+  live = { ...live, viewRevision: live.viewRevision + 1, geometryRevision: live.geometryRevision + 1 };
+  const settled = request(scene(), live, 'settled'), latest = h.renderer.render(settled, options);
+  await h.finish(latest, 'newest');
+  const index = h.publications.findIndex(p => p.requestId === settled.requestId);
+  await h.finish(old);
+  assert.ok(index >= 0);
+  assert.ok(h.publications.slice(index).every(p => p.requestId === settled.requestId));
+  h.renderer.destroy();
+});
+
+test('an invalidated navigation stream or live device epoch cannot publish even without a replacement request', async () => {
+  for (const change of ['stream', 'epoch']) {
+    const h = await rig(); let stream = 1, live = generation();
+    const job = h.renderer.render(request(scene(), live), { currentNavigation: () => stream, currentGeneration: () => live });
+    await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === job.jobId));
+    if (change === 'stream') stream++; else live = { ...live, deviceEpoch: live.deviceEpoch + 1 };
+    await h.finish(job);
+    assert.equal(h.publications.some(p => p.requestId === job.requestId), false, change);
+    h.renderer.destroy();
+  }
+});
+
+test('cancelling the newest navigation request fences its older pending drafts', async () => {
+  const h = await rig(); let live = generation();
+  try {
+    const options = {currentGeneration:()=>live,currentNavigation:()=>1};
+    const a = h.renderer.render(request(scene(), live), options);
+    await h.until(()=>h.tickets.some(t=>t.pending&&t.desc.identity.jobId===a.jobId));
+    live = generation(2, 1);
+    const b = h.renderer.render(request(scene(), live), options);
+    assert.equal(h.renderer.cancel(b.jobId).accepted, true);
+    await h.finish(a); await h.finish(b);
+    assert.equal(h.publications.length, 0);
+  } finally {h.renderer.destroy();}
+});
+
+test('presentation completion rejects a cancelled request or invalidated navigation stream', async () => {
+  for (const invalidation of ['cancel', 'stream']) {
+    const h = await rig(); let stream = 1;
+    try {
+      const job = h.renderer.render(request(), {currentNavigation:()=>stream});
+      await h.until(()=>h.tickets.some(t=>t.pending&&t.method==='present'&&t.desc.identity.jobId===job.jobId));
+      assert.equal(h.publications.length, 1, 'the image was encoded before invalidation');
+      if(invalidation==='cancel') h.renderer.cancel(job.jobId); else stream++;
+      await h.finish(job);
+      assert.equal(h.presents.length, 0, invalidation);
+    } finally {h.renderer.destroy();}
+  }
+});
 
 test('releaseObsolete preserves the live viewport cache after a different export fails', async () => {
   const h = await rig(), a = request(directScene(), generation(), 'settled');
@@ -1349,4 +1436,30 @@ test('B09c F2 draft classification uses 64 iterations when the scene permits an 
     assert.equal(batch.bounds.iterations, r.quality.iteration.maxIterations);
   }
   h.renderer.destroy(); h.fake.destroy();
+});
+
+
+test('each pending draft guard independently rejects changed content appearance current request and newest stream', () => {
+  function fixture() {
+    let liveContent = 'unchanged';
+    const record = {navigation:1,navigationContent:'unchanged',currentNavigationContent:()=>liveContent,
+      currentNavigation:()=>1,currentGeneration:()=>generation(2,1),
+      request:{output:{purpose:'interactive'},quality:{preview:true},viewId:'space',generation:generation(1,1)}};
+    const interactive = {navigation:1,navigationContent:'unchanged',cancelled:false};
+    return {record,interactive,current:interactive,viewId:'space',epoch:1,destroyed:false,setContent:value=>{liveContent=value;}};
+  }
+  const defects = {
+    'content changed without another submission':x=>x.setContent('changed'),
+    'newest content differs':x=>{x.interactive.navigationContent='changed';},
+    'appearance revision changed':x=>{x.record.currentGeneration=()=>generation(2,2);},
+    'another purpose became current':x=>{x.current={};},
+    'newest request belongs to another stream':x=>{x.interactive.navigation=2;},
+    'live stream was invalidated':x=>{x.record.currentNavigation=()=>2;},
+    'newest request was cancelled':x=>{x.interactive.cancelled=true;},
+    'live epoch changed':x=>{x.record.currentGeneration=()=>({...generation(2,1),deviceEpoch:2});},
+  };
+  for(const [name,mutate] of Object.entries(defects)) {
+    const x=fixture();assert.equal(navigationDraftEligible(x),true,`valid baseline: ${name}`);
+    mutate(x);assert.equal(navigationDraftEligible(x),false,name);
+  }
 });

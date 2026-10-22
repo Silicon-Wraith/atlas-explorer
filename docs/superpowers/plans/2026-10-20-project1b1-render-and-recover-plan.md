@@ -2136,6 +2136,19 @@ unchanged assertions.
 
 ### Task B15: Performance acceptance, the recorded investigation, the audit and the handoff (spec §16.4, §3, §16.3; P3)
 
+**B15 audit scope note (Claude–Codex ruling, 2026-10-22):** The audited commit set is
+`git rev-list main..feat/project1b1`, pinning both tips as full SHAs in the live acceptance
+manifest (use the reviewed implementation head for the feature tip when auditing a candidate).
+Project 0 and Project 1a ancestors already reachable from `main` retain their shipped audits;
+they are not reclassified or re-audited as 1b.1 commits. Missing typed fast evidence may be
+re-recorded only by running the exact historical commit's own unit manifest and build now.
+Such records retain the true current run timestamps and `recordedRetrospectively: true`.
+They qualify only with a byte-pinned contemporaneous ledger excerpt recording a passing
+unit/build fast check for the same SHA; absent or contradictory original evidence fails closed.
+No original run timestamp or result is invented, and this does not retrospectively make WIP
+promotable or change the four enumerated transition classifications.
+
+
 **Owner:** Codex. **Reviewer:** Claude. **Depends on:** B14, B11b (the visual acceptance check passes before sign-off); **1a T13** (audit scripts).
 
 **Files:**

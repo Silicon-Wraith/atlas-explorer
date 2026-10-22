@@ -1,6 +1,6 @@
 // Space pass orchestration. Resource ownership and execution identities stay here;
 // the scheduler owns admission/outcomes and the backend owns queue completion.
-import { deepFreeze } from '../../shared/scene.js';
+import { deepFreeze, canonicalJson } from '../../shared/scene.js';
 import { createScheduler } from '../../shared/scheduler.js';
 import { createRenderRequest, isPublishable, RENDER_OUTCOMES, RUNTIME_ID } from '../../shared/render-request.js';
 import { createReportBuilder, observed, UNAVAILABLE } from '../../shared/render-report.js';
@@ -28,6 +28,27 @@ const stale = () => ({ stale: true });
 // The per-sample geometry targets, kept, reused and cached together (B11c: the recovery word is geometry).
 const GEOMETRY_TARGETS = Object.freeze(['depth', 'status', 'normal', 'recovery']);
 let preparationId = 0;
+
+export function navigationContentKey(scene, output) {
+  const {camera, ...content} = scene;
+  return canonicalJson({content, output});
+}
+export function navigationDraftEligible({record, current, interactive, viewId, epoch, destroyed}) {
+  try {
+    return !destroyed && !record.result && !record.cancelled && record.navigation !== null &&
+      record.request.output.purpose === 'interactive' && record.request.quality.preview &&
+      current === interactive && !interactive?.cancelled && record.request.viewId === viewId &&
+      record.request.generation.deviceEpoch === epoch &&
+      record.navigation === record.currentNavigation() &&
+      record.navigation === interactive?.navigation &&
+      record.navigationContent === interactive?.navigationContent &&
+      record.navigationContent === record.currentNavigationContent() &&
+      record.currentGeneration().deviceEpoch === epoch &&
+      record.currentGeneration().viewRevision >= record.request.generation.viewRevision &&
+      record.currentGeneration().geometryRevision >= record.request.generation.geometryRevision &&
+      record.request.generation.appearanceRevision === record.currentGeneration().appearanceRevision;
+  } catch { return false; }
+}
 
 // admit() transfers leases for the entire scheduler, not just the calling view.
 // All Space views sharing it therefore share one dispatcher. A second subscriber
@@ -118,6 +139,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   const submittedJobs = new Set(), submittedRequests = new Set();
   let current = null, interactive = null, published = null, geometryCache = null, destroyed = false;
   let preparation = null, prepared = null, acquisition = null, acquiring = null, serial = 0, auxSerial = 0;
+  let requestOrder = 0;
   const emit = (name, value) => { for (const listener of listeners[name]) { try { listener(deepFreeze(value)); } catch { /* isolate observers */ } } };
   const subscribe = name => listener => { if (typeof listener !== 'function') throw new TypeError('listener must be a function'); listeners[name].add(listener); return () => listeners[name].delete(listener); };
   function hold(handles) { for (const handle of handles) owners.set(handle, (owners.get(handle) ?? 0) + 1); }
@@ -139,9 +161,15 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   }
   function fresh(record) {
     try { return !destroyed && current === record && !record.result && !record.cancelled && record.request.viewId === viewId &&
+      (!record.request.quality.preview || record.navigation === null || record.navigation === record.currentNavigation() && record.navigationContent === record.currentNavigationContent()) &&
       record.request.generation.deviceEpoch === backend.currentEpoch() && isPublishable(record.request, record.currentGeneration()); }
     catch { return false; }
   }
+  // The caller owns the monotonic navigation stream. This exception is opt-in:
+  // shared isPublishable and all settled/inspection paths remain strict.
+  const navigationDraft = record => navigationDraftEligible({record, current, interactive, viewId, epoch: backend.currentEpoch(), destroyed});
+  const executable = record => fresh(record) || navigationDraft(record);
+  const publishable = record => executable(record) && (!published || record.order >= published.record.order);
   function publishedCurrent(snapshot) {
     return !destroyed && snapshot && published === snapshot && snapshot.request.viewId === viewId &&
       snapshot.request.generation.deviceEpoch === backend.currentEpoch();
@@ -244,7 +272,8 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         shadowSteps: quality.lighting.shadowSteps, aoSamples: quality.lighting.aoSamples }, inputs, outputs, uniforms });
   }
   function publish(record, meta, display) {
-    if (!fresh(record)) return false;
+    if (!publishable(record)) return false;
+    const pending = !fresh(record);
     const geometry = { sample: meta.sample, status: record.targets.handles.status, depth: record.targets.handles.depth };
     const handles = [display, geometry.status, geometry.depth], old = published; hold(handles);
     published = { request: record.request, record, display, geometry, handles }; if (old) release(old.handles);
@@ -257,10 +286,11 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     if (meta.last) record.milestones.fullQualityMs = elapsed;
     const appearance = appearanceKey(record.request.sceneSnapshot, meta.quality);
     emit('Publish', { kind: record.request.quality.preview ? 'draft' : meta.ordinal === 0 ? 'settled-first' : 'refinement',
-      requestId: record.request.requestId, geometryRequestId: record.geometryRequestId, samples: meta.sample + 1, sampleIndex: meta.sample, pending: false,
+      requestId: record.request.requestId, identity: identity(record.request), createdAt: record.requestedAt,
+      geometryRequestId: record.geometryRequestId, samples: meta.sample + 1, sampleIndex: meta.sample, pending,
       appearanceKey: appearance, accumulationKey: accumulationKey(record.request.keys.geometryKey, appearance, record.request.quality.sampling),
       quality: meta.quality, publishedAt: now(), rayTermination: record.publishedCounts.rayTermination });
-    emit('Status', { pending: false }); return true;
+    emit('Status', { pending }); return true;
   }
 
   // The outcome-mask identity of one ordinal: its accumulation key (the direct sample of a full request has its own)
@@ -400,10 +430,10 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         else aux.done.resolve(stale());
       }
     };
-    let ticket;
+    let ticket, didPresent = false;
     try {
       if (aux && !aux.valid()) throw new BackendError('stale-epoch', 'auxiliary snapshot replaced before submission');
-      if (!record.internal && !aux && !fresh(record)) {
+      if (!record.internal && !aux && (!executable(record) || (operation.kind === 'presentation' && !publishable(record)))) {
         // The lease exists but no backend work has entered the queue. Cancelling
         // first makes a pre-submission rejection terminal drain evidence, without
         // turning the stale job into a failed job or drawing an obsolete image.
@@ -419,7 +449,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       } else if (operation.kind === 'readback') ticket = backend.readback(operation.descriptor, { admission });
       else {
         ticket = backend.present(operation.descriptor, { admission });
-        if (!record.internal && fresh(record)) publish(record, meta, operation.descriptor.display);
+        if (!record.internal) didPresent = publish(record, meta, operation.descriptor.display);
       }
     } catch (error) {
       retire();
@@ -471,7 +501,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
             countReadback(record.counts, field, result.data, region, record.masks);
           }
         }
-        if (operation.kind === 'presentation' && fresh(record)) emit('Present', { identity: identity(record.request), queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
+        if (operation.kind === 'presentation' && didPresent && !record.cancelled && executable(record)) emit('Present', { identity: identity(record.request), queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
         // completed() notifies the dispatcher synchronously. Copy-out is finished;
         // remove this ticket before a replacement lease can increment the count.
         retire();
@@ -545,23 +575,34 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     })();
     return attempt.promise;
   }
-  function render(request, { currentGeneration = () => request.generation } = {}) {
+  function render(request, { currentGeneration = () => request.generation, currentNavigation = null, currentNavigationContent = null, requestedAt = now() } = {}) {
     if (destroyed) throw new BackendError('unavailable', 'renderer destroyed');
     if (request.viewId !== viewId) throw new TypeError('request belongs to another view');
     if (submittedJobs.has(request.jobId) || submittedRequests.has(request.requestId)) throw new TypeError('execution identity already submitted');
     const model = getModel(request.sceneSnapshot.model.id, request.sceneSnapshot.model.version);
     submittedJobs.add(request.jobId); submittedRequests.add(request.requestId);
     pending();
-    const record = { request, model, currentGeneration: typeof currentGeneration === 'function' ? currentGeneration : () => currentGeneration,
+    const navigation = currentNavigation?.() ?? null;
+    if (navigation !== null && (!Number.isSafeInteger(navigation) || navigation < 0)) throw new TypeError('navigation stream must be a nonnegative integer');
+    if (!Number.isFinite(requestedAt) || requestedAt > now()) throw new TypeError('requestedAt must be a finite creation time no later than now');
+    const navigationContent = navigationContentKey(request.sceneSnapshot, request.output);
+    const record = { request, model, order: ++requestOrder, navigation, currentNavigation, navigationContent,
+      currentNavigationContent: currentNavigationContent ?? (() => navigationContent),
+      currentGeneration: typeof currentGeneration === 'function' ? currentGeneration : () => currentGeneration,
       effective: effectiveParameters(model.id, request.sceneSnapshot.parameters).effective,
-      requestedAt: now(), builder: createReportBuilder(request, { implementation: versions, clock: now,
+      requestedAt, builder: createReportBuilder(request, { implementation: versions, clock: now,
         environment: () => ({ backend: observed('Space backend interface', 'renderer backend contract'), device: acquisition?.identity ?? UNAVAILABLE }) }),
       done: deferred(), handles: [], geometryRequestId: request.requestId, geometrySerial: 0, samplesCompleted: 0,
       milestones: {}, counts: emptyCounts(), queueElapsedMs: 0, completionCount: 0, timestampCount: 0, timestampMs: 0, outstanding: 0, outstandingMax: 0 };
     if (request.output.purpose === 'interactive') {
-      // Every earlier interactive request was already cancelled by its successor.
-      // Avoid scanning a burst of registrations whose done microtasks are pending.
-      if (interactive && !interactive.result) cancel(interactive.request.jobId);
+      // Running drafts may finish within this navigation stream. The scheduler
+      // still coalesces unissued requests; invalidated streams stop admission.
+      for (const previous of jobs.values()) {
+        if (previous.request.output.purpose !== 'interactive' || previous.result) continue;
+        if (!(navigation !== null && previous.navigation === navigation && previous.navigationContent === navigationContent && previous.request.quality.preview &&
+          previous.request.generation.deviceEpoch === request.generation.deviceEpoch &&
+          previous.request.generation.appearanceRevision === request.generation.appearanceRevision)) cancel(previous.request.jobId);
+      }
       interactive = record;
     }
     current = record;

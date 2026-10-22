@@ -23,12 +23,14 @@ import { createFlight as defaultCreateFlight } from './flight.js';
 import { createGamepadInput as defaultCreateGamepadInput, STANDARD_MAPPING } from './gamepad.js';
 import { bindSpaceNavigation, cameraStatus } from './navigation.js';
 import { createRecovery } from './recovery.js';
-import { createSpaceRenderer } from './render/renderer.js';
+import { createSpaceRenderer, navigationContentKey } from './render/renderer.js';
 import { createAdmission } from './render/backend.js';
 import { createWebGPUBackend } from './render/webgpu/backend.js';
 import { productPipelineSet, productPipelineDescriptors, verifyPrewarm, VIEW_MODE_LABELS } from './render/webgpu/appearance.js';
 import { KERNEL_VERSION } from './render/webgpu/kernels.js';
 import { TRACING_VERSION } from './render/webgpu/passes.js';
+import { webgpuUnavailable } from './render/webgpu/availability.js';
+import { deepFreeze } from '../shared/scene.js';
 
 export const SPACE_VIEW_ID = 'space-main';
 export const SPACE_PIXEL_BUDGET = 2_300_000; // the viewport's internal pixels at settled quality (about 88 B/px)
@@ -89,7 +91,8 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   // B14-r2 F2: an activation commits only on a presentation of the current generation made while that
   // activation is current; `reveal` is its waiter, settled by a presentation, a failure or deactivation.
   let reveal = null, lastPresented = null, revealed = false;
-  const requests = new Map(), publishListeners = new Set(), presentListeners = new Set();
+  const requests = new Map(), renderJobs = new Set(), publishListeners = new Set(), presentListeners = new Set(), requestListeners = new Set(), reportListeners = new Set();
+  let navigationStream = 0, navigationOpen = false, navigationContentCache = null;
   const liveGeneration = () => ({ deviceEpoch: backend?.currentEpoch() ?? 0, viewRevision, geometryRevision, appearanceRevision });
 
   function viewportSize() {
@@ -108,35 +111,56 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   function onTransition(transition) {
     if (!transition) return;
     const changed = transition.changed;
+    // A monotonic stream identity prevents A → B → A from reviving an old draft.
+    // Only camera previews and their final commit share a stream. Content edits,
+    // discrete camera jumps and lifecycle changes invalidate it immediately.
+    if (transition.preview && changed.every(domain => domain === 'camera')) {
+      if (!navigationOpen) navigationStream++;
+      navigationOpen = true;
+    } else if (transition.cause === 'commit' && navigationOpen) navigationOpen = false;
+    else if (transition.render) { navigationStream++; navigationOpen = false; }
     if (transition.render) {
       viewRevision++;
       if (changed.some(domain => domain !== 'appearance')) geometryRevision++;
       if (changed.includes('appearance')) appearanceRevision++;
       requestRender(transition.preview ? 'draft' : 'settled');
-    } else if (transition.cause === 'commit' && lastProfile === 'draft') requestRender('settled');
+    } else if (transition.cause === 'commit' && (lastProfile === 'draft' || wantProfile === 'draft')) requestRender('settled');
     if (!transition.preview) refreshCameraStatus();
     if (changed.some(domain => domain !== 'camera')) syncPanel();
     updateHistoryControls();
   }
   function requestRender(profile) {
+    navigationContentCache = null;
     wantProfile = profile; dirty = true;
     wantFrame();
   }
   function ready() { return Boolean(recovery) && recovery.state().phase === 'ready' && prewarm?.ok; }
+  function renderScene() {
+    const snapshot = scene();
+    return cost.sampleCap ? sceneCodec.validate({ ...snapshot, sampling: { ...snapshot.sampling, targetSamples: Math.min(cost.sampleCap, snapshot.sampling.targetSamples) } }) : snapshot;
+  }
+  function liveNavigationContent() {
+    // Cache until the next edit/resize/submission, avoiding layout reads and
+    // canonical serialization for every admitted GPU operation.
+    return navigationContentCache ??= navigationContentKey(renderScene(), { ...requestedSize(), purpose: 'interactive' });
+  }
   // The one viewport submission path: live scene, current size, through the facade. Refused while
   // inactive (admission closed), recovering or stopped; the dirty request is kept for later.
   function submit() {
     if (!active || !ready() || destroyed) return false;
     const size = requestedSize();
     if (lastSize && (size.width !== lastSize.width || size.height !== lastSize.height)) { viewRevision++; geometryRevision++; }
-    let snapshot = scene();
-    if (cost.sampleCap) snapshot = sceneCodec.validate({ ...snapshot, sampling: { ...snapshot.sampling, targetSamples: Math.min(cost.sampleCap, snapshot.sampling.targetSamples) } });
+    const snapshot = renderScene();
+    const createdAt = now();
     const request = createSpaceRequest({ scene: snapshot, purpose: 'interactive', ...size, profile: wantProfile, generation: liveGeneration(), viewId: SPACE_VIEW_ID, versions: VERSIONS });
-    return submitRequest(request, size);
+    return submitRequest(request, size, createdAt);
   }
-  function submitRequest(request, size = { width: request.output.width, height: request.output.height }) {
+  function submitRequest(request, size = { width: request.output.width, height: request.output.height }, createdAt = now()) {
+    navigationContentCache = null;
+    const event = deepFreeze({ identity: identityOf(request), purpose: request.output.purpose, createdAt, request });
+    for (const listener of requestListeners) { try { listener(event); } catch { /* isolate observers */ } }
     let job;
-    try { job = recovery.render(request, { currentGeneration: liveGeneration }); }
+    try { job = recovery.render(request, { currentGeneration: liveGeneration, currentNavigation: () => navigationStream, currentNavigationContent: liveNavigationContent, requestedAt: createdAt }); }
     catch (error) { if (error?.code === 'unavailable') return false; showRecovery(`Rendering failed: ${message(error)}`); return false; }
     dirty = false; lastProfile = request.quality.profile; lastRequest = request; lastSize = size; submitted++;
     track(job);
@@ -144,9 +168,11 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   }
   function track(job) {
     if (!job) return;
+    renderJobs.add(job.jobId);
     currentJob = job; requests.set(job.requestId, job.request);
     if (requests.size > 64) requests.delete(requests.keys().next().value);
     job.done.then(result => {
+      renderJobs.delete(job.jobId);
       if (currentJob === job) currentJob = null;
       // B14-r3 F11: cancelling the render the first presentation waits for cancels the activation
       // (a replacement render settles 'superseded' and keeps the wait for its own presentation).
@@ -187,12 +213,12 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     renderer = createSpaceRenderer({ backend, scheduler, clock: now, viewId: SPACE_VIEW_ID, versions: VERSIONS, pipelineSet: productPipelineSet() });
     renderer.onPublish(publication => onPublish(publication));
     renderer.onPresent(event => { onPresentation(event); for (const listener of presentListeners) { try { listener(event); } catch { /* isolate observers */ } } });
-    renderer.onReport(report => { lastReport = report; });
+    renderer.onReport(report => { lastReport = report; for (const listener of reportListeners) { try { listener(report); } catch { /* isolate observers */ } } });
     renderer.onStatus(status => { if (typeof status.pending === 'boolean') pendingStatus = status.pending; updateIndicators(); });
     recovery = createRecovery({ backend, renderer, scheduler, clock: now, onNotice: notice => onNotice(notice) });
   }
   function onPresentation(event) {
-    lastPresented = event.identity ?? null;
+    if (sameGeneration(event.identity?.generation, liveGeneration())) lastPresented = event.identity;
     if (reveal && active && activation === reveal.token && sameGeneration(lastPresented?.generation, liveGeneration())) settleReveal({ outcome: 'activated' });
   }
   function settleReveal(result) { const waiter = reveal; reveal = null; waiter?.resolve(Object.freeze(result)); }
@@ -279,6 +305,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     if (!active) return;
     const size = requestedSize();
     if (lastSize && size.width === lastSize.width && size.height === lastSize.height) return;
+    navigationStream++; navigationOpen = false;
     if (dirty || !lastRequest || !ready()) { requestRender(wantProfile); return; }
     const next = renderer.resize(size);
     if (!next) { requestRender('settled'); return; }
@@ -323,7 +350,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
       } catch (error) {
         if (activation !== token || destroyed) return Object.freeze({ outcome: 'superseded' });
         unavailableReason = message(error);
-        showUnavailable(unavailableReason);
+        showUnavailable(unavailableReason, error.code);
         return Object.freeze({ outcome: 'unavailable', reason: unavailableReason });
       }
     }
@@ -361,6 +388,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   // keyboard focus are released and the global listeners detached. Submitted batches drain; the view
   // is marked hidden in the scheduler, never preempted.
   function deactivate() {
+    navigationStream++; navigationOpen = false;
     activation = null; revealed = false;
     settleReveal({ outcome: 'superseded' });
     if (!active) return;
@@ -423,7 +451,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   const text = (selector, value) => { const element = $(selector); if (element) element.textContent = value; };
   function setHidden(selector, hidden) { const element = $(selector); if (element) element.hidden = hidden; }
   function showPreparation(value) { text('#space-preparation', value); setHidden('#space-preparation', !value); }
-  function showUnavailable(reason) { text('#space-unavailable', `Space unavailable: ${reason}`); setHidden('#space-unavailable', false); showPreparation(''); }
+  function showUnavailable(reason, code) { text('#space-unavailable', `Space unavailable: ${webgpuUnavailable(reason, code)}`); setHidden('#space-unavailable', false); showPreparation(''); }
   function hideUnavailable() { setHidden('#space-unavailable', true); }
   function showRecovery(value, retry = false) { text('#space-recovery', value); setHidden('#space-recovery', !value); setHidden('#space-retry', !retry); }
   function showNavigationStatus(status) {
@@ -573,6 +601,16 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     gestures.settle(kind);
     return gestures.apply([{ type: 'setCamera', camera }], kind);
   }
+  function requestCamera(pose, { phase = 'commit' } = {}) {
+    if (!['preview', 'commit'].includes(phase)) throw new RangeError('camera phase must be preview or commit');
+    const camera = sceneCodec.validate({ ...scene(), camera: pose }).camera;
+    if (phase === 'preview') return gestures.drag('orbit-drag', camera);
+    if (gestures.openKind === 'orbit-drag') {
+      gestures.drag('orbit-drag', camera);
+      return gestures.dragCommit('orbit-drag');
+    }
+    return jump(camera, 'harness');
+  }
   const showOverview = () => jump(overviewFor(scene().model.id, scene().parameters), 'overview');
   const resetView = () => jump(resetOrientation(getCamera()), 'orientation-reset');
   function rotate(kind, degrees) {
@@ -650,7 +688,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     const state = recovery?.state().phase;
     if (state === 'recovering' || state === 'preparing') return false;
     if (state !== 'ready') return true;
-    return !dirty && !currentJob && history.snapshot().gesture === null;
+    return !dirty && !currentJob && renderJobs.size === 0 && scheduler.snapshot().outstanding === 0 && history.snapshot().gesture === null;
   };
   class SpaceIdleTimeout extends Error { constructor(ms, state) { super(`Space did not become idle within ${ms} ms (${JSON.stringify(state)}).`); this.name = 'SpaceIdleTimeout'; this.code = 'ATLAS_IDLE_TIMEOUT'; } }
   const inspection = Object.freeze({
@@ -678,12 +716,19 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
       }
     },
     pickContext,
-    requestCamera: pose => jump(sceneCodec.validate({ ...scene(), camera: pose }).camera, 'harness'),
-    editParameter, selectFamily, cancelCurrent: () => (currentJob && recovery ? recovery.cancel(currentJob.jobId) : null),
+    requestCamera,
+    editParameter, selectFamily, cancelCurrent() {
+      navigationStream++; navigationOpen = false;
+      return currentJob && recovery ? recovery.cancel(currentJob.jobId) : null;
+    },
     overview: showOverview, resetOrientation: resetView, undo: () => historyStep('undo'), redo: () => historyStep('redo'), back: () => historyStep('back'), forward: () => historyStep('forward'),
     saveScene, openSceneText, restoreFullCost,
     onPublish(listener) { publishListeners.add(listener); return () => publishListeners.delete(listener); },
     onPresent(listener) { presentListeners.add(listener); return () => presentListeners.delete(listener); },
+    // Workspace submissions, including workspace resize requests. Direct renderer
+    // calls and internal recovery replays are outside this subscription.
+    onRequest(listener) { if (typeof listener !== 'function') throw new TypeError('listener must be a function'); requestListeners.add(listener); return () => requestListeners.delete(listener); },
+    onReport(listener) { if (typeof listener !== 'function') throw new TypeError('listener must be a function'); reportListeners.add(listener); return () => reportListeners.delete(listener); },
     // Test seams: a backend before the first activation, and the backend test adapter.
     setBackend(fake) { if (backend || recovery) throw new Error('the Space backend is already in use'); backendOverride = fake; },
     injectLoss() { if (!backend) throw new Error('no Space backend'); return backend.testAdapter.injectLoss({ reason: 'unknown', message: 'injected through the B14 test seam' }); },
@@ -698,7 +743,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
       deactivate(); destroyed = true;
       gamepad.destroy();
       recovery?.destroy(); renderer?.destroy(); backend?.destroy();
-      publishListeners.clear(); presentListeners.clear();
+      publishListeners.clear(); presentListeners.clear(); requestListeners.clear(); reportListeners.clear();
     },
   });
 }
