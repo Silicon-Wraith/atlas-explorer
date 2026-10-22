@@ -4,8 +4,8 @@ import {
   createSceneCodec, SceneError, requireObject, isPlainObject, deepFreeze, utf8Bytes,
   APPLICATION, SCENE_SCHEMA, SCENE_SCHEMA_VERSION, APPLICATION_VERSION,
 } from '../shared/scene.js';
-// B11 moves these definitions into shared/palettes.js and preserves this re-export.
-import { PALETTES } from '../plane/palettes.js';
+// Shared palette definitions (plan B11; spec §4.1): Space never imports Plane.
+import { PALETTES } from '../shared/palettes.js';
 import { ANCHOR_LIMITS, parseAnchorDecimal, effectiveParameters } from './numerics/parameters.js';
 
 export const SPACE_CONVENTIONS = 'atlas-space-rh-zup-abcd-v1';

@@ -7,6 +7,8 @@ import { createReportBuilder, observed, UNAVAILABLE } from '../../shared/render-
 import { createSpaceRequest, spaceWorkspaceFields } from '../render-adapter.js';
 import { effectiveParameters, escapeRadius } from '../numerics/parameters.js';
 import { getModel } from '../models/registry.js';
+import { VIEW_MODES } from '../scene-adapter.js';
+import { mengerBoxData } from './webgpu/kernels.js';
 import { basis, encodeOrdinaryOrigin } from '../camera.js';
 import { appearanceKey, accumulationKey, sampleKey } from './keys.js';
 import { unpackStatus, unpackLightingStatus, STATUS_LABELS } from './status.js';
@@ -191,7 +193,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const descriptor = pipeline(pass, record, quality.lighting.stage), handles = record.targets?.handles ?? {};
     const alias = { ...handles, probe_target: handles.status,
       previous: handles.accumulation?.[sample & 1], next: handles.accumulation?.[(sample + 1) & 1],
-      accumulation: handles.accumulation?.[(sample + 1) & 1], display: record.displayHandle, ...extra.handles };
+      accumulation: handles.accumulation?.[(sample + 1) & 1], display: record.displayHandle, menger_boxes: record.mengerBoxes, ...extra.handles };
     const inputs = {}, outputs = {};
     for (const binding of descriptor.bindings) {
       if (binding.type === 'uniform-buffer' && descriptor.uniformLayout.byteLength) continue;
@@ -208,7 +210,10 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       stepMultiplier: quality.tracing.stepMultiplier, toleranceFloor: quality.tracing.toleranceFloor,
       // B10: τ(t) = max(toleranceFloor, toleranceFactor·α·t), and the quaternion's outward-rounded B02 R(C).
       toleranceFactor: quality.tracing.toleranceFactor, bound: effective.C ? escapeRadius(effective.C).bound : undefined,
-      power: effective.power, C: effective.C, kappa: effective.kappa, depth: effective.depth, ...extra.uniforms };
+      power: effective.power, C: effective.C, kappa: effective.kappa, depth: effective.depth,
+      // B11: the shading stage's secondary-ray work (B00 bounds) and the view mode code (scene-adapter VIEW_MODES order).
+      shadowSteps: quality.lighting.shadowSteps, shadowRays: quality.lighting.shadowRays, aoSamples: quality.lighting.aoSamples,
+      viewMode: record.request.sceneSnapshot.appearance ? VIEW_MODES.indexOf(record.request.sceneSnapshot.appearance.viewMode) : undefined, ...extra.uniforms };
     // Camera transport is evaluated only when a descriptor asks for it. No world
     // position is collapsed into a Number; B05 supplies high/low binary32 parts.
     if (camera && descriptor.uniformLayout.fields.some(field => ['originHigh', 'originLow', 'forward', 'right', 'up', 'alpha'].includes(field.name))) {
@@ -586,6 +591,13 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           record.geometry = { ...geometryCache }; record.geometrySerial = geometryCache.serial; record.geometryRequestId = geometryCache.geometryRequestId;
         }
         record.geometrySets = [Object.fromEntries(geometryNames.map(name => [name, record.targets.handles[name]])), ...(spare ? [spare] : [])];
+        // B11 (B10 report D2): Menger field evaluation reads the job's box buffer (kernels.js mengerBoxData rows,
+        // 640 B at depth 1, 12,800 B at depth 2), bound as `menger_boxes` and released with the job.
+        if (model.id === 'menger') {
+          const data = mengerBoxData(record.effective.depth);
+          const boxes = backend.allocate({ name: `menger-boxes-${record.effective.depth}`, bytes: data.byteLength, usage: 'storage', data });
+          hold([boxes]); record.handles.push(boxes); record.mengerBoxes = boxes;
+        }
         readyPlan = makePlan(record);
         scheduler.ready(request.jobId, { epoch: request.generation.deviceEpoch });
       } catch (error) { fail(record, error); record.cancellation?.resolve({ outcome: 'cancelled', submitted: 'none' }); }

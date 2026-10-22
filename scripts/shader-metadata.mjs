@@ -1,5 +1,6 @@
-// Declared Node generator for the Space field-kernel metadata (plan B08) and the tracing metadata (plan
-// B10). Writes src/space/render/webgpu/kernel-hashes.js and tracing-hashes.js: the SHA-256 of each WGSL source on disk and of each
+// Declared Node generator for the Space field-kernel metadata (plan B08), the tracing metadata (plan B10)
+// and the appearance metadata (plan B11). Writes src/space/render/webgpu/kernel-hashes.js, tracing-hashes.js
+// and appearance-hashes.js: the SHA-256 of each WGSL source on disk and of each
 // assembled module exactly as the backend executes it (shaders.js shaderCode: wgslConstants() + '\n'
 // + the sources joined by '\n'). `--check` fails when the committed metadata is stale. The static
 // build copies the metadata unchanged; kernel-metadata.test.js verifies it against the sources.
@@ -12,9 +13,12 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const load = async id => readFileSync(new URL(`shaders/${id}.wgsl`, root), 'utf8');
 // B10: every tracing descriptor is fields + a Menger adapter + the trace core + one entry source.
 const TRACING_ASSEMBLIES = ['menger-absent', 'menger-sample'].flatMap(adapter => ['trace-band', 'normals', 'trace-rays'].map(entry => ['fields', adapter, 'trace', entry]));
+// B11: shade.wgsl follows fields, a Menger adapter and the trace core; accumulate and display stand alone.
+const APPEARANCE_ASSEMBLIES = [...['menger-absent', 'menger-sample'].map(adapter => ['fields', adapter, 'trace', 'shade']), ['accumulate'], ['display']];
 const TARGETS = [
   { file: 'kernel-hashes.js', name: 'KERNEL_HASHES', sources: ['fields', 'points'], assemblies: [['fields', 'points']] },
   { file: 'tracing-hashes.js', name: 'TRACING_HASHES', sources: ['trace', 'trace-band', 'normals', 'trace-rays', 'menger-sample', 'menger-absent'], assemblies: TRACING_ASSEMBLIES },
+  { file: 'appearance-hashes.js', name: 'APPEARANCE_HASHES', sources: ['shade', 'accumulate', 'display'], assemblies: APPEARANCE_ASSEMBLIES },
 ];
 
 let stale = false;

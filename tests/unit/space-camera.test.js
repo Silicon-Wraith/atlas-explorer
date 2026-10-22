@@ -464,8 +464,8 @@ test('camera functions do not mutate inputs', () => {
 test('camera dependencies exclude DOM GPU and reference code and shared never imports Space', async () => {
   assert.deepEqual(await boundaryViolations(['src/space/camera.js'], [
     /^src\/space\/(camera|scene-adapter)\.js$/, /^src\/space\/numerics\/parameters\.js$/,
-    /^src\/shared\/scene\.js$/, /^src\/plane\/palettes\.js$/,
-  ]), []); // B02's palette dependency remains until the scheduled B11 move.
+    /^src\/shared\/(scene|palettes)\.js$/,
+  ]), []); // B11 moved the palette dependency to src/shared/palettes.js (rev 4.7 B05 note: no Plane allowlist entry).
   assert.deepEqual(await boundaryViolations(['src/shared'], [/^src\/shared\//]), []);
 });
 

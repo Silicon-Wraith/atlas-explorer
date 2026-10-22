@@ -44,6 +44,8 @@
     "tests/unit/space-gestures.test.js",
     "tests/unit/space-navigation.test.js",
     "tests/unit/space-recovery.test.js",
-    "tests/unit/space-gamepad.test.js"
+    "tests/unit/space-gamepad.test.js",
+    "tests/unit/shared-palettes.test.js",
+    "tests/unit/appearance-metadata.test.js"
   ]
 }
