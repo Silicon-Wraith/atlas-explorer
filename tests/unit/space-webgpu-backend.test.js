@@ -276,3 +276,43 @@ test('B15-R10-F2 group snapshot allocation failure rolls back before consuming a
     assert.equal(backend.diagnostics().tracked, before);
   } finally { backend.destroy(); }
 });
+
+test('B15-R11-F1 a third uniform allocation failure rolls back the entire group transaction', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), options = lease(backend), baseline = backend.diagnostics().tracked;
+    const device = gpu.control.devices[0], createBuffer = device.createBuffer;
+    const allocated = []; let attempts = 0;
+    device.createBuffer = descriptor => {
+      if (descriptor.label.startsWith('uniforms:') && ++attempts === 3) throw new Error('third uniform failed');
+      const buffer = createBuffer(descriptor); allocated.push(buffer); return buffer;
+    };
+    assert.throws(() => backend.submitBatch(draftGroup(backend, Array(5).fill(set.handles.status)), options), code('allocation-failed'));
+    assert.equal(attempts, 3); assert.equal(allocated.length, 2);
+    assert.equal(backend.diagnostics().tracked, baseline, 'earlier uniforms must not leak tracked bytes');
+    assert.ok(allocated.every(buffer => buffer.destroyed), 'earlier native uniforms must also be destroyed');
+    assert.equal(options.admission.consume(), true, 'failure precedes lease consumption');
+    assert.equal(gpu.control.submissions.length, 0);
+  } finally { backend.destroy(); }
+});
+
+test('B15-R11-F1 rejected admission releases every reserved group uniform without submitting', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), baseline = backend.diagnostics().tracked;
+    const options = lease(backend), nativeCount = gpu.control.natives.length;
+    let consumed = 0;
+    options.admission = { ...options.admission, consume() {
+      consumed++;
+      assert.equal(backend.diagnostics().tracked, baseline + 5 * 16, 'all five snapshots are reserved before consume');
+      return false;
+    } };
+    assert.throws(() => backend.submitBatch(draftGroup(backend, Array(5).fill(set.handles.status)), options), code('no-admission'));
+    assert.equal(consumed, 1);
+    const uniforms = gpu.control.natives.slice(nativeCount);
+    assert.equal(uniforms.length, 5);
+    assert.equal(backend.diagnostics().tracked, baseline, 'consume rejection must roll back all snapshots');
+    assert.ok(uniforms.every(buffer => buffer.destroyed));
+    assert.equal(gpu.control.submissions.length, 0);
+  } finally { backend.destroy(); }
+});

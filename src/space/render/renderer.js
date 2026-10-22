@@ -129,7 +129,9 @@ function countStatus(counts, word) {
 // must have a registered Space renderer. Admission cannot be peeked at or returned,
 // so a foreign dispatcher must use a different scheduler. Injected infrastructure
 // remains caller-owned; destroying this renderer releases only its own resources.
-export function createSpaceRenderer({ backend, scheduler, clock, viewId, versions, pipelineSet }) {
+// groupDrafts=false is an injected diagnostic/test comparison path; product callers
+// use grouping. It changes submission boundaries, never draft quality or diagnostics.
+export function createSpaceRenderer({ backend, scheduler, clock, viewId, versions, pipelineSet, groupDrafts = true }) {
   assertBackend(backend);
   const now = typeof clock === 'function' ? clock : clock?.now;
   if (typeof now !== 'function') throw new TypeError('renderer requires a clock');
@@ -321,9 +323,11 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     let windowIds = [], windowLeft = 0, phaseEnded = false, completions = 0, replacements = 0, boundaries = 0, lastReplacement = 0;
     let comparison = null;
     const metadata = new Map(), remaining = new Set();
+    const grouped = request.quality.preview && groupDrafts;
     const groupPhase = skipGeometry() ? 'draft-reuse' : 'draft-group';
-    const phases = request.quality.preview ? [groupPhase, 'draftDiagnostics', 'present']
-      : ['trace', 'normals', 'shade', 'accumulate', 'display', 'status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus', 'present'];
+    const phases = grouped ? [groupPhase, 'draftDiagnostics', 'present']
+      : ['trace', 'normals', 'shade', 'accumulate', 'display',
+        ...(request.quality.preview ? ['draftDiagnostics'] : ['status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus']), 'present'];
     const workload = (phase, quality) => canonicalJson({ epoch: request.generation.deviceEpoch, family: record.model.id, effective: record.effective, profile: quality.profile, phase, width: quality.internalSize.width, iteration: quality.iteration, tracing: quality.tracing, lighting: quality.lighting, viewMode: request.sceneSnapshot.appearance.viewMode });
     function tileBatch(phase, region, m) {
       if (!phase.startsWith('draft-')) return batch(record, phase, region, m.sample, m.quality);
@@ -340,7 +344,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     }
     function nextWindow(dependencies = []) {
       if (ordinal >= sampleCount) return [];
-      while (!request.quality.preview && phaseIndex < 2 && skipGeometry()) phaseIndex++;
+      while (!grouped && phaseIndex < 2 && skipGeometry()) phaseIndex++;
       const phase = phases[phaseIndex], m = meta(), operations = [];
       if (['trace', 'draft-group'].includes(phase) && x === 0 && y === 0) {
         record.targets = { ...record.targets, handles: { ...record.targets.handles, ...record.geometrySets[m.sample % record.geometrySets.length] } };

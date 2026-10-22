@@ -1553,6 +1553,42 @@ test('B15-R10-F1 constant 4 ms fences and a short tail do not collapse persisted
   } finally { h.renderer.destroy(); h.fake.destroy(); }
 });
 
+async function learnedDraftRows(timings) {
+  const h = await rig({ structural: true });
+  try {
+    const start = async revision => {
+      const r = request(scene(), generation(revision), 'draft', { width: 1280, height: 720 });
+      h.renderer.render(r); await flush();
+      return h.plans.find(p => p.request.jobId === r.jobId);
+    };
+    const plan = await start(1);
+    for (const [index, timing] of timings.entries()) {
+      const op = plan.next();
+      assert.deepEqual(op.batch.region, { x: 0, y: index * 51, width: 640, height: 51 });
+      advance(plan, op, timing);
+    }
+    return (await start(2)).next().batch.region.height;
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+}
+
+test('B15-R11-F2 tile learning waits for four comparable observations and uses their minimum', async () => {
+  for (const timings of [[2, 12, 12, 12], [24, 3, 3, 3], [24, 24, 24, 24]]) {
+    for (let count = 1; count < 4; count++) {
+      assert.equal(await learnedDraftRows(timings.slice(0, count)), 51, `${timings}: no resize after ${count} observations`);
+    }
+    const expected = Math.floor(Math.max(8192, Math.floor(640 * 51 * 8 / Math.min(...timings))) / 640);
+    assert.equal(await learnedDraftRows(timings), expected, `${timings}: the fourth observation uses the minimum`);
+  }
+});
+
+test('B15-R11-F2 tile learning keeps sizes stable for jitter inside the hysteresis band', async () => {
+  for (const timings of [[6, 10, 6, 10], [10, 14, 10, 14], [16, 16, 16, 16]]) {
+    assert.equal(await learnedDraftRows(timings), 51, `${timings}: four in-band observations retain the size`);
+  }
+  assert.equal(await learnedDraftRows([4, 4, 4, 4]), 102, 'the lower threshold is inclusive');
+  assert.equal(await learnedDraftRows([17, 17, 17, 17]), 24, 'above the upper threshold permits shrinking');
+});
+
 test('B15-R10-F2 drafts group ordered passes per region and drain two leases before cancellation', async () => {
   const h = await rig();
   try {

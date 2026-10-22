@@ -341,3 +341,24 @@ test('B15-R10-F3 BackendError preserves the acquisition cause without changing i
   const error = new BackendError('unavailable', 'acquisition failed', { cause });
   assert.equal(error.cause, cause); assert.equal(error.code, 'unavailable');
 });
+
+const draftGroupInput = () => {
+  const base = batchInput();
+  base.bounds = { ...base.bounds, shadowRays: 0, shadowSteps: 0, aoSamples: 0 };
+  return { identity: base.identity, region: base.region, sample: base.sample,
+    passes: ['trace', 'normals', 'shade', 'accumulate', 'display'].map(pass => ({ ...base, pass })) };
+};
+test('B15-R11-F1 draft groups reject a matching nonzero sample in every member', () => {
+  const input = draftGroupInput();
+  input.sample = { ...input.sample, index: 1 };
+  input.passes = input.passes.map(pass => ({ ...pass, sample: input.sample }));
+  invalid(() => backendModule.createBatchGroup(input));
+});
+
+test('B15-R11-F1 draft groups reject each kind of secondary-ray work', () => {
+  for (const field of ['shadowRays', 'shadowSteps', 'aoSamples']) {
+    const input = draftGroupInput();
+    input.passes[2] = { ...input.passes[2], bounds: { ...input.passes[2].bounds, [field]: 1 } };
+    invalid(() => backendModule.createBatchGroup(input));
+  }
+});
