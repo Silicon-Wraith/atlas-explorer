@@ -231,13 +231,13 @@ test('a failed first-use preparation leaves Plane visible and reports the failur
 
 // B14-r2 F2 (spec §15): Space becomes the visible workspace only on a presentation from the current
 // activation; until then Plane stays on screen, and cancellation or failure leaves it there.
-function presentingRig({ holdPresents = true } = {}) {
+function presentingRig({ holdPresents = true, clock = () => performance.now(), timers = {} } = {}) {
   const toasts = [], shell = fakeShell(browser.document, { toasts });
   let backend;
   const frames = new Map(); let id = 0;
   const plane = createPlaneWorkspace({ shell, discoveries: stubDiscoveries() });
   const space = createSpaceWorkspace({ shell, backendFactory: ({ clock }) => { backend = createDrivenFakeBackend({ clock }); if (holdPresents) backend.control.holdPresentation(); return backend; },
-    clock: () => performance.now(), env: { requestFrame: fn => { frames.set(++id, fn); return id; }, cancelFrame: n => frames.delete(n), viewportSize: () => ({ width: 16, height: 8 }), getGamepads: () => [] } });
+    clock, env: { requestFrame: fn => { frames.set(++id, fn); return id; }, cancelFrame: n => frames.delete(n), viewportSize: () => ({ width: 16, height: 8 }), getGamepads: () => [], ...timers } });
   const pump = setInterval(() => { const due = [...frames.values()]; frames.clear(); for (const fn of due) fn(performance.now()); }, 2);
   const presents = [];
   space.inspection.onPresent(event => presents.push(event));
@@ -329,4 +329,93 @@ test('the Plane held during Space preparation is inert and releases focus; cance
     assert.equal($('#control-panel').inert, false, 'cancel restores Plane input');
     assert.equal($('#fractal-surface').inert, false);
   } finally { switcher.destroy(); space.destroy(); plane.destroy(); }
+});
+
+// B14-r3 F10: selecting Space again while its first presentation is held supersedes the earlier
+// waiter (every promise settles) and nothing reveals Space before a current presentation.
+const within = (promise, ms = 2000) => Promise.race([promise, sleep(ms).then(() => ({ outcome: 'timed-out' }))]);
+test('selecting Space again while its first presentation is held never reveals it early and settles every switch', async () => {
+  const h = presentingRig();
+  const body = browser.document.body;
+  try {
+    await h.switcher.ready;
+    const first = h.switcher.switchTo('space');
+    await h.until(() => h.backend?.control.heldPresentations() > 0);
+    let secondSettled = false;
+    const second = h.switcher.switchTo('space').then(result => { secondSettled = true; return result; });
+    await sleep(20);
+    assert.equal(secondSettled, false, 'the repeated selection waits for the presentation too');
+    assert.equal(body.dataset.workspace, 'plane', 'no reveal without a presentation');
+    assert.equal((await within(first)).outcome, 'superseded', 'the earlier switch settles as superseded');
+    h.backend.control.releasePresentation();
+    assert.deepEqual(await within(second), { activeId: 'space', outcome: 'activated' });
+    assert.ok(h.presents.length >= 1);
+    assert.equal(body.dataset.workspace, 'space');
+    assert.deepEqual(await within(h.switcher.switchTo('space')), { activeId: 'space', outcome: 'activated' }, 'selecting the shown Space again is immediate');
+  } finally { h.destroy(); }
+});
+
+// B14-r3 F11: cancelling the render that the first presentation waits for settles the switch as
+// cancelled (not superseded), keeps Plane on screen and restores its input.
+test('cancelling the held first render settles the switch as cancelled and restores Plane', async () => {
+  const h = presentingRig();
+  const body = browser.document.body, $ = selector => browser.document.querySelector(selector);
+  try {
+    await h.switcher.ready;
+    const toSpace = h.switcher.switchTo('space');
+    await h.until(() => h.backend?.control.heldPresentations() > 0);
+    const cancellation = h.space.inspection.cancelCurrent();
+    assert.equal(cancellation?.accepted, true, 'the cancellation is accepted');
+    h.backend.control.releasePresentation();
+    const result = await within(toSpace);
+    assert.deepEqual([result.activeId, result.outcome], ['plane', 'cancelled'], JSON.stringify(result));
+    assert.equal(body.dataset.workspace, 'plane');
+    assert.equal(body.dataset.workspacePending, undefined, 'no pending activation remains');
+    assert.equal(h.plane.isActive(), true, 'Plane input is restored');
+    assert.equal($('#control-panel').inert, false);
+    assert.equal(h.space.inspection.state.active, false);
+    assert.equal(h.toasts.filter(text => text.startsWith('Space unavailable')).length, 0, 'a cancellation is not reported as a failure');
+  } finally { h.destroy(); }
+});
+
+// Fx4 (accepted by Codex r3): an allocation failure or a budget overrun before the first presentation
+// reveals Space, because the explicit recovery choice lives in its panel.
+test('an allocation failure before the first presentation reveals Space with its lower-cost choices', async () => {
+  const h = presentingRig({ holdPresents: false });
+  const body = browser.document.body;
+  try {
+    await h.switcher.ready;
+    assert.equal((await within(h.switcher.switchTo('space'))).outcome, 'activated');
+    await within(h.switcher.switchTo('plane'));
+    h.space.inspection.requestCamera(orbit(h.space.inspection.scene.camera, 0.3, 0));
+    h.space.inspection.injectAllocationFailure();
+    const presents = h.presents.length;
+    const result = await within(h.switcher.switchTo('space'), 4000);
+    assert.deepEqual(result, { activeId: 'space', outcome: 'activated' }, JSON.stringify(result));
+    assert.ok(h.space.inspection.state.allocationFailure, 'the allocation failure is offered');
+    assert.equal(h.presents.length, presents, 'no presentation of the new view before the reveal');
+    assert.equal(body.dataset.workspace, 'space', 'Space is shown so its choices are reachable');
+  } finally { h.destroy(); }
+});
+
+test('a budget overrun before the first presentation reveals Space with its continuation', async () => {
+  // A controllable clock and scheduler timers: advancing fires every timer that is due.
+  let offset = 0, timerId = 0;
+  const clock = () => performance.now() + offset, pending = new Map();
+  const setTimer = (fn, ms) => { const id = ++timerId; pending.set(id, { fn, due: clock() + ms, real: setTimeout(() => { pending.delete(id); fn(); }, ms) }); return id; };
+  const clearTimer = id => { const entry = pending.get(id); if (entry) { clearTimeout(entry.real); pending.delete(id); } };
+  const advance = ms => { offset += ms; for (const [id, entry] of [...pending]) if (entry.due <= clock()) { clearTimer(id); entry.fn(); } };
+  const h = presentingRig({ clock, timers: { setTimer, clearTimer } });
+  const body = browser.document.body;
+  try {
+    await h.switcher.ready;
+    const toSpace = h.switcher.switchTo('space');
+    await h.until(() => h.backend?.control.heldPresentations() > 0);
+    advance(120000); // the held first render outlives its work budget
+    const result = await within(toSpace, 4000);
+    assert.deepEqual(result, { activeId: 'space', outcome: 'activated' }, JSON.stringify(result));
+    assert.ok(h.space.inspection.state.budget, `the budget overrun is offered: ${JSON.stringify(h.space.inspection.state)}`);
+    assert.equal(h.presents.length, 0, 'no presentation before the reveal');
+    assert.equal(body.dataset.workspace, 'space', 'Space is shown so its continuation is reachable');
+  } finally { h.backend?.control.releasePresentation(); h.destroy(); }
 });

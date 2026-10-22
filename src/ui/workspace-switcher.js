@@ -5,7 +5,8 @@
 // "the current view stays"): `body[data-workspace-pending]` marks the pending activation so the shell
 // can show its preparation status, and only the latest token's successful activation commits
 // visibility and focus. A failed activation reports "<Name> unavailable: <reason>" and reactivates the
-// previous workspace, which never left the screen, only while that activation is still the latest.
+// previous workspace, which never left the screen, only while that activation is still the latest; a
+// cancelled activation (its first render was cancelled) reactivates it without a report.
 //   createWorkspaceSwitcher({root, workspaces: {plane, space}, initial: 'plane', toast?})
 //     → {ready, switchTo(id) → Promise<{activeId, outcome, reason?}>, current(), pending(), destroy()}
 const NAMES = Object.freeze({ plane: 'Plane', space: 'Space' });
@@ -45,12 +46,16 @@ export function createWorkspaceSwitcher({ root = document, workspaces, initial =
       workspaces[id].focus?.();
       return Object.freeze({ activeId: id, outcome: 'activated' });
     }
-    const reason = result?.reason ?? result?.outcome ?? 'unknown';
-    toast(`${NAMES[id] ?? id} unavailable: ${reason}`);
+    // A cancelled activation (B14-r3 F11) is not a failure: nothing is reported, and the previous
+    // workspace, which never left the screen, is reactivated.
+    const cancelled = result?.outcome === 'cancelled';
+    const reason = cancelled ? 'cancelled' : result?.reason ?? result?.outcome ?? 'unknown';
+    if (!cancelled) toast(`${NAMES[id] ?? id} unavailable: ${reason}`);
     const fallback = stable !== id ? stable : Object.keys(workspaces).find(other => other !== id);
-    if (restoring || !fallback) return Object.freeze({ activeId: id, outcome: 'unavailable', reason });
+    const failed = cancelled ? 'cancelled' : 'unavailable';
+    if (restoring || !fallback) return Object.freeze({ activeId: id, outcome: failed, reason });
     const restored = await switchTo(fallback, { restoring: true });
-    return Object.freeze({ activeId: restored.activeId, outcome: restored.outcome === 'activated' ? 'unavailable' : restored.outcome, reason });
+    return Object.freeze({ activeId: restored.activeId, outcome: restored.outcome === 'activated' ? failed : restored.outcome, reason });
   }
   const ready = switchTo(initial);
   return Object.freeze({

@@ -7,8 +7,8 @@
 // prewarm (B11) before interaction is enabled.
 //   createSpaceWorkspace({shell, backendFactory = createWebGPUBackend, clock, env?})
 //     → {inspection (window.atlas.space), activate(token) → Promise<{outcome, reason?}>, deactivate(), focus(), destroy()}
-// `env` injects the document, window, animation frames, the Gamepad API, the viewport size and the
-// input factories for tests; production uses the browser's.
+// `env` injects the document, window, animation frames, the scheduler's timers, the Gamepad API, the
+// viewport size and the input factories for tests; production uses the browser's.
 import { createHistory } from '../shared/history.js';
 import { createScheduler } from '../shared/scheduler.js';
 import { PALETTES } from '../shared/palettes.js';
@@ -88,7 +88,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   let cpuCamera = null, effectiveCamera = null;
   // B14-r2 F2: an activation commits only on a presentation of the current generation made while that
   // activation is current; `reveal` is its waiter, settled by a presentation, a failure or deactivation.
-  let reveal = null, lastPresented = null;
+  let reveal = null, lastPresented = null, revealed = false;
   const requests = new Map(), publishListeners = new Set(), presentListeners = new Set();
   const liveGeneration = () => ({ deviceEpoch: backend?.currentEpoch() ?? 0, viewRevision, geometryRevision, appearanceRevision });
 
@@ -148,6 +148,9 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     if (requests.size > 64) requests.delete(requests.keys().next().value);
     job.done.then(result => {
       if (currentJob === job) currentJob = null;
+      // B14-r3 F11: cancelling the render the first presentation waits for cancels the activation
+      // (a replacement render settles 'superseded' and keeps the wait for its own presentation).
+      if (result.outcome === 'cancelled' && reveal && !currentJob) settleReveal({ outcome: 'cancelled' });
       if (result.outcome === 'failed' && result.errorCode !== 'allocation-failed') { failReveal(`the view could not be rendered: ${result.reason}`); showRecovery(`The view could not be rendered: ${result.reason}`); }
       updateIndicators();
     });
@@ -180,7 +183,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     if (recovery) return;
     const raw = backendOverride ?? backendFactory({ canvas, clock: now });
     backend = Object.freeze({ ...raw, async acquire(...args) { const receipt = await raw.acquire(...args); acquisition = receipt; return receipt; } });
-    scheduler = createScheduler({ clock: now, makeAdmission: createAdmission, setTimer: (fn, ms) => setTimeout(fn, ms), clearTimer: id => clearTimeout(id) });
+    scheduler = createScheduler({ clock: now, makeAdmission: createAdmission, setTimer: env.setTimer ?? ((fn, ms) => setTimeout(fn, ms)), clearTimer: env.clearTimer ?? (id => clearTimeout(id)) });
     renderer = createSpaceRenderer({ backend, scheduler, clock: now, viewId: SPACE_VIEW_ID, versions: VERSIONS, pipelineSet: productPipelineSet() });
     renderer.onPublish(publication => onPublish(publication));
     renderer.onPresent(event => { onPresentation(event); for (const listener of presentListeners) { try { listener(event); } catch { /* isolate observers */ } } });
@@ -308,7 +311,10 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   async function activate(token) {
     if (destroyed) return Object.freeze({ outcome: 'unavailable', reason: 'the Space workspace was destroyed' });
     activation = token;
-    if (active) return Object.freeze({ outcome: 'activated' });
+    // Already shown: a repeated selection is immediate. Still waiting for the first presentation: the
+    // newer selection takes over the wait (B14-r3 F10) and the earlier one settles as superseded.
+    if (active && revealed) return Object.freeze({ outcome: 'activated' });
+    if (active) return awaitReveal(token);
     if (!ready()) {
       try {
         if (unavailableReason && !recovery) unavailableReason = null;
@@ -322,17 +328,30 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
       }
     }
     if (activation !== token || destroyed) return Object.freeze({ outcome: 'superseded' });
-    if (active) return Object.freeze({ outcome: 'activated' });
+    if (active) return awaitReveal(token);
     enable();
-    // B14-r2 F2: the switcher reveals Space only on this activation's first current presentation.
-    const outcome = presented() ? Object.freeze({ outcome: 'activated' }) : await new Promise(resolve => { reveal = { token, resolve }; });
-    if (activation !== token || destroyed) return Object.freeze({ outcome: 'superseded' });
+    return awaitReveal(token);
+  }
+  // B14-r2 F2: the switcher reveals Space only on the current activation's first current presentation
+  // (or, Fx4, on an allocation or budget choice that needs the Space panel). The outcome is
+  // 'activated', 'superseded' (a newer selection or a deactivation), 'cancelled' (the render it waited
+  // for was cancelled, F11) or 'unavailable' (a failure before the first presentation).
+  async function awaitReveal(token) {
+    let outcome;
+    if (presented()) outcome = Object.freeze({ outcome: 'activated' });
+    else {
+      settleReveal({ outcome: 'superseded' });
+      outcome = await new Promise(resolve => { reveal = { token, resolve }; });
+    }
+    if (activation !== token || destroyed || outcome.outcome === 'superseded') return Object.freeze({ outcome: 'superseded' });
+    if (outcome.outcome === 'cancelled') { deactivate(); return outcome; }
     if (outcome.outcome !== 'activated') {
       deactivate();
       unavailableReason = outcome.reason;
       showUnavailable(unavailableReason);
       return outcome;
     }
+    revealed = true;
     unavailableReason = null; // B14-F7: a successful activation clears an earlier failure's reason
     hideUnavailable();
     return Object.freeze({ outcome: 'activated' });
@@ -342,7 +361,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   // keyboard focus are released and the global listeners detached. Submitted batches drain; the view
   // is marked hidden in the scheduler, never preempted.
   function deactivate() {
-    activation = null;
+    activation = null; revealed = false;
     settleReveal({ outcome: 'superseded' });
     if (!active) return;
     active = false;
