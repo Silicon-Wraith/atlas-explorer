@@ -201,3 +201,78 @@ test('a pipeline rejection while a loss is pending waits for the loss and report
   assert.deepEqual(outcome, ['device-lost']);
   assert.equal(backend.diagnostics().state, 'unavailable'); assert.equal(backend.currentEpoch(), 0);
 });
+
+const draftGroup = (backend, handles) => {
+  const base = probe(backend, handles[0]);
+  return { identity: base.identity, region: base.region, sample: base.sample,
+    passes: ['trace', 'normals', 'shade', 'accumulate', 'display'].map((pass, i) => ({ ...base, pass, outputs: { probe_target: handles[i] } })) };
+};
+test('B15-R10-F2 backend groups submit once and retain every resource and uniform until their fence', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), handles = [set.handles.status, set.handles.recovery, set.handles.depth, set.handles.lightingStatus, set.handles.accumulationFlags];
+    gpu.control.fences.held = true;
+    const before = gpu.control.submissions.length, options = lease(backend); let ticket;
+    const input = draftGroup(backend, handles);
+    input.passes = input.passes.map((batch, i) => ({ ...batch, uniforms: { ...batch.uniforms, origin: [i, 0] } }));
+    assert.doesNotThrow(() => { ticket = backend.submitBatch(input, options); });
+    input.passes[0].uniforms.origin[0] = 999;
+    assert.equal(options.admission.consume(), false); assert.equal(gpu.control.submissions.length, before + 1);
+    assert.equal(gpu.control.submissions.at(-1), 1, 'one command buffer');
+    const commands = gpu.control.commandBuffers.at(-1).commands;
+    assert.equal(commands.length, 5);
+    for (const [i, command] of commands.entries()) {
+      assert.equal(command.ended, true); assert.deepEqual(command.dimensions, [1, 1]);
+      const buffer = command.group.descriptor.entries.find(e => e.resource.buffer)?.resource.buffer;
+      assert.equal(new DataView(buffer.data.buffer).getUint32(0, true), i, 'ordered immutable per-member uniform snapshots');
+    }
+    const uniforms = backend.diagnostics().inventory.filter(e => e.name.startsWith('uniforms:'));
+    assert.equal(uniforms.length, 5); assert.ok(uniforms.every(e => e.state === 'retiring'));
+    for (const handle of handles) { backend.release(handle); assert.equal(entryOf(backend, handle).state, 'retiring'); }
+    gpu.control.fences.release(); assert.equal((await ticket.done).outcome, 'completed');
+    for (const handle of handles) assert.equal(entryOf(backend, handle), undefined);
+    assert.ok(backend.diagnostics().inventory.every(e => !e.name.startsWith('uniforms:')));
+  } finally { backend.destroy(); }
+});
+
+test('B15-R10-F2 invalid later group members consume no lease and submit no partial work', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), input = draftGroup(backend, Array(5).fill(set.handles.status));
+    const before = backend.diagnostics().tracked, submissions = gpu.control.submissions.length, options = lease(backend);
+    input.passes[4] = { ...input.passes[4], pipelineId: 'unprepared-final-pass' };
+    assert.throws(() => backend.submitBatch(input, options), code('preparation-failed'));
+    assert.equal(options.admission.consume(), true); assert.equal(gpu.control.submissions.length, submissions);
+    assert.equal(backend.diagnostics().tracked, before);
+  } finally { backend.destroy(); }
+});
+
+test('B15-R10-F2 group loss and captured failure settle the entire ticket and release all snapshots', async () => {
+  for (const outcome of ['interrupted', 'failed']) {
+    const { gpu, backend } = await ready();
+    try {
+      const set = await targets(backend), handle = set.handles.status;
+      gpu.control.fences.held = true;
+      if (outcome === 'failed') gpu.control.errors.push({ op: 'createBindGroup', filter: 'validation', message: 'group binding failed' });
+      const ticket = backend.submitBatch(draftGroup(backend, Array(5).fill(handle)), lease(backend));
+      backend.release(handle);
+      if (outcome === 'interrupted') backend.testAdapter.injectLoss({ reason: 'group lost' });
+      gpu.control.fences.release();
+      const result = await ticket.done;
+      assert.equal(result.outcome, outcome); assert.equal(result.timing.elapsedMs, null);
+      assert.equal(entryOf(backend, handle), undefined);
+      assert.ok(backend.diagnostics().inventory.every(e => !e.name.startsWith('uniforms:')));
+    } finally { backend.destroy(); }
+  }
+});
+
+test('B15-R10-F2 group snapshot allocation failure rolls back before consuming admission', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), options = lease(backend), before = backend.diagnostics().tracked;
+    backend.testAdapter.failNextAllocation();
+    assert.throws(() => backend.submitBatch(draftGroup(backend, Array(5).fill(set.handles.status)), options), code('allocation-failed'));
+    assert.equal(options.admission.consume(), true); assert.equal(gpu.control.submissions.length, 0);
+    assert.equal(backend.diagnostics().tracked, before);
+  } finally { backend.destroy(); }
+});

@@ -361,3 +361,39 @@ test('the unavailable UI adds enablement guidance only for absent WebGPU or adap
     } finally { h.space.destroy(); }
   }
 });
+
+test('B15-R10-F3 real acquisition failures guide both panel and switcher toast and restore Plane', async () => {
+  const { createWorkspaceSwitcher } = await import('../../src/ui/workspace-switcher.js');
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  try {
+    for (const scenario of ['no-webgpu', 'no-adapter', 'device-refused']) {
+      const calls = [];
+      const gpu = scenario === 'no-webgpu' ? undefined : { async requestAdapter(options) {
+        calls.push(options);
+        return scenario === 'no-adapter' ? null : { features: new Set(), limits: {}, async requestDevice() { throw new Error('test device refusal'); } };
+      } };
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { gpu } });
+      const toasts = [], document = browser.document;
+      // All production factories remain at their defaults, through acquireDevice.
+      const space = createSpaceWorkspace({ shell: fakeShell(document, { toasts }) });
+      let activations = 0, deactivations = 0;
+      const plane = { activate() { activations++; return { outcome: 'activated' }; }, deactivate() { deactivations++; } };
+      const switcher = createWorkspaceSwitcher({ root: document, workspaces: { plane, space }, toast: text => toasts.push(text) });
+      try {
+        await switcher.ready;
+        const result = await switcher.switchTo('space');
+        assert.equal(result.outcome, 'unavailable'); assert.equal(result.activeId, 'plane');
+        assert.equal(activations, 2); assert.equal(deactivations, 1);
+        assert.equal(calls.length, scenario === 'no-webgpu' ? 0 : 1);
+        if (calls.length) assert.deepEqual(calls[0], { powerPreference: 'high-performance' });
+        const panel = document.querySelector('#space-unavailable');
+        assert.equal(panel.hidden, false); assert.equal(toasts.length, 1);
+        assert.equal(panel.textContent, toasts[0]);
+        for (const text of [panel.textContent, toasts[0], result.reason]) {
+          assert.equal(text.includes('npm run dev:gpu'), scenario !== 'device-refused', `${scenario}: ${text}`);
+          assert.equal(text.includes('chrome://gpu'), scenario !== 'device-refused', `${scenario}: ${text}`);
+        }
+      } finally { switcher.destroy(); space.destroy(); }
+    }
+  } finally { if (saved) Object.defineProperty(globalThis, 'navigator', saved); else delete globalThis.navigator; }
+});

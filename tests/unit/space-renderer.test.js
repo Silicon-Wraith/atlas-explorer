@@ -75,11 +75,11 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
   };
   for (const method of ['submitBatch', 'readback', 'present']) backend[method] = (desc, options) => {
     if (method === 'submitBatch') stageDraftDiagnostics(fake, desc, { statusWords, normals, recoveryWords });
-    hooks.before?.(method, desc, options);
+    for (const member of desc.passes ?? [desc]) hooks.before?.(method, member, options);
     if (method === 'readback' && desc.fields.includes('probe')) fake.stage(desc.source, words([probe]));
     if (method === 'readback' && desc.fields.includes('cameraClassification') && classificationWords) fake.stage(desc.source, words(classificationWords));
     const ticket = fake[method](desc, options);
-    const replacement = hooks.after?.(method, desc, ticket);
+    const replacement = (desc.passes ?? [desc]).map(member => hooks.after?.(method, member, ticket)).find(Boolean);
     const record = { method, desc, admission: options.admission, ticket, pending: true };
     tickets.push(record); submissions.push(record);
     ticket.done.then(() => { record.pending = false; });
@@ -126,7 +126,7 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
   prepared = true;
   return { renderer, fake, backend, scheduler, clock, hooks, discarded, failed, auxiliaryJobs, tickets, submissions, publications, presents, statuses, reports, plans, targets, receipt, failure, complete, until, finish, releaseConfiguration, releaseReadbacks };
 }
-const batches = (h, jobId) => h.submissions.filter(x => x.method === 'submitBatch' && x.desc.identity.jobId === jobId).map(x => x.desc);
+const batches = (h, jobId) => h.submissions.filter(x => x.method === 'submitBatch' && x.desc.identity.jobId === jobId).flatMap(x => x.desc.passes ?? [x.desc]);
 const auxiliaryResult = async (h, promise) => { let result; promise.then(value => { result = value; }); await h.until(() => result !== undefined); return result; };
 
 const inventoryEntry = (h, handle) => h.fake.diagnostics().inventory.find(entry => entry.id === handle.id && entry.epoch === handle.epoch);
@@ -785,7 +785,7 @@ test('a shared scheduler dispatches each lease to the renderer that owns its vie
 });
 
 test('outstanding accounting retires completion before synchronous replenishment and includes readback copy-out', async () => {
-  const h = await rig({ holdReadbacks: true }), r = request(directScene(), generation(), 'settled', { width: 1024, height: 256 });
+  const h = await rig({ holdReadbacks: true }), r = request(directScene(), generation(), 'settled', { width: 1024, height: 512 });
   let peak = 0;
   const unsubscribe = h.scheduler.subscribe(() => { peak = Math.max(peak, h.scheduler.snapshot().outstanding); });
   const job = h.renderer.render(r);
@@ -1114,7 +1114,7 @@ test('F3 4K phases span bounded windows with exact coverage', async () => {
   }
   assert.equal(plan.exhausted(), true); assert.equal(rows.size, 8);
   for (const [phase, bands] of rows) {
-    assert.ok(windows.get(phase) >= 2, `${phase} spans multiple windows`);
+    if (['trace', 'normals', 'shade', 'accumulate', 'display'].includes(phase)) assert.ok(windows.get(phase) >= 2, `${phase} spans multiple compute windows`);
     for (const intervals of bands) {
       let end = 0;
       for (const [a, b] of intervals.sort((a, b) => a[0] - b[0])) { assert.equal(a, end, `${phase} has no holes or overlaps`); end = b; }
@@ -1127,7 +1127,7 @@ test('F3 4K phases span bounded windows with exact coverage', async () => {
 test('F3 adaptation respects both band edges after eight completions', async () => {
   for (const [elapsed, replacements] of [[20, 1], [15.2, 0], [3.2, 0], [4.8, 0]]) {
     const { h, plan } = await structuralPlan({ width: 1024, height: 1024 });
-    for (let i = 0; i < 8; i++) advance(plan, plan.next(), i === 7 ? elapsed : 8);
+    for (let i = 0; i < 8; i++) advance(plan, plan.next(), elapsed);
     assert.equal(plan.diagnostics().replacements, replacements, `eighth completion at ${elapsed / 8}x`);
     let next;
     do { next = plan.next(); if (next.batch.pass === 'trace') advance(plan, next); } while (next.batch.pass === 'trace');
@@ -1501,7 +1501,9 @@ test('draft diagnostics use one packed readback with exact status normal and rec
 test('tile learning persists by workload and pass and permits compute regions taller than 256 rows', async () => {
   const h = await rig();
   async function renderFast(model, revision) {
-    const r = request(scene({ model }), generation(revision), 'draft', { width: 1280, height: 720 });
+    const base = scene({ model });
+    const direct = changed(base, { appearance: { ...base.appearance, lightingQuality: 'direct' }, sampling: { ...base.sampling, targetSamples: 1 } });
+    const r = request(direct, generation(revision), 'settled', { width: 640, height: 360 });
     let result; h.renderer.render(r).done.then(value => { result = value; });
     for (let i = 0; !result && i < 1000; i++) {
       await flush(); const pending = h.tickets.find(t => t.pending);
@@ -1534,4 +1536,99 @@ test('pending navigation requests allocate targets only after the active draft r
   for (const job of skipped.slice(0, -1)) assert.equal((await job.done).outcome, 'superseded');
   await h.finish(first); assert.equal((await h.finish(skipped.at(-1))).outcome, 'completed');
   assert.equal(h.targets.length, allocated + 1); h.renderer.destroy();
+});
+
+test('B15-R10-F1 constant 4 ms fences and a short tail do not collapse persisted tiles', async () => {
+  const h = await rig({ structural: true });
+  try {
+    for (let revision = 1; revision <= 6; revision++) {
+      const r = request(scene(), generation(revision), 'draft', { width: 1280, height: 720 });
+      h.renderer.render(r); await flush();
+      const plan = h.plans.find(p => p.request.jobId === r.jobId);
+      const first = plan.next();
+      assert.ok(first.batch.region.height >= 51, `request ${revision} must not inherit tail-biased 12-row tiles`);
+      advance(plan, first, 4);
+      while (!plan.exhausted()) advance(plan, plan.next(), 4);
+    }
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R10-F2 drafts group ordered passes per region and drain two leases before cancellation', async () => {
+  const h = await rig();
+  try {
+    const r = request(scene(), generation(), 'draft', { width: 1280, height: 720 });
+    const job = h.renderer.render(r);
+    await h.until(() => h.tickets.filter(t => t.pending).length === 2);
+    const work = h.tickets.filter(t => t.pending);
+    assert.ok(work.every(t => Array.isArray(t.desc.passes)), 'each lease carries an entire draft group');
+    for (const t of work) assert.deepEqual(t.desc.passes.map(p => p.pass), ['trace', 'normals', 'shade', 'accumulate', 'display']);
+    const before = h.submissions.length;
+    const cancellation = h.renderer.cancel(job.jobId); let drained = false;
+    cancellation.done.then(() => { drained = true; }); await flush(); assert.equal(drained, false);
+    await h.complete(); assert.equal(drained, false);
+    await h.complete(); assert.equal((await job.done).outcome, 'cancelled');
+    assert.equal(h.submissions.length, before); assert.equal(h.scheduler.snapshot().outstanding, 0);
+    assert.equal(h.publications.length, 0);
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R10-F4 4K texture readbacks use 256 rows independently of compute tile learning', async () => {
+  const { h, plan } = await structuralPlan({ width: 3840, height: 2160 });
+  try {
+    const reads = [];
+    while (!plan.exhausted()) {
+      const op = plan.next(); assert.ok(op);
+      if (op.kind === 'readback') reads.push(op);
+      advance(plan, op, 4);
+    }
+    assert.equal(reads.length, 27, 'nine copies per field, three fields per direct sample');
+    for (const field of ['status', 'normal', 'lightingStatus']) {
+      const regions = reads.filter(op => op.descriptor.fields[0] === field).map(op => op.descriptor.region);
+      assert.deepEqual(regions.map(r => r.height), [...Array(8).fill(256), 112]);
+      assert.ok(regions.every(r => r.width === 3840));
+    }
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R10-F2 all draft regions complete before diagnostics and compatible reuse omits only geometry', async () => {
+  const h = await rig();
+  try {
+    const first = request(scene(), generation(), 'draft', { width: 1280, height: 720 });
+    const result = await h.finish(h.renderer.render(first), 'newest');
+    assert.equal(result.outcome, 'completed');
+    const operations = h.submissions.filter(s => s.desc.identity.jobId === first.jobId);
+    const groups = operations.filter(s => s.desc.passes);
+    assert.equal(groups.length, 8); assert.equal(operations.length, 10);
+    assert.equal(result.report.operations.byPass['draft-group'].submitted, 8);
+    assert.deepEqual(operations.slice(-2).map(s => s.method), ['readback', 'present']);
+    const cover = new Uint8Array(pixelsIn(first));
+    for (const { desc } of groups) {
+      const { x, y, width, height } = desc.region;
+      for (let row = y; row < y + height; row++) for (let col = x; col < x + width; col++) cover[row * first.quality.internalSize.width + col]++;
+    }
+    assert.ok(cover.every(n => n === 1));
+    const second = request(first.sceneSnapshot, { ...first.generation, viewRevision: 2, appearanceRevision: 2 }, 'draft', { width: 1280, height: 720 });
+    assert.equal((await h.finish(h.renderer.render(second))).outcome, 'completed');
+    const reused = h.submissions.filter(s => s.desc.identity.jobId === second.jobId && s.desc.passes);
+    assert.ok(reused.length); assert.ok(reused.every(s => s.desc.passes.map(p => p.pass).join(',') === 'shade,accumulate,display'));
+    assert.equal(h.publications.at(-1).geometryRequestId, first.requestId);
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R10-F1 clipped tiles and isolated queue delays cannot bias comparable tile calibration', async () => {
+  const h = await rig({ structural: true });
+  try {
+    for (let revision = 1; revision <= 3; revision++) {
+      const r = request(scene(), generation(revision), 'draft', { width: 1280, height: 1440 });
+      h.renderer.render(r); await flush(); const plan = h.plans.find(p => p.request.jobId === r.jobId);
+      let n = 0;
+      while (!plan.exhausted()) {
+        const op = plan.next();
+        if (op.kind === 'batch') assert.ok(op.batch.region.height >= 51 || op.batch.region.y + op.batch.region.height === 720);
+        // Queue fences include unrelated preceding work: one delay at the eighth completion must not override ordinary
+        // 8 ms observations or subdivide the remaining pending regions.
+        advance(plan, op, n++ % 8 === 7 ? 40 : 8);
+      }
+    }
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
 });

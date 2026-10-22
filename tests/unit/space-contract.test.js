@@ -313,3 +313,31 @@ test('adaptive replacement must retain every original pending operation id', () 
   const reserved = plan.next(); invalid(() => plan.advance(reserved, { epoch: 1, elapsedMs: 1 }));
   assert.equal(plan.exhausted(), false); assert.equal(plan.next(), null);
 });
+
+test('B15-R10-F2 BatchGroup snapshots members and rejects mismatched identities regions samples and pass order', () => {
+  assert.equal(typeof backendModule.createBatchGroup, 'function');
+  const base = batchInput();
+  const member = pass => ({ ...base, pass, bounds: { ...base.bounds, shadowRays: 0, shadowSteps: 0, aoSamples: 0 } });
+  const input = { identity: base.identity, region: base.region, sample: { ...base.sample, index: 0 },
+    passes: ['trace', 'normals', 'shade', 'accumulate', 'display'].map(pass => ({ ...member(pass), sample: { ...base.sample, index: 0 } })) };
+  const group = backendModule.createBatchGroup(input);
+  assert.ok(Object.isFrozen(group.passes)); assert.ok(Object.isFrozen(group.passes[0].uniforms));
+  input.passes[0].uniforms = { changed: true }; assert.notDeepEqual(group.passes[0].uniforms, input.passes[0].uniforms);
+  for (const patch of [{ identity: { ...base.identity, jobId: 'foreign' } }, { region: { ...base.region, x: 1 } }, { sample: { ...base.sample, index: 1 } }]) {
+    invalid(() => backendModule.createBatchGroup({ ...group, passes: group.passes.map((p, i) => i === 1 ? { ...p, ...patch } : p) }));
+  }
+  invalid(() => backendModule.createBatchGroup({ ...group, passes: [...group.passes].reverse() }));
+  invalid(() => backendModule.createBatchGroup({ ...group, passes: group.passes.slice(1) }));
+  assert.equal(backendModule.createBatchGroup({ ...group, passes: group.passes.slice(2) }).passes.length, 3);
+  const op = { id: 'group', dependsOn: [], kind: 'batch', batch: group };
+  invalid(() => createJobPlan({ request: request(), operations: [op] }));
+  const plan = createJobPlan({ request: { ...request(), quality: { preview: true } }, operations: [op] });
+  const reserved = plan.next(); assert.equal(reserved.batch.passes.length, 5); assert.equal(plan.next(), null);
+  plan.advance(reserved, { epoch: 1, elapsedMs: 8, targetMs: 8 }); assert.equal(plan.exhausted(), true);
+});
+
+test('B15-R10-F3 BackendError preserves the acquisition cause without changing its boundary code', () => {
+  const cause = Object.assign(new Error('adapter unavailable'), { code: 'no-adapter' });
+  const error = new BackendError('unavailable', 'acquisition failed', { cause });
+  assert.equal(error.cause, cause); assert.equal(error.code, 'unavailable');
+});

@@ -1570,7 +1570,7 @@ async function classifyCamerasInPage(cases) {
   const { TRACING_VERSION } = await import('/src/space/render/webgpu/passes.js');
   const points = [], rows = [], viewId = 'space-b09c-classification';
   const proxy = { ...backend, submitBatch(batch, options) {
-    if (batch.pipelineId.startsWith('points-')) points.push({ pipelineId: batch.pipelineId,
+    if (batch.pipelineId?.startsWith('points-')) points.push({ pipelineId: batch.pipelineId,
       cap: batch.uniforms.cap, iterations: batch.bounds.iterations });
     return backend.submitBatch(batch, options);
   } };
@@ -1817,12 +1817,15 @@ async function rendererJobInPage(spec) {
     async configureTargets(description) { const targets = await backend.configureTargets(description); if (spec.poison) await poison(targets); return targets; },
     release(handle) { kept.push(handle); },
     submitBatch(batch, options) {
-      const b = spec.override && batch.pass === 'shade' && batch.uniforms.lightingStage === 1 ? { ...batch, uniforms: { ...batch.uniforms, ...spec.override } } : batch;
-      batches.push({ pipelineId: b.pipelineId, pass: b.pass, sample: b.sample.index, region: b.region, ordinal: presents,
-        lightingStage: b.uniforms.lightingStage ?? null, shadowSteps: b.uniforms.shadowSteps ?? null, aoSamples: b.uniforms.aoSamples ?? null, shadowRays: b.uniforms.shadowRays ?? null,
-        maxIterations: b.uniforms.maxIterations ?? null, toleranceFactor: b.uniforms.toleranceFactor ?? null });
-      if (b.pass === 'accumulate') lastAccumulate = { next: b.outputs.next, flags: b.outputs.accumulationFlags };
-      return backend.submitBatch(b, options);
+      const inspect = batch => {
+        const b = spec.override && batch.pass === 'shade' && batch.uniforms.lightingStage === 1 ? { ...batch, uniforms: { ...batch.uniforms, ...spec.override } } : batch;
+        batches.push({ pipelineId: b.pipelineId, pass: b.pass, sample: b.sample.index, region: b.region, ordinal: presents,
+          lightingStage: b.uniforms.lightingStage ?? null, shadowSteps: b.uniforms.shadowSteps ?? null, aoSamples: b.uniforms.aoSamples ?? null, shadowRays: b.uniforms.shadowRays ?? null,
+          maxIterations: b.uniforms.maxIterations ?? null, toleranceFactor: b.uniforms.toleranceFactor ?? null });
+        if (b.pass === 'accumulate') lastAccumulate = { next: b.outputs.next, flags: b.outputs.accumulationFlags };
+        return b;
+      };
+      return backend.submitBatch(batch.passes ? { ...batch, passes: batch.passes.map(inspect) } : inspect(batch), options);
     },
     readback(desc, options) {
       const ticket = backend.readback(desc, options), ordinal = presents, field = desc.fields[0];
@@ -1895,15 +1898,30 @@ async function passesInPage(spec) {
     const k = (pass.length * 7 + sample * 3) % list.length, rotated = [...list.slice(k), ...list.slice(0, k)];
     return sample % 2 ? rotated.reverse() : rotated;
   };
+  const groups = new Map();
   const run = async (pass, pipelineId, sample, uniformsFor, inputs, outputs) => {
-    const tickets = bandsFor(pass, sample).map(region => backend.submitBatch({ identity: s.identity(jobId), pipelineId, pass, region,
-      sample: { sequence: 'atlas-aa-v1', seed: spec.seed, index: sample }, bounds: bounds(region), inputs, outputs, uniforms: uniformsFor(region) }, s.lease(jobId)).done);
+    const batches = bandsFor(pass, sample).map(region => ({ identity: s.identity(jobId), pipelineId, pass, region,
+      sample: { sequence: 'atlas-aa-v1', seed: spec.seed, index: sample }, bounds: bounds(region), inputs, outputs, uniforms: uniformsFor(region) }));
+    if (spec.groupedDraft) {
+      for (const batch of batches) {
+        const key = JSON.stringify(batch.region);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(batch);
+      }
+      return;
+    }
+    const tickets = batches.map(batch => backend.submitBatch(batch, s.lease(jobId)).done);
     const done = await Promise.all(tickets);
     const failed = done.filter(d => d.outcome !== 'completed');
     if (failed.length) throw new Error(`${pipelineId} sample ${sample}: ${failed[0].outcome} ${failed[0].reason}`);
   };
   const out = { perSample: [] }; let diagnosticBuffer;
   try {
+    const stride = spec.modelId === 'quaternion-julia' ? 3 : 2, byteLength = W * H * stride * 4;
+    if (spec.groupedDraft) {
+      if (spec.samples !== 1 || spec.perSample || !spec.packedDiagnostics || spec.geometry === 'values') throw new Error('group equivalence requires a one-sample packed draft');
+      diagnosticBuffer = backend.allocate({ name: 'draft-packet-equivalence', bytes: byteLength, usage: 'storage' });
+    }
     for (let sample = 0; sample < spec.samples; sample++) {
       const sampling = { seed: spec.seed, sampleIndex: sample }, common = { modelId: spec.modelId, camera: spec.camera, effective: spec.effective, internalSize: size, sampling, profile };
       if (spec.geometry === 'values') {
@@ -1931,17 +1949,30 @@ async function passesInPage(spec) {
     }
     const last = spec.samples - 1, accumulation = h.accumulation[(last + 1) & 1];
     const lightingStage = spec.viewMode === 'shaded' ? appearance.LIGHTING_STAGE_CODES[lighting.stage] : appearance.LIGHTING_STAGE_CODES.diagnostic;
-    await run('display', 'display_band', last, region => appearance.displayUniforms({ region, lightingStage, viewMode: appearance.VIEW_MODE_CODES[spec.viewMode] }),
-      { accumulation, accumulationFlags: h.accumulationFlags }, { display: h.display });
+    await run('display', spec.groupedDraft ? 'display_draft_band' : 'display_band', last,
+      region => ({ ...appearance.displayUniforms({ region, lightingStage, viewMode: appearance.VIEW_MODE_CODES[spec.viewMode] }), ...(spec.groupedDraft ? { diagnosticStride: stride } : {}) }),
+      { accumulation, accumulationFlags: h.accumulationFlags, ...(spec.groupedDraft ? { status: h.status, normal: h.normal, recovery: h.recovery, draftDiagnostics: diagnosticBuffer } : {}) },
+      { display: h.display, ...(spec.groupedDraft ? { draftDiagnostics: diagnosticBuffer } : {}) });
+    if (spec.groupedDraft) {
+      const pending = [...groups.values()]; out.groupSizes = pending.map(members => members.length);
+      // At most two whole-group leases in flight. The same descriptors and
+      // permuted regions as the single-pass control, with no intermediate fences.
+      for (let i = 0; i < pending.length; i += 2) {
+        const done = await Promise.all(pending.slice(i, i + 2).map(members => backend.submitBatch(s.contract.createBatchGroup({
+          identity: members[0].identity, region: members[0].region, sample: members[0].sample, passes: members }), s.lease(jobId)).done));
+        if (done.some(d => d.outcome !== 'completed')) throw new Error(`draft group failed: ${JSON.stringify(done)}`);
+      }
+    }
     const full = { x: 0, y: 0, width: W, height: H };
     out.display = s.base64(await s.read(h.display, full, 'display', jobId));
     out.accumulation = s.base64(await s.read(accumulation, full, 'accumulation', jobId));
     out.flags = s.base64(await s.read(h.accumulationFlags, full, 'accumulationFlags', jobId));
     if (spec.packedDiagnostics) {
-      const stride = spec.modelId === 'quaternion-julia' ? 3 : 2, byteLength = W * H * stride * 4;
-      diagnosticBuffer = backend.allocate({ name: 'draft-packet-equivalence', bytes: byteLength, usage: 'storage' });
-      await run('display', 'display_draft_band', last, region => ({ ...appearance.displayUniforms({ region, lightingStage, viewMode: appearance.VIEW_MODE_CODES[spec.viewMode] }), diagnosticStride: stride }),
-        { accumulation, accumulationFlags: h.accumulationFlags, status: h.status, normal: h.normal, recovery: h.recovery, draftDiagnostics: diagnosticBuffer }, { display: h.display, draftDiagnostics: diagnosticBuffer });
+      if (!spec.groupedDraft) {
+        diagnosticBuffer = backend.allocate({ name: 'draft-packet-equivalence', bytes: byteLength, usage: 'storage' });
+        await run('display', 'display_draft_band', last, region => ({ ...appearance.displayUniforms({ region, lightingStage, viewMode: appearance.VIEW_MODE_CODES[spec.viewMode] }), diagnosticStride: stride }),
+          { accumulation, accumulationFlags: h.accumulationFlags, status: h.status, normal: h.normal, recovery: h.recovery, draftDiagnostics: diagnosticBuffer }, { display: h.display, draftDiagnostics: diagnosticBuffer });
+      }
       out.packedDisplay = s.base64(await s.read(h.display, full, 'display', jobId));
       out.packet = s.base64(await s.read(diagnosticBuffer, { x: 0, y: 0, width: byteLength, height: 1 }, 'draftDiagnostics', jobId));
       out.independent = {};
@@ -2878,16 +2909,34 @@ async function runRendering({ page }) {
   const patternRuns = {};
   const independent = { modelId: 'sphere', camera: camera.lookAt({ ...SPACE_DEFAULTS.camera, positionLocal: [0, 0, 0], focusLocal: [0, 0, -1] }, [0, 0, -1]), effective: {},
     internalSize: { width: 24, height: 8 }, profile: patternProfile, lighting: directLighting, seed: 1, geometry: 'values', bandRows: 3, order: 'permuted' };
-  const packedRuns = [];
-  for (const modelId of ['sphere', 'quaternion-julia']) packedRuns.push(await direct({ ...independent, label: `packed-${modelId}`, modelId, effective: effectiveParameters(modelId, createSpaceScene({ model: modelId }).parameters).effective,
-    geometry: 'pattern', internalSize: patternSize, viewMode: 'shaded', samples: 1, packedDiagnostics: true, recoveryPattern: modelId === 'quaternion-julia' }));
+  const packedRuns = [], groupedRuns = [], tracedPairs = [];
+  for (const modelId of ['sphere', 'quaternion-julia']) {
+    const spec = { ...independent, label: `packed-${modelId}`, modelId, effective: effectiveParameters(modelId, createSpaceScene({ model: modelId }).parameters).effective,
+      geometry: 'pattern', internalSize: patternSize, viewMode: 'shaded', samples: 1, packedDiagnostics: true, recoveryPattern: modelId === 'quaternion-julia' };
+    packedRuns.push(await direct(spec));
+    groupedRuns.push(await direct({ ...spec, label: `grouped-pattern-${modelId}`, groupedDraft: true }));
+    // Five-pass groups exercise actual geometry production; the three-pass
+    // pattern cases preserve varied diagnostics, including nonzero recovery.
+    const traced = { ...spec, geometry: 'trace', recoveryPattern: false,
+      camera: camera.lookAt({ ...SPACE_DEFAULTS.camera, positionLocal: [0, 0, 4], focusLocal: [0, 0, 0] }, [0, 0, 0]) };
+    tracedPairs.push([await direct({ ...traced, label: `ungrouped-trace-${modelId}` }),
+      await direct({ ...traced, label: `grouped-trace-${modelId}`, groupedDraft: true })]);
+  }
   const { checkPackedDiagnostics } = await import('./support/packed-diagnostics.mjs');
   check(APPEARANCE_PASSES[9], () => packedRuns.map((run, index) => {
+    const compare = (ungrouped, grouped, members) => {
+      assert.ok(grouped.groupSizes.length > 1, 'equivalence spans multiple regions');
+      assert.ok(grouped.groupSizes.every(n => n === members));
+      for (const field of ['display', 'packedDisplay', 'packet', 'accumulation', 'flags']) assert.equal(grouped[field], ungrouped[field], `grouped ${field} bytes match single-pass execution`);
+      assert.deepEqual(grouped.independent, ungrouped.independent, 'all independent diagnostic texture bytes match');
+    };
+    compare(run, groupedRuns[index], 3); compare(...tracedPairs[index], 5);
     const recovery = index === 1, raw = run.independent;
     // B15-R8-F5: the quaternion run seeds varied nonzero recovery words (fixture-recovery), so a
     // packet that omits or misplaces recovery cannot match; counts are asserted exactly.
-    return checkPackedDiagnostics({ size: patternSize, recovery, packet: bytes(run.packet), status: bytes(raw.status), normal: bytes(raw.normal),
-      lightingStatus: bytes(raw.lightingStatus), recoveryWords: recovery ? bytes(raw.recovery) : null, display: bytes(run.display), packedDisplay: bytes(run.packedDisplay) });
+    return { ...checkPackedDiagnostics({ size: patternSize, recovery, packet: bytes(run.packet), status: bytes(raw.status), normal: bytes(raw.normal),
+      lightingStatus: bytes(raw.lightingStatus), recoveryWords: recovery ? bytes(raw.recovery) : null, display: bytes(run.display), packedDisplay: bytes(run.packedDisplay) }),
+      groupedEquivalence: { patternGroups: groupedRuns[index].groupSizes.length, tracedGroups: tracedPairs[index][1].groupSizes.length, memberCounts: [3, 5] } };
   }));
   const linear = await direct({ ...independent, label: 'known-linear', viewMode: 'shaded', samples: 2, normalAvailable: true });
   check(APPEARANCE_PASSES[7], () => {

@@ -12,6 +12,7 @@ const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 // emulate or validate GPU shaders. GPU equivalence is checked by the headed suite.
 const stagedDraftBuffers = new WeakSet();
 export function stageDraftDiagnostics(fake, batch, { statusWords = [0], normals = [false], recoveryWords = [0] } = {}) {
+  if (batch.passes) { batch.passes.forEach(member => stageDraftDiagnostics(fake, member, { statusWords, normals, recoveryWords })); return; }
   if (!batch.outputs?.draftDiagnostics || stagedDraftBuffers.has(batch.outputs.draftDiagnostics)) return;
   const stride = batch.uniforms.diagnosticStride;
   const bytes = fake.diagnostics().inventory.find(r => r.id === batch.outputs.draftDiagnostics.id).bytes;

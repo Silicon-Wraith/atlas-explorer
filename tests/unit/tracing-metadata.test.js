@@ -144,7 +144,7 @@ test('the renderer drives the tracing descriptors through the B09 pass sequence 
     const batches = [], tickets = [];
     const track = (method, desc, options) => { const ticket = fake[method](desc, options); const item = { ticket, pending: true }; tickets.push(item); ticket.done.then(() => { item.pending = false; }); return ticket; };
     const backend = { ...fake,
-      submitBatch(batch, options) { stageDraftDiagnostics(fake, batch); batches.push(batch); return track('submitBatch', batch, options); },
+      submitBatch(batch, options) { stageDraftDiagnostics(fake, batch); batches.push(...(batch.passes ?? [batch])); return track('submitBatch', batch, options); },
       readback(desc, options) { if (desc.fields.includes('probe')) fake.stage(desc.source, new Uint8Array(Uint32Array.of(0x41544c53).buffer)); return track('readback', desc, options); },
       present(desc, options) { return track('present', desc, options); } };
     const scheduler = createScheduler({ clock, makeAdmission: createAdmission, setTimer: clock.schedule, clearTimer: clock.clear });

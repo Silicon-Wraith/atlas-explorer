@@ -350,8 +350,8 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
         await preparing;
       } catch (error) {
         if (activation !== token || destroyed) return Object.freeze({ outcome: 'superseded' });
-        unavailableReason = message(error);
-        showUnavailable(unavailableReason, error.code);
+        unavailableReason = webgpuUnavailable(message(error), error.cause?.code ?? error.code);
+        showUnavailable(unavailableReason);
         return Object.freeze({ outcome: 'unavailable', reason: unavailableReason });
       }
     }

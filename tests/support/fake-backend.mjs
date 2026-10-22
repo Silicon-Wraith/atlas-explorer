@@ -1,7 +1,7 @@
 // Deterministic test adapter for the §9 boundary. It performs no rendering and makes no
 // physical-device claims. Queue completion and readback copy-out are separate events.
 import { deepFreeze, isPlainObject } from '../../src/shared/scene.js';
-import { BackendError, createBatch, createPipelineSet, TARGET_LAYOUT_ID, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../../src/space/render/backend.js';
+import { BackendError, createBatchSubmission, createPipelineSet, TARGET_LAYOUT_ID, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../../src/space/render/backend.js';
 
 const invalid = message => { throw new BackendError('invalid-descriptor', message); };
 const count = (value, label, min = 0) => {
@@ -286,22 +286,26 @@ export function createFakeBackend({ clock, cap = TRACKED_ALLOCATION_CAP, limits 
       return replacement;
     },
     submitBatch(input, options) {
-      const batch = createBatch(input), consume = admissionFor(batch.identity, options);
-      const pipeline = pipelines.get(batch.pipelineId); if (!pipeline) throw new BackendError('preparation-failed', `pipeline ${batch.pipelineId} is not prepared`);
-      if (pipeline.kind !== 'compute') invalid('submitBatch requires a compute pipeline; present uses a render pipeline');
-      validateBindings(batch, pipeline);
-      const handles = [...Object.values(batch.inputs), ...Object.values(batch.outputs)];
-      for (const handle of handles) {
-        const resource = lookup(handle);
-        if (resource.width && (batch.region.x + batch.region.width > resource.width || batch.region.y + batch.region.height > resource.height)) invalid('batch region outside resource');
+      const submission = createBatchSubmission(input), consume = admissionFor(submission.identity, options);
+      const handles = [], uniformDescriptions = [];
+      for (const batch of submission.passes ?? [submission]) {
+        const pipeline = pipelines.get(batch.pipelineId); if (!pipeline) throw new BackendError('preparation-failed', `pipeline ${batch.pipelineId} is not prepared`);
+        if (pipeline.kind !== 'compute') invalid('submitBatch requires a compute pipeline; present uses a render pipeline');
+        validateBindings(batch, pipeline);
+        const memberHandles = [...Object.values(batch.inputs), ...Object.values(batch.outputs)];
+        handles.push(...memberHandles);
+        for (const handle of memberHandles) {
+          const resource = lookup(handle);
+          if (resource.width && (batch.region.x + batch.region.width > resource.width || batch.region.y + batch.region.height > resource.height)) invalid('batch region outside resource');
+        }
+        const bytes = pipeline.uniformLayout.byteLength;
+        if (bytes) uniformDescriptions.push(allocationDescription({ name: 'uniforms', bytes }));
       }
-      const bytes = pipeline.uniformLayout.byteLength;
-      if (bytes) { allocationDescription({ name: 'uniforms', bytes }); reservation(bytes); }
+      reservation(uniformDescriptions.reduce((sum, desc) => sum + desc.bytes, 0));
       consume();
-      const uniforms = bytes ? createResource({ name: 'uniforms', bytes }) : null;
-      if (uniforms) handles.push(uniforms);
-      const item = makeTicket(batch.identity, handles, { batch });
-      if (uniforms) release(uniforms); return item.ticket;
+      const uniforms = uniformDescriptions.map(desc => createResource(desc));
+      const item = makeTicket(submission.identity, [...handles, ...uniforms], { batch: submission });
+      uniforms.forEach(release); return item.ticket;
     },
     readback(desc, options) {
       record(desc, ['identity', 'source', 'region', 'fields'], 'readback');

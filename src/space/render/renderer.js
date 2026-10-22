@@ -15,7 +15,7 @@ import { appearanceKey, accumulationKey, sampleKey } from './keys.js';
 import { unpackStatus, unpackLightingStatus, POINT_STATUS, STATUS_LABELS } from './status.js';
 import { createOutcomeMasks } from './outcome-masks.js';
 import { RECOVERING_FAMILIES } from './webgpu/passes.js';
-import { assertBackend, BackendError, createAdmission, createBatch, createJobPlan, createPickRequest, createPipelineSet,
+import { assertBackend, BackendError, createAdmission, createBatch, createBatchGroup, createJobPlan, createPickRequest, createPipelineSet,
   sampleJitter, TARGET_LAYOUT_ID, TARGET_LAYOUT, LIGHTING_BOUNDS_DEFAULT } from './backend.js';
 
 const WINDOW_LIMIT = 256, INITIAL_PIXELS = 32768, MIN_PIXELS = INITIAL_PIXELS / 4, PREPARATION_BOUND_MS = 60000;
@@ -319,9 +319,18 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const sampleCount = full ? target + 1 : target;
     let ordinal = 0, phaseIndex = 0, x = 0, y = 0, rowHeight = 0, sequence = 0;
     let windowIds = [], windowLeft = 0, phaseEnded = false, completions = 0, replacements = 0, boundaries = 0, lastReplacement = 0;
+    let comparison = null;
     const metadata = new Map(), remaining = new Set();
-    const phases = ['trace', 'normals', 'shade', 'accumulate', 'display', ...(request.quality.preview ? ['draftDiagnostics'] : ['status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus']), 'present'];
-    const workload = (phase, quality) => canonicalJson({ epoch: request.generation.deviceEpoch, family: record.model.id, effective: record.effective, profile: quality.profile, phase, iteration: quality.iteration, tracing: quality.tracing, lighting: quality.lighting, viewMode: request.sceneSnapshot.appearance.viewMode });
+    const groupPhase = skipGeometry() ? 'draft-reuse' : 'draft-group';
+    const phases = request.quality.preview ? [groupPhase, 'draftDiagnostics', 'present']
+      : ['trace', 'normals', 'shade', 'accumulate', 'display', 'status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus', 'present'];
+    const workload = (phase, quality) => canonicalJson({ epoch: request.generation.deviceEpoch, family: record.model.id, effective: record.effective, profile: quality.profile, phase, width: quality.internalSize.width, iteration: quality.iteration, tracing: quality.tracing, lighting: quality.lighting, viewMode: request.sceneSnapshot.appearance.viewMode });
+    function tileBatch(phase, region, m) {
+      if (!phase.startsWith('draft-')) return batch(record, phase, region, m.sample, m.quality);
+      const passes = (phase === 'draft-reuse' ? ['shade', 'accumulate', 'display'] : ['trace', 'normals', 'shade', 'accumulate', 'display'])
+        .map(pass => batch(record, pass, region, m.sample, m.quality));
+      return createBatchGroup({ identity: identity(request), region, sample: passes[0].sample, passes });
+    }
     function meta() {
       const sample = full && ordinal > 0 ? ordinal - 1 : ordinal;
       return { ordinal, sample, quality: stageQuality(request, ordinal), last: ordinal === sampleCount - 1 };
@@ -331,9 +340,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     }
     function nextWindow(dependencies = []) {
       if (ordinal >= sampleCount) return [];
-      while (phaseIndex < 2 && skipGeometry()) phaseIndex++;
+      while (!request.quality.preview && phaseIndex < 2 && skipGeometry()) phaseIndex++;
       const phase = phases[phaseIndex], m = meta(), operations = [];
-      if (phase === 'trace' && x === 0 && y === 0) {
+      if (['trace', 'draft-group'].includes(phase) && x === 0 && y === 0) {
         record.targets = { ...record.targets, handles: { ...record.targets.handles, ...record.geometrySets[m.sample % record.geometrySets.length] } };
       }
       record.displayHandle = record.targets.handles[ordinal % 2 === 0 ? 'display' : 'retained'];
@@ -341,7 +350,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       phaseEnded = false;
       do {
         const id = `${request.jobId}/${++sequence}`;
-        let op;
+        let op, learning = null;
         if (phase === 'present') { op = { id, dependsOn: dependencies, kind: 'presentation', descriptor: { identity: identity(request), display: record.displayHandle } }; phaseEnded = true; }
         else if (phase === 'draftDiagnostics') {
           op = { id, dependsOn: dependencies, kind: 'readback', descriptor: { identity: identity(request), source: record.draftDiagnostics,
@@ -351,30 +360,32 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           const readback = ['status', 'recovery', 'normal', 'lightingStatus'].includes(phase), bpt = readback ? TARGET_LAYOUT[phase].bytesPerTexel : 0;
           // Texture copies retain their separate row/alignment limits. Compute is
           // sized only from this workload's completed evidence and device limits.
-          const pixels = readback ? INITIAL_PIXELS : tileLearning.get(workload(phase, m.quality))?.pixels ?? INITIAL_PIXELS;
+          const pixels = tileLearning.get(workload(phase, m.quality))?.pixels ?? INITIAL_PIXELS;
           const maxComputeSide = (acquisition?.limits?.maxComputeWorkgroupsPerDimension ?? 65535) * 8;
           const maxBuffer = acquisition?.limits?.maxBufferSize ?? 2 ** 28;
           const maxWidth = readback ? Math.floor(maxBuffer / 256) * 256 / bpt : maxComputeSide;
-          const tileWidth = Math.min(size.width, pixels, maxWidth);
+          const tileWidth = Math.min(size.width, readback ? maxWidth : Math.min(pixels, maxWidth));
           const width = Math.min(size.width - x, tileWidth);
           if (width < 1) throw new BackendError('allocation-failed', 'a single aligned readback row exceeds maxBufferSize');
-          if (x === 0) rowHeight = Math.min(size.height - y, Math.max(1, Math.floor(pixels / tileWidth)),
-            readback ? Math.min(256, Math.floor(maxBuffer / (Math.ceil(tileWidth * bpt / 256) * 256))) : maxComputeSide);
+          const nominalRows = readback ? Math.min(256, Math.floor(maxBuffer / (Math.ceil(tileWidth * bpt / 256) * 256)))
+            : Math.min(Math.max(1, Math.floor(pixels / tileWidth)), maxComputeSide);
+          if (x === 0) rowHeight = Math.min(size.height - y, nominalRows);
           const rows = rowHeight, region = { x, y, width, height: rows };
+          if (!readback && width === tileWidth && rows === nominalRows) learning = { pixels, area: width * rows };
           op = readback ? { id, dependsOn: dependencies, kind: 'readback', descriptor: { identity: identity(request), source: record.targets.handles[phase], region, fields: [phase] } }
-            : { id, dependsOn: dependencies, kind: 'batch', batch: batch(record, phase, region, m.sample, m.quality) };
+            : { id, dependsOn: dependencies, kind: 'batch', batch: tileBatch(phase, region, m) };
           x += width;
           if (x === size.width) { x = 0; y += rows; }
           if (y === size.height) phaseEnded = true;
         }
-        metadata.set(id, { ...m, phase }); remaining.add(id); operations.push(op);
+        metadata.set(id, { ...m, phase, learning }); remaining.add(id); operations.push(op);
       } while (!phaseEnded && operations.length < WINDOW_LIMIT);
       windowIds = operations.map(op => op.id); windowLeft = operations.length;
       return operations;
     }
     function phaseComplete() {
       const phase = phases[phaseIndex], m = meta();
-      if (phase === 'normals') {
+      if (phase === 'normals' || phase === 'draft-group') {
         record.geometry = { sample: m.sample, sampleKey: sampleKey(request.keys.geometryKey, request.quality.sampling, m.sample), serial: record.geometrySerial };
         record.geometryRequestId = request.requestId;
         // Only centre geometry is reusable as the first sample of a fresh sequence.
@@ -392,16 +403,34 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const initial = nextWindow();
     const plan = createJobPlan({ request, operations: initial, onAdvance(operation, evidence, pendingOperations) {
       completions++; remaining.delete(operation.id); windowLeft--;
-      // Learn even at phase boundaries (including an eight-tile phase). Learning
-      // changes future windows/jobs; only the split below replaces pending work.
+      // Fence latency includes queue/service overhead: it is an upper bound, not
+      // per-pixel shader time. Use the minimum of four comparable observations,
+      // never extrapolate a clipped edge or a subdivided tile, and ignore old-size
+      // completions after a sizing decision. A 0.5–2x band prevents timing jitter
+      // from continually resizing tiles. Persist decisions across windows/jobs.
       const elapsed = evidence.timestampMs ?? evidence.elapsedMs;
+      let sustainedSlow = false;
       if (operation.kind === 'batch') {
         const m = metadata.get(operation.id), key = workload(m.phase, m.quality), previous = tileLearning.get(key);
-        const cost = Math.max(0.001, elapsed) / operation.batch.bounds.pixels;
-        const msPerPixel = previous ? (previous.msPerPixel + cost) / 2 : cost;
-        const pixels = Math.min(INITIAL_PIXELS * 8, Math.max(MIN_PIXELS, Math.floor(evidence.targetMs / msPerPixel)));
-        tileLearning.delete(key); tileLearning.set(key, { pixels, msPerPixel });
-        if (tileLearning.size > 256) tileLearning.delete(tileLearning.keys().next().value);
+        const method = evidence.timestampMs === undefined ? 'queue-completion' : 'timestamp';
+        if (m.learning) {
+          const comparisonKey = `${key}:${m.learning.area}:${method}`;
+          if (comparison?.key !== comparisonKey) comparison = { key: comparisonKey, times: [] };
+          comparison.times.push(elapsed); if (comparison.times.length > 4) comparison.times.shift();
+          sustainedSlow = comparison.times.length === 4 && Math.min(...comparison.times) > 2 * evidence.targetMs;
+        }
+        if (m.learning && m.learning.pixels === (previous?.pixels ?? INITIAL_PIXELS)) {
+          const comparable = previous?.area === m.learning.area && previous?.method === method;
+          const observations = (comparable ? previous.observations : 0) + 1;
+          const minimumMs = Math.min(comparable ? previous.minimumMs : Infinity, Math.max(0.001, elapsed));
+          let pixels = m.learning.pixels;
+          if (observations >= 4 && (minimumMs <= evidence.targetMs / 2 || minimumMs > 2 * evidence.targetMs)) {
+            pixels = Math.min(INITIAL_PIXELS * 8, Math.max(MIN_PIXELS, Math.floor(m.learning.area * evidence.targetMs / minimumMs)));
+          }
+          tileLearning.delete(key); tileLearning.set(key, { pixels, area: m.learning.area, method,
+            observations: observations >= 4 ? 0 : observations, minimumMs: observations >= 4 ? Infinity : minimumMs });
+          if (tileLearning.size > 256) tileLearning.delete(tileLearning.keys().next().value);
+        }
       }
       if (windowLeft === 0) {
         if (phaseEnded) phaseComplete();
@@ -409,7 +438,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         if (!next.length) return undefined;
         boundaries++; replacements++; lastReplacement = completions; return [...pendingOperations, ...next];
       }
-      if (operation.kind !== 'batch' || elapsed <= 2 * evidence.targetMs || completions - lastReplacement < 8) return undefined;
+      if (!sustainedSlow || completions - lastReplacement < 8) return undefined;
       // A long slow stream must not recursively reduce every later pass to single
       // pixels. The tile budget bottoms at one quarter of its initial value;
       // row/edge rounding and readback limits may still require smaller regions.
@@ -424,9 +453,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       const firstRegion = { ...region, [dimension]: Math.floor(region[dimension] / 2) };
       const secondRegion = { ...region, [axis]: region[axis] + firstRegion[dimension], [dimension]: region[dimension] - firstRegion[dimension] };
       const m = metadata.get(candidate.id), childId = `${request.jobId}/${++sequence}`;
-      const child = { ...candidate, id: childId, batch: batch(record, candidate.batch.pass, firstRegion, m.sample, m.quality) };
-      const barrier = { ...candidate, dependsOn: [childId], batch: batch(record, candidate.batch.pass, secondRegion, m.sample, m.quality) };
-      metadata.set(childId, m); remaining.add(childId); windowIds.push(childId); windowLeft++;
+      const child = { ...candidate, id: childId, batch: tileBatch(m.phase, firstRegion, m) };
+      const barrier = { ...candidate, dependsOn: [childId], batch: tileBatch(m.phase, secondRegion, m) };
+      metadata.set(candidate.id, { ...m, learning: null }); metadata.set(childId, { ...m, learning: null }); remaining.add(childId); windowIds.push(childId); windowLeft++;
       replacements++; lastReplacement = completions;
       return pendingOperations.flatMap(op => op === candidate ? [child, barrier] : [op]);
     } });
@@ -443,7 +472,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const meta = record.metadata?.get(operation.id);
     record.builder?.mark('admitted'); record.builder?.mark('submitted');
     if (!record.internal && !aux && !record.result) {
-      const key = operation.kind === 'batch' ? descriptor.pass : operation.kind === 'readback' ? `readback:${descriptor.fields[0]}` : 'present';
+      const key = operation.kind === 'batch' ? descriptor.passes ? meta.phase : descriptor.pass : operation.kind === 'readback' ? `readback:${descriptor.fields[0]}` : 'present';
       record.operationMetrics ??= {};
       const metric = record.operationMetrics[key] ??= { submitted: 0, pixelsOrBytes: 0, maxRegionHeight: 0 };
       metric.submitted++; metric.pixelsOrBytes += descriptor.region ? descriptor.region.width * descriptor.region.height : 0;
@@ -477,7 +506,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         throw new BackendError('stale-epoch', 'request superseded before submission');
       }
       if (operation.kind === 'batch') {
-        if (operation.batch.pass === 'trace') {
+        if (operation.batch.pass === 'trace' || operation.batch.passes?.[0].pass === 'trace') {
           record.geometry = null; record.geometrySerial = ++serial;
           if (geometryCache?.handles.some(handle => handle === record.targets.handles.depth)) forgetGeometry();
         }

@@ -583,9 +583,8 @@ the production `allocate` method and `maxUniformBufferBindingSize` (Allocator an
   alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and
   B11 add their descriptors and preparation assertions as their shaders come into existence; B11
   verifies complete product prewarming before B14 enables interaction. Compute dispatch geometry is frozen ABI: every compute entry point declares `@workgroup_size(8, 8, 1)`; the backend dispatches `ceil(region.width / 8) × ceil(region.height / 8)` workgroups and injects nothing; each pass carries its region (origin, size) in its own uniform layout and bounds-checks invocations.
-- **Batches.** The descriptor and ticket of B00 (`identity`, `pipelineId`, `pass`, `region`,
-  `sample`, `bounds`, named `inputs`/`outputs` slots, `uniforms`); one command buffer per batch;
-  uniform data snapshotted before submission; storage owned by an outstanding ticket is never
+- **Batches.** Retain the single-pass B00 Batch. Draft requests may additionally use a BatchGroup containing an ordered list of validated Batch descriptors sharing identity, region and sample: trace → normals → shade → accumulate → display, with diagnostic packing in display. Trace and normals may be omitted only under the existing compatible-geometry rules. Each group uses one command buffer, one admission lease and one completion ticket. The 8 ms adaptation target applies to the whole group; the epoch limit remains two outstanding leases. Validate every member and retain all resources and uniform snapshots before submission. Failure, cancellation drain and loss apply to the whole ticket. Read back packed diagnostics after every region completes, then present after diagnostic validation. Preserve mathematical bounds, sample order, diagnostics and publication rules.
+  Uniform data snapshotted before submission; storage owned by an outstanding ticket is never
   overwritten; horizontal subdivision is the caller's (one lease per region); completion is `device.queue.onSubmittedWorkDone()`
   labelled `queue-completion` (a fence includes preceding queued work and is not isolated shader
   time); GPU timestamps are a separate measurement recorded only when granted, never a substitute

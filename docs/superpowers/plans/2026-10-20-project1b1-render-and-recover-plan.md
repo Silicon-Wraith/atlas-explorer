@@ -376,9 +376,8 @@ cites from Global Constraints); any later amendment changes both together.
   alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and
   B11 add their descriptors and preparation assertions as their shaders come into existence; B11
   verifies complete product prewarming before B14 enables interaction. Compute dispatch geometry is frozen ABI: every compute entry point declares `@workgroup_size(8, 8, 1)`; the backend dispatches `ceil(region.width / 8) × ceil(region.height / 8)` workgroups and injects nothing; each pass carries its region (origin, size) in its own uniform layout and bounds-checks invocations.
-- **Batches.** The descriptor and ticket of B00 (`identity`, `pipelineId`, `pass`, `region`,
-  `sample`, `bounds`, named `inputs`/`outputs` slots, `uniforms`); one command buffer per batch;
-  uniform data snapshotted before submission; storage owned by an outstanding ticket is never
+- **Batches.** Retain the single-pass B00 Batch. Draft requests may additionally use a BatchGroup containing an ordered list of validated Batch descriptors sharing identity, region and sample: trace → normals → shade → accumulate → display, with diagnostic packing in display. Trace and normals may be omitted only under the existing compatible-geometry rules. Each group uses one command buffer, one admission lease and one completion ticket. The 8 ms adaptation target applies to the whole group; the epoch limit remains two outstanding leases. Validate every member and retain all resources and uniform snapshots before submission. Failure, cancellation drain and loss apply to the whole ticket. Read back packed diagnostics after every region completes, then present after diagnostic validation. Preserve mathematical bounds, sample order, diagnostics and publication rules.
+  Uniform data snapshotted before submission; storage owned by an outstanding ticket is never
   overwritten; horizontal subdivision is the caller's (one lease per region); completion is `device.queue.onSubmittedWorkDone()`
   labelled `queue-completion` (a fence includes preceding queued work and is not isolated shader
   time); GPU timestamps are a separate measurement recorded only when granted, never a substitute
@@ -574,6 +573,8 @@ request, with full quality reported separately. The harness drives the page thro
 
 ---
 ### Task B00: Contracts, the fake backend and the frozen protocols (spec §7.1–7.5, §9, §11.4, §16)
+
+**B15 r10 amendment (2026-10-22):** Add `createBatchGroup({identity, region, sample, passes}) → frozen BatchGroup`; `passes` contains the member Batch descriptors. `submitBatch` and JobPlan batch operations accept either descriptor form. Test grouped-versus-ungrouped display and diagnostic equivalence, atomic validation, resource retention, two-lease accounting, cancellation and loss. Settled execution remains single-pass.
 
 **Owner:** Codex. **Reviewer:** Claude. **Depends on:** 1a T00, T03, T04, T06 (landed).
 
@@ -1242,6 +1243,8 @@ picking (B10/B12).
 
 ### Task B06: The WebGPU backend (spec §9, §8.3, §15; the annex)
 
+**B15 r10 amendment (2026-10-22):** Add `createBatchGroup({identity, region, sample, passes}) → frozen BatchGroup`; `passes` contains the member Batch descriptors. `submitBatch` and JobPlan batch operations accept either descriptor form. Test grouped-versus-ungrouped display and diagnostic equivalence, atomic validation, resource retention, two-lease accounting, cancellation and loss. Settled execution remains single-pass.
+
 **Owner:** Claude. **Reviewer:** Codex. **Depends on:** B00, B01.
 
 **Files:**
@@ -1449,6 +1452,8 @@ with the evidence; tolerances and floors are never relaxed.
 ---
 
 ### Task B09: The pass graph — requests, keys, accumulation, publication, reports (spec §7.1–7.4, §8.1, §8.2)
+
+**B15 r10 amendment (2026-10-22):** Add `createBatchGroup({identity, region, sample, passes}) → frozen BatchGroup`; `passes` contains the member Batch descriptors. `submitBatch` and JobPlan batch operations accept either descriptor form. Test grouped-versus-ungrouped display and diagnostic equivalence, atomic validation, resource retention, two-lease accounting, cancellation and loss. Settled execution remains single-pass.
 
 **Owner:** Codex. **Reviewer:** Claude. **Depends on:** B00, B02, B03, B07.
 

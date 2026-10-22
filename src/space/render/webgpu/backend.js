@@ -14,7 +14,7 @@
 //   - Target handles are caller-owned until release(): reconfiguration never releases the earlier set.
 //   - Compute dispatch geometry is frozen ABI: @workgroup_size(8, 8, 1), ceil(region / 8) workgroups;
 //     each pass carries its region in its own uniforms (the backend injects nothing).
-import { BackendError, createBatch, TARGET_LAYOUT_ID, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../backend.js';
+import { BackendError, createBatchSubmission, TARGET_LAYOUT_ID, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../backend.js';
 import { deepFreeze, isPlainObject } from '../../../shared/scene.js';
 import { acquireDevice, IDENTITY_FIELDS } from './device.js';
 import { createTrackedAllocator } from './allocator.js';
@@ -275,7 +275,7 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       acquiring = true;
       let result;
       try { result = await acquire({ onLost: observeLoss }); }
-      catch (error) { throw new BackendError('unavailable', `acquisition failed: ${message(error)}`); }
+      catch (error) { throw new BackendError('unavailable', `acquisition failed: ${message(error)}`, { cause: error }); }
       finally { acquiring = false; }
       const { device } = result;
       const discard = () => { try { device.destroy(); } catch { /* ignore */ } };
@@ -354,33 +354,46 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       return Object.freeze({ epoch, layoutId, internalSize, outputSize, handles: Object.freeze(handles), descriptions: Object.freeze(descriptions) });
     }),
     submitBatch: (input, options) => timed('submit', () => {
-      const batch = createBatch(input), consume = admissionFor(batch.identity, options);
-      const prepared = pipelines.get(batch.pipelineId);
-      if (!prepared) throw new BackendError('preparation-failed', `pipeline ${batch.pipelineId} is not prepared`);
-      if (prepared.descriptor.kind !== 'compute') invalid('submitBatch requires a compute pipeline; present uses the render pipeline');
-      validateBindings(batch, prepared.descriptor, handle => entry(handle));
-      const handles = [...new Set([...Object.values(batch.inputs), ...Object.values(batch.outputs)])];
-      for (const handle of handles) {
-        const { description } = entry(handle);
-        if (description.width !== undefined && (batch.region.x + batch.region.width > description.width || batch.region.y + batch.region.height > description.height)) invalid('batch region outside resource');
-      }
-      const groups = [Math.ceil(batch.region.width / WORKGROUP_SIZE[0]), Math.ceil(batch.region.height / WORKGROUP_SIZE[1])];
-      if (Math.max(...groups) > attempt.limits.maxComputeWorkgroupsPerDimension) invalid('batch region needs more workgroups than maxComputeWorkgroupsPerDimension; subdivide it');
-      const layout = prepared.descriptor.uniformLayout;
-      // The uniform snapshot is a counted, scoped allocation, reserved before the lease is consumed.
-      const uniforms = layout.byteLength ? createScoped(() => allocator.allocate({ name: `uniforms:${batch.pipelineId}`, bytes: layout.byteLength, usage: 'uniform', data: packUniforms(layout, batch.uniforms) })).value : null;
-      try { consume(); } catch (error) { if (uniforms) allocator.release(uniforms); throw error; }
-      const item = makeTicket(batch.identity, uniforms ? [...handles, uniforms] : handles, { batch });
-      if (uniforms) allocator.release(uniforms); // retiring at once; the ticket holds it
-      submit(item, batch.pipelineId, encoder => {
-        const entries = prepared.descriptor.bindings.map((binding, index) => {
-          if (binding.type === 'uniform-buffer' && layout.byteLength) return { binding: index, resource: { buffer: entry(uniforms, true).native } };
-          const native = entry(batch.inputs[binding.slot] ?? batch.outputs[binding.slot]).native;
-          return { binding: index, resource: binding.type.endsWith('buffer') ? { buffer: native } : native.createView() };
-        });
-        const bindGroup = attempt.device.createBindGroup({ label: batch.pipelineId, layout: prepared.pipeline.getBindGroupLayout(0), entries });
-        const pass = encoder.beginComputePass({ label: batch.pipelineId });
-        pass.setPipeline(prepared.pipeline); pass.setBindGroup(0, bindGroup); pass.dispatchWorkgroups(groups[0], groups[1]); pass.end();
+      const submission = createBatchSubmission(input), consume = admissionFor(submission.identity, options);
+      // Validate every member, including uniform packing, before allocating or
+      // consuming the sole lease. A bad final member cannot submit a prefix.
+      const members = (submission.passes ?? [submission]).map(batch => {
+        const prepared = pipelines.get(batch.pipelineId);
+        if (!prepared) throw new BackendError('preparation-failed', `pipeline ${batch.pipelineId} is not prepared`);
+        if (prepared.descriptor.kind !== 'compute') invalid('submitBatch requires a compute pipeline; present uses the render pipeline');
+        validateBindings(batch, prepared.descriptor, handle => entry(handle));
+        const handles = [...new Set([...Object.values(batch.inputs), ...Object.values(batch.outputs)])];
+        for (const handle of handles) {
+          const { description } = entry(handle);
+          if (description.width !== undefined && (batch.region.x + batch.region.width > description.width || batch.region.y + batch.region.height > description.height)) invalid('batch region outside resource');
+        }
+        const groups = [Math.ceil(batch.region.width / WORKGROUP_SIZE[0]), Math.ceil(batch.region.height / WORKGROUP_SIZE[1])];
+        if (Math.max(...groups) > attempt.limits.maxComputeWorkgroupsPerDimension) invalid('batch region needs more workgroups than maxComputeWorkgroupsPerDimension; subdivide it');
+        const layout = prepared.descriptor.uniformLayout;
+        const data = packUniforms(layout, batch.uniforms);
+        return { batch, prepared, handles, groups, layout, data };
+      });
+      const uniformDescriptions = members.filter(member => member.layout.byteLength).map(({ batch, layout, data }) =>
+        ({ name: `uniforms:${batch.pipelineId}`, bytes: layout.byteLength, usage: 'uniform', data }));
+      // Reserve all snapshots transactionally; hold all group resources until its
+      // one ticket settles, including creation scopes and cancellation/loss drain.
+      const uniforms = uniformDescriptions.length ? createScoped(() => allocator.transaction(uniformDescriptions)).value : [];
+      try { consume(); } catch (error) { uniforms.forEach(handle => allocator.release(handle)); throw error; }
+      const item = makeTicket(submission.identity, [...members.flatMap(member => member.handles), ...uniforms], { batch: submission });
+      uniforms.forEach(handle => allocator.release(handle)); // retiring; the ticket owns them
+      submit(item, submission.passes ? 'draft-group' : submission.pipelineId, encoder => {
+        let uniformIndex = 0;
+        for (const { batch, prepared, groups, layout } of members) {
+          const uniform = layout.byteLength ? uniforms[uniformIndex++] : null;
+          const entries = prepared.descriptor.bindings.map((binding, index) => {
+            if (binding.type === 'uniform-buffer' && layout.byteLength) return { binding: index, resource: { buffer: entry(uniform, true).native } };
+            const native = entry(batch.inputs[binding.slot] ?? batch.outputs[binding.slot]).native;
+            return { binding: index, resource: binding.type.endsWith('buffer') ? { buffer: native } : native.createView() };
+          });
+          const bindGroup = attempt.device.createBindGroup({ label: batch.pipelineId, layout: prepared.pipeline.getBindGroupLayout(0), entries });
+          const pass = encoder.beginComputePass({ label: batch.pipelineId });
+          pass.setPipeline(prepared.pipeline); pass.setBindGroup(0, bindGroup); pass.dispatchWorkgroups(groups[0], groups[1]); pass.end();
+        }
       });
       return item.ticket;
     }),
