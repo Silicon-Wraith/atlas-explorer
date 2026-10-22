@@ -157,3 +157,74 @@ test('a backend acquisition failure restores Plane only when that activation is 
     assert.equal(switcher.current(), 'plane');
   } finally { switcher.destroy(); space.destroy(); plane.destroy(); }
 });
+
+// B14-F2 (spec §15: first-use preparation is visible and the current view stays): the current workspace
+// stays visible while the next one prepares; only the latest successful activation commits visibility.
+test('Plane stays visible while Space prepares and Space becomes visible only once activated', async () => {
+  const log = [], pending = deferred();
+  const plane = scripted('plane', log), space = scripted('space', log, { results: [pending] });
+  const switcher = createWorkspaceSwitcher({ root: browser.document, workspaces: { plane, space }, initial: 'plane' });
+  const body = browser.document.body;
+  try {
+    await switcher.ready;
+    const toSpace = switcher.switchTo('space');
+    await sleep(0);
+    assert.equal(body.dataset.workspace, 'plane', 'Plane stays visible during preparation');
+    assert.equal(switcher.current(), 'plane');
+    assert.equal(body.dataset.workspacePending, 'space', 'the pending activation is marked for the preparation status');
+    assert.equal(plane.active, false, 'Plane input is closed while Space prepares');
+    pending.resolve({ outcome: 'activated' });
+    assert.deepEqual(await toSpace, { activeId: 'space', outcome: 'activated' });
+    assert.equal(body.dataset.workspace, 'space', 'Space is visible once it can present');
+    assert.equal(body.dataset.workspacePending, undefined, 'no pending activation remains');
+  } finally { switcher.destroy(); }
+});
+
+test('switching back during preparation never shows Space and reactivates Plane', async () => {
+  const log = [], pending = deferred(), seen = [];
+  const plane = scripted('plane', log), space = scripted('space', log, { results: [pending] });
+  const switcher = createWorkspaceSwitcher({ root: browser.document, workspaces: { plane, space }, initial: 'plane' });
+  const body = browser.document.body;
+  try {
+    await switcher.ready;
+    const toSpace = switcher.switchTo('space');
+    await sleep(0); seen.push(body.dataset.workspace);
+    log.length = 0;
+    assert.deepEqual(await switcher.switchTo('plane'), { activeId: 'plane', outcome: 'activated' });
+    seen.push(body.dataset.workspace);
+    assert.ok(log.includes('space.deactivate'), 'the pending Space activation is invalidated');
+    assert.ok(log.includes('plane.activate:3'), 'Plane is reactivated');
+    pending.resolve({ outcome: 'superseded' });
+    assert.equal((await toSpace).outcome, 'superseded');
+    seen.push(body.dataset.workspace);
+    assert.deepEqual(seen, ['plane', 'plane', 'plane'], 'Space was never shown');
+    assert.equal(body.dataset.workspacePending, undefined);
+    assert.equal(plane.active, true);
+  } finally { switcher.destroy(); }
+});
+
+test('a failed first-use preparation leaves Plane visible and reports the failure', async () => {
+  const toasts = [], shell = fakeShell(browser.document, { toasts });
+  let backend;
+  const realPlane = createPlaneWorkspace({ shell, discoveries: stubDiscoveries() });
+  const space = createSpaceWorkspace({ shell, backendFactory: ({ clock }) => {
+    backend = createDrivenFakeBackend({ clock }); backend.control.holdAcquisition();
+    backend.control.failNextAcquisition(Object.assign(new Error('the adapter was refused'), { code: 'no-webgpu' }));
+    return backend;
+  }, clock: () => performance.now(), env: { requestFrame: () => 0, cancelFrame() {}, viewportSize: () => ({ width: 8, height: 4 }), getGamepads: () => [] } });
+  const switcher = createWorkspaceSwitcher({ root: browser.document, workspaces: { plane: realPlane, space }, initial: 'plane', toast: shell.toast });
+  const body = browser.document.body;
+  try {
+    await switcher.ready;
+    const toSpace = switcher.switchTo('space');
+    await sleep(5);
+    assert.equal(body.dataset.workspace, 'plane', 'Plane stays visible while Space acquires its device');
+    backend.control.releaseAcquisition();
+    const result = await toSpace;
+    assert.deepEqual([result.activeId, result.outcome], ['plane', 'unavailable']);
+    assert.equal(body.dataset.workspace, 'plane');
+    assert.equal(body.dataset.workspacePending, undefined);
+    assert.ok(toasts.some(text => /^Space unavailable: .*adapter was refused/.test(text)), `reported: ${toasts.join(' | ')}`);
+    assert.equal(realPlane.isActive(), true, 'Plane is active again');
+  } finally { switcher.destroy(); space.destroy(); realPlane.destroy(); }
+});

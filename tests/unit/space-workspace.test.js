@@ -213,3 +213,63 @@ test('a device loss before the first publication resubmits the current request o
     assert.deepEqual(h.space.inspection.lastPublication.camera, h.space.inspection.scene.camera, 'the publication shows the current camera');
   } finally { h.space.destroy(); }
 });
+
+// B14-F1: a pending scene edit or a generation mismatch makes picking unavailable, never a hit on old geometry.
+test('a pending parameter edit makes the pick context unavailable until the new geometry publishes', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    const before = h.space.inspection.pickContext();
+    assert.ok(before, 'a settled publication is pickable');
+    assert.equal(h.space.inspection.editParameter('parameters.power', '6').ok, true);
+    assert.equal(h.space.inspection.state.dirty, true, 'the edit is pending');
+    assert.equal(h.space.inspection.pickContext(), null, 'no pick context while the edit is pending');
+    h.runFrame();
+    assert.equal(h.space.inspection.state.dirty, false, 'the edit was submitted');
+    if (h.space.inspection.lastPublication.requestId === before.identity.requestId) {
+      assert.equal(h.space.inspection.pickContext(), null, 'the old publication is not pickable against the new generation');
+    }
+    await h.settle();
+    const after = h.space.inspection.pickContext();
+    assert.ok(after, 'the new publication is pickable');
+    assert.notEqual(after.identity.requestId, before.identity.requestId);
+    assert.ok(after.geometryRevision > before.geometryRevision);
+  } finally { h.space.destroy(); }
+});
+
+test('a pick readback resolving between an edit and the next frame moves nothing', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    h.backends[0].control.setPickDepth(1.5);
+    // Control: without an edit, the scripted surface is a hit and focus moves the camera.
+    const start = h.space.inspection.scene.camera;
+    h.canvas().dispatchEvent({ type: 'dblclick', clientX: 400, clientY: 300, target: h.canvas() });
+    await sleep(30);
+    assert.notDeepEqual(h.space.inspection.scene.camera, start, 'a current pick focuses');
+    await h.settle();
+    const camera = h.space.inspection.scene.camera, cameraHistory = h.space.inspection.history.camera;
+    h.backends[0].control.pause();
+    h.canvas().dispatchEvent({ type: 'dblclick', clientX: 400, clientY: 300, target: h.canvas() });
+    await sleep(5);
+    assert.equal(h.space.inspection.editParameter('parameters.power', '6').ok, true);
+    h.backends[0].control.resume();
+    await sleep(30);
+    assert.deepEqual(h.space.inspection.scene.camera, camera, 'the pick on superseded geometry did not move the camera');
+    assert.deepEqual(h.space.inspection.history.camera, cameraHistory, 'no camera-history entry');
+  } finally { h.space.destroy(); }
+});
+
+// B14-F7: a successful activation clears the reason of an earlier failed one.
+test('a successful activation after a failed one clears the unavailable reason', async () => {
+  const h = rig({ env: {} });
+  try {
+    const first = h.space.activate(1);
+    h.backends[0]?.control.failNextAcquisition(Object.assign(new Error('injected acquisition failure'), { code: 'no-webgpu' }));
+    assert.equal((await first).outcome, 'unavailable');
+    assert.match(h.space.inspection.state.unavailable ?? '', /injected acquisition failure/);
+    assert.equal((await h.space.activate(2)).outcome, 'activated');
+    assert.equal(h.space.inspection.state.unavailable, null, 'no stale unavailable reason after success');
+    assert.equal(h.space.inspection.state.phase, 'ready');
+  } finally { h.space.destroy(); }
+});

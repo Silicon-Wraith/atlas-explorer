@@ -467,11 +467,14 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   };
   // A link opened during an investigation: a valid scene is a whole-scene restoration;
   // anything else is reported and changes neither the scene nor either history.
-  const onHashChange = () => {
-    const link = decodeShareHash(location.hash);
+  // `openShareHash` is also the shell link router's restore path for a link that arrived while Plane
+  // was inactive (B14-F3); the router calls it only after Plane is active again.
+  const openShareHash = hash => {
+    const link = decodeShareHash(hash);
     if (link.kind === 'scene' && link.scene.workspace === 'plane') { stopTour(); activePlace = ''; applyAction([{ type: 'restoreScene', scene: link.scene }], 'restore'); renderPlaces(); }
     else if (link.kind === 'unsupported') toast(`${link.error.message[0].toUpperCase()}${link.error.message.slice(1)}. Your view is unchanged.`);
   };
+  const onHashChange = () => openShareHash(location.hash);
 
   function download(blob, name) {
     const url = URL.createObjectURL(blob), link = document.createElement('a');
@@ -690,6 +693,6 @@ export function createPlaneWorkspace({ shell, discoveries, sourceId = 'local' })
   syncControls(); renderPlaces(); updateHistoryControls(); requestRender();
   // Teardown order (plan amendment E(1)): the control before the controller that owns it (the
   // composition root destroys the controller after this), then the renderer.
-  return Object.freeze({ inspection, activate, deactivate, focus: () => canvas.focus?.({ preventScroll: true }),
+  return Object.freeze({ inspection, activate, deactivate, isActive: () => active, openShareHash, focus: () => canvas.focus?.({ preventScroll: true }),
     destroy: () => { deactivate(); control.destroy(); adapter.renderer.destroy(); } });
 }

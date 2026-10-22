@@ -311,6 +311,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     }
     if (activation !== token || destroyed) return Object.freeze({ outcome: 'superseded' });
     if (active) return Object.freeze({ outcome: 'activated' });
+    unavailableReason = null; // B14-F7: a successful activation clears an earlier failure's reason
     enable();
     return Object.freeze({ outcome: 'activated' });
   }
@@ -334,10 +335,12 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     detach();
     updateIndicators();
   }
+  // B14-F1: a pending scene edit (dirty) or a publication from another generation is not pickable;
+  // a pick then reports unavailable instead of hitting superseded geometry.
   function pickContext() {
-    if (!active || !eligibleForPicks() || pendingStatus || !lastPublication) return null;
+    if (!active || !eligibleForPicks() || pendingStatus || dirty || !lastPublication) return null;
     const request = requests.get(lastPublication.requestId);
-    if (!request) return null;
+    if (!request || !sameGeneration(request.generation, liveGeneration())) return null;
     return { identity: identityOf(request), geometryRevision: request.generation.geometryRevision, dimensions: { ...request.quality.internalSize }, sampleIndex: lastPublication.sampleIndex };
   }
   const eligibleForPicks = () => ready();

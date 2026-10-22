@@ -10,7 +10,7 @@ const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
 export function createDrivenFakeBackend({ clock = () => performance.now(), limits = {}, schedule = fn => setTimeout(fn, 0) } = {}) {
   const fake = createFakeBackend({ clock, limits });
-  let auto = true, acquisitionGate = null, failAcquisition = null, acquisitions = 0;
+  let auto = true, acquisitionGate = null, failAcquisition = null, acquisitions = 0, pickDepth = null;
   const held = [];
   const drive = ticket => { if (auto) schedule(() => fake.complete(ticket)); else held.push(ticket); return ticket; };
   const backend = {
@@ -29,6 +29,11 @@ export function createDrivenFakeBackend({ clock = () => performance.now(), limit
     submitBatch: (batch, options) => drive(fake.submitBatch(batch, options)),
     readback(desc, options) {
       if (desc.fields.includes('probe')) fake.stage(desc.source, words([PROBE_WORD]));
+      // A scripted surface for pick tests: every depth texel reads `pickDepth` (status words stay 0 = hit).
+      if (pickDepth !== null && desc.fields.includes('depth')) {
+        const bytes = fake.diagnostics().inventory.find(entry => entry.id === desc.source.id)?.bytes;
+        if (bytes) fake.stage(desc.source, new Uint8Array(new Float32Array(bytes / 4).fill(pickDepth).buffer));
+      }
       return drive(fake.readback(desc, options));
     },
     present: (desc, options) => drive(fake.present(desc, options)),
@@ -42,6 +47,7 @@ export function createDrivenFakeBackend({ clock = () => performance.now(), limit
     pause() { auto = false; },
     resume() { auto = true; for (const ticket of held.splice(0)) schedule(() => fake.complete(ticket)); },
     heldTickets: () => held.length,
+    setPickDepth(depth) { pickDepth = depth; },
   });
   return Object.freeze(backend);
 }

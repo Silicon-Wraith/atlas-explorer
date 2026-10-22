@@ -2534,18 +2534,28 @@ async function runShell({ page }) {
 
   await check(SHELL_PASSES.prepare, async () => {
     const result = await ev(page, async () => {
-      const status = document.querySelector('#space-preparation'), texts = [];
-      const observer = new MutationObserver(() => { if (!status.hidden && status.textContent) texts.push(status.textContent); });
+      const status = document.querySelector('#space-preparation'), texts = [], screens = [];
+      // B14-F2 (spec §15): while preparing, Plane stays on screen and the status is shown over it.
+      const screen = () => { const style = getComputedStyle(status);
+        return { workspace: document.body.dataset.workspace ?? null, pending: document.body.dataset.workspacePending ?? null,
+          plane: getComputedStyle(document.querySelector('#fractal-surface')).display,
+          statusShown: !status.hidden && style.display !== 'none' && style.visibility !== 'hidden' && status.getBoundingClientRect().height > 0 }; };
+      const observer = new MutationObserver(() => { if (!status.hidden && status.textContent) { texts.push(status.textContent); screens.push(screen()); } });
       observer.observe(status, { childList: true, characterData: true, subtree: true, attributes: true });
       const fresh = { factoryUsed: atlas.space.state.backendCreated, workspace: atlas.workspaces.current() };
       const started = performance.now(), switched = await atlas.workspaces.switchTo('space');
       const activatedMs = performance.now() - started;
       observer.disconnect();
-      return { fresh, switched, activatedMs, texts, prewarm: atlas.space.state.prewarm, eligible: atlas.space.state.eligible, visible: document.body.dataset.workspace };
+      return { fresh, switched, activatedMs, texts, screens, prewarm: atlas.space.state.prewarm, eligible: atlas.space.state.eligible, visible: document.body.dataset.workspace,
+        pendingAfter: document.body.dataset.workspacePending ?? null };
     }, undefined, 'first switch to Space', LIMITS.deep);
     assert.equal(result.fresh.factoryUsed, false, 'a fresh start acquired no Space device');
     assert.equal(result.switched.outcome, 'activated', `Space activated: ${JSON.stringify(result.switched)}`);
     assert.ok(result.texts.some(text => /Preparing/i.test(text)), `preparation status was visible: ${JSON.stringify(result.texts)}`);
+    const preparing = result.screens.filter((_, i) => /Preparing/i.test(result.texts[i]));
+    assert.ok(preparing.length > 0 && preparing.every(entry => entry.workspace === 'plane' && entry.pending === 'space' && entry.plane !== 'none' && entry.statusShown),
+      `Plane stayed on screen with the preparation status shown over it: ${JSON.stringify(preparing)}`);
+    assert.deepEqual([result.visible, result.pendingAfter], ['space', null], 'Space is shown once it can present');
     assert.equal(result.prewarm?.ok, true, `the product set prewarmed: ${JSON.stringify(result.prewarm)}`);
     await spaceIdle(page, 'bulb overview');
     const after = await ev(page, async () => {

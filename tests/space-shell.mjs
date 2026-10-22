@@ -23,6 +23,12 @@ const writeReport = entries => writeFile(reportPath, JSON.stringify(entries, nul
 const pass = (name, details = {}) => { report.push({ name, ...details }); console.log(`PASS ${name}`, JSON.stringify(details).slice(0, 400)); };
 export const PASS_UNAVAILABLE = 'Space reports unavailable without WebGPU and Plane keeps working';
 export const PASS_ROUND_TRIP = 'Switching to Space and back preserves the Plane scene and both histories';
+export const PASS_LINKS = 'A share link received while Space is active restores Plane or is reported';
+// B14-F2 (spec §15): what is on screen while a switch is pending.
+const SAMPLE_SCREEN = `() => ({ workspace: document.body.dataset.workspace ?? null, pending: document.body.dataset.workspacePending ?? null,
+  plane: getComputedStyle(document.querySelector('#fractal-surface')).display,
+  status: (() => { const el = document.querySelector('#space-preparation'), style = getComputedStyle(el);
+    return { text: el.textContent, shown: !el.hidden && style.display !== 'none' && style.visibility !== 'hidden' && el.getBoundingClientRect().height > 0 }; })() })`;
 
 // The fake backend modules, served by a route from this checkout's tests/support.
 async function routeFakes(page) {
@@ -63,14 +69,18 @@ try {
 
   {
     const { page, errors } = await openPage(browser);
-    const result = await ev(page, async () => {
+    const result = await ev(page, async sample => {
       const toast = document.querySelector('#toast');
       const start = { workspace: atlas.workspaces.current(), scene: JSON.stringify(atlas.scene), rendered: atlas.rendered };
-      const switched = await atlas.workspaces.switchTo('space');
-      return { start, switched, toast: toast.textContent, visible: document.body.dataset.workspace, unavailable: document.querySelector('#space-unavailable').textContent,
+      const screen = (0, eval)(sample), pendingSwitch = atlas.workspaces.switchTo('space'), during = screen();
+      const switched = await pendingSwitch;
+      return { start, switched, during, after: screen(), toast: toast.textContent, visible: document.body.dataset.workspace, unavailable: document.querySelector('#space-unavailable').textContent,
         spaceState: atlas.space.state, gpu: 'gpu' in navigator && navigator.gpu !== undefined };
-    }, undefined, 'switch to Space without WebGPU', LIMITS.deep);
+    }, SAMPLE_SCREEN, 'switch to Space without WebGPU', LIMITS.deep);
     assert.equal(result.start.workspace, 'plane', 'a fresh start opens Plane');
+    assert.deepEqual([result.during.workspace, result.during.pending], ['plane', 'space'], 'Plane stays visible while Space is attempted');
+    assert.notEqual(result.during.plane, 'none', 'the Plane image stays on screen');
+    assert.equal(result.after.pending, null, 'no pending activation after the failure');
     assert.deepEqual([result.switched.activeId, result.switched.outcome], ['plane', 'unavailable']);
     assert.match(result.toast, /^Space unavailable: /, 'the reason is reported');
     assert.equal(result.visible, 'plane', 'Plane is visible again');
@@ -92,15 +102,21 @@ try {
 
   {
     const { page, errors } = await openPage(browser);
-    const result = await ev(page, async () => {
+    const result = await ev(page, async sample => {
       const { createDrivenFakeBackend } = await import('/tests/support/fake-space-backend.mjs');
-      atlas.space.setBackend(createDrivenFakeBackend({ clock: () => performance.now() }));
+      const fake = createDrivenFakeBackend({ clock: () => performance.now() });
+      fake.control.holdAcquisition();
+      atlas.space.setBackend(fake);
       atlas.goTo({ re: '-0.743643887037151', im: '0.13182590420533', zoom: 3 });
       await atlas.whenIdle({ timeoutMs: 60000 });
       document.querySelector('[data-palette="aurora"]')?.click();
       await atlas.whenIdle({ timeoutMs: 60000 });
       const plane = { scene: JSON.stringify(atlas.scene), history: JSON.stringify(atlas.history) };
-      const toSpace = await atlas.workspaces.switchTo('space');
+      const screen = (0, eval)(sample), pendingSwitch = atlas.workspaces.switchTo('space');
+      await new Promise(done => setTimeout(done, 100));
+      const during = screen();
+      fake.control.releaseAcquisition();
+      const toSpace = await pendingSwitch, afterSwitch = screen();
       await atlas.space.whenIdle({ timeoutMs: 60000 });
       const camera = atlas.space.scene.camera;
       atlas.space.requestCamera({ ...camera, positionLocal: camera.positionLocal.map(x => x * 1.25) });
@@ -115,9 +131,13 @@ try {
       const spaceAfter = { scene: JSON.stringify(atlas.space.scene), history: JSON.stringify(atlas.space.history) };
       await atlas.workspaces.switchTo('plane');
       await atlas.whenIdle({ timeoutMs: 60000 });
-      return { plane, planeAfter, space, spaceAfter, toSpace, toPlane, spaceHistory: atlas.space.history, final: atlas.workspaces.current() };
-    }, undefined, 'round trip on the fake backend', LIMITS.deep);
+      return { plane, planeAfter, space, spaceAfter, toSpace, toPlane, during, afterSwitch, spaceHistory: atlas.space.history, final: atlas.workspaces.current() };
+    }, SAMPLE_SCREEN, 'round trip on the fake backend', LIMITS.deep);
     assert.equal(result.toSpace.outcome, 'activated', 'Space activates on the fake backend');
+    assert.deepEqual([result.during.workspace, result.during.pending], ['plane', 'space'], `Plane stays visible while Space acquires: ${JSON.stringify(result.during)}`);
+    assert.notEqual(result.during.plane, 'none', 'the Plane image stays on screen during preparation');
+    assert.ok(result.during.status.shown && /Preparing/.test(result.during.status.text), `the preparation status is visible over Plane: ${JSON.stringify(result.during.status)}`);
+    assert.deepEqual([result.afterSwitch.workspace, result.afterSwitch.pending], ['space', null], 'Space is shown once activated');
     assert.equal(result.planeAfter.scene, result.plane.scene, 'the Plane scene is preserved');
     assert.equal(result.planeAfter.history, result.plane.history, 'both Plane histories are preserved');
     assert.equal(result.spaceAfter.scene, result.space.scene, 'the Space scene is preserved');
@@ -127,6 +147,47 @@ try {
     assert.equal(result.final, 'plane');
     assert.deepEqual(errors, [], `no runtime errors: ${errors.join(' | ')}`);
     pass(PASS_ROUND_TRIP, { toSpace: result.toSpace, toPlane: result.toPlane, spaceHistory: result.spaceHistory });
+    await closeDrained(page);
+  }
+
+  {
+    const { page, errors } = await openPage(browser);
+    const result = await ev(page, async () => {
+      const { createDrivenFakeBackend } = await import('/tests/support/fake-space-backend.mjs');
+      const { encodeShareHash } = await import('/src/plane/scene-adapter.js');
+      atlas.space.setBackend(createDrivenFakeBackend({ clock: () => performance.now() }));
+      const waitFor = async (predicate, ms = 10000) => { const end = performance.now() + ms; while (!predicate()) { if (performance.now() > end) return false; await new Promise(done => setTimeout(done, 25)); } return true; };
+      atlas.goTo({ re: '-0.743643887037151', im: '0.13182590420533', zoom: 3 });
+      await atlas.whenIdle({ timeoutMs: 60000 });
+      const linked = JSON.stringify(atlas.scene), hash = encodeShareHash(atlas.scene);
+      atlas.goTo({ re: '-0.75', im: '0.1', zoom: 2 });
+      await atlas.whenIdle({ timeoutMs: 60000 });
+      const toSpace = await atlas.workspaces.switchTo('space');
+      await atlas.space.whenIdle({ timeoutMs: 60000 });
+      const spaceBefore = { scene: JSON.stringify(atlas.space.scene), history: JSON.stringify(atlas.space.history) };
+      location.hash = hash;
+      const switched = await waitFor(() => atlas.workspaces.current() === 'plane' && JSON.stringify(atlas.scene) === linked);
+      await atlas.whenIdle({ timeoutMs: 60000 });
+      const valid = { switched, current: atlas.workspaces.current(), restored: JSON.stringify(atlas.scene) === linked,
+        spaceKept: JSON.stringify(atlas.space.scene) === spaceBefore.scene && JSON.stringify(atlas.space.history) === spaceBefore.history };
+      await atlas.workspaces.switchTo('space');
+      await atlas.space.whenIdle({ timeoutMs: 60000 });
+      const before = { plane: JSON.stringify(atlas.scene), planeHistory: JSON.stringify(atlas.history), space: JSON.stringify(atlas.space.scene), spaceHistory: JSON.stringify(atlas.space.history) };
+      const toast = document.querySelector('#toast');
+      location.hash = '#scene=%%%not-a-link';
+      const reported = await waitFor(() => /Your view is unchanged\./.test(toast.textContent));
+      const after = { plane: JSON.stringify(atlas.scene), planeHistory: JSON.stringify(atlas.history), space: JSON.stringify(atlas.space.scene), spaceHistory: JSON.stringify(atlas.space.history) };
+      return { toSpace, valid, invalid: { reported, toast: toast.textContent, current: atlas.workspaces.current(), unchanged: JSON.stringify(before) === JSON.stringify(after) } };
+    }, undefined, 'share links while Space is active', LIMITS.deep);
+    assert.equal(result.toSpace.outcome, 'activated');
+    assert.equal(result.valid.switched, true, `a supported Plane link switched to Plane: ${JSON.stringify(result.valid)}`);
+    assert.equal(result.valid.restored, true, 'the linked Plane scene is restored');
+    assert.equal(result.valid.spaceKept, true, 'the Space investigation is retained');
+    assert.equal(result.invalid.reported, true, `an invalid link is reported: ${result.invalid.toast}`);
+    assert.equal(result.invalid.current, 'space', 'an invalid link does not switch workspaces');
+    assert.equal(result.invalid.unchanged, true, 'an invalid link changes neither investigation nor any history');
+    assert.deepEqual(errors, [], `no runtime errors: ${errors.join(' | ')}`);
+    pass(PASS_LINKS, result);
     await closeDrained(page);
   }
   await writeReport(report);

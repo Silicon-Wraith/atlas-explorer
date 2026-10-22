@@ -48,6 +48,7 @@
     "tests/unit/shared-palettes.test.js",
     "tests/unit/appearance-metadata.test.js",
     "tests/unit/plane-activation.test.js",
+    "tests/unit/share-link-router.test.js",
     "tests/unit/space-workspace.test.js",
     "tests/unit/workspace-switcher.test.js"
   ]

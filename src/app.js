@@ -6,6 +6,7 @@ import { createShell } from './ui/shell.js';
 import { createPlaneWorkspace } from './plane/workspace.js';
 import { createSpaceWorkspace } from './space/workspace.js';
 import { createWorkspaceSwitcher } from './ui/workspace-switcher.js';
+import { createShareLinkRouter } from './ui/share-link-router.js';
 import { openPersistence } from './shared/persistence.js';
 import { createLocalDiscoverySource, createDiscoveriesController } from './shared/discoveries.js';
 import { sceneCodec } from './plane/scene-adapter.js';
@@ -31,10 +32,12 @@ const discoveries = createDiscoveriesController({ sources: [local], sceneCodec }
 const plane = createPlaneWorkspace({ shell, discoveries, sourceId: local.id });
 const space = createSpaceWorkspace({ shell });
 const switcher = createWorkspaceSwitcher({ root: document, workspaces: { plane, space }, initial: 'plane', toast: shell.toast });
+// Share links that arrive while Plane is inactive (Space active or preparing) are routed, never lost (spec §14).
+const links = createShareLinkRouter({ plane, switcher, report: shell.toast });
 // window.atlas stays Plane's inspection (the Plane suites read it); Space and the switcher hang off it.
 window.atlas = plane.inspection;
 window.atlas.space = space.inspection;
-window.atlas.workspaces = Object.freeze({ switchTo: id => switcher.switchTo(id), current: () => switcher.current(), ready: switcher.ready });
-// Teardown order (plan amendment E(1)): the switcher, the workspaces (Plane's Discoveries control
+window.atlas.workspaces = Object.freeze({ switchTo: id => switcher.switchTo(id), current: () => switcher.current(), pending: () => switcher.pending(), ready: switcher.ready });
+// Teardown order (plan amendment E(1)): the link router and the switcher, the workspaces (Plane's Discoveries control
 // first, then its renderer; then Space's device), then the controller, then the storage connection.
-addEventListener('pagehide', () => { switcher.destroy(); plane.destroy(); space.destroy(); discoveries.destroy(); opened.then(db => db.close(), () => {}); });
+addEventListener('pagehide', () => { links.destroy(); switcher.destroy(); plane.destroy(); space.destroy(); discoveries.destroy(); opened.then(db => db.close(), () => {}); });
