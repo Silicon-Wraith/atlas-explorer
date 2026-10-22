@@ -267,7 +267,7 @@ itself. Each is pinned by named tests in its owning task.
 | B07 | The shared scheduler: admission, coalescing, priorities, pause and one-snapshot update, completed-work adaptation, budgets, watchdog | Codex | B00 | 2 |
 | B08 | WGSL field kernels validated against B04's frozen references; validation records | Claude | B03, B04, B06 | 3 |
 | B09 | Pass orchestration, profiles, keys and revisions, compatible accumulation, complete-image publication, Space reports | Codex | B00, B02, B03, B07 | 3 |
-| B09b | Renderer-owned obsolete geometry release and structured job error codes | Codex | B09, B07c | follow-up (before B13 integration and B14 allocation acceptance) |
+| B09b | Renderer-owned obsolete geometry release and structured job error codes | Codex | B09, B07 (incl. the incorporated B07c amendment) | follow-up (before B13 integration and B14 allocation acceptance) |
 | B09c | Product camera classification repair and navigation integration (B11-F1); permanent all-family CPU/GPU check | Codex | B08 (point ABI), B09, B10, B11 | follow-up (before B14 enables interaction) |
 | B10 | Primary tracing, normals and pick data; geometric validation (analytic rays, adversarial rays, convergence) before decorative shading | Claude | B04, B05, B08, B09 | 4 |
 | B11 | Lighting, bounded shadows and AO, diagnostic display, seeded jitter, linear accumulation, display mapping; shared palettes | Claude | B09, B10 | 5 |
@@ -275,7 +275,7 @@ itself. Each is pinned by named tests in its owning task.
 | B12 | Orbit, pan, dolly, orientation control, flight, Space-owned gestures, stale-safe focus, camera-exterior status | Codex | B03, B05, B09, 1a T04 | 4 |
 | B12b | Controller (gamepad) exploration: snapshot decoding, dead zones and response, input state machine, one-entry runs, selection, arming and suspension (standard layout) | Codex | B12 | 5 |
 | T04a | Space semantic camera equality in shared history (`cameraEqual`) | Codex | 1a T04, B05; required by B14 | follow-up (before B14) |
-| B13 | Recovery orchestration: cancellation, failed allocation, stalled work, loss and repeated loss, preserving the investigation | Codex | B06 (contract), B07, B09 | 4 |
+| B13 | Recovery orchestration: cancellation, failed allocation, stalled work, loss and repeated loss, preserving the investigation | Codex | B06 (contract), B07, B09; B09b (allocation integration) | 4 |
 | B14 | **Checkpoint:** the Space workspace, the workspace switcher, the activation contract, panel, indicators, diagnostics, scene files, controller polling and status | Claude | B10–B13, B12b, T04a, B09b, B09c; **1a T12 merged** | 6 |
 | B15 | Headed interaction and recovery acceptance, frozen performance acceptance, the recorded investigation, the commit audit, handoff | Codex | B14, B11b; **1a T13** | 7 |
 
@@ -1341,7 +1341,7 @@ report (B11 records the complete product set's preparation time once it exists).
   | {accepted: false, done: Promise<null>}` (stops admission immediately; `done` reports `drained` only
   after every outstanding lease has terminal evidence—completion, failure or auxiliary discard—or `interrupted` after observed loss. Watchdog expiry proves neither. Failure before cancellation preserves the job's `failed` outcome; failure during cancellation contributes terminal drain evidence without changing the outcome to `failed`. Unknown or retired jobs return `accepted: false`; their outcomes remain on their own `job.done`), `snapshot()`, `subscribe(listener)}`. The watchdog runs on the
   injected timer while leases are outstanding, including for hidden views; it never depends on
-  animation-frame ticks. Expiry stops admission for that epoch and settles only jobs holding outstanding leases as `budget-exceeded`, reason `watchdog`, continuation `lower-cost`. Unissued jobs remain queued. Requests and auxiliary requests received during the stall also queue. The stall clears after every outstanding lease has terminal completion, failure, auxiliary discard, or loss evidence. Already-settled jobs remain settled. Observed loss still prevents admission until a new epoch is installed. No timeout releases resources or proves cancellation. Elapsed work accrues only while the plan holds at least one admitted operation lease and its view is eligible. Queued, paused and hidden time is excluded; auxiliary leases do not charge this clock. End-to-end latency remains anchored to `requestedAt`. Elapsed-work exhaustion settles `budget-exceeded` with continuation `resume`; watchdog exhaustion uses `lower-cost`. These are recovery offers, not instructions to revive a settled job. Auxiliaries share the lease pool and cancellation ownership by `jobId`, have separate `done` promises, never advance the owner's plan, and are covered by the watchdog but not elapsed-work budgets. Unissued auxiliaries supersede with their pending owner; issued auxiliaries drain through explicit cancellation. An auxiliary request for a job already settled by the watchdog or by failure is rejected. `failed(admission, error)` on any lease of a job, auxiliary leases included, fails the whole job when it precedes a cancellation. B09 reports stale or rejected picks and classifications as stale results; terminal auxiliary rejection uses `discardAuxiliary`, never `failed()`. Discard does not close the owner group or alter an already settled render. During cancellation it supplies drain evidence for that lease, with promises awaiting the whole group's drain or loss; observed loss takes precedence over a partially proved drain. Previously settled outcomes remain unchanged, including discard before cancellation and watchdog settlement. Clients call `interrupted(lostEpoch)` on observed loss before calling `setEpoch(nextEpoch)`. A job settles
+  animation-frame ticks. Expiry stops admission for that epoch and settles only jobs holding outstanding leases as `budget-exceeded`, reason `watchdog`, continuation `lower-cost`. Unissued jobs remain queued. Requests and auxiliary requests received during the stall also queue. The stall clears after every outstanding lease has terminal completion, failure, auxiliary discard, or loss evidence. Already-settled jobs remain settled. Observed loss still prevents admission until a new epoch is installed. No timeout releases resources or proves cancellation. Elapsed work accrues only while the plan holds at least one admitted operation lease and its view is eligible. Queued, paused and hidden time is excluded; auxiliary leases do not charge this clock. End-to-end latency remains anchored to `requestedAt`. Elapsed-work exhaustion settles `budget-exceeded` with continuation `resume`; watchdog exhaustion uses `lower-cost`. These are recovery offers, not instructions to revive a settled job. Auxiliaries share the lease pool and cancellation ownership by `jobId`, have separate `done` promises, never advance the owner's plan, and are covered by the watchdog but not elapsed-work budgets. Unissued auxiliaries supersede with their pending owner; issued auxiliaries drain through explicit cancellation. An auxiliary request for a job already settled by the watchdog or by failure is rejected. `failed(admission, error)` on any lease of a job, auxiliary leases included, fails the whole job when it precedes a cancellation. Picks retain their existing stale-result contract. Classification replacement, cancellation, loss and identity mismatch remain stale; ordinary descriptor, admission, allocation, copy-out and decode failures return `unresolved` with error code/message under B09c. Terminal auxiliary rejection uses `discardAuxiliary`, never `failed()`. Discard does not close the owner group or alter an already settled render. During cancellation it supplies drain evidence for that lease, with promises awaiting the whole group's drain or loss; observed loss takes precedence over a partially proved drain. Previously settled outcomes remain unchanged, including discard before cancellation and watchdog settlement. Clients call `interrupted(lostEpoch)` on observed loss before calling `setEpoch(nextEpoch)`. A job settles
   `completed` when its plan is exhausted. `ready(jobId, {epoch}) → boolean` rechecks only
   that job's plan after asynchronous preparation. A request may register before preparation
   completes; its immutable identity remains selectable by Update. Until ready, the plan returns
@@ -1353,7 +1353,7 @@ report (B11 records the complete product set's preparation time once it exists).
   issues a lease, revives a terminal job, changes the Update selection, or bypasses priority,
   visibility, pause/Update eligibility, instrument cadence, watchdog stalls or the lease limit.
 
-**Rev 5.0 notes (2026-10-22):** (a) the `ready()` text and its tests are B07b's proposed replacements (codex-B07b-notes.md:173, Codex run 20261021T174058Z-73af). (b) `discardAuxiliary` is B07c's old→new text (codex-B07c-report.md, Codex run 20261021T184450Z-7ff7); the fix that a discard is not watchdog progress (`releaseLease` gains `progress = true`, discard passes false) was reviewed READY by Codex (codex-B07c-r2.out, run 20261021T191127Z-99fa).
+**Rev 5.0 notes (2026-10-22):** B07b and B07c are incorporated B07 amendments, not separate tasks (so B09b's dependency on B07c resolves to this section). (a) the `ready()` text and its tests are B07b's proposed replacements (codex-B07b-notes.md:173, Codex run 20261021T174058Z-73af). (b) `discardAuxiliary` is B07c's old→new text (codex-B07c-report.md, Codex run 20261021T184450Z-7ff7); the fix that a discard is not watchdog progress (`releaseLease` gains `progress = true`, discard passes false) was reviewed READY by Codex (codex-B07c-r2.out, run 20261021T191127Z-99fa).
 
 **Design assertions:** §7.3 (lifecycle and outcomes; cancelling stops future submissions and
 drains; "cancelled" never implies preemption; rejecting a stale result is not cancelling it; pause
@@ -1568,7 +1568,7 @@ backend.
 
 ### Task B09b: Renderer-owned obsolete geometry release and structured job error codes (follow-up to B09; rev 5.0)
 
-**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B09, B07c. **Precedes:** B13's allocation integration and B14's allocation acceptance.
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B09, B07 (incorporating the B07c amendment). **Precedes:** B13's allocation integration and B14's allocation acceptance.
 
 **Scope** (codex-B09b-report.md, Codex run 20261021T225008Z-03c8; claude-B09b-r1-review.md, APPROVED): files `src/space/render/renderer.js` and `tests/unit/space-renderer.test.js`. Add synchronous `renderer.releaseObsolete() → frozen {freed, retiring}` in bytes, judged against the live viewport request and its current generation (a failed export never evicts compatible viewport geometry; an absent or throwing generation source retains the cache), preserving publication, job and pick ownership and ticket/mapping accounting. Preserve `record.error?.code` as the job result's `errorCode`; untyped failures get no invented code and no message is parsed. B13's follow-on consumes the real hooks, forwards `retiring` separately from `released` and removes its injected seams and `releaseUnavailable` fallback; B14 continues through the recovery facade.
 
@@ -1725,6 +1725,8 @@ existing Plane assertion unchanged and green.
 
 **Scope:** implements the lighting-only tint (B11 note), the one-sided normal fallback (B10 note) and the visual acceptance check below, with new B10 tracing and B11 appearance identities and record IDs.
 
+**Files/interfaces/tests:** Modify `normals.wgsl`, the affected appearance shaders and metadata, `renderer.js`, and their tests. Add frozen visual fixtures and a measurement helper; register "Six frozen scenes meet visual acceptance" in `tests/space.mjs` and `space-rendering.requiredPasses`. Retain identity-, pixel- and sample-indexed status/normal/lighting masks through completed readbacks. Compute per-sample metrics and pixelwise unions from those same eight samples; aggregate counts or the last sample cannot supply union denominators. Test misses, mixed hit/miss samples, isolated failures, reset and stale identities. Correct the product unavailable-normal count using the joint hit/normal mask. Preserve visible lighting-only indication on every flagged pixel, independently of lighting, including after accumulation. Requalify affected tracing/appearance records under new identities, retaining old evidence. B11b follows B14 and therefore B11/B12; B15 starts after its required check passes.
+
 **Visual acceptance (user decision 1, a new required check before B15).** Six frozen scenes: default power-8 bulb; default quaternion Julia (`C = [-0.2, 0.8, 0, 0]`, κ = 0); sphere; rotated box; Menger depth 1; Menger depth 2. Cameras are the actual product overview cameras, stored explicitly in fixtures; 1280×720 internal and output resolution, 128 iterations, 512 steps, eight samples, `atlas-aa-v1` seed 1. Capture direct-only, full lighting, normals and termination views with identical rays, and retain fixed crops covering the reported box bands, the Menger hole walls and the right-face arc. Thresholds are Codex's proposals taken as given except the fractal lighting-unresolved ceiling, set by the user at 10% (analytic stays ≤1%); they are new post-discovery product thresholds, not performance or numerical tolerances:
 
 | Metric | Analytic scenes | Fractal scenes |
@@ -1830,8 +1832,8 @@ standard layout; non-standard joysticks and flight sticks stay deferred (§17). 
 **Files:**
 - Create: `src/space/gamepad.js`
 - Modify (additive, B12's files): `src/space/gestures.js` (`'gamepad'` in `SPACE_KINDS` and in the drag allowlist),
-  `src/space/flight.js` (`setAnalogInput`; stop reasons `disconnect`, `input-suspended`)
-- Test: `tests/unit/space-gamepad.test.js`; additions to `tests/unit/space-gestures.test.js`
+  `src/space/flight.js` (`setAnalogInput`; stop reasons `disconnect`, `input-suspended`), `src/space/navigation.js` (pointerdown guard; rev 5.0)
+- Test: `tests/unit/space-gamepad.test.js`; additions to `tests/unit/space-gestures.test.js` and `tests/unit/space-navigation.test.js`
 
 **Interfaces:**
 - Consumes: `createSpaceGestures` and `createFlight` (B12); camera functions `orbit`, `pan`,
@@ -1906,7 +1908,7 @@ camera-only jumps add one entry; undo never moves the camera); §15 (disconnect 
 movement and commits once). Excludes DOM, polling scheduling and status layout (B14). Nothing
 imports `src/plane/`. Physical devices are unqualified until exercised.
 
-**Rev 5.0 notes (2026-10-22; codex-B12b-report.md, Codex run 20261021T225841Z-e7ee and fix round 20261021T231148Z-8d55; claude-B12b-r1-review.md):** (a) **look rate:** the optional second argument `{lookRadPerSec}` of `setAnalogInput` (finite, ≥0) makes the normalized yaw and pitch demands scale the supplied angular rate independently of translation speed, which is needed because demands are clamped to [−1, 1]. (b) **gamepad allowlist:** `'gamepad'` joins both `SPACE_KINDS` and the drag allowlist (`drag/dragCommit/dragCancel`); controller first-owner arbitration rests on `openKind`, since B12's private `begin` closes the previous gesture. (c) **pointer guard:** `src/space/navigation.js` is a B12b file; pointerdown is refused while `gestures.openKind === 'gamepad'`, so first owner wins in both directions (claude-B12b-r1-review.md F1). (d) **connect status:** controller connect status refreshes on polls even while input is ineligible, without accepting input (F3).
+**Rev 5.0 notes (2026-10-22; codex-B12b-report.md, Codex run 20261021T225841Z-e7ee and fix round 20261021T231148Z-8d55; claude-B12b-r1-review.md):** (a) **look rate:** the optional second argument `{lookRadPerSec}` of `setAnalogInput` (finite, ≥0) makes the normalized yaw and pitch demands scale the supplied angular rate independently of translation speed, which is needed because demands are clamped to [−1, 1]. (b) **gamepad allowlist:** `'gamepad'` joins both `SPACE_KINDS` and the drag allowlist (`drag/dragCommit/dragCancel`); controller first-owner arbitration rests on `openKind`, since B12's private `begin` closes the previous gesture. (c) **Pointer ownership:** B12b modifies `navigation.js` to refuse pointerdown during a gamepad run and `gestures.js` to refuse delayed pointer drag delivery during that run. Neither path captures, settles or displaces the controller owner. Add both regressions to `tests/unit/space-navigation.test.js` and include that file in B12b's test scope. (d) **connect status:** controller connect status refreshes on polls even while input is ineligible, without accepting input (F3).
 
 - [ ] **Step 1: Write the failing tests** (fake `Gamepad` snapshots with `mapping`, `connected`,
   `axes`, `buttons[{pressed, value}]`, `timestamp`; fake clock; fake gestures/flight recording
@@ -1944,7 +1946,7 @@ physical controller; seventeen named tests passing.
 
 ### Task B13: Recovery orchestration (spec §7.3, §14, §15)
 
-**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B06 (contract), B07, B09.
+**Owner:** Codex. **Reviewer:** Claude. **Depends on:** B06 (contract), B07, B09; B09b (allocation integration).
 
 **Files:**
 - Create: `src/space/recovery.js`
@@ -2204,12 +2206,12 @@ serialized (port 5190, one GPU).
 | W3 | B08 ‖ B09 | B08 needs the GPU and the frozen matrix; B09 Node-only |
 | W4 | B10 ‖ B12 ‖ B13 | B10 needs the GPU; B12 and B13 Node-only |
 | W5 | B11 ‖ B12b | B11 GPU, mechanical palette change touches `src/plane/palettes.js`; B12b Node-only (additive to B12's `gestures.js` and `flight.js`) |
+| follow-ups | B09b ‖ T04a ‖ B09c | B09b merges before B13's allocation integration; T04a before B14; B09c after B11 and before B14 enables interaction |
 | W6 | B14 | after 1a T12 is merged and the dependency table is reconciled; alone (touches `src/app.js`, `index.html`) |
-| follow-ups | T04a ‖ B09b ‖ B09c | merged before B14 (B09c before B14 enables interaction); B13 consumes B09b |
 | W6b | B11b | after B14, before B15 (rev 5.0); Claude implements, Codex reviews |
 | W7 | B15 | after 1a T13; alone |
 
-Critical path: B00 → B01 → B06 → B08 → B10 → B11 → B14 → B11b → B15 (9 deep with rev 5.0's B11b). The Node-only chain
+Critical path: B00 → B01 → B06 → B08 → B10 → B11 → B09c → B14 → B11b → B15 (10 deep). The Node-only chain
 B02 → B05/B09 → B12/B13 → B12b runs beside it.
 
 **Hot files (serialized or merged by the merger):**
