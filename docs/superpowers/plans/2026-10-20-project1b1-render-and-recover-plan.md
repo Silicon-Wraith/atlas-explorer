@@ -607,7 +607,7 @@ and the subscriptions `atlas.space.onPublish(listener)` and `atlas.space.onPrese
   `STATUS_LABELS` (the §11.4 names verbatim), `wgslConstants() → string` (the same enums as WGSL
   `const` declarations, so kernels and JavaScript share one source).
 - Produces (`backend.js`): `PASSES = ['probe', 'trace', 'normals', 'shade', 'accumulate',
-  'display']`, `TARGET_LAYOUT_V2` (the annex table: name → `{format, bytesPerTexel, count}`),
+  'display']`, `TARGET_LAYOUT` (the annex table: name → `{format, bytesPerTexel, count}`),
   `TRACKED_ALLOCATION_CAP = 2 ** 30`, `LIGHTING_BOUNDS_DEFAULT = {normalFieldSamples: 7,
   shadowRays: 1, shadowSteps: 64, aoSamples: 5}` (both the settled defaults and the 1b.1 ceilings;
   direct lighting retains `normalFieldSamples: 7`, and only `shadowRays`, `shadowSteps` and
@@ -1259,7 +1259,7 @@ picking (B10/B12).
 
 **Interfaces:**
 - Consumes: `acquireDevice` (B01); `BACKEND_METHODS`, `assertBackend`, `createAdmission`,
-  `TARGET_LAYOUT_V2`, the ticket shape (B00).
+  `TARGET_LAYOUT`, the ticket shape (B00).
 - Produces: `createWebGPUBackend({canvas, clock, acquire = acquireDevice, enableTimestamps =
   false}) → backend` (every annex method and semantics; `onLoss` observers attached at
   acquisition; `destroy()` terminal; `allocate({name, bytes, usage: 'storage' | 'uniform', data?:
@@ -1467,7 +1467,7 @@ with the evidence; tolerances and floors are never relaxed.
 **Interfaces:**
 - Consumes: `createScheduler` (B07); the fake backend, `createBatch`, `createPickRequest`,
   `createJobPlan`, `sampleJitter`, `createAdmission` (B00; the renderer passes `createAdmission`
-  to the scheduler as `makeAdmission`); `TARGET_LAYOUT_V2`, `LIGHTING_BOUNDS_DEFAULT` (B00);
+  to the scheduler as `makeAdmission`); `TARGET_LAYOUT`, `LIGHTING_BOUNDS_DEFAULT` (B00);
   `createRenderRequest`, `isPublishable`, `createReportBuilder`, `observed`, `UNAVAILABLE` (1a
   T06); `sceneCodec`, `effectiveParameters` (B02); `getModel` (B03, resolved per request from
   `request.sceneSnapshot.model`, never a fixed constructor argument).
