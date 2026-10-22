@@ -31,8 +31,8 @@ const loadFromDisk = async id => readFileSync(shaderPath(id), 'utf8');
 const DEFAULT_LIMITS = { maxStorageBuffersPerShaderStage: 8, maxStorageTexturesPerShaderStage: 4, maxUniformBufferBindingSize: 65536, maxComputeInvocationsPerWorkgroup: 256 };
 
 test('the appearance metadata hashes equal the sources and verifyPrewarm reports a missing variant', async () => {
-  assert.equal(APPEARANCE_VERSION, 'space-appearance-v2');
-  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v2');
+  assert.equal(APPEARANCE_VERSION, 'space-appearance-v3');
+  assert.equal(PRODUCT_PIPELINE_SET_ID, 'space-product-v3');
   const descriptors = appearancePipelineDescriptors();
   const owned = new Set(descriptors.flatMap(d => d.sourceIds).filter(id => !['fields', 'trace', 'menger-sample', 'menger-absent'].includes(id)));
   assert.deepEqual([...owned].sort(), ['accumulate', 'display', 'shade']);
@@ -96,6 +96,21 @@ test('the appearance descriptors bind every slot at its WGSL index under the fro
   for (const d of descriptors) for (const b of d.bindings) assert.ok(aliases.has(b.slot), `${d.pipelineId}: ${b.slot}`);
   const flags = descriptors.find(d => d.pipelineId === 'accumulate_band').bindings.find(b => b.slot === 'accumulationFlags');
   assert.deepEqual(flags, { slot: 'accumulationFlags', type: 'storage-texture', access: 'read-write' });
+});
+
+// Rev 5.1 (B11c FU1, user-approved 2026-10-22): AO heights h_i = 4i·τ(t), i = 1..5; the 0.015·t term is removed.
+// The kernel is the only implementation, so its source is checked: one spacing of SECONDARY_OFFSET·τ, no t-scaled term.
+test('AO sample heights are 4i·tau(t) with no t-proportional reach (space-appearance-v3)', () => {
+  const shade = readFileSync(shaderPath('shade'), 'utf8'), code = shade.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
+  assert.equal(APPEARANCE_VERSION, 'space-appearance-v3');
+  assert.match(code, /const SECONDARY_OFFSET: f32 = 4\.0;/);
+  assert.match(code, /const AO_MAX_SAMPLES: u32 = 5u;/);
+  assert.doesNotMatch(code, /AO_SPACING/);
+  assert.doesNotMatch(code, /0\.015/);
+  const body = code.slice(code.indexOf('fn ambient_occlusion'), code.indexOf('fn inspection_light'));
+  assert.match(body, /let spacing = SECONDARY_OFFSET \* tau;/);
+  assert.match(body, /let h = f32\(k\) \* spacing;/);
+  assert.doesNotMatch(body, /max\(/);
 });
 
 test('the shader legend, flag and colour literals equal the appearance constants', () => {

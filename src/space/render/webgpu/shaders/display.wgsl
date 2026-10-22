@@ -1,4 +1,4 @@
-// display_band, APPEARANCE_VERSION space-appearance-v2 (plan B11; spec §8.1 step 6, §8.2, §9.1 "Pipelines"; plan
+// display_band, APPEARANCE_VERSION space-appearance-v3 (plan B11; spec §8.1 step 6, §8.2, §9.1 "Pipelines"; plan
 // rev 5.0 B11 note, implemented by B11b): the mean of the accumulated samples into `display` (rgba8unorm). The sole
 // sRGB encoding of the pipeline happens here, and only for shaded (linear) means; diagnostic means are already
 // display-space values. A diagnostic outcome recorded in `accumulationFlags` overrides the mean with its legend

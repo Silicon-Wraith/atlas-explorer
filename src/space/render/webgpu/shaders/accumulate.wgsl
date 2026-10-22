@@ -1,4 +1,4 @@
-// accumulate_band, APPEARANCE_VERSION space-appearance-v2 (plan B11; spec §8.1 step 5, §9.1 "Targets"): the
+// accumulate_band, APPEARANCE_VERSION space-appearance-v3 (plan B11; spec §8.1 step 5, §9.1 "Targets"): the
 // linear sum and count of the completed samples of one accumulation identity, ping-pong between the two
 // accumulation targets (sample s reads accumulation[s & 1] as `previous` and writes accumulation[(s + 1) & 1]
 // as `next`; the renderer walks samples in ascending index per pixel), and the diagnostic propagation in

@@ -1,5 +1,5 @@
-// shade_band and the diagnostic view modes, APPEARANCE_VERSION space-appearance-v2 (plan B11; spec §8.1
-// step 4, §8.2, §7.6; plan rev 5.0 B11 note, implemented by B11b). Assembled after fields.wgsl, a Menger adapter and trace.wgsl, so a secondary ray is
+// shade_band and the diagnostic view modes, APPEARANCE_VERSION space-appearance-v3 (plan B11; spec §8.1
+// step 4, §8.2, §7.6; plan rev 5.0 B11 note, implemented by B11b; plan rev 5.1 FU1 AO heights, implemented by B11c). Assembled after fields.wgsl, a Menger adapter and trace.wgsl, so a secondary ray is
 // the same §11.4 tracer (march) and every secondary field value the same field_sample.
 //   shade_band: the neutral inspection light in linear colour. In the full stage it adds one bounded shadow
 //     ray (u.max_steps, the descriptor's `shadowSteps` <= 64) and restrained AO from at most five bounded
@@ -60,11 +60,11 @@ const KEY: f32 = 0.85;
 const SPECULAR: f32 = 0.18;
 const SHININESS: f32 = 32.0;
 const BACKGROUND: vec3<f32> = vec3<f32>(0.01, 0.013, 0.022);
-// Secondary rays and samples start SECONDARY_OFFSET·τ(t) off the surface along the normal; restrained AO:
-// spacing max(SECONDARY_OFFSET·τ, AO_SPACING·t), weights 1/2^k, occlusion scaled by AO_STRENGTH (AO >= 0.4); the
-// weighted mean runs over the resolved samples only.
+// Secondary rays and samples start SECONDARY_OFFSET·τ(t) off the surface along the normal; restrained AO (plan rev
+// 5.1 FU1, user-approved 2026-10-22): heights h_k = SECONDARY_OFFSET·k·τ(t) = 4k·τ(t), k = 1..5 (reach 20τ, no
+// t-proportional term), weights 1/2^k, occlusion scaled by AO_STRENGTH (AO >= 0.4); the weighted mean runs over the
+// resolved samples only. The reach is local and resolution-dependent through τ, by design.
 const SECONDARY_OFFSET: f32 = 4.0;
-const AO_SPACING: f32 = 0.015;
 const AO_STRENGTH: f32 = 0.6;
 const AO_MAX_SAMPLES: u32 = 5u; // B00 batch bound aoSamples
 
@@ -151,8 +151,8 @@ fn ao_sample(q: vec3<f32>) -> AoSample {
 }
 // Restrained AO: every bounded sample is evaluated. The factor is the weighted occlusion of the resolved samples
 // (1 when none resolved); any failure is reduced and returned with it, so the occlusion is reported as incomplete.
-fn ambient_occlusion(p: vec3<f32>, n: vec3<f32>, t: f32, tau: f32) -> Secondary {
-  let spacing = max(SECONDARY_OFFSET * tau, AO_SPACING * t);
+fn ambient_occlusion(p: vec3<f32>, n: vec3<f32>, tau: f32) -> Secondary {
+  let spacing = SECONDARY_OFFSET * tau;
   var occlusion = 0.0;
   var total = 0.0;
   var weight = 0.5;
@@ -215,7 +215,7 @@ fn shade(px: vec2<u32>, g: Geometry) -> Shaded {
         shadow_failure = s.failure;
       }
       if (u.ao_samples >= 1u) {
-        let a = ambient_occlusion(p, n, g.t, tau);
+        let a = ambient_occlusion(p, n, tau);
         ao = a.factor;
         ao_failure = a.failure;
       }
