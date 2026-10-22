@@ -2857,13 +2857,13 @@ async function runRendering({ page }) {
   check(APPEARANCE_PASSES[8], () => {
     const available = bytes(depths[0].display), unavailable = bytes(depths[1].display);
     assert.deepEqual(available, unavailable, 'normal availability cannot affect depth');
-    // A unit sphere viewed from its centre has interval [0, 1] on every unit ray.
-    // Placed depths .25/.5/.75 therefore map to .75/.5/.25, without sRGB encoding.
+    // analytic.js declares a radius-2 enclosing sphere: from its centre the
+    // interval is [0, 2]. Placed depths .25/.5/.75 map to .875/.75/.625, without sRGB.
     for (let y = 0; y < 8; y++) for (let x = 0; x < 24; x++) {
-      const expected = 255 * (1 - 0.25 * (1 + x % 3));
+      const expected = 255 * (1 - 0.25 * (1 + x % 3) / 2);
       for (let c = 0; c < 3; c++) assert.ok(Math.abs(available[4 * (y * 24 + x) + c] - expected) <= 1);
     }
-    return { origin: [0, 0, 0], enclosingRadius: 1, depths: [0.25, 0.5, 0.75], expected: [0.75, 0.5, 0.25], identicalWithNormalsToggled: true };
+    return { origin: [0, 0, 0], enclosingRadius: 2, depths: [0.25, 0.5, 0.75], expected: [0.875, 0.75, 0.625], identicalWithNormalsToggled: true };
   });
   for (const samples of [1, 8]) for (const viewMode of VIEW_MODE_LIST) {
     patternRuns[`${viewMode}/${samples}`] = await direct({ label: `pattern-${viewMode}-${samples}`, modelId: 'sphere', camera: interior, effective: {}, internalSize: patternSize,
@@ -3514,7 +3514,7 @@ try {
     const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), options.group === 'prewarm' ? 'none' : 'webgl');
     watchErrors(page);
     if (options.group === 'prewarm') await (await import('./support/space-prewarm.mjs')).runColdPrewarm({ page, url, environment, pass, report });
-    else if (options.group === 'performance') await (await import('./space-performance.mjs')).runPerformance({ context, page, environment, sceneId: options.scene, url, pass, report });
+    else if (options.group === 'performance') await (await import('./support/space-performance.mjs')).runPerformance({ context, page, environment, sceneId: options.scene, url, pass, report });
     else if (options.group === 'memory') await (await import('./support/space-memory.mjs')).runMemory({ page, url, environment, pass, report });
     else if (options.group === 'shell' && options.investigation) await (await import('./support/space-investigation.mjs')).runInvestigation({ page, url, environment, pass, report });
     else await groups[options.group]({ context, page, environment });

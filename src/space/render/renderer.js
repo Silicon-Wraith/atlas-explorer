@@ -287,6 +287,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const appearance = appearanceKey(record.request.sceneSnapshot, meta.quality);
     emit('Publish', { kind: record.request.quality.preview ? 'draft' : meta.ordinal === 0 ? 'settled-first' : 'refinement',
       requestId: record.request.requestId, identity: identity(record.request), createdAt: record.requestedAt,
+      sceneHash: record.request.sceneHash, camera: record.request.sceneSnapshot.camera,
+      model: record.request.sceneSnapshot.model.id, internalSize: { ...meta.quality.internalSize },
+      output: { width: record.request.output.width, height: record.request.output.height },
       geometryRequestId: record.geometryRequestId, samples: meta.sample + 1, sampleIndex: meta.sample, pending,
       appearanceKey: appearance, accumulationKey: accumulationKey(record.request.keys.geometryKey, appearance, record.request.quality.sampling),
       quality: meta.quality, publishedAt: now(), rayTermination: record.publishedCounts.rayTermination });

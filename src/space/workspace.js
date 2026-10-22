@@ -226,8 +226,9 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   function presented() { return !dirty && Boolean(lastPresented) && sameGeneration(lastPresented.generation, liveGeneration()); }
   function onPublish(publication) {
     const request = requests.get(publication.requestId);
-    lastPublication = Object.freeze({ ...publication, sceneHash: request?.sceneHash ?? null, camera: request?.sceneSnapshot.camera ?? null,
-      model: request?.sceneSnapshot.model.id ?? null, internalSize: request ? { ...request.quality.internalSize } : null, output: request ? { width: request.output.width, height: request.output.height } : null });
+    // The renderer owns the published request even after this bounded history
+    // evicts it. In particular, a delayed pending draft keeps its own metadata.
+    lastPublication = publication;
     for (const listener of publishListeners) { try { listener(lastPublication); } catch { /* isolate observers */ } }
     if (publication.kind === 'settled-first' && request) classifyEffective(request);
     hideUnavailable();

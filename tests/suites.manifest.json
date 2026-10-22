@@ -103,6 +103,9 @@
         "No browser runtime errors"
       ]
     },
+    { "id": "performance-entry", "gpu": false, "server": false, "timeoutMs": 30000,
+      "command": ["tests/performance-entry.mjs"], "report": "artifacts/performance-entry-report.json", "evidence": "workflow",
+      "requiredPasses": ["Registered P3 entry points terminate without a circular module wait"] },
     { "id": "acceptance-audit", "gpu": false, "server": false, "timeoutMs": 30000,
       "command": ["tests/audit-acceptance.mjs"], "report": "artifacts/acceptance-audit-report.json", "evidence": "workflow",
       "requiredPasses": ["The audit wrapper validates a real Git range and large shards with pinned evidence"] }

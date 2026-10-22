@@ -75,6 +75,37 @@ test('harness previews request drafts and commit closes one camera history entry
   } finally { h.space.destroy(); }
 });
 
+test('a pending draft retains its own camera size and scene after more than 64 newer requests', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    const requests = [], publications = [], camera = h.space.inspection.scene.camera;
+    h.space.inspection.onRequest(event => requests.push(event.request));
+    h.space.inspection.onPublish(event => publications.push(event));
+    h.backends[0].control.pause();
+    h.space.inspection.requestCamera(orbit(camera, 0.01, 0), { phase: 'preview' });
+    for (let i = 0; i < 80 && !h.backends[0].control.heldTickets(); i++) { h.runFrame(); await turn(); }
+    assert.ok(h.backends[0].control.heldTickets(), 'the oldest draft is already in flight');
+    const first = requests[0];
+    for (let i = 1; i <= 65; i++) {
+      h.space.inspection.requestCamera(orbit(camera, 0.01 + i * 0.001, 0), { phase: 'preview' });
+      h.runFrame(); await turn();
+    }
+    assert.ok(requests.length > 64, 'exercise request-history eviction');
+    assert.notDeepEqual(first.sceneSnapshot.camera, requests.at(-1).sceneSnapshot.camera);
+    h.backends[0].control.resume();
+    for (let i = 0; i < 400 && !publications.some(p => p.requestId === first.requestId); i++) { h.runFrame(); await turn(); }
+    const pending = publications.find(p => p.requestId === first.requestId);
+    assert.ok(pending, 'the oldest completed draft publishes');
+    assert.equal(pending.pending, true);
+    assert.deepEqual(pending.camera, first.sceneSnapshot.camera);
+    assert.deepEqual(pending.internalSize, first.quality.internalSize);
+    assert.deepEqual(pending.output, { width: first.output.width, height: first.output.height });
+    assert.equal(pending.sceneHash, first.sceneHash);
+    assert.equal(pending.model, first.sceneSnapshot.model.id);
+  } finally { h.backends[0]?.control.resume(); h.space.destroy(); }
+});
+
 test('deactivation commits the last preview exactly once and a later capture-loss callback cannot cancel it', async () => {
   const h = rig();
   try {

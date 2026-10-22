@@ -128,6 +128,56 @@ test('retrospective recorder requires pinned ledger input and an exact target ch
   const result=parseFastOptions(args);assert.equal(result.retrospective,true);assert.equal(result.expectedCommit,promotion);assert.equal(result.checkout,'artifacts/old');
 });
 
+async function fastLedgerFixture(run) {
+  const {readContemporaneousFast}=await import('../../scripts/gate/fast-evidence.mjs');
+  const {mkdir,mkdtemp,writeFile,rm}=await import('node:fs/promises');
+  const {resolve}=await import('node:path');
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  await mkdir('artifacts/runtime',{recursive:true});
+  const root=await mkdtemp(resolve('artifacts/runtime/fast-clauses-'));
+  const load=async(text,{commit=promotion,pin}={})=>{
+    await writeFile(resolve(root,'progress.md'),text);
+    const entry={commit,unit:'passed',build:'passed',recordedAt:'2026-10-21T12:00:00Z',source:{file:'progress.md',sha256:hash(text),startLine:1,endLine:text.split('\n').length,excerpt:text}};
+    const bytes=JSON.stringify({schema:'atlas.contemporaneous-fast-index',schemaVersion:1,entries:[entry]});
+    await writeFile(resolve(root,'index.json'),bytes);
+    return readContemporaneousFast([{file:'index.json',sha256:pin??hash(bytes)}],{root,resolveCommit:s=>[promotion,candidate].includes(s)?s:null});
+  };
+  try {await run(load);} finally {await rm(root,{recursive:true,force:true});}
+}
+
+test('the fast-evidence loader rejects failed pending and held wording even beside a passing phrase',async()=>{
+  await fastLedgerFixture(async load=>{
+    assert.equal((await load(`Promotion ${promotion}: fast checks 945 + build.`)).size,1);
+    for(const outcome of ['failed','pending','held']) {
+      await assert.rejects(load(`Promotion ${promotion}: fast checks 945 + build ${outcome}.`),/explicitly record passing fast checks/);
+    }
+  });
+});
+
+test('the fast-evidence loader verifies the index pin before accepting valid source evidence',async()=>{
+  await fastLedgerFixture(async load=>{
+    const text=`Promotion ${promotion}: fast checks 945 + build.`;
+    assert.equal((await load(text)).size,1);
+    await assert.rejects(load(text,{pin:'0'.repeat(64)}),/index hash mismatch/);
+    await assert.rejects(load(text,{pin:'not-a-hash'}),/index hash mismatch/);
+  });
+});
+
+test('the fast-evidence loader binds passing checks to their named commit clause',async()=>{
+  await fastLedgerFixture(async load=>{
+    const mixed=`Commit ${promotion} (wip); Candidate ${candidate} (feat merged); fast checks 766 + build.`;
+    await assert.rejects(load(mixed),/same.SHA.*association/);
+    assert.equal((await load(mixed,{commit:candidate})).size,1);
+    await assert.rejects(load(`Candidate ${candidate}; references commit ${promotion}; fast checks 945 + build.`),/same.SHA.*association/);
+    for(const separator of ['. ','\n']) {
+      await assert.rejects(load(`Commit ${promotion} (wip)${separator}fast checks 945 + build.`),/same.SHA.*association/);
+    }
+    const two=`Candidate ${candidate} gate PASSED; promotion ${promotion}: parents ${candidate}; tree identical; fast checks 945 + build. Candidate ${candidate}: fast checks 766 + build pending.`;
+    assert.equal((await load(two)).size,1,'a different candidate\'s pending checks do not invalidate this promotion');
+    await assert.rejects(load(two,{commit:candidate}),/explicitly record passing fast checks/);
+  });
+});
+
 
 test('a historical fast-evidence pin cannot hide its retrospective status',()=>{
   const x=baseline();x.manifest.commits.at(-1).requiresRetrospectiveFast=true;
