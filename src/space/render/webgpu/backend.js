@@ -14,7 +14,7 @@
 //   - Target handles are caller-owned until release(): reconfiguration never releases the earlier set.
 //   - Compute dispatch geometry is frozen ABI: @workgroup_size(8, 8, 1), ceil(region / 8) workgroups;
 //     each pass carries its region in its own uniforms (the backend injects nothing).
-import { BackendError, createBatch, TARGET_LAYOUT_ID, TARGET_LAYOUT_V1, TRACKED_ALLOCATION_CAP } from '../backend.js';
+import { BackendError, createBatch, TARGET_LAYOUT_ID, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../backend.js';
 import { deepFreeze, isPlainObject } from '../../../shared/scene.js';
 import { acquireDevice, IDENTITY_FIELDS } from './device.js';
 import { createTrackedAllocator } from './allocator.js';
@@ -335,7 +335,7 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       const maxDimension = attempt.limits.maxTextureDimension2D;
       if (Math.max(internalSize.width, internalSize.height, outputSize.width, outputSize.height) > maxDimension) throw new BackendError('allocation-failed', `target dimensions exceed maxTextureDimension2D ${maxDimension}`);
       const current = attempt, names = [], descs = [];
-      for (const [name, layout] of Object.entries(TARGET_LAYOUT_V1)) for (let index = 0; index < layout.count; index++) {
+      for (const [name, layout] of Object.entries(TARGET_LAYOUT)) for (let index = 0; index < layout.count; index++) {
         names.push([name, index, layout.count]);
         descs.push(Object.freeze({ name: layout.count === 1 ? name : `${name}-${index}`, width: internalSize.width, height: internalSize.height, format: layout.format, bytesPerTexel: layout.bytesPerTexel, bytes: internalSize.width * internalSize.height * layout.bytesPerTexel }));
       }

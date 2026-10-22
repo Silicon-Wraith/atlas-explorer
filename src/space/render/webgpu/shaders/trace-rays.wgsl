@@ -1,7 +1,8 @@
 // trace_rays (plan B10): the validation ray-list entry. It shares march() with trace_band and takes
 // explicit rays (B04's analytic and adversarial strata are rays, not camera pixels): each record is
 // origin high (w: 1 for an explicit interval), origin low, unit direction, interval (enter, exit).
-// Each result is the packed status, the depth bits, the interior detail and the starting parameter.
+// Each result is the packed status, the depth bits, the interior detail | the recovery word << 8 (B11c) and the steps.
+// A ray is primary unless low.w = 1 (B11c: a secondary-ray probe, which never enters the quaternion recovery).
 // Rays are a row-major grid `internal_size.x` wide; the batch region bounds every invocation.
 struct TraceRay { high: vec4<f32>, low: vec4<f32>, direction: vec4<f32>, interval: vec4<f32> }
 @group(0) @binding(0) var<uniform> u: TraceUniforms;
@@ -16,6 +17,7 @@ fn trace_rays(@builtin(global_invocation_id) gid: vec3<u32>) {
   if (i >= arrayLength(&rays) || i >= arrayLength(&ray_results)) { return; }
   let ray = rays[i];
   let use_given = ray.high.w == 1.0;
-  let r = march(ray.high.xyz, ray.low.xyz, ray.direction.xyz, use_given, Interval(0u, ray.interval.x, ray.interval.y));
-  ray_results[i] = vec4<u32>(pack_status(r), bitcast<u32>(r.t), r.detail, r.steps);
+  let primary = ray.low.w != 1.0;
+  let r = march(ray.high.xyz, ray.low.xyz, ray.direction.xyz, use_given, Interval(0u, ray.interval.x, ray.interval.y), primary);
+  ray_results[i] = vec4<u32>(pack_status(r), bitcast<u32>(r.t), r.detail | (r.recovery << 8u), r.steps);
 }

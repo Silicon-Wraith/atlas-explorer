@@ -29,7 +29,7 @@ const loadFromDisk = async id => readFileSync(shaderPath(id), 'utf8');
 const DEFAULT_LIMITS = { maxStorageBuffersPerShaderStage: 8, maxStorageTexturesPerShaderStage: 4, maxUniformBufferBindingSize: 65536, maxComputeInvocationsPerWorkgroup: 256 };
 
 test('the tracing metadata hashes equal the shader sources on disk and the descriptors validate against the B00 schema', async () => {
-  assert.equal(TRACING_VERSION, 'surface-v1/space-trace-v1');
+  assert.equal(TRACING_VERSION, 'surface-v1/space-trace-v3');
   const descriptors = [...tracePipelineDescriptors(), ...validationPipelineDescriptors()];
   const sources = new Set(descriptors.flatMap(d => d.sourceIds).filter(id => id !== 'fields'));
   assert.deepEqual(Object.keys(TRACING_HASHES.sources).sort(), [...sources].sort());
@@ -54,7 +54,10 @@ test('the tracing metadata hashes equal the shader sources on disk and the descr
   assert.deepEqual(set.descriptors.map(d => d.pipelineId), [...TRACE_FIELD_IDS.map(id => `trace_band:${id}`), ...TRACE_FIELD_IDS.map(id => `normals_band:${id}`)]);
   // Only the Menger variants bind the box buffer; the slot is recorded in the versioned binding table.
   for (const d of set.descriptors) assert.equal(d.bindings.some(b => b.slot === 'menger_boxes'), d.pipelineId.endsWith(':menger'), d.pipelineId);
-  assert.equal(TRACING_BINDINGS.version, 'space-trace-bindings-v1');
+  // B11c: trace_band writes the per-pixel quaternion-primary recovery word beside depth and status.
+  assert.equal(TRACING_BINDINGS.version, 'space-trace-bindings-v2');
+  for (const d of set.descriptors.filter(x => x.entryPoint === 'trace_band')) assert.deepEqual(d.bindings.slice(1, 4).map(b => [b.slot, b.access]), [['depth', 'write'], ['status', 'write'], ['recovery', 'write']], d.pipelineId);
+  assert.equal(TRACING_BINDINGS.wgsl.trace_band.recovery, 'recovery_out');
   for (const d of descriptors) assert.deepEqual(TRACING_BINDINGS.descriptors[d.pipelineId], d.bindings.map(b => b.slot), d.pipelineId);
   assert.ok(VALIDATION_FIELD_IDS.includes('constant') && !TRACE_FIELD_IDS.includes('constant'), 'the constant field is validation-only');
   assert.doesNotThrow(() => checkLayoutLimits(createPipelineSet({ id: 'all', descriptors }), DEFAULT_LIMITS));
@@ -98,7 +101,8 @@ test('validation rays encode as high/low/direction/interval records and results 
   view.setFloat32(4, 1.5, true); words[2] = 0;
   words[4] = packStatus({ status: RAY_STATUS.unresolved, reason: UNRESOLVED_REASON.estimateUnavailable, subreason: 0, steps: 1 }); words[6] = 1;
   const decoded = decodeRayResults(new Uint8Array(words.buffer), 2);
-  assert.deepEqual(decoded[0], { status: 'unresolved', reason: 'stagnation', subreason: 'field-coordinate', steps: 1, t: 1.5, detail: null });
+  assert.deepEqual(decoded[0], { status: 'unresolved', reason: 'stagnation', subreason: 'field-coordinate', steps: 1, t: 1.5, detail: null,
+    recovery: { attempted: false, outcome: 'none', stop: 'none', midpoints: 0, encounters: 0 } });
   assert.equal(decoded[1].reason, 'estimate-unavailable'); assert.equal(decoded[1].subreason, null); assert.equal(decoded[1].detail, 'interior');
   assert.equal(TRACE_RESULT_BYTES, 16);
   const u = traceRaysUniforms({ modelId: 'constant', effective: { distance: 2 ** -30 }, count: 2, pitch: 2, profile: { maxIterations: 128, maxSteps: 512, stepMultiplier: 0.9, toleranceFloor: 0, toleranceFactor: 0, alpha: 0 } });

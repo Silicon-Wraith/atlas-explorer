@@ -179,7 +179,7 @@ test('releaseObsolete follows unsubmitted live geometry edits and keeps the publ
   assert.equal((await h.finish(h.renderer.render(exporting))).outcome, 'failed');
   const before = h.fake.diagnostics().tracked;
   const receipt = h.renderer.releaseObsolete({ request: exporting });
-  assert.deepEqual(receipt, { freed: pixelsIn(a) * 8, retiring: 0 });
+  assert.deepEqual(receipt, { freed: pixelsIn(a) * 12, retiring: 0 });
   assert.ok(Object.isFrozen(receipt));
   assert.equal(h.fake.diagnostics().tracked, before - receipt.freed);
   assert.equal(inventoryEntry(h, normal), undefined);
@@ -204,7 +204,7 @@ test('releaseObsolete checks the live request key and sample seed as well as its
       h.fake.testAdapter.failNextAllocation();
       assert.equal((await h.finish(h.renderer.render(next))).outcome, 'failed');
     }
-    assert.deepEqual(h.renderer.releaseObsolete(), { freed: pixelsIn(a) * 8, retiring: 0 }, change);
+    assert.deepEqual(h.renderer.releaseObsolete(), { freed: pixelsIn(a) * 12, retiring: 0 }, change);
     h.renderer.destroy(); h.fake.destroy();
   }
 });
@@ -238,8 +238,9 @@ test('releaseObsolete reports retiring cache bytes until the outstanding ticket 
   live = generation(2);
   const before = h.fake.diagnostics(), outstanding = h.scheduler.snapshot().outstanding;
   assert.ok(before.retiring > 0, 'unrelated ticket-owned targets already retire');
-  assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: pixelsIn(r) * 16 });
-  assert.equal(h.fake.diagnostics().tracked, before.tracked);
+  // B11c: the ticket holds depth, status and normal; the cached recovery word (4 B/px) is freed at once.
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: pixelsIn(r) * 4, retiring: pixelsIn(r) * 16 });
+  assert.equal(h.fake.diagnostics().tracked, before.tracked - pixelsIn(r) * 4);
   assert.equal(h.fake.diagnostics().retiring, before.retiring + pixelsIn(r) * 16);
   assert.equal(h.scheduler.snapshot().outstanding, outstanding);
   for (const handle of handles) assert.equal(inventoryEntry(h, handle).state, 'retiring');
@@ -267,13 +268,13 @@ test('releaseObsolete separates freed bytes from a cache readback still held by 
   const status = readback.desc.source, before = h.fake.diagnostics().tracked;
   assert.equal(inventoryEntry(h, status).tickets, 0);
   assert.equal(inventoryEntry(h, status).mappings, 1);
-  assert.deepEqual(h.renderer.releaseObsolete(), { freed: pixelsIn(r) * 12, retiring: pixelsIn(r) * 4 });
-  assert.equal(h.fake.diagnostics().tracked, before - pixelsIn(r) * 12);
+  assert.deepEqual(h.renderer.releaseObsolete(), { freed: pixelsIn(r) * 16, retiring: pixelsIn(r) * 4 });
+  assert.equal(h.fake.diagnostics().tracked, before - pixelsIn(r) * 16);
   assert.equal(inventoryEntry(h, status).state, 'retiring');
   assert.equal(h.scheduler.snapshot().outstanding, 1, 'one region retains one lease through copy-out');
   await flush();
   assert.equal(inventoryEntry(h, status), undefined);
-  assert.equal(h.fake.diagnostics().tracked, before - pixelsIn(r) * 16);
+  assert.equal(h.fake.diagnostics().tracked, before - pixelsIn(r) * 20);
   assert.equal(h.scheduler.snapshot().outstanding, 0);
   assert.deepEqual(h.renderer.releaseObsolete(), { freed: 0, retiring: 0 });
   h.renderer.destroy(); h.fake.destroy();
@@ -399,11 +400,87 @@ test('a report counts terminations and lighting failures from the status words a
   const r = request(directScene(), generation(), 'settled', { width: 8, height: 1 });
   const { report } = await h.finish(h.renderer.render(r));
   assert.deepEqual(report.rayTermination, { hit: 1, miss: 1, unresolved: { pointBudget: 1, estimateUnavailable: 1, rayStepBudget: 1, stagnation: { rayParameter: 1, fieldCoordinate: 1 } }, numericalFailure: 1 });
-  assert.deepEqual(report.lightingFailures, { shadow: 4, ao: 4, both: 2 }); assert.equal(report.unavailableNormals, 4);
+  // B11b measurement fix: an unavailable normal counts only where the same sample hit (pixel 0 of 0, 2, 4, 6).
+  assert.deepEqual(report.lightingFailures, { shadow: 4, ao: 4, both: 2 }); assert.equal(report.unavailableNormals, 1);
   assert.equal(report.gpuTiming.completionMethod, 'queue-completion'); assert.ok(report.gpuTiming.queueElapsedMs > 0);
   assert.equal(report.timings.gpu, 'unavailable'); assert.equal(report.outcome, 'completed');
   assert.equal(report.estimator.category, 'exact-distance'); assert.equal(report.estimator.validationRecordId, null);
   assert.deepEqual(report.samples, { target: 1, completed: 1 }); h.renderer.destroy();
+});
+
+test('a report carries per-sample outcome metrics and pixelwise unions from the same full-light samples', async () => {
+  const HIT = packStatus({ status: 0, reason: 0, subreason: 0, steps: 2 }), MISS = packStatus({ status: 1, reason: 0, subreason: 0, steps: 2 });
+  const AO = packLightingStatus({ shadow: null, ao: { status: 2, reason: 1, subreason: 0 } }), SHADOW = packLightingStatus({ shadow: { status: 2, reason: 3, subreason: 0 }, ao: null });
+  // Ordinal 0 is the direct sample (its own accumulation identity); ordinals 1 and 2 are full-light samples 0 and 1.
+  const frames = [
+    { status: [HIT, HIT, HIT, HIT], normal: [false, false, false, false], lighting: [0, 0, 0, 0] },
+    { status: [HIT, MISS, HIT, HIT], normal: [true, false, true, false], lighting: [0, 0, 0, 0] },
+    { status: [MISS, MISS, HIT, HIT], normal: [false, false, true, true], lighting: [0, 0, AO, SHADOW] },
+  ];
+  const h = await rig();
+  let ordinal = 0;
+  const normalBytes = flags => { const d = new Uint16Array(flags.length * 4); flags.forEach((f, i) => { d[4 * i + 3] = f ? 0x3c00 : 0; }); return new Uint8Array(d.buffer); };
+  h.hooks.before = (method, desc) => {
+    if (method === 'present') ordinal++;
+    if (method !== 'readback' || !desc.identity?.jobId) return;
+    const frame = frames[ordinal], field = desc.fields[0];
+    if (field === 'status') h.fake.stage(desc.source, words(frame.status));
+    if (field === 'normal') h.fake.stage(desc.source, normalBytes(frame.normal));
+    if (field === 'lightingStatus') h.fake.stage(desc.source, words(frame.lighting));
+  };
+  const s = scene(), r = request(changed(s, { sampling: { ...s.sampling, targetSamples: 2 } }), generation(), 'settled', { width: 4, height: 1 });
+  const { report } = await h.finish(h.renderer.render(r));
+  assert.equal(report.outcome, 'completed');
+  const masks = report.outcomeMasks;
+  assert.ok(masks, 'the report retains the outcome masks');
+  assert.equal(masks.accumulationKey, h.publications.at(-1).accumulationKey, 'the masks belong to the published accumulation identity');
+  assert.notEqual(masks.accumulationKey, h.publications[0].accumulationKey, 'the direct sample is a different identity');
+  assert.deepEqual(masks.samples.map(x => [x.sample, x.hits, x.unavailableNormals, x.lightingUnresolved]), [[0, 3, 1, 0], [1, 2, 0, 2]]);
+  assert.deepEqual(masks.union, { samples: 2, pixels: 4, hits: 3, nonMiss: 3, primaryUnresolved: 0, numericalFailures: 0, unavailableNormals: 1, lightingUnresolved: 2, shadowUnresolved: 1, aoUnresolved: 1, lightingNumericalFailures: 0 });
+  // B11b fix round 1: the reasons survive into the report, per sample and over the union.
+  assert.equal(masks.reasons.samples.length, 2);
+  assert.equal(masks.reasons.union.aoUnresolved.multiple + Object.entries(masks.reasons.union.aoUnresolved).filter(([k]) => k !== 'multiple').reduce((n, [, v]) => n + v, 0) >= 1, true, JSON.stringify(masks.reasons.union));
+  assert.equal(Object.values(masks.reasons.union.shadowUnresolved).reduce((n, v) => n + v, 0) >= 1, true);
+  // The legacy last-sample counts use the same joint hit/normal mask.
+  assert.equal(report.unavailableNormals, 0); assert.deepEqual(report.lightingFailures, { shadow: 1, ao: 1, both: 0 });
+  // A later request starts its own masks: nothing of this job's samples enters it.
+  h.hooks.before = undefined;
+  const again = request(changed(s, { sampling: { ...s.sampling, targetSamples: 1 }, appearance: { ...s.appearance, lightingQuality: 'direct' } }), generation(2), 'settled', { width: 4, height: 1 });
+  const second = (await h.finish(h.renderer.render(again))).report.outcomeMasks;
+  assert.equal(second.samples.length, 1); assert.equal(second.union.samples, 1);
+  h.renderer.destroy();
+});
+
+// B11c (spec §11.4 rev 5.1): a recovering family (quaternion Julia) reads back the per-pixel recovery word with each
+// sample's geometry, and the report keeps the recovery diagnostics per sample and over the union; other families do not.
+test('a quaternion report keeps per-sample recovery diagnostics from a recovery readback; other families read none back', async () => {
+  const { packRecoveryWord } = await import('../../src/space/render/webgpu/passes.js');
+  const HIT = packStatus({ status: 0, reason: 0, subreason: 0, steps: 6 }), POINT = packStatus({ status: 2, reason: 1, subreason: 0, steps: 12 });
+  const recovered = packRecoveryWord({ attempted: true, outcome: 'approximate hit', stop: 'none', midpoints: 2, encounters: 2 });
+  const stopped = packRecoveryWord({ attempted: true, outcome: 'point-budget', stop: 'midpoint-limit', midpoints: 8, encounters: 6 });
+  const h = await rig();
+  const normalBytes = n => { const d = new Uint16Array(n * 4); for (let i = 0; i < n; i++) d[4 * i + 3] = 0x3c00; return new Uint8Array(d.buffer); };
+  h.hooks.before = (method, desc) => {
+    if (method !== 'readback' || !desc.identity?.jobId) return;
+    const field = desc.fields[0];
+    if (field === 'status') h.fake.stage(desc.source, words([HIT, POINT]));
+    if (field === 'normal') h.fake.stage(desc.source, normalBytes(2));
+    if (field === 'recovery') h.fake.stage(desc.source, words([recovered, stopped]));
+  };
+  const q = scene({ model: 'quaternion-julia' }), r = request(changed(q, { appearance: { ...q.appearance, lightingQuality: 'direct' }, sampling: { ...q.sampling, targetSamples: 2 } }), generation(), 'settled', { width: 2, height: 1 });
+  const { report } = await h.finish(h.renderer.render(r));
+  assert.equal(report.outcome, 'completed', report.reason);
+  const recovery = report.outcomeMasks?.recovery;
+  assert.ok(recovery, 'the quaternion report keeps the recovery diagnostics');
+  assert.deepEqual(recovery.samples.map(x => [x.sample, x.attempts, x.outcomes['approximate hit'], x.stops['midpoint-limit'], x.midpoints, x.encounters]), [[0, 2, 1, 1, 10, 8], [1, 2, 1, 1, 10, 8]]);
+  assert.deepEqual([recovery.union.samples, recovery.union.attempted], [2, 2]);
+  const recoveryReads = jobId => h.submissions.filter(x => x.method === 'readback' && x.desc.identity.jobId === jobId && x.desc.fields[0] === 'recovery').length;
+  assert.ok(recoveryReads(r.jobId) >= 2, 'one recovery readback per sample at least');
+  h.hooks.before = undefined;
+  const sphere = request(directScene(), generation(2), 'settled', { width: 2, height: 1 });
+  const plain = (await h.finish(h.renderer.render(sphere))).report;
+  assert.equal(recoveryReads(sphere.jobId), 0); assert.equal(plain.outcomeMasks.recovery, null);
+  h.renderer.destroy();
 });
 
 test('the first settled direct-light image and full-quality completion are separate milestones', async () => {

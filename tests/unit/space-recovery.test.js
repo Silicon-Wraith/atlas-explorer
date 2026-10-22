@@ -182,7 +182,7 @@ test('allocation failure releases obsolete generations before offering a lower-c
   const notices = h.notices.filter(value => value.type === 'allocation-failed'); assert.equal(notices.length, 1);
   const notice = notices[0];
   assert.deepEqual(notice.choices, ['release-and-retry', 'lower-resolution', 'fewer-samples']);
-  assert.equal(notice.request, request); assert.equal(notice.released, 8 * 8 * 8); assert.equal(notice.retiring, 0);
+  assert.equal(notice.request, request); assert.equal(notice.released, 8 * 8 * 12); assert.equal(notice.retiring, 0);
   assert.ok(!Object.hasOwn(notice, 'releaseUnavailable')); assert.ok(Object.isFrozen(notice));
   assert.equal(atNotice.tracked, tracked - notice.released, 'release precedes the choice notification');
   assert.ok(!atNotice.inventory.some(value => value.id === normal.id));
@@ -405,7 +405,7 @@ test('real allocation failures report freed cache bytes separately from bytes he
     const result = await h.recovery.render(exporting).done; await flush(); // Keep the old ticket outstanding.
     assert.equal(result.outcome, 'failed'); assert.equal(result.errorCode, 'allocation-failed');
     const notices = h.notices.filter(value => value.type === 'allocation-failed'); assert.equal(notices.length, 1);
-    const notice = notices[0], freed = stage === 'shade' ? 0 : 8 * 8 * 12, retiring = stage === 'shade' ? 8 * 8 * 16 : 8 * 8 * 4;
+    const notice = notices[0], freed = stage === 'shade' ? 8 * 8 * 4 : 8 * 8 * 16, retiring = stage === 'shade' ? 8 * 8 * 16 : 8 * 8 * 4; // B11c: + the recovery word (4 B/px)
     assert.equal(notice.request, exporting); assert.equal(notice.released, freed, stage); assert.equal(notice.retiring, retiring, stage);
     assert.ok(!Object.hasOwn(notice, 'releaseUnavailable'));
     assert.equal(h.fake.diagnostics().tracked, before.tracked - freed);

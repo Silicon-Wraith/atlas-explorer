@@ -1,12 +1,16 @@
-// shade_band and the diagnostic view modes, APPEARANCE_VERSION space-appearance-v1 (plan B11; spec §8.1
-// step 4, §8.2, §7.6). Assembled after fields.wgsl, a Menger adapter and trace.wgsl, so a secondary ray is
+// shade_band and the diagnostic view modes, APPEARANCE_VERSION space-appearance-v3 (plan B11; spec §8.1
+// step 4, §8.2, §7.6; plan rev 5.0 B11 note, implemented by B11b; plan rev 5.1 FU1 AO heights, implemented by B11c). Assembled after fields.wgsl, a Menger adapter and trace.wgsl, so a secondary ray is
 // the same §11.4 tracer (march) and every secondary field value the same field_sample.
 //   shade_band: the neutral inspection light in linear colour. In the full stage it adds one bounded shadow
 //     ray (u.max_steps, the descriptor's `shadowSteps` <= 64) and restrained AO from at most five bounded
 //     samples along the normal. Each failure is kept in `lightingStatus` with its status, reason and
 //     subreason (B00 packLightingStatus layout); shadow and AO failures are independent and may coexist.
-//     Unknown visibility is never shaded as known lit or known occluded: a pixel with any lighting failure
-//     carries the legend colour of that failure, and the accumulate pass propagates it (accumulationFlags).
+//     Unknown visibility is never presented as known lit or known occluded (rev 5.0, user decision 2): where only
+//     the shadow or AO evaluation is unresolved, the sample is shaded from what resolved (AO from its resolved
+//     samples alone; an unresolved shadow ray leaves the key unattenuated, direct-light context rather than a
+//     claim of visibility) and the failure is kept in lightingStatus; the accumulate pass ORs it into
+//     accumulationFlags and display_band marks every such pixel with the lighting-unresolved tint, never the
+//     primary magenta. A secondary numerical failure keeps the numerical-failure legend colour.
 //   diagnostic_normals / _depth / _steps / _termination: display-space values that bypass lighting (and fog,
 //     which 1b.1 rejects); lightingStatus is written zero.
 // Every entry statically uses bindings 0–5 through load_geometry and store_sample, so each descriptor lists
@@ -56,10 +60,11 @@ const KEY: f32 = 0.85;
 const SPECULAR: f32 = 0.18;
 const SHININESS: f32 = 32.0;
 const BACKGROUND: vec3<f32> = vec3<f32>(0.01, 0.013, 0.022);
-// Secondary rays and samples start SECONDARY_OFFSET·τ(t) off the surface along the normal; restrained AO:
-// spacing max(SECONDARY_OFFSET·τ, AO_SPACING·t), weights 1/2^k, occlusion scaled by AO_STRENGTH (AO >= 0.4).
+// Secondary rays and samples start SECONDARY_OFFSET·τ(t) off the surface along the normal; restrained AO (plan rev
+// 5.1 FU1, user-approved 2026-10-22): heights h_k = SECONDARY_OFFSET·k·τ(t) = 4k·τ(t), k = 1..5 (reach 20τ, no
+// t-proportional term), weights 1/2^k, occlusion scaled by AO_STRENGTH (AO >= 0.4); the weighted mean runs over the
+// resolved samples only. The reach is local and resolution-dependent through τ, by design.
 const SECONDARY_OFFSET: f32 = 4.0;
-const AO_SPACING: f32 = 0.015;
 const AO_STRENGTH: f32 = 0.6;
 const AO_MAX_SAMPLES: u32 = 5u; // B00 batch bound aoSamples
 
@@ -117,7 +122,7 @@ fn shadow_ray(p: vec3<f32>, n: vec3<f32>, l: vec3<f32>, t: f32, tau: f32) -> Sec
   let volume = enclosing_interval(origin, vec3<f32>(0.0), l);
   if (volume.kind == 2u || !finite_f32(volume.enter) || !finite_f32(volume.exit)) { return Secondary(1.0, numerical_failure()); }
   if (volume.kind == 1u) { return Secondary(1.0, no_failure()); } // the ray never meets the volume
-  let r = march(origin, vec3<f32>(0.0), l, true, Interval(0u, max(t, volume.enter), volume.exit));
+  let r = march(origin, vec3<f32>(0.0), l, true, Interval(0u, max(t, volume.enter), volume.exit), false); // secondary: no recovery
   if (r.status == RAY_STATUS_HIT) { return Secondary(0.0, no_failure()); }
   if (r.status == RAY_STATUS_MISS) { return Secondary(1.0, no_failure()); }
   if (r.status == RAY_STATUS_UNRESOLVED) { return Secondary(1.0, unresolved_failure(r.reason, r.subreason)); }
@@ -125,9 +130,11 @@ fn shadow_ray(p: vec3<f32>, n: vec3<f32>, l: vec3<f32>, t: f32, tau: f32) -> Sec
 }
 
 struct AoSample { resolved: bool, distance: f32, failure: Failure }
-// One AO field value at q, resolved as the tracer resolves it: an analytic distance, an analytic interior (the
-// point lies in the solid: the sphere's signed distance, otherwise zero), or a fractal estimate 2^(log2 DE).
-// A field failure is a numerical failure; an unescaped orbit or an unavailable estimate is unresolved.
+// One AO field value at q: an analytic distance or a fractal estimate 2^(log2 DE) is a distance. An analytic
+// interior is proven solid occupancy (the sphere's signed distance, otherwise zero), so the sample is fully
+// occluded; this differs from the tracer, for which an interior start is unresolved (estimate-unavailable with
+// interior detail), and from an unescaped fractal orbit, which proves no occupancy and stays unresolved here
+// (point budget). A field failure is a numerical failure; an unavailable estimate is unresolved.
 fn ao_sample(q: vec3<f32>) -> AoSample {
   if (!admissible3(q)) { return AoSample(false, 0.0, numerical_failure()); }
   let s = field_sample(q);
@@ -142,10 +149,10 @@ fn ao_sample(q: vec3<f32>) -> AoSample {
   if (s.kind == SAMPLE_UNAVAILABLE) { return AoSample(false, 0.0, unresolved_failure(UNRESOLVED_REASON_ESTIMATE_UNAVAILABLE, STAGNATION_NONE)); }
   return AoSample(false, 0.0, numerical_failure());
 }
-// Restrained AO: every bounded sample is evaluated, and any failure makes the occlusion unknown (the reduced
-// failure is returned; the factor is not used).
-fn ambient_occlusion(p: vec3<f32>, n: vec3<f32>, t: f32, tau: f32) -> Secondary {
-  let spacing = max(SECONDARY_OFFSET * tau, AO_SPACING * t);
+// Restrained AO: every bounded sample is evaluated. The factor is the weighted occlusion of the resolved samples
+// (1 when none resolved); any failure is reduced and returned with it, so the occlusion is reported as incomplete.
+fn ambient_occlusion(p: vec3<f32>, n: vec3<f32>, tau: f32) -> Secondary {
+  let spacing = SECONDARY_OFFSET * tau;
   var occlusion = 0.0;
   var total = 0.0;
   var weight = 0.5;
@@ -157,16 +164,15 @@ fn ambient_occlusion(p: vec3<f32>, n: vec3<f32>, t: f32, tau: f32) -> Secondary 
     if (s.resolved) {
       // guard: h >= spacing > 0 (spacing is checked positive by the caller)
       occlusion += weight * clamp((h - s.distance) / h, 0.0, 1.0);
+      total += weight;
     } else {
       failure = reduce_failure(failure, s.failure);
     }
-    total += weight;
     weight *= 0.5;
   }
-  if (failure.failed) { return Secondary(1.0, failure); }
-  if (!(total > 0.0)) { return Secondary(1.0, no_failure()); }
+  if (!(total > 0.0)) { return Secondary(1.0, failure); }
   // guard: total > 0 (checked above)
-  return Secondary(1.0 - AO_STRENGTH * occlusion / total, no_failure());
+  return Secondary(1.0 - AO_STRENGTH * occlusion / total, failure);
 }
 
 fn inspection_light() -> vec3<f32> {
@@ -209,16 +215,15 @@ fn shade(px: vec2<u32>, g: Geometry) -> Shaded {
         shadow_failure = s.failure;
       }
       if (u.ao_samples >= 1u) {
-        let a = ambient_occlusion(p, n, g.t, tau);
+        let a = ambient_occlusion(p, n, tau);
         ao = a.factor;
         ao_failure = a.failure;
       }
     }
     lighting = pack_failure(shadow_failure, LIGHTING_FAILURE_FLAGS_SHADOW, 2u) | pack_failure(ao_failure, LIGHTING_FAILURE_FLAGS_AO, 12u);
-    if (lighting != 0u) {
-      let numerical = (shadow_failure.failed && shadow_failure.status == RAY_STATUS_NUMERICAL_FAILURE) || (ao_failure.failed && ao_failure.status == RAY_STATUS_NUMERICAL_FAILURE);
-      return Shaded(select(LEGEND_UNRESOLVED, LEGEND_NUMERICAL_FAILURE, numerical), lighting);
-    }
+    let numerical = (shadow_failure.failed && shadow_failure.status == RAY_STATUS_NUMERICAL_FAILURE) || (ao_failure.failed && ao_failure.status == RAY_STATUS_NUMERICAL_FAILURE);
+    if (numerical) { return Shaded(LEGEND_NUMERICAL_FAILURE, lighting); }
+    // An unresolved shadow or AO evaluation continues with the factors of what resolved (see the header).
   }
   // guard: d is a unit direction, so l − d is zero only when l = d (the light behind the surface point along the view)
   let half_vector = l - d;

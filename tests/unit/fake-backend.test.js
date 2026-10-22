@@ -100,8 +100,8 @@ test('old epoch and foreign job leases cannot submit and a stale descriptor cann
 });
 
 test('target replacement is transactional and counts each actual internal dimension', async () => {
-  const backend = await ready({ cap: 1000 }), input = { epoch: backend.currentEpoch(), layoutId: 'space-targets-v1', internalSize: { width: 2, height: 2 }, outputSize: { width: 4, height: 4 } };
-  const targets = await backend.configureTargets(input); assert.equal(backend.diagnostics().tracked, 72 * 4);
+  const backend = await ready({ cap: 1000 }), input = { epoch: backend.currentEpoch(), layoutId: 'space-targets-v2', internalSize: { width: 2, height: 2 }, outputSize: { width: 4, height: 4 } };
+  const targets = await backend.configureTargets(input); assert.equal(backend.diagnostics().tracked, 76 * 4); // B11c: space-targets-v2, 76 bytes per pixel
   assert.equal(targets.handles.accumulation.length, 2); assert.equal(targets.descriptions.display.width, 2);
   const before = backend.diagnostics(); backend.testAdapter.failNextAllocation();
   await assert.rejects(backend.configureTargets(input), code('allocation-failed')); assert.deepEqual(backend.diagnostics(), before);
@@ -109,11 +109,11 @@ test('target replacement is transactional and counts each actual internal dimens
   const ticket = backend.present({ identity: identity(backend.currentEpoch()), display: targets.handles.display }, lease(backend));
   backend.complete(ticket, { elapsedMs: 2 }); assert.equal((await ticket.done).outcome, 'completed');
   // Target handles stay caller-owned: a replacement leaves the earlier set live until release.
-  const replacement = await backend.configureTargets(input); assert.equal(backend.diagnostics().tracked, 576);
+  const replacement = await backend.configureTargets(input); assert.equal(backend.diagnostics().tracked, 608);
   const previous = backend.present({ identity: identity(backend.currentEpoch()), display: targets.handles.display }, lease(backend));
   backend.complete(previous, { elapsedMs: 1 }); assert.equal((await previous.done).outcome, 'completed', 'the previous image can still be presented');
   for (const handle of Object.values(targets.handles).flat()) backend.release(handle);
-  assert.equal(backend.diagnostics().tracked, 288); assert.ok(replacement.handles.display);
+  assert.equal(backend.diagnostics().tracked, 304); assert.ok(replacement.handles.display);
 });
 
 test('readback stages exact region bytes and keeps mapping ownership after queue completion', async () => {
@@ -208,11 +208,11 @@ test('invalid bindings, foreign handles and in-flight staging writes are refused
 });
 
 test('the fake supports a 4K logical target set without allocating host pixel arrays', async () => {
-  const backend = await ready(), targets = await backend.configureTargets({ epoch: backend.currentEpoch(), layoutId: 'space-targets-v1', internalSize: { width: 3840, height: 2160 }, outputSize: { width: 3840, height: 2160 } });
-  assert.equal(backend.diagnostics().tracked, 597196800);
+  const backend = await ready(), targets = await backend.configureTargets({ epoch: backend.currentEpoch(), layoutId: 'space-targets-v2', internalSize: { width: 3840, height: 2160 }, outputSize: { width: 3840, height: 2160 } });
+  assert.equal(backend.diagnostics().tracked, 630374400);
   for (const value of Object.values(targets.handles)) for (const handle of Array.isArray(value) ? value : [value]) backend.release(handle);
   assert.equal(backend.diagnostics().tracked, 0); assert.equal(backend.diagnostics().inventory.length, 0);
-  assert.equal(backend.diagnostics().peak, 597196800);
+  assert.equal(backend.diagnostics().peak, 630374400);
 });
 
 test('byte-buffer readback uses byte offsets and returns an owned copy', async () => {

@@ -13,8 +13,10 @@ import { admitPointModel, decodePointResults, encodePoints, mengerBoxData, point
 import { basis, encodeOrdinaryOrigin } from '../camera.js';
 import { appearanceKey, accumulationKey, sampleKey } from './keys.js';
 import { unpackStatus, unpackLightingStatus, POINT_STATUS, STATUS_LABELS } from './status.js';
+import { createOutcomeMasks } from './outcome-masks.js';
+import { RECOVERING_FAMILIES } from './webgpu/passes.js';
 import { assertBackend, BackendError, createAdmission, createBatch, createJobPlan, createPickRequest, createPipelineSet,
-  sampleJitter, TARGET_LAYOUT_ID, TARGET_LAYOUT_V1, LIGHTING_BOUNDS_DEFAULT } from './backend.js';
+  sampleJitter, TARGET_LAYOUT_ID, TARGET_LAYOUT, LIGHTING_BOUNDS_DEFAULT } from './backend.js';
 
 const WINDOW_LIMIT = 256, INITIAL_PIXELS = 32768, MIN_PIXELS = INITIAL_PIXELS / 4, PREPARATION_BOUND_MS = 60000;
 const identity = request => Object.fromEntries(['requestId', 'jobId', 'viewId', 'generation'].map(key => [key, request[key]]));
@@ -23,6 +25,8 @@ const sameIdentity = (a, b) => a && b && ['requestId', 'jobId', 'viewId'].every(
 const sameSize = (a, b) => a.width === b.width && a.height === b.height;
 const flatHandles = targets => Object.values(targets.handles).flat();
 const stale = () => ({ stale: true });
+// The per-sample geometry targets, kept, reused and cached together (B11c: the recovery word is geometry).
+const GEOMETRY_TARGETS = Object.freeze(['depth', 'status', 'normal', 'recovery']);
 let preparationId = 0;
 
 // admit() transfers leases for the entire scheduler, not just the calling view.
@@ -68,10 +72,17 @@ function emptyCounts() {
   return { rayTermination: { hit: 0, miss: 0, unresolved: { pointBudget: 0, estimateUnavailable: 0, rayStepBudget: 0, stagnation: { rayParameter: 0, fieldCoordinate: 0 } }, numericalFailure: 0 },
     unavailableNormals: 0, lightingFailures: { shadow: 0, ao: 0, both: 0 } };
 }
-function countReadback(counts, field, bytes) {
+// B11b measurement fix: an unavailable normal is counted only where the same sample's status is a hit (the
+// joint hit/normal mask from `masks`, whose status phase completes before the normal phase of that sample).
+function countReadback(counts, field, bytes, region, masks) {
+  if (field === 'recovery') return; // B11c: recovery words are diagnostics, kept by the outcome masks only
   const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (field === 'normal') {
-    for (let i = 6; i < bytes.byteLength; i += 8) if ((data.getUint16(i, true) & 0x7fff) === 0) counts.unavailableNormals++;
+    for (let row = 0, k = 0; row < region.height; row++) for (let col = 0; col < region.width; col++, k++) {
+      const index = (region.y + row) * masks.width + region.x + col;
+      if (!masks.statusSeen(index)) throw new BackendError('invalid-descriptor', 'a normal readback precedes its status readback');
+      if (masks.hitAt(index) && (data.getUint16(8 * k + 6, true) & 0x7fff) === 0) counts.unavailableNormals++;
+    }
   } else for (let i = 0; i < bytes.byteLength; i += 4) {
     const word = data.getUint32(i, true);
     if (field === 'lightingStatus') {
@@ -160,7 +171,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const report = record.builder.finish(result.outcome, { reason: result.reason ?? '', completed: record.samplesCompleted ? {
       ...record.request.quality.internalSize, iteration: record.request.quality.iteration, tracing: record.request.quality.tracing,
       samples: record.samplesCompleted, lighting: record.publishedQuality.lighting,
-    } : null, details: { ...fields, geometryRequestId: record.geometryRequestId, appearanceRebound: record.geometryRequestId !== record.request.requestId,
+    } : null, details: { ...fields, outcomeMasks: record.publishedMasks ?? UNAVAILABLE, geometryRequestId: record.geometryRequestId, appearanceRebound: record.geometryRequestId !== record.request.requestId,
       ...(result.continuation ? { continuation: result.continuation } : {}), ...(result.submitted ? { submitted: result.submitted } : {}),
     } });
     record.result = Object.freeze({ ...result, ...(record.error?.code === undefined ? {} : { errorCode: record.error.code }), report });
@@ -239,6 +250,8 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     published = { request: record.request, record, display, geometry, handles }; if (old) release(old.handles);
     record.builder.mark('published'); record.samplesCompleted = meta.sample + 1;
     record.publishedCounts = structuredClone(record.counts); record.publishedQuality = meta.quality;
+    // B11b: the sample's outcome masks close here (every readback of this ordinal completed before its presentation).
+    record.masks.end(maskIdentity(record, meta)); record.publishedMasks = record.masks.snapshot();
     const elapsed = now() - record.requestedAt;
     if (!record.request.quality.preview && meta.ordinal === 0) record.milestones.settledFirstImageMs = elapsed;
     if (meta.last) record.milestones.fullQualityMs = elapsed;
@@ -250,14 +263,23 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     emit('Status', { pending: false }); return true;
   }
 
+  // The outcome-mask identity of one ordinal: its accumulation key (the direct sample of a full request has its own)
+  // and its sample index within that accumulation.
+  function maskIdentity(record, meta) {
+    const key = accumulationKey(record.request.keys.geometryKey, appearanceKey(record.request.sceneSnapshot, meta.quality), record.request.quality.sampling);
+    return { accumulationKey: key, sample: meta.sample };
+  }
   function makePlan(record) {
     const request = record.request, target = request.quality.sampling.targetSamples;
+    // B11c: a recovering family (spec §11.4 rev 5.1, quaternion Julia) also reads back each sample's recovery words.
+    const recovers = RECOVERING_FAMILIES.includes(record.model?.id);
+    record.masks = createOutcomeMasks(request.quality.internalSize, { recovery: recovers });
     const full = request.quality.lighting.stage === 'full';
     const sampleCount = full ? target + 1 : target;
     let ordinal = 0, phaseIndex = 0, x = 0, y = 0, sequence = 0, pixels = INITIAL_PIXELS;
     let windowIds = [], windowLeft = 0, phaseEnded = false, completions = 0, replacements = 0, boundaries = 0, lastReplacement = 0;
     const metadata = new Map(), remaining = new Set();
-    const phases = ['trace', 'normals', 'shade', 'accumulate', 'display', 'status', 'normal', 'lightingStatus', 'present'];
+    const phases = ['trace', 'normals', 'shade', 'accumulate', 'display', 'status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus', 'present'];
     function meta() {
       const sample = full && ordinal > 0 ? ordinal - 1 : ordinal;
       return { ordinal, sample, quality: stageQuality(request, ordinal), last: ordinal === sampleCount - 1 };
@@ -280,7 +302,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         let op;
         if (phase === 'present') { op = { id, dependsOn: dependencies, kind: 'presentation', descriptor: { identity: identity(request), display: record.displayHandle } }; phaseEnded = true; }
         else {
-          const readback = ['status', 'normal', 'lightingStatus'].includes(phase), bpt = readback ? TARGET_LAYOUT_V1[phase].bytesPerTexel : 0;
+          const readback = ['status', 'recovery', 'normal', 'lightingStatus'].includes(phase), bpt = readback ? TARGET_LAYOUT[phase].bytesPerTexel : 0;
           const maxBuffer = acquisition?.limits?.maxBufferSize ?? 2 ** 28;
           const maxWidth = readback ? Math.floor(maxBuffer / 256) * 256 / bpt : size.width;
           const tileWidth = Math.min(size.width, pixels, maxWidth);
@@ -308,7 +330,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         // Only centre geometry is reusable as the first sample of a fresh sequence.
         // Later AA samples are not relabelled sample zero on appearance edits.
         if (m.sample === 0 && fresh(record)) {
-          forgetGeometry(); const handles = ['depth', 'status', 'normal'].map(name => record.targets.handles[name]); hold(handles);
+          forgetGeometry(); const handles = GEOMETRY_TARGETS.map(name => record.targets.handles[name]); hold(handles);
           geometryCache = { ...record.geometry, handles, request, geometryRequestId: record.geometryRequestId };
         }
       }
@@ -442,9 +464,11 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           if (record.internal) {
             if (result.data.byteLength !== 4 || new DataView(result.data.buffer, result.data.byteOffset, 4).getUint32(0, true) !== 0x41544c53) throw new BackendError('preparation-failed', 'ATLS probe mismatch');
           } else if (!aux && !record.result) {
-            const field = operation.descriptor.fields[0], expected = operation.descriptor.region.width * operation.descriptor.region.height * TARGET_LAYOUT_V1[field].bytesPerTexel;
+            const field = operation.descriptor.fields[0], expected = operation.descriptor.region.width * operation.descriptor.region.height * TARGET_LAYOUT[field].bytesPerTexel;
             if (result.data.byteLength !== expected) throw new BackendError('invalid-descriptor', 'incomplete status readback');
-            countReadback(record.counts, field, result.data);
+            const region = operation.descriptor.region;
+            record.masks.record(maskIdentity(record, meta), field, region, result.data);
+            countReadback(record.counts, field, result.data, region, record.masks);
           }
         }
         if (operation.kind === 'presentation' && fresh(record)) emit('Present', { identity: identity(record.request), queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
@@ -571,7 +595,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         // timer/frame after the resources needed by this immutable plan exist.
         const description = { epoch: request.generation.deviceEpoch, layoutId: TARGET_LAYOUT_ID,
           internalSize: request.quality.internalSize, outputSize: { width: request.output.width, height: request.output.height } };
-        const geometryNames = ['depth', 'status', 'normal'];
+        const geometryNames = GEOMETRY_TARGETS;
         let spare = null;
         if (request.quality.sampling.targetSamples > 1) {
           // The annex allocates complete target sets. Keep only the spare geometry
@@ -588,7 +612,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         record.handles.push(...flatHandles(targets)); record.targets = targets;
         if (compatibleGeometry(request)) {
           const handles = { ...targets.handles };
-          for (const [i, name] of ['depth', 'status', 'normal'].entries()) {
+          for (const [i, name] of GEOMETRY_TARGETS.entries()) {
             release([handles[name]]); record.handles = record.handles.filter(handle => handle !== handles[name]); handles[name] = geometryCache.handles[i];
           }
           hold(geometryCache.handles); record.handles.push(...geometryCache.handles); record.targets = { ...targets, handles };

@@ -7,7 +7,7 @@ import {
   packStatus, unpackStatus, packLightingStatus, unpackLightingStatus, wgslConstants,
 } from '../../src/space/render/status.js';
 import {
-  PASSES, TARGET_LAYOUT_V1, TRACKED_ALLOCATION_CAP, LIGHTING_BOUNDS_DEFAULT,
+  PASSES, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP, LIGHTING_BOUNDS_DEFAULT,
   BACKEND_METHODS, BackendError, createBatch, createAdmission, createPickRequest,
   createJobPlan, validatePipelineDescriptor, createPipelineSet, assertBackend, mix, sampleJitter,
 } from '../../src/space/render/backend.js';
@@ -49,10 +49,12 @@ test('status words pack and unpack every combination losslessly', () => {
 test('a batch rejects an unknown pass, a region whose pixels disagree with its bounds, and bounds above the spec limits', () => {
   invalid(() => createBatch({ ...batchInput(), pass: 'bogus' }));
   for (const pixels of [7, 9]) invalid(() => createBatch({ ...batchInput(), bounds: { ...batchInput().bounds, pixels } }));
-  for (const [name, value] of Object.entries({ raySteps: 1025, iterations: 513, normalFieldSamples: 7, shadowRays: 2, shadowSteps: 65, aoSamples: 6 })) {
+  for (const [name, value] of Object.entries({ raySteps: 1025, iterations: 513, normalFieldSamples: 8, shadowRays: 2, shadowSteps: 65, aoSamples: 6 })) {
     invalid(() => createBatch({ ...batchInput(), bounds: { ...batchInput().bounds, [name]: value } }));
   }
   assert.equal(createBatch(batchInput()).bounds.pixels, 8);
+  // Rev 5.0 (B11b): the box and Menger one-sided normal fallback needs a seventh field sample (the centre value).
+  assert.doesNotThrow(() => createBatch({ ...batchInput(), bounds: { ...batchInput().bounds, normalFieldSamples: 7 } }), 'seven normal field samples are within the bound');
 });
 
 test('an admission lease is consumed exactly once', () => {
@@ -148,17 +150,19 @@ test('the status vocabulary and legend preserve the spec labels verbatim', () =>
   assert.throws(() => packLightingStatus({ shadow: { status: RAY_STATUS.hit, reason: 0, subreason: 0 }, ao: null }), RangeError);
 });
 
-test('the target layout counts both accumulation images and totals 72 bytes per pixel', () => {
-  assert.equal(backendModule.TARGET_LAYOUT_ID, 'space-targets-v1');
-  assert.deepEqual(TARGET_LAYOUT_V1, {
+test('the target layout counts both accumulation images and the recovery word and totals 76 bytes per pixel', () => {
+  // B11c (rev 5.1): space-targets-v2 adds the per-pixel quaternion-primary recovery word (r32uint), a geometry target.
+  assert.equal(backendModule.TARGET_LAYOUT_ID, 'space-targets-v2');
+  assert.deepEqual(TARGET_LAYOUT, {
     depth: { format: 'r32float', bytesPerTexel: 4, count: 1 }, status: { format: 'r32uint', bytesPerTexel: 4, count: 1 },
+    recovery: { format: 'r32uint', bytesPerTexel: 4, count: 1 },
     normal: { format: 'rgba16float', bytesPerTexel: 8, count: 1 }, sampleColor: { format: 'rgba16float', bytesPerTexel: 8, count: 1 },
     lightingStatus: { format: 'r32uint', bytesPerTexel: 4, count: 1 }, accumulationFlags: { format: 'r32uint', bytesPerTexel: 4, count: 1 },
     accumulation: { format: 'rgba32float', bytesPerTexel: 16, count: 2 }, display: { format: 'rgba8unorm', bytesPerTexel: 4, count: 1 },
     retained: { format: 'rgba8unorm', bytesPerTexel: 4, count: 1 },
   });
-  const bytes = Object.values(TARGET_LAYOUT_V1).reduce((sum, item) => sum + item.bytesPerTexel * item.count, 0);
-  assert.equal(bytes, 72); assert.equal(bytes * 3840 * 2160, 597196800); assert.equal(TRACKED_ALLOCATION_CAP, 2 ** 30);
+  const bytes = Object.values(TARGET_LAYOUT).reduce((sum, item) => sum + item.bytesPerTexel * item.count, 0);
+  assert.equal(bytes, 76); assert.equal(bytes * 3840 * 2160, 630374400); assert.equal(TRACKED_ALLOCATION_CAP, 2 ** 30);
   assert.deepEqual(PASSES, ['probe', 'trace', 'normals', 'shade', 'accumulate', 'display']);
 });
 

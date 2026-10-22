@@ -2,10 +2,13 @@
 import { deepFreeze, isPlainObject } from '../../shared/scene.js';
 
 export const PASSES = Object.freeze(['probe', 'trace', 'normals', 'shade', 'accumulate', 'display']);
-export const TARGET_LAYOUT_ID = 'space-targets-v1';
-export const TARGET_LAYOUT_V1 = deepFreeze({
+// B11c (spec §11.4 rev 5.1): space-targets-v2 adds `recovery`, the per-pixel quaternion-primary recovery word that
+// trace_band writes beside depth and status; it is geometry, kept and reused with them (v1 was B06's layout).
+export const TARGET_LAYOUT_ID = 'space-targets-v2';
+export const TARGET_LAYOUT = deepFreeze({
   depth: { format: 'r32float', bytesPerTexel: 4, count: 1 },
   status: { format: 'r32uint', bytesPerTexel: 4, count: 1 },
+  recovery: { format: 'r32uint', bytesPerTexel: 4, count: 1 },
   normal: { format: 'rgba16float', bytesPerTexel: 8, count: 1 },
   sampleColor: { format: 'rgba16float', bytesPerTexel: 8, count: 1 },
   lightingStatus: { format: 'r32uint', bytesPerTexel: 4, count: 1 },
@@ -17,7 +20,8 @@ export const TARGET_LAYOUT_V1 = deepFreeze({
 export const TRACKED_ALLOCATION_CAP = 2 ** 30;
 // Settled defaults and 1b.1 ceilings. Direct lighting keeps normal samples but has
 // zero shadow/AO work; raising a ceiling requires a recorded plan amendment.
-export const LIGHTING_BOUNDS_DEFAULT = Object.freeze({ normalFieldSamples: 6, shadowRays: 1, shadowSteps: 64, aoSamples: 5 });
+// normalFieldSamples: rev 5.0 (B11b) — six stencil samples plus the box and Menger one-sided fallback's centre value.
+export const LIGHTING_BOUNDS_DEFAULT = Object.freeze({ normalFieldSamples: 7, shadowRays: 1, shadowSteps: 64, aoSamples: 5 });
 export const BACKEND_METHODS = Object.freeze(['acquire', 'prepare', 'allocate', 'configureTargets', 'submitBatch', 'readback', 'present', 'release', 'onLoss', 'currentEpoch', 'diagnostics', 'destroy']);
 const ERROR_CODES = ['allocation-failed', 'device-lost', 'preparation-failed', 'invalid-descriptor', 'stale-epoch', 'no-admission', 'unavailable'];
 export class BackendError extends Error {

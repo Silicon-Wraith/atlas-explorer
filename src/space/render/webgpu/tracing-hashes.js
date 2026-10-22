@@ -2,19 +2,19 @@
 // assembled module (wgslConstants() + '\n' + sources joined by '\n'), as the backend executes it.
 export const TRACING_HASHES = Object.freeze({
   sources: Object.freeze({
-    "trace": "48816a139caf2fcc35152cdbbb991979bb9e790214b243a39572438b6c563f6e",
-    "trace-band": "7c0b831c032e6829d61e2675408e53c4d212ca93cc3ef9fe2d334efd6001c1b0",
-    "normals": "4b01e95797d9915832c3483e16a140c4b875ab49a338685ddfd2dac5c759aec6",
-    "trace-rays": "82e98179e00c9036444dd6ba6a654edfa8fcc547a4b710dc8d95ce6043365190",
+    "trace": "ec7bf889db5e9c07d4aaf63a6f8947f395262df6dd09db85b04cce0206e454a6",
+    "trace-band": "3b2d27e1ea002d0226f92cf078b05bce87d047ee7b19986353bd808c38e0c57e",
+    "normals": "4220c58a0cc228495a07114f7c378b58a18fedef466f10781b4c9fd2da0117e2",
+    "trace-rays": "b30ce59b43eaf9d999636ee6d08baa33169893d375d6ac654f2a104d15f2a575",
     "menger-sample": "04ba714da0e0c82a37ba76c508a0056297161de438e814eacb874c946b7f0947",
     "menger-absent": "2f0a1ae777744820d48cfc1111659c7daaf1cd43342a569c8ba08e8b016b0e77"
   }),
   assembled: Object.freeze({
-    "fields+menger-absent+trace+trace-band": "b19b98135cbbd097698db9736b2a8fc5edd4945c0e04cd2b20e173c60e8b35a8",
-    "fields+menger-absent+trace+normals": "cd0ea7203e8c49dd105429df703841cbefc65f73e9ae7f98237734e177629494",
-    "fields+menger-absent+trace+trace-rays": "23735c8e7d8c0e85dd9d5684c95de51cfce8adb187c0710e1c9fe75159839286",
-    "fields+menger-sample+trace+trace-band": "8527d80de7e3e97851baf0126a3ad3f213c827309e6e62937126acf2fd901a76",
-    "fields+menger-sample+trace+normals": "4395b015d2ca3e61e6c7cd4ca446f93f3bd6c0cb5e7e543dde33efdb20ac96eb",
-    "fields+menger-sample+trace+trace-rays": "ec03bb970bd5b0c8435a8db9baf18c46cfa13eaaa5d9c72f9be41025d7045548"
+    "fields+menger-absent+trace+trace-band": "1adb254b8450ba5f39ef12fc99cf4ef0212f5f1908ca443297b0abf9b028b283",
+    "fields+menger-absent+trace+normals": "c19d1e9f0579b582f88f25f5ec0bb11b65105cecb571b72f363100127a03dac7",
+    "fields+menger-absent+trace+trace-rays": "b73b5fdc39643d39d701f0d172eb3945d485c55c81dc2086f89c9228580e851f",
+    "fields+menger-sample+trace+trace-band": "f025035b50f6aa5f71da2be0da37aa97515de1844292afb3a91498793770430f",
+    "fields+menger-sample+trace+normals": "3724af5dc6f69e46e40a3d85eadf044eb7280c7117d13df971149e23101510ca",
+    "fields+menger-sample+trace+trace-rays": "348f57affbbf751a5b6d81e94c88568c412f9be2cb72b581289b3b35f0494ba2"
   }),
 });

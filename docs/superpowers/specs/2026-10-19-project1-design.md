@@ -576,9 +576,9 @@ the production `allocate` method and `maxUniformBufferBindingSize` (Allocator an
   `accumulationFlags` r32uint (4; diagnostic propagation across samples),
   two ping-pong `accumulation` rgba32float (16 each; sum and count, read previous, write next),
   `display` rgba8unorm (4), `retained` rgba8unorm (4; the previous complete image, shown with the
-  pending mark): 72 bytes per pixel, 597,196,800 B at 3840 × 2160 before staging, uniforms, model
+  pending mark): 76 bytes per pixel, 630,374,400 B at 3840 × 2160 before staging, uniforms, model
   buffers and overlapping generations. Each resource is counted at its actual dimensions. (Project
-  0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.)
+  0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.) `space-targets-v2` adds a tracked `recovery` r32uint geometry target, retained and released with the corresponding geometry. One target set totals 76 B per internal pixel, or 630,374,400 B at 3840×2160, before other allocations. The 1 GiB tracked-allocation cap is unchanged. (Rev 5.2, B11b-F9, Codex run 20261022T060300Z-5ca3; implementation consequence, no new user decision.)
 - **Pipeline descriptors.** B00 freezes the pipeline descriptor schema and binding/uniform
   conventions. B06, B08, B10 and B11 freeze their concrete pipeline IDs, slots and layouts
   alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and

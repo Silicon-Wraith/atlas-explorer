@@ -20,7 +20,10 @@ test('profiles resolve explicit caps, internal dimensions and actual lighting wi
   assert.deepEqual(draft.internalSize, { width: 3, height: 2 });
   assert.equal(draft.iteration.maxIterations, 64); assert.equal(draft.tracing.maxSteps, 256);
   assert.equal(draft.sampling.targetSamples, 1); assert.equal(draft.preview, true);
-  assert.deepEqual(draft.lighting, { stage: 'direct', normalFieldSamples: 6, shadowRays: 0, shadowSteps: 0, aoSamples: 0 });
+  assert.deepEqual(draft.lighting, { stage: 'direct', normalFieldSamples: 7, shadowRays: 0, shadowSteps: 0, aoSamples: 0 });
+  // Rev 5.0 (B11b): box and Menger normals use central differences with the one-sided analytic-interior fallback.
+  assert.deepEqual(draft.normals, { method: 'central-differences', epsilonFactor: 0.5, fieldSamples: 6 });
+  for (const model of ['box', 'menger']) assert.deepEqual(resolveQuality(createSpaceScene({ model }), 'draft', size).normals, { method: 'central-differences-one-sided-analytic-v1', epsilonFactor: 0.5, fieldSamples: 7 });
   assert.equal(quality().lighting.stage, 'full'); assert.equal(quality().sampling.targetSamples, 8);
   const low = createSpaceScene({ model: 'sphere', iteration: { ...SPACE_DEFAULTS.iteration, maxIterations: 12 } });
   assert.equal(resolveQuality(low, 'draft', size).iteration.maxIterations, 12);

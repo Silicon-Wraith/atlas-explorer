@@ -134,7 +134,7 @@ test('tracing records register only when every covered mandatory stratum passed;
   const registry = createValidationRegistry();
   for (const record of all.records) registry.register(record);
   const one = buildTracingRecords({ results: ids.map(id => (id === 'overview/bulb/p4' ? { ...pass(id), state: 'failed', passed: false } : pass(id))), implementationHashes: hashes });
-  assert.deepEqual(one.withheld.map(w => w.recordId), ['mandelbulb@1/tracing/p4/matrix-rev4.8']);
+  assert.deepEqual(one.withheld.map(w => w.recordId), ['mandelbulb@1/tracing/p4/matrix-rev4.8/space-trace-v3']);
   // Rev 4.8: an analytic record lists both mandatory checks and both profiles in its coverage.
   const checks = { 'surface-envelope': { profile: 'surface-v1', passed: true }, 'inspection-relative': { profile: 'analytic-inspection-v1', passed: true } };
   const withChecks = buildTracingRecords({ results: ids.map(id => (id === 'analytic/sphere' ? { ...pass(id), kind: 'analytic-ray', checks } : pass(id))), implementationHashes: hashes });
@@ -148,7 +148,7 @@ test('tracing records register only when every covered mandatory stratum passed;
   assert.deepEqual(geometric.records[0].testedDomain.distances, [0.1]);
   registry.register(geometric.records[0]);
   const query = { modelId: 'mandelbulb', evidenceClass: 'geometric', implementationHashes: hashes, profile: 'ladder-v1', effective: { power: 8 }, sampling: { maxIterations: 128, maxSteps: 512 } };
-  assert.equal(registry.lookup({ ...query, domain: { anchorId: 'bulb-8/anchor-0', anchor: [0.1, 0.2, 0.3], pixels: geometric.records[0].testedDomain.pixels, distance: 0.1 } })?.recordId, 'mandelbulb@1/geometric/bulb-8/anchor-0/matrix-rev4.8');
+  assert.equal(registry.lookup({ ...query, domain: { anchorId: 'bulb-8/anchor-0', anchor: [0.1, 0.2, 0.3], pixels: geometric.records[0].testedDomain.pixels, distance: 0.1 } })?.recordId, 'mandelbulb@1/geometric/bulb-8/anchor-0/matrix-rev4.8/space-trace-v3');
   assert.equal(registry.lookup({ ...query, domain: { anchorId: 'bulb-8/anchor-0', anchor: [0.1, 0.2, 0.3], pixels: geometric.records[0].testedDomain.pixels, distance: 0.01 } }), null, 'no claim at an exceeded distance');
   assert.equal(buildGeometricRecords({ ladders: rows.map(r => ({ ...r, outcome: 'exceedance' })), anchors, implementationHashes: hashes }).records.length, 0);
 });
