@@ -13,9 +13,10 @@ import { RECOVERY_WORD, decodeRecoveryWord } from '../../src/space/render/webgpu
 
 export const VISUAL_FIXTURE_PATH = 'tests/fixtures/visual-acceptance.json';
 export const loadVisualFixture = () => JSON.parse(readFileSync(VISUAL_FIXTURE_PATH, 'utf8'));
-export const VISUAL_ACCEPTANCE_PASS = 'Five frozen scenes meet visual acceptance; the quaternion is reported as diagnostic';
+export const VISUAL_ACCEPTANCE_PASS = 'Five required frozen scenes meet visual acceptance';
 // Plan rev 5.2 (user decision 2026-10-22): the quaternion is deferred from required visual acceptance. It is still
-// rendered, measured and reported against the unchanged thresholds, as diagnostic evidence that never gates.
+// rendered, measured and saved as required diagnostic evidence: only its threshold comparison (against the unchanged
+// thresholds) is diagnostic and never gates; every other quaternion gate stays binding.
 export const REQUIRED_VISUAL_SCENES = Object.freeze(['bulb', 'sphere', 'box', 'menger-1', 'menger-2']);
 export const DIAGNOSTIC_VISUAL_SCENES = Object.freeze(['quaternion']);
 export const VISUAL_DIAGNOSTIC_LABEL = 'deferred to 1b.2 (user decision 2026-10-22)';
@@ -261,21 +262,26 @@ export function predictStencilNormal(model, p, eps, depth, tol = 1e-4) {
   return { expected: 'available', normal: gradient.map(v => v / length), modes };
 }
 
-// Plan rev 5.2: the verdict over measured scene rows. Only required scenes gate (a missing one fails closed); the
-// diagnostic scenes keep every numerator, denominator, reason and recovery count in the report.
-const sceneSummary = row => ({ id: row.id, class: row.class, passed: row.failures.length === 0, failures: [...row.failures], union: row.union,
+// Plan rev 5.2: the verdict over measured scene rows. `failures` always gate (a missing scene, required or diagnostic,
+// fails closed); `diagnosticFailures` (the threshold comparison, diagnostic scenes only) never gate and are reported
+// with every numerator, denominator, reason and recovery count.
+const sceneSummary = row => ({ id: row.id, class: row.class, passed: row.failures.length === 0, thresholdsPassed: row.thresholds.passed,
+  failures: [...row.failures], diagnosticFailures: [...(row.diagnosticFailures ?? [])], union: row.union,
   reasons: row.reasons?.union ?? null, recovery: row.recovery?.union ?? null,
   thresholds: row.thresholds.rows.map(r => ({ metric: r.metric, numerator: r.numerator, denominator: r.denominator, fraction: r.fraction, limit: r.limit, passed: r.passed })),
   faces: row.faces ?? null });
 export function visualVerdict(rows) {
-  for (const row of rows) if (!REQUIRED_VISUAL_SCENES.includes(row.id) && !DIAGNOSTIC_VISUAL_SCENES.includes(row.id)) throw new RangeError(`scene ${row.id} is neither required nor diagnostic`);
+  for (const row of rows) {
+    if (!REQUIRED_VISUAL_SCENES.includes(row.id) && !DIAGNOSTIC_VISUAL_SCENES.includes(row.id)) throw new RangeError(`scene ${row.id} is neither required nor diagnostic`);
+    if ((row.diagnosticFailures ?? []).length && !DIAGNOSTIC_VISUAL_SCENES.includes(row.id)) throw new RangeError(`scene ${row.id}: only a diagnostic scene carries diagnostic failures`);
+  }
   const byId = new Map(rows.map(row => [row.id, row])), requiredFailures = [];
-  for (const id of REQUIRED_VISUAL_SCENES) {
+  for (const id of [...REQUIRED_VISUAL_SCENES, ...DIAGNOSTIC_VISUAL_SCENES]) {
     const row = byId.get(id);
     if (!row) requiredFailures.push(`${id}: not measured`);
     else for (const failure of row.failures) requiredFailures.push(`${id}: ${failure}`);
   }
   return { passed: requiredFailures.length === 0, requiredFailures,
     required: REQUIRED_VISUAL_SCENES.filter(id => byId.has(id)).map(id => sceneSummary(byId.get(id))),
-    diagnostic: { label: VISUAL_DIAGNOSTIC_LABEL, gates: false, scenes: DIAGNOSTIC_VISUAL_SCENES.filter(id => byId.has(id)).map(id => sceneSummary(byId.get(id))) } };
+    diagnostic: { label: VISUAL_DIAGNOSTIC_LABEL, thresholdsGate: false, scenes: DIAGNOSTIC_VISUAL_SCENES.filter(id => byId.has(id)).map(id => sceneSummary(byId.get(id))) } };
 }

@@ -2079,7 +2079,7 @@ async function runVisualAcceptance({ page, check }) {
       jobs[view] = await ev(page, visualJobInPage, { label: `${sceneSpec.id}-${view}`, model: sceneSpec.model, parameters: sceneSpec.parameters, camera: sceneSpec.camera,
         appearance: VIEWS[view], size, bits: B, accumulation: view === 'shaded-full' }, `visual ${sceneSpec.id} ${view}`, 3 * LIMITS.deep);
     }
-    const row = { id: sceneSpec.id, class: sceneSpec.class, failures: [], wallMs: Object.fromEntries(Object.entries(jobs).map(([v, j]) => [v, Math.round(j.wallMs)])) };
+    const row = { id: sceneSpec.id, class: sceneSpec.class, failures: [], diagnosticFailures: [], wallMs: Object.fromEntries(Object.entries(jobs).map(([v, j]) => [v, Math.round(j.wallMs)])) };
     const fail = message => row.failures.push(message);
     for (const [view, job] of Object.entries(jobs)) {
       if (job.outcome !== 'completed') fail(`${view}: ${job.outcome} ${job.reason}`);
@@ -2132,7 +2132,8 @@ async function runVisualAcceptance({ page, check }) {
     if (flagMismatch) fail(`${flagMismatch} accumulated flags differ from the union of the sample masks`);
     Object.assign(row, { lightingAsMagenta, lostIndication, lightingIndicated: tinted, lostExamples });
     row.thresholds = va.evaluateScene({ sceneClass: sceneSpec.class, union: row.union, lightingAsMagenta, lostIndication });
-    if (!row.thresholds.passed) fail(`thresholds: ${row.thresholds.rows.filter(r => !r.passed).map(r => `${r.metric} ${r.numerator}/${r.denominator}`).join(', ')}`);
+    // Plan rev 5.2: a diagnostic scene's threshold comparison is reported, never gated; its other checks stay binding.
+    if (!row.thresholds.passed) (va.DIAGNOSTIC_VISUAL_SCENES.includes(sceneSpec.id) ? row.diagnosticFailures : row.failures).push(`thresholds: ${row.thresholds.rows.filter(r => !r.passed).map(r => `${r.metric} ${r.numerator}/${r.denominator}`).join(', ')}`);
     // Smooth analytic face interiors: the same rays traced directly, sample by sample.
     const cropIndex = (crop, i) => { const x = i % W, y = Math.floor(i / W); return x >= crop.x && x < crop.x + crop.width && y >= crop.y && y < crop.y + crop.height; };
     const cropTallies = Object.fromEntries(sceneSpec.crops.map(crop => [crop.id, []]));
@@ -2178,19 +2179,20 @@ async function runVisualAcceptance({ page, check }) {
     }
     row.passed = row.failures.length === 0; row.elapsedMs = Date.now() - started;
     rows.push(row);
-    console.log(`VISUAL ${sceneSpec.id}${va.DIAGNOSTIC_VISUAL_SCENES.includes(sceneSpec.id) ? ' (diagnostic)' : ''}: ${row.passed ? 'pass' : va.DIAGNOSTIC_VISUAL_SCENES.includes(sceneSpec.id) ? 'over thresholds' : 'FAIL'} ${JSON.stringify({ union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures }).slice(0, 2400)}`);
+    console.log(`VISUAL ${sceneSpec.id}${va.DIAGNOSTIC_VISUAL_SCENES.includes(sceneSpec.id) ? ` (diagnostic thresholds; ${row.thresholds.passed ? 'within' : 'over'})` : ''}: ${row.passed ? 'pass' : 'FAIL'} ${JSON.stringify({ union: row.union, reasons: row.reasons.union, recovery: row.recovery?.union ?? null, magenta: lightingAsMagenta, lost: lostIndication, faces: row.faces && strip(row.faces, 'worst'), failures: row.failures, diagnosticFailures: row.diagnosticFailures }).slice(0, 2400)}`);
   }
   const verdict = va.visualVerdict(rows), recorded = new Map(rows.map(row => [row.id, { ...row, perSample: row.perSample }]));
   report.push({ name: 'Visual acceptance scenes (recorded; plan rev 5.0 B11b; rev 5.2 five required)', fixture: fixture.version, settings: fixture.settings, thresholds: va.VISUAL_THRESHOLDS, faceCriterion: va.FACE_NORMAL_CRITERION,
     required: va.REQUIRED_VISUAL_SCENES, scenes: va.REQUIRED_VISUAL_SCENES.filter(id => recorded.has(id)).map(id => recorded.get(id)) });
-  // Plan rev 5.2 (user decision 2026-10-22): the quaternion, measured against the unchanged thresholds; never gates.
-  report.push({ name: `Visual acceptance diagnostic: quaternion, ${va.VISUAL_DIAGNOSTIC_LABEL} (recorded; never gated)`, label: va.VISUAL_DIAGNOSTIC_LABEL, gates: false,
+  // Plan rev 5.2 (user decision 2026-10-22): the quaternion's threshold comparison, against the unchanged thresholds;
+  // reported, never gated (its other checks gate through the pass below).
+  report.push({ name: `Visual acceptance diagnostic: quaternion, ${va.VISUAL_DIAGNOSTIC_LABEL} (recorded; thresholds never gated)`, label: va.VISUAL_DIAGNOSTIC_LABEL, thresholdsGate: false,
     fixture: fixture.version, thresholds: va.VISUAL_THRESHOLDS, summary: verdict.diagnostic.scenes, scenes: va.DIAGNOSTIC_VISUAL_SCENES.filter(id => recorded.has(id)).map(id => recorded.get(id)) });
-  for (const scene of verdict.diagnostic.scenes) console.log(`VISUAL DIAGNOSTIC ${scene.id} (${va.VISUAL_DIAGNOSTIC_LABEL}): ${scene.passed ? 'within thresholds' : 'over thresholds'} ${scene.thresholds.map(r => `${r.metric} ${r.numerator}/${r.denominator} = ${(100 * r.fraction).toFixed(2)}%`).join(', ')}`);
+  for (const scene of verdict.diagnostic.scenes) console.log(`VISUAL DIAGNOSTIC ${scene.id} (${va.VISUAL_DIAGNOSTIC_LABEL}): ${scene.thresholdsPassed ? 'within thresholds' : 'over thresholds'} ${scene.thresholds.map(r => `${r.metric} ${r.numerator}/${r.denominator} = ${(100 * r.fraction).toFixed(2)}%`).join(', ')}`);
   check(va.VISUAL_ACCEPTANCE_PASS, () => {
     assert.deepEqual(verdict.requiredFailures, [], verdict.requiredFailures.join('; '));
     const brief = scene => ({ id: scene.id, union: scene.union, reasons: scene.reasons, recovery: scene.recovery, thresholds: scene.thresholds.map(r => `${r.metric} ${r.numerator}/${r.denominator}`), faces: scene.faces && strip(scene.faces, 'worst') });
-    return { scenes: verdict.required.map(brief), diagnostic: { label: verdict.diagnostic.label, gates: false, scenes: verdict.diagnostic.scenes.map(scene => ({ ...brief(scene), passed: scene.passed, failures: scene.failures })) } };
+    return { scenes: verdict.required.map(brief), diagnostic: { label: verdict.diagnostic.label, thresholdsGate: false, scenes: verdict.diagnostic.scenes.map(scene => ({ ...brief(scene), thresholdsPassed: scene.thresholdsPassed, diagnosticFailures: scene.diagnosticFailures })) } };
   });
   return rows;
 }
@@ -2907,7 +2909,7 @@ async function runRendering({ page }) {
     return details;
   });
 
-  // B11b: the six frozen scenes; five gate and the quaternion is diagnostic (plan rev 5.2).
+  // B11b: the six frozen scenes; five required, and the quaternion's thresholds are diagnostic (plan rev 5.2).
   await runVisualAcceptance({ page, check });
 
   // Representative images for manual review (recorded only; rgba8 display bytes, base64).
