@@ -1945,6 +1945,63 @@ test('r4-F2 historical L6d confirmation never calls publish or changes retained 
   } finally { h.renderer.destroy(); h.fake.destroy(); }
 });
 
+for (const rung of ['L6b', 'L6c']) test(`B15-P19-1 ${rung} historical validation emits metadata without changing retained image or status`, async () => {
+  const attempts = [];
+  const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: rung,
+    testProbe: { publish: record => attempts.push(record.request.requestId) } });
+  let releaseOld;
+  try {
+    let live = generation(1, 1);
+    const held = new Promise(resolve => { releaseOld = resolve; });
+    const options = { currentGeneration: () => live, currentNavigation: () => 1 };
+    const first = request(scene(), live);
+    h.hooks.after = (method, batch, ticket) => batch.pass === 'reduce' && batch.identity.requestId === first.requestId
+      ? { ...ticket, result: ticket.result.then(async result => { await held; return result; }) } : undefined;
+    const a = h.renderer.render(first, options);
+    await h.until(() => h.publicationRecords.length === 1); await h.complete();
+    const oldTargets = h.targets.at(-1);
+    live = generation(2, 1);
+    const second = request(scene(), live), b = h.renderer.render(second, options);
+    assert.equal((await h.finish(b)).outcome, 'completed');
+    const retained = h.renderer.published, calls = [...attempts], statuses = [...h.statuses], submissions = h.submissions.length;
+    releaseOld(); assert.equal((await h.finish(a)).outcome, 'completed');
+    assert.equal(h.publications.length, 2, 'both validated presentations have publication evidence');
+    assert.equal(h.publications.at(-1).historical, true);
+    assert.equal(h.publications.at(-1).requestId, first.requestId);
+    assert.deepEqual(attempts, calls, 'historical validation never calls the current-image publish path');
+    assert.equal(h.renderer.published, retained, 'picking/export retained image and geometry stay current');
+    assert.deepEqual(h.statuses, statuses, 'historical validation changes no current indicators');
+    assert.equal(h.submissions.length, submissions, 'no re-presentation or restoration');
+    assert.equal(h.scheduler.snapshot().outstanding, 0);
+    // Only the newer published request may own retained display/geometry handles.
+    assert.equal(h.renderer.published.request.requestId, second.requestId);
+    for (const handle of Object.values(oldTargets.handles)) assert.equal(inventoryEntry(h, handle)?.state === 'live', false, 'historical metadata retains no old targets');
+  } finally { releaseOld?.(); h.renderer.destroy(); h.fake.destroy(); }
+});
+
+for (const rung of ['L6b', 'L6c']) test(`B15-P19-1 ${rung} invalidation fences still suppress historical publications`, async () => {
+  for (const action of ['cancel', 'loss', 'stream', 'content']) {
+    const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: rung, holdReadbacks: true });
+    try {
+      let live = generation(1, 1), stream = 1;
+      const options = { currentGeneration: () => live, currentNavigation: () => stream };
+      const first = request(scene(), live), a = h.renderer.render(first, options);
+      await h.until(() => h.publicationRecords.length === 1);
+      live = generation(2, 1);
+      const b = h.renderer.render(request(scene(), live), options);
+      await h.until(() => h.publicationRecords.length === 2);
+      await h.complete('oldest'); await h.complete('newest');
+      if (action === 'cancel') h.renderer.cancel(a.jobId);
+      else if (action === 'loss') h.fake.lose();
+      else if (action === 'stream') stream++;
+      else live = { ...live, appearanceRevision: 2 };
+      h.releaseReadbacks(); await h.finish(a); await h.finish(b);
+      assert.equal(h.publications.some(p => p.requestId === first.requestId), false, action);
+      assert.equal(h.scheduler.snapshot().outstanding, 0);
+    } finally { h.releaseReadbacks(); h.renderer.destroy(); h.fake.destroy(); }
+  }
+});
+
 for (const variant of ['b', 'd']) test(`r4-F2 L6${variant} validatePublication exceptions fail the frame before confirmation`, async () => {
   let validations = 0;
   const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: `L6${variant}`,

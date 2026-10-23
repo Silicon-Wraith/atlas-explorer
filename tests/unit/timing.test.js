@@ -121,3 +121,23 @@ test('B15-REC-G P3 measurement excludes a pending draft confirmed beyond the orb
   trial.publicationUpdates=[];
   assert.match(measureAttempt(trial,workload).applicationFailure,/missing diagnostic confirmation/);
 });
+
+test('B15-P19-1 P3 counts historical validated cadence only at publication emission within the orbit window', async () => {
+  const { measureAttempt } = await import('../space-performance.mjs'), { trial, workload } = trialFixture();
+  for (const p of trial.publications.filter(p => p.kind === 'draft')) {
+    Object.assign(p, { sampleIndex: 0, historical: false, eligible: true, presentationSubmittedAt: p.publishedAt - 3,
+      completion: { outcome: 'completed', queueCompletedAt: p.publishedAt - 2 }, confirmationAt: p.publishedAt - 1 });
+  }
+  for (let i = 0; i < 450; i++) trial.publications[i].historical = true;
+  // One historical notification is emitted after the window, despite earlier
+  // presentation and confirmation. Neither earlier timestamp can backdate it.
+  trial.publications[0].publishedAt = 30001;
+  const measured = measureAttempt(trial, workload);
+  assert.equal(measured.applicationFailure, null);
+  assert.equal(measured.metrics.drafts, 899);
+  assert.equal(measured.metrics.draftsPerSecond, 899 / 30);
+  assert.equal(measured.metrics.draftIntervalP95Ms, 30);
+  assert.equal(measured.metrics.completedDrafts, 900, 'completion remains a separate observation');
+  trial.publications.push({ ...trial.publications[1], historical: false });
+  assert.match(measureAttempt(trial, workload).applicationFailure, /invalid diagnostic confirmation/, 'duplicates cannot inflate published cadence');
+});

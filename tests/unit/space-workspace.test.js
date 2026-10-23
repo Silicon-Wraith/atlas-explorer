@@ -89,6 +89,93 @@ test('B15-P17-3 L6d workspace retains historical confirmations and strict pairin
   } finally { h.backends[0]?.control.resume(); h.space.destroy(); }
 });
 
+async function driveUntil(h, predicate) {
+  for (let i = 0; i < 200 && !predicate(); i++) { h.runFrame(); await turn(); }
+  assert.ok(predicate(), 'bounded workspace driver reached its condition');
+}
+
+for (const rung of [undefined, 'L6c']) for (const newestFirst of [false, true]) {
+  test(`B15-P19-1 ${rung ?? 'default L6b'} preserves both confirmed presentations without replacing current state (${newestFirst ? 'newest' : 'oldest'} first)`, async () => {
+    const h = rig({ env: { draftExecution: rung } });
+    try {
+      await h.space.activate(1); await h.settle();
+      const publications = [], updates = [], reports = [], presentations = [], requests = [], historicalState = [];
+      let lastCurrent = h.space.inspection.lastPublication;
+      h.space.inspection.onPublish(p => {
+        publications.push(p);
+        if (p.historical) historicalState.push({ actual: h.space.inspection.lastPublication, expected: lastCurrent });
+        else lastCurrent = p;
+      });
+      h.space.inspection.onPublicationUpdate(u => updates.push(u));
+      h.space.inspection.onReport(r => reports.push(r));
+      h.space.inspection.onPresent(p => presentations.push(p));
+      h.space.inspection.onRequest(r => requests.push(r));
+      const camera = h.space.inspection.scene.camera;
+      h.backends[0].control.pause();
+      for (let i = 1; i <= 2; i++) {
+        h.space.inspection.requestCamera(orbit(camera, i / 10, 0), { phase: 'preview' });
+        await driveUntil(h, () => h.backends[0].control.heldTickets() === i);
+      }
+      h.backends[0].control.resume({ newestFirst });
+      await driveUntil(h, () => reports.length === 2);
+      const checked = confirmedPublications(publications, updates);
+      assert.equal(presentations.length, 2);
+      assert.equal(reports.filter(r => r.outcome === 'completed' && r.draftRecord.diagnosticsState === 'confirmed').length, 2);
+      assert.deepEqual(checked.failures, []); assert.deepEqual(checked.pending, []);
+      assert.equal(checked.publications.length, 2, 'both confirmed presentations count, including the older frame');
+      assert.equal(new Set(publications.map(p => p.requestId)).size, 2);
+      assert.equal(publications.find(p => p.requestId === requests[0].identity.requestId).historical, true);
+      assert.equal(historicalState.length, 1);
+      assert.equal(historicalState[0].actual, historicalState[0].expected, 'even synchronous historical observers see the unchanged current publication');
+      assert.equal(h.space.inspection.lastPublication.requestId, requests[1].identity.requestId);
+      assert.deepEqual(updates, []);
+      for (const p of publications) {
+        const original = requests.find(r => r.identity.requestId === p.requestId);
+        assert.deepEqual(p.request, original.request);
+        assert.deepEqual(p.camera, original.request.sceneSnapshot.camera);
+        assert.equal(p.frameId, undefined, 'ordinary validated publications do not become async originals');
+        assert.equal(p.diagnosticsState, undefined);
+        assert.equal(p.eligible, true);
+        assert.equal(p.completion.outcome, 'completed');
+        assert.ok(p.presentationSubmittedAt <= p.completion.queueCompletedAt);
+        assert.ok(p.completion.queueCompletedAt <= p.confirmationAt);
+        assert.ok(p.confirmationAt <= p.publishedAt);
+      }
+    } finally { h.backends[0]?.control.resume(); h.space.destroy(); }
+  });
+}
+
+test('B15-P19-1 default L6b publishes all 1467 confirmed presentations from 482 overlapping pairs and 503 singles', async () => {
+  const h = rig();
+  try {
+    await h.space.activate(1); await h.settle();
+    const publications = [], reports = [], presentations = [];
+    h.space.inspection.onPublish(p => publications.push(p));
+    h.space.inspection.onReport(r => reports.push(r));
+    h.space.inspection.onPresent(p => presentations.push(p));
+    const camera = h.space.inspection.scene.camera;
+    let submitted = 0;
+    // Synthetic completion ordering reproduces the saved Menger counts. No GPU
+    // timing or physical presentation is simulated or claimed.
+    for (let group = 0; group < 985; group++) {
+      h.backends[0].control.pause();
+      const count = group < 482 ? 2 : 1;
+      for (let i = 1; i <= count; i++) {
+        h.space.inspection.requestCamera(orbit(camera, ++submitted / 1000, 0), { phase: 'preview' });
+        await driveUntil(h, () => h.backends[0].control.heldTickets() === i);
+      }
+      h.backends[0].control.resume({ newestFirst: true });
+      await driveUntil(h, () => reports.length === submitted);
+    }
+    assert.equal(presentations.length, 1467);
+    assert.equal(reports.filter(r => r.outcome === 'completed' && r.draftRecord.diagnosticsState === 'confirmed').length, 1467);
+    const checked = confirmedPublications(publications);
+    assert.deepEqual(checked.failures, []);
+    assert.equal(checked.publications.length, 1467, 'regression: 1467 presented and confirmed but only 985 published');
+    assert.equal(publications.filter(p => p.historical).length, 482);
+  } finally { h.backends[0]?.control.resume(); h.space.destroy(); }
+});
+
 for (const rung of ['L6b', 'L6c', 'L6d']) test(`B15-P17-3 failed draft remains visible in reports (${rung})`, async () => {
   const h = rig({ env: { draftExecution: rung }, wrapBackend: backend => ({ ...backend,
     submitBatch(batch, options) {

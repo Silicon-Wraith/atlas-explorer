@@ -248,8 +248,11 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     const request = publication.request;
     // The renderer owns the published request even after this bounded history
     // evicts it. In particular, a delayed pending draft keeps its own metadata.
-    lastPublication = publication;
-    for (const listener of publishListeners) { try { listener(lastPublication); } catch { /* isolate observers */ } }
+    if (!publication.historical) lastPublication = publication;
+    for (const listener of publishListeners) { try { listener(publication); } catch { /* isolate observers */ } }
+    // Historical validation is an accounting notification, never a change to
+    // current publication, picking eligibility, visibility or diagnostic state.
+    if (publication.historical) return;
     if (publication.kind === 'settled-first' && request) classifyEffective(request);
     hideUnavailable();
     updateIndicators();

@@ -12,7 +12,7 @@ export async function rendererWithProbe() {
   const edits = [
     ['export function createSpaceRenderer({', 'export function createSpaceRenderer({ testProbe,'],
     ['function validatePublication(record, meta) {', 'function validatePublication(record, meta) {\n    testProbe?.validatePublication?.(record, meta);'],
-    ['function publish(record, meta, display, { emitPublication = true } = {}) {', 'function publish(record, meta, display, { emitPublication = true } = {}) {\n    testProbe?.publish?.(record, meta);'],
+    ['function publish(record, meta, display, { emitPublication = true, presentationEvidence } = {}) {', 'function publish(record, meta, display, { emitPublication = true, presentationEvidence } = {}) {\n    testProbe?.publish?.(record, meta);'],
     ['return Object.freeze({ prepare, render, pick,', 'return Object.freeze({ get published() { return published; }, prepare, render, pick,'],
   ];
   for (const [before, after] of edits) {

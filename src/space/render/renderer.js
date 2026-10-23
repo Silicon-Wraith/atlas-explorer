@@ -276,13 +276,13 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       appearanceKey: appearance, accumulationKey: accumulationKey(record.request.keys.geometryKey, appearance, record.request.quality.sampling),
       quality: meta.quality, publishedAt: now(), rayTermination: record.publishedCounts?.rayTermination ?? null };
   }
-  function publish(record, meta, display, { emitPublication = true } = {}) {
+  function publish(record, meta, display, { emitPublication = true, presentationEvidence } = {}) {
     if (!publishable(record)) return false;
     const geometry = { sample: meta.sample, status: record.targets.handles.status, depth: record.targets.handles.depth };
     const handles = [display, geometry.status, geometry.depth], old = published; hold(handles);
     published = { request: record.request, record, display, geometry, handles }; if (old) release(old.handles);
     acceptPublication(record, meta);
-    const snapshot = published, active = current, event = publicationData(record, meta);
+    const snapshot = published, active = current, event = { ...publicationData(record, meta), ...presentationEvidence };
     if (emitPublication) emit('Publish', event);
     // A synchronous subscriber may stop refinement after this complete image. Its
     // accepted status is unchanged; a subscriber's replacement request owns its own status.
@@ -655,7 +655,17 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           if (update) {
             record.diagnosticsState = 'confirmed'; record.confirmationAt = update.confirmationAt;
             acceptPublication(record, meta);
-            if (!update.historical && !record.cancelled && !record.result) publish(record, meta, record.displayHandle, { emitPublication: draftConfig.mode !== 'async' });
+            const ordinary = draftConfig.mode === 'gated' || draftConfig.mode === 'provisional';
+            const presentationEvidence = ordinary ? { historical: update.historical, eligible: record.frame.eligible,
+              presentationSubmittedAt: record.frame.presentationSubmittedAt, completion: update.completion,
+              confirmationAt: update.confirmationAt } : undefined;
+            if (!record.cancelled && !record.result) {
+              if (!update.historical) publish(record, meta, record.displayHandle, { emitPublication: draftConfig.mode !== 'async', presentationEvidence });
+              // Navigation supersession changes the current image, not the fact
+              // that this admitted presentation completed and validated. Keep
+              // other invalidation fences; retain no historical image handles.
+              else if (ordinary && executable(record)) emit('Publish', { ...publicationData(record, meta), ...presentationEvidence });
+            }
           }
         }
         if (operation.kind === 'presentation' && didPresent && !record.cancelled && executable(record)) emit('Present', { identity: identity(record.request), queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });

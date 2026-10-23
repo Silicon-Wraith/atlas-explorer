@@ -2,9 +2,24 @@
 import { canonicalJson } from '../../src/shared/scene.js';
 export const PERFORMANCE_RECORD_VERSION = 'atlas.performance-records-v2';
 export function confirmedPublications(publications, updates = []) {
-  const accepted=[], failures=[], pending=[], byFrame=new Map(), terminal=new Map();
+  const accepted=[], failures=[], pending=[], byFrame=new Map(), terminal=new Map(), ordinaryDrafts=new Set();
   for(const p of publications) {
-    if(p.diagnosticsState===undefined || p.diagnosticsState==='confirmed' && !p.frameId) { accepted.push(p);continue; }
+    if(p.diagnosticsState===undefined || p.diagnosticsState==='confirmed' && !p.frameId) {
+      // L6b/c expose ordinary validated notifications, including historical
+      // ones. They never enter L6d's pending-original/update pairing protocol.
+      if(p.kind==='draft' && (p.historical!==undefined || p.presentationSubmittedAt!==undefined || p.confirmationAt!==undefined)) {
+        if(typeof p.historical!=='boolean'||p.eligible!==true||!p.identity||p.sampleIndex!==0||
+           !Number.isFinite(p.presentationSubmittedAt)||!Number.isFinite(p.completion?.queueCompletedAt)||p.completion?.outcome!=='completed'||
+           !Number.isFinite(p.confirmationAt)||!Number.isFinite(p.publishedAt)||!p.rayTermination||
+           p.presentationSubmittedAt>p.completion.queueCompletedAt||p.completion.queueCompletedAt>p.confirmationAt||p.confirmationAt>p.publishedAt) {
+          failures.push({identity:p.identity,reason:'invalid validated presentation evidence'});continue;
+        }
+        const key=canonicalJson({identity:p.identity,sampleIndex:p.sampleIndex});
+        if(ordinaryDrafts.has(key)) { failures.push({identity:p.identity,reason:'duplicate validated draft publication'});continue; }
+        ordinaryDrafts.add(key);
+      }
+      accepted.push(p);continue;
+    }
     if(p.diagnosticsState!=='pending'||!p.frameId||byFrame.has(p.frameId)||p.eligible!==true||!p.identity||!Number.isFinite(p.presentationSubmittedAt)) {
       failures.push({frameId:p.frameId,reason:'invalid original frame record'});continue;
     }
