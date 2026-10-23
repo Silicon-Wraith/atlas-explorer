@@ -18,8 +18,10 @@ export async function runUnpaced({poses, submit, lifecycle, liveFrames=2}) {
     await Promise.all(active);
   } finally {await Promise.allSettled(active);}
 }
+// Focus is recorded with the cell but does not gate it: an unfocused, visible headed window is
+// not throttled (diagnosis H1). Hidden pages and slow idle GPU round trips are rejected.
 export function environmentValid(probe) {
-  return probe?.visibilityState==='visible' && !probe.hidden && probe.hasFocus===true &&
+  return probe?.visibilityState==='visible' && !probe.hidden &&
     Number.isFinite(probe.idleFenceRttP95) && probe.idleFenceRttP95<=1 &&
     Number.isFinite(probe.idleScopeRttP95) && probe.idleScopeRttP95<=1;
 }

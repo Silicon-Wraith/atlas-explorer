@@ -18,6 +18,9 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
     }
     console.log(JSON.stringify([...groups].map(([key,results])=>({group:JSON.parse(key),...compareLadder(results,manifest)})),null,2));
   }
-  else if(args.length===1&&args[0]==='--all'){delete process.env.ATLAS_LADDER_CELL;process.argv=[process.argv[0],process.argv[1],'--group','performance-ladder'];await import('./space.mjs');}
-  else {if(args.length!==2||args[0]!=='--cell'||!/^\d+$/.test(args[1])||!cells[Number(args[1])])throw Error('usage: --all | --list | --cell <registered index> | --compare <evidence directory>');process.env.ATLAS_LADDER_CELL=JSON.stringify(cells[Number(args[1])]);process.argv=[process.argv[0],process.argv[1],'--group','performance-ladder'];await import('./space.mjs');}
+  else if(args.length===2&&args[0]==='--cells'&&/^\d+(,\d+)*$/.test(args[1])){
+    const selected=args[1].split(',').map(i=>cells[Number(i)]);if(selected.some(c=>!c))throw Error('--cells takes registered indices');
+    delete process.env.ATLAS_LADDER_CELL;process.env.ATLAS_LADDER_CELLS=JSON.stringify(selected);process.argv=[process.argv[0],process.argv[1],'--group','performance-ladder'];await import('./space.mjs');}
+  else if(args.length===1&&args[0]==='--all'){delete process.env.ATLAS_LADDER_CELL;delete process.env.ATLAS_LADDER_CELLS;process.argv=[process.argv[0],process.argv[1],'--group','performance-ladder'];await import('./space.mjs');}
+  else {if(args.length!==2||args[0]!=='--cell'||!/^\d+$/.test(args[1])||!cells[Number(args[1])])throw Error('usage: --all | --list | --cell <registered index> | --cells <i,j,...> | --compare <evidence directory>');delete process.env.ATLAS_LADDER_CELLS;process.env.ATLAS_LADDER_CELL=JSON.stringify(cells[Number(args[1])]);process.argv=[process.argv[0],process.argv[1],'--group','performance-ladder'];await import('./space.mjs');}
 }

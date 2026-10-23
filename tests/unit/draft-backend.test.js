@@ -8,6 +8,8 @@ import { createSpaceRequest } from '../../src/space/render-adapter.js';
 import { createSpaceScene } from '../../src/space/scene-adapter.js';
 const versions={kernelVersion:'fixture',tracingVersion:'fixture'};
 const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
+// A job that never settles is the defect under test; report it as an assertion, not a runner timeout.
+const settled=(promise,ms=2000)=>{let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new assert.AssertionError({message:'job never settled'})),ms);})]).finally(()=>clearTimeout(timer));};
 async function setup(rung='L6a'){
   const pipelineSet=productPipelineSet(),gpu=createRendererDeviceDouble(pipelineSet),batches=[],presents=[],updates=[];
   const real=createWebGPUBackend({canvas:gpu.canvas,clock:performance,acquire:gpu.acquire,loadSource:gpu.loadSource,format:'bgra8unorm',draftExecution:rung});
@@ -90,4 +92,36 @@ test('B15 r14 unpaced newest-wins cannot accumulate reservations behind a held c
     assert.equal(results.at(-1).outcome, 'completed');
     assert.ok(results.slice(0,-1).every(r=>r.outcome==='superseded'));
   } finally { h.gpu.control.scopes.release(); await Promise.allSettled(jobs); h.renderer.destroy(); h.real.destroy(); }
+});
+
+test('B15 r14 a request that turns non-publishable while waiting for configuration ends cancelled and reserves nothing', async () => {
+  const h = await setup(), jobs = [];
+  try {
+    h.gpu.control.scopes.held = true;
+    const baseline = h.gpu.control.natives.filter(n => n.kind === 'texture').length;
+    jobs.push(h.renderer.render(h.request(), {currentNavigation:()=>1}).done); await flush();
+    let live = {deviceEpoch:h.real.currentEpoch(), viewRevision:1, geometryRevision:1, appearanceRevision:1};
+    const waiting = h.request();
+    jobs.push(h.renderer.render(waiting, {currentGeneration:()=>live}).done); await flush();
+    live = {...live, viewRevision:2};
+    h.gpu.control.scopes.release();
+    const [first, second] = await settled(Promise.all(jobs));
+    assert.equal(first.outcome, 'cancelled', 'a replacement outside the navigation stream cancels the earlier draft');
+    assert.equal(second.outcome, 'cancelled');
+    assert.equal(h.gpu.control.natives.filter(n => n.kind === 'texture').length, baseline + 11, 'the stale request created no target set');
+    assert.equal(h.real.diagnostics().inventory.filter(e => e.width && e.state !== 'pooled').length, 0);
+  } finally { h.gpu.control.scopes.release(); h.renderer.destroy(); h.real.destroy(); }
+});
+
+test('B15 r14 supersession during a pending configuration settles superseded, never failed', async () => {
+  const h = await setup(), jobs = [];
+  try {
+    h.gpu.control.scopes.held = true;
+    jobs.push(h.renderer.render(h.request(), {currentNavigation:()=>1}).done); await flush();
+    jobs.push(h.renderer.render(h.request(), {currentNavigation:()=>1}).done);
+    h.gpu.control.scopes.release();
+    const [first, second] = await settled(Promise.all(jobs));
+    assert.equal(first.outcome, 'superseded', JSON.stringify(first.reason));
+    assert.equal(second.outcome, 'completed');
+  } finally { h.gpu.control.scopes.release(); h.renderer.destroy(); h.real.destroy(); }
 });

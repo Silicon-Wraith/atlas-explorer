@@ -391,3 +391,21 @@ test('B15 r14 4K spare geometry and working sets reuse partial pool under the tr
     backend.release(buffer);
   } finally {backend.destroy();}
 });
+
+test('B15 r14 a superseded configuration served from the pool returns its textures to the pool', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const first = await targets(backend);
+    Object.values(first.handles).flat().forEach(h => backend.release(h));
+    const textures = () => gpu.control.natives.filter(n => n.kind === 'texture' && !n.destroyed).length, before = textures();
+    const controller = new AbortController();
+    const pending = backend.configureTargets({epoch:backend.currentEpoch(),layoutId:LAYOUT,internalSize:{width:2,height:2},outputSize:{width:2,height:2},signal:controller.signal});
+    controller.abort();
+    await assert.rejects(pending, /superseded/);
+    assert.equal(textures(), before, 'no healthy pooled texture was destroyed');
+    assert.equal(backend.diagnostics().inventory.filter(e => e.width && e.state === 'pooled').length, 11);
+    const again = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    await targets(backend);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, again, 'the next configuration still reuses the set');
+  } finally { backend.destroy(); }
+});

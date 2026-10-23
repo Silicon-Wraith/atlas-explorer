@@ -6,8 +6,10 @@ import { productPipelineSet } from '../../src/space/render/webgpu/appearance.js'
 import { createSpaceScene } from '../../src/space/scene-adapter.js';
 import { DRAFT_RUNGS } from '../../src/space/render/draft-execution.js';
 
-test('B15-REC-G ladder rungs execute distinct admission and ticket boundaries with common shader inputs',async()=>{
-  for(const rung of DRAFT_RUNGS){
+// One test per rung: each rung builds its own device double and driver, and the whole loop
+// exceeded the runner's 10 s per-test bound under suite load. The assertions are unchanged.
+for(const rung of DRAFT_RUNGS)test(`B15-REC-G ladder rungs execute distinct admission and ticket boundaries with common shader inputs (${rung})`,async()=>{
+  {
     const gpu=createRendererDeviceDouble(productPipelineSet(),{limits:{maxComputeWorkgroupsPerDimension:65535}});
     const driver=await createDraftLadderDriver({canvas:gpu.canvas,clock:()=>0,scene:createSpaceScene({model:'sphere'}),rung,acquire:gpu.acquire,loadSource:gpu.loadSource,format:'bgra8unorm'});
     try{
@@ -69,4 +71,47 @@ test('B15 r14 ladder metrics use orbit window and preserve phase latency', async
   assert.equal(metrics.benchmarkDraftsPerSecond,2/30);
   assert.equal(metrics.latencyP95Ms,20);
   assert.equal(metrics.phases.interaction.latencyP95Ms,200);
+});
+
+test('B15 r14 the per-cell environment gate rejects hidden pages and slow idle round trips, and records focus without gating on it', async () => {
+  const {environmentValid}=await import('../support/ladder-control.mjs');
+  const ok={visibilityState:'visible',hidden:false,hasFocus:false,idleFenceRttP95:.2,idleScopeRttP95:.2};
+  assert.equal(environmentValid(ok),true);
+  assert.equal(environmentValid({...ok,visibilityState:'hidden',hidden:true}),false);
+  assert.equal(environmentValid({...ok,idleFenceRttP95:1.5}),false);
+  assert.equal(environmentValid({...ok,idleScopeRttP95:1.5}),false);
+  assert.equal(environmentValid({...ok,idleFenceRttP95:undefined}),false);
+});
+
+test('B15 r14 unpaced lifecycle cells issue the next pose only after a completion; lower rungs keep two slots busy', async () => {
+  const {runUnpaced}=await import('../support/ladder-control.mjs');
+  for(const lifecycle of [true,false]){
+    let live=0,max=0;const poses=Array.from({length:6},(_,i)=>i);
+    await runUnpaced({poses,lifecycle,submit:async()=>{live++;max=Math.max(max,live);await new Promise(r=>setTimeout(r,1));live--;return {outcome:'completed'};}});
+    assert.equal(max,lifecycle?1:2,`lifecycle=${lifecycle}`);
+  }
+  await assert.rejects(runUnpaced({poses:[0,1],lifecycle:true,submit:async()=>({outcome:'superseded'})}),/failed-harness: unpaced draft did not complete \(superseded\)/);
+});
+
+test('B15 r14 a ladder cell with zero completed drafts is failed-harness, and comparison requires one browser session', async () => {
+  const {classifyLadder,compareLadder}=await import('../support/space-performance-ladder.mjs');
+  const env={visibilityState:'visible',hidden:false,hasFocus:true,idleFenceRttP95:.2,idleScopeRttP95:.2};
+  const base={environmentProbe:env,metrics:{confirmed:0,benchmark:0,failures:[]},tasks:[],timings:[]};
+  assert.equal(classifyLadder(base).state,'failed-harness');
+  assert.equal(classifyLadder({...base,metrics:{...base.metrics,benchmark:3}}).state,'measured');
+  assert.equal(classifyLadder({...base,environmentProbe:{...env,hidden:true,visibilityState:'hidden'},metrics:{...base.metrics,benchmark:3}}).state,'failed-harness');
+  const {readFile}=await import('node:fs/promises');const manifest=JSON.parse(await readFile('tests/reference/performance-ladder-v1.json'));
+  const results=manifest.order.map((rung,position)=>({sessionId:position?'a':'b',cell:{rung,position,mode:'paced'},metrics:{latencyP95Ms:10,benchmarkDraftsPerSecond:100,confirmedDraftsPerSecond:100}}));
+  assert.equal(compareLadder(results,manifest).state,'incomplete');
+  assert.match(compareLadder(results,manifest).reason,/one browser session/);
+});
+
+test('B15 r14 several registered cells can be selected for one browser session', async () => {
+  const {ladderCells,ladderSelection}=await import('../support/space-performance-ladder.mjs');
+  const {readFile}=await import('node:fs/promises');const manifest=JSON.parse(await readFile('tests/reference/performance-ladder-v1.json'));
+  const cells=ladderCells(manifest);
+  assert.equal(ladderSelection(manifest,{}).length,cells.length);
+  assert.deepEqual(ladderSelection(manifest,{ATLAS_LADDER_CELL:JSON.stringify(cells[3])}),[cells[3]]);
+  assert.deepEqual(ladderSelection(manifest,{ATLAS_LADDER_CELLS:JSON.stringify([cells[0],cells[6]])}),[cells[0],cells[6]]);
+  assert.throws(()=>ladderSelection(manifest,{ATLAS_LADDER_CELLS:JSON.stringify([{...cells[0],rung:'L9'}])}),/registered cell/);
 });

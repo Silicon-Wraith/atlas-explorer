@@ -8,6 +8,15 @@ import { ev, within, LIMITS, idleWithin } from './bounded.mjs';
 export const LADDER_MANIFEST='tests/reference/performance-ladder-v1.json';
 export function ladderCells(manifest){const cells=[];for(const instrumentation of manifest.instrumentation)for(const scene of manifest.scenes)for(let repetition=1;repetition<=manifest.repetitions;repetition++)for(const mode of manifest.modes)for(const [position,rung] of manifest.order.entries())cells.push({scene,repetition,mode,instrumentation,position,rung});return cells;}
 const p95=values=>values.length?[...values].sort((a,b)=>a-b)[Math.ceil(values.length*.95)-1]:null;
+// One browser session runs every selected cell: ATLAS_LADDER_CELLS (a JSON array), the single
+// ATLAS_LADDER_CELL, or else all registered cells. Every selected cell must be registered.
+export function ladderSelection(manifest,env=process.env){
+  const cells=ladderCells(manifest);
+  const selected=env.ATLAS_LADDER_CELLS?JSON.parse(env.ATLAS_LADDER_CELLS):env.ATLAS_LADDER_CELL?[JSON.parse(env.ATLAS_LADDER_CELL)]:cells;
+  if(!Array.isArray(selected)||!selected.length)throw Error('ladder selection must be a nonempty array of registered cells');
+  for(const cell of selected)if(!cells.some(c=>JSON.stringify(c)===JSON.stringify(cell)))throw Error(`not a registered cell: ${JSON.stringify(cell)}`);
+  return selected;
+}
 export function ladderMetrics(events,durationMs,windows={orbit:{start:0,end:durationMs}}){
   const requests=new Map(events.filter(e=>e.type==='request').map(e=>[e.identity.requestId,e]));
   const first=new Map();
@@ -136,7 +145,7 @@ async function runCell({page,url,environment,report,pass,cell,sessionId}){
 
 export async function runPerformanceLadder(options){
   const manifest=JSON.parse(await readFile(LADDER_MANIFEST));
-  const cells=process.env.ATLAS_LADDER_CELL?[JSON.parse(process.env.ATLAS_LADDER_CELL)]:ladderCells(manifest);
+  const cells=ladderSelection(manifest);
   const sessionId=randomUUID();
   // The headed runner creates this page/browser once. Each cell reloads it, records its own
   // environment probe, and destroys its driver before the next cell begins.

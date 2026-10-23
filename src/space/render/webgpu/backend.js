@@ -348,10 +348,14 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       // The complete layout is the family-requirements key (all current families include recovery).
       // Partial releases can be reused individually, including the non-geometry spare at 4K.
       const pool = JSON.stringify([layoutId, outputSize, TARGET_LAYOUT]);
-      const { value: created, status } = allocator.canReuse(descs, pool)
+      // A set served wholly from the pool creates nothing, so it has no creation error to await.
+      const reused = allocator.canReuse(descs, pool);
+      const { value: created, status } = reused
         ? { value: allocator.transaction(descs, { pool }), status: Promise.resolve(null) }
         : createScoped(() => allocator.transaction(descs, { pool }));
-      const abandon = () => created.forEach(handle => allocator.release(handle, { discard: true }));
+      // An abandoned fresh set may carry an unobserved creation error: never pool it. A pooled set
+      // was validated when first created and returns to the pool.
+      const abandon = () => created.forEach(handle => allocator.release(handle, { discard: !reused }));
       signal?.addEventListener('abort', abandon, { once: true });
       let error;
       try { error = await Promise.race([status, current.lost]); } finally { signal?.removeEventListener('abort', abandon); }

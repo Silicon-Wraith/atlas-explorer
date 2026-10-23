@@ -159,7 +159,10 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       await previous;
       // Recheck after every asynchronous wait, before any reservation. A waiting newest-wins
       // request owns no targets, and an aborted configure drains its scopes before the next one.
-      if (record.result || record.cancelled || !executable(record)) return null;
+      // A finished or cancelled record is already on a terminal path. A record that is merely
+      // no longer executable must be ended here, as dispatch would end it, or it waits forever.
+      if (record.result || record.cancelled || destroyed) return null;
+      if (!executable(record)) { cancel(record.request.jobId); return null; }
       return await backend.configureTargets({ ...description, signal: record.configuration.signal });
     } finally { lane.resolve(); }
   }

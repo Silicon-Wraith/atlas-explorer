@@ -53,8 +53,8 @@ const options = parseArgs(process.argv.slice(2));
 const { chromium } = await import('playwright');
 // The registered ladder executes all cells in one Chrome session; each cell retains its
 // own 500 s evaluation bound plus bounded probe/setup/cleanup. Other suites keep their bound.
-const ladderCount=options.group==='performance-ladder'&&!process.env.ATLAS_LADDER_CELL
-  ? (await import('./support/space-performance-ladder.mjs')).ladderCells(JSON.parse(await readFile('tests/reference/performance-ladder-v1.json'))).length : 1;
+const ladderCount=options.group==='performance-ladder'
+  ? (await import('./support/space-performance-ladder.mjs')).ladderSelection(JSON.parse(await readFile('tests/reference/performance-ladder-v1.json'))).length : 1;
 installSuiteDeadline(`space-${options.group}`,LIMITS.suite*ladderCount);
 await mkdir('artifacts/runtime', { recursive: true });
 process.env.TMPDIR = resolve('artifacts/runtime');
@@ -3612,6 +3612,9 @@ try {
     const { context, environment } = await launchProfile({ label: 'profile', args: PROJECT0_LAUNCH_ARGS });
     const page = expectBackend(boundContext(await within(context.newPage(), LIMITS.launch, 'newPage')), options.group === 'prewarm' ? 'none' : 'webgl');
     watchErrors(page);
+    // The application server never serves tests/; the ladder and draft-summary pages import their
+    // tests/support drivers through this route (as space-shell does). Carried from the B15 executor.
+    if (['performance-ladder', 'draft-summary'].includes(options.group)) await page.route('**/tests/support/*.mjs', async route => route.fulfill({ status: 200, contentType: 'text/javascript', body: await readFile(resolve('tests/support', new URL(route.request().url()).pathname.split('/').pop()), 'utf8') }));
     if (options.group === 'prewarm') await (await import('./support/space-prewarm.mjs')).runColdPrewarm({ page, url, environment, pass, report });
     else if (options.group === 'draft-summary') await (await import('./support/space-draft-summary.mjs')).runDraftSummary({ page, url, report, pass });
     else if (options.group === 'performance-ladder') await (await import('./support/space-performance-ladder.mjs')).runPerformanceLadder({ page, environment, url, pass, report });
