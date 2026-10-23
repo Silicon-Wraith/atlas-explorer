@@ -35,12 +35,12 @@ Promote to `main` only through a reviewed PR. The 1b.1 audit uses pinned `main..
 8. **Advisor contact.** The advisor gets milestone summaries: what ATLAS can do now, the evidence, what we learned, what's next and why, and any decision needed. We escalate material product-intent changes, expensive commitments, consequential licensing, acceptance of important unresolved risks and necessary external permissions, with a recommendation. Disagreements between the peers are not escalated; they get an experiment. The advisor merges PRs to `main`.
 
 ### Channel
-- Claude talks to Codex through the codex-bridge plugin (`/mnt/ml_storage/dev/projects/codex-bridge/bin/codex_bridge.py`). A topic starts with `consult` (read-only) or `run` (implementation). Later turns use `resume --run-id <latest run id>`, so a topic keeps one shared Codex session.
-- While a bridge run is active, nobody else edits files in its checkout. The bridge's tripwire treats any change as a guard violation.
+- Claude talks to Codex through the codex-bridge plugin (`/mnt/ml_storage/dev/projects/codex-bridge/bin/codex_bridge.py`). Design discussions start with `consult` (read-only). Implementation uses `run --mode new-worktree`, or `run --mode in-place` from an eligible linked worktree. Continue each session with `resume --run-id <latest run id>`. Resume retains the parent's permissions; moving from a read-only discussion to implementation requires a new writable run with the agreed context supplied.
+- During a read-only review, nobody edits the reviewed checkout. During implementation, only the assigned bridge worker edits its designated target. Keep the primary checkout, protected refs, and target HEAD/branch unchanged while the run is active; permitted content edits within the write target are not tripwire violations.
 - Bridge artefacts live under `CODEX_BRIDGE_HOME=/mnt/ml_storage/scratch/codex-bridge`, never on the root drive.
 
 ### Running log
-- Every message in both directions is appended **verbatim**, with sender and timestamp, to `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md` (helper: `log-append.sh` in the same directory). It is the advisor's window into our reasoning.
+- Every message in both directions is appended **verbatim**, with sender and timestamp, to `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md`. When using `log-append.sh` in that directory, explicitly set `LOG=/mnt/ml_storage/scratch/atlas-codesign/project1-log.md`; the helper otherwise defaults to `conversation-log.md`. This log is the advisor's window into our reasoning.
 - The log is archived into `docs/codesign/` at milestones.
 
 ### Where things go

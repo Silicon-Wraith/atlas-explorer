@@ -6,7 +6,12 @@
 **Purpose:** Establish the product vision, guiding principles, architectural expectations, research agenda, and collaborative development responsibilities for ATLAS.
 
 ## Adoption decisions (advisor, 2026-10-23)
-- This charter mostly replaces the 2026-10-18 workbench charter. Carried forward from it: numerical honesty (declared estimator categories and limits, §3.4 there), explicit resource management and recovery, and browser compatibility discipline.
+- This charter governs ATLAS and supersedes the workbench charter except for the engineering invariants stated below:
+  - **Numerical honesty:** where distance estimates are used, declare their category, applicability, signed/exterior-only semantics and derivation. Keep empirical validation separate from mathematical guarantees. Distinguish unresolved results and numerical failures from established hits, misses or occupancy, and record relevant approximation and precision limits. This preserves the substance of old §3.4 without requiring its particular viewport indicator. Detailed overlays may be optional; unresolved geometry still requires a defined, honestly indicated fallback.
+  - **Resource management and recovery:** bound work, manage resource ownership and release explicitly, report completion truthfully, and recover without silently changing requested outputs or losing scene state.
+  - **Compatibility evidence:** record the hardware, browser and launch configuration tested, report unsupported configurations clearly, and limit compatibility claims to evidence. Desktop/laptop discrete GPUs are the product target; mobile support is not required.
+
+  Existing project specs continue to govern their implemented paths until explicitly amended. They do not mandate distance-estimated representation for new experiments. Existing acceptance requirements change only through an explicit policy amendment.
 - Runtime dependencies are allowed when they make sense for ATLAS.
 - Distance-estimate-only representation does not survive; representation is an engineering decision.
 - Target hardware: desktop or laptop with a discrete GPU. Not mobile.

@@ -1,4 +1,4 @@
-> **Mostly superseded (2026-10-23)** by `2026-10-23-atlas-north-star-charter.md`. Still in force from this charter: numerical honesty (§3.4 estimator honesty: declared categories, applicability and limits), explicit resource management and recovery, and browser compatibility discipline. The zero-runtime-dependency default and the distance-estimate-only representation no longer apply. Existing project specs remain valid where they don't contradict the new charter.
+> **Mostly superseded (2026-10-23)** by `2026-10-23-atlas-north-star-charter.md`. Its Adoption decisions define the authoritative carried-forward invariants and the treatment of existing project specs. The body below is historical, including its former governance and approval wording. The zero-runtime-dependency default and distance-estimate-only representation no longer govern new work.
 
 # ATLAS Workbench — Architectural Charter
 
