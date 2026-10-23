@@ -1,0 +1,217 @@
+{
+  "schema": "atlas.performance-ladder",
+  "schemaVersion": 1,
+  "version": "rec-g-ladder-v1",
+  "recordProtocol": "atlas.performance-records-v2",
+  "productDefault": "L6a",
+  "workload": "tests/reference/performance-workload.json",
+  "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d",
+  "targets": {
+    "completedDraftsPerSecondMin": 30,
+    "consecutiveDraftIntervalP95Ms": 50,
+    "interactionP95Ms": 100,
+    "stressReplacementMs": 250,
+    "applicationMainThreadTaskMaxMs": 50,
+    "firstSettledImageMs": 2000
+  },
+  "scenes": [
+    "bulb",
+    "quaternion",
+    "menger"
+  ],
+  "repetitions": 3,
+  "rungs": [
+    "L0",
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "L5a",
+    "L5b",
+    "L5c",
+    "L5d",
+    "L6a",
+    "L6b",
+    "L6c",
+    "L6d"
+  ],
+  "order": [
+    "L0",
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "L5a",
+    "L5b",
+    "L5c",
+    "L5d",
+    "L6a",
+    "L6b",
+    "L6c",
+    "L6d",
+    "L0"
+  ],
+  "warmup": {
+    "poses": 60,
+    "rule": "first 60 frozen orbit poses, in order, drain; excluded from measurements"
+  },
+  "modes": [
+    "paced",
+    "unpaced"
+  ],
+  "instrumentation": [
+    "plain",
+    "timestamps"
+  ],
+  "queue": {
+    "liveFrames": 2,
+    "outstandingSubmissions": 2,
+    "l0": "bounded benchmark fences; no application tickets or leases"
+  },
+  "unpaced": {
+    "copies": 4,
+    "posesPerCopy": 1875,
+    "total": 7500,
+    "dropPoses": false
+  },
+  "paced": {
+    "workload": "full frozen orbit, settled-first/full, interaction, stress; absolute issuance",
+    "incompleteRungs": "P3 acceptance metrics unavailable; only full L6a default can satisfy acceptance",
+    "profiles": "Camera preview poses are drafts; the final orbit/interaction commit is settled; every discrete stress parameter edit is settled, matching workspace requestCamera/editParameter. Drain final full-quality commit before the next phase."
+  },
+  "comparison": {
+    "latency": "paced draft request-to-presenter-completion p95 across orbit and interaction (settled milestones and stress replacement measured separately)",
+    "throughput": "confirmed unpaced drafts/s; L0-L3 benchmark-completion rate is explicitly incomplete evidence",
+    "latencyFormula": "(Lr-Lprevious)/L0",
+    "throughputFormula": "(Tprevious-Tr)/T0",
+    "baseline": "mean of bracketing L0 repetitions",
+    "previous": {
+      "L1": "L0",
+      "L2": "L1",
+      "L3": "L2",
+      "L4": "L3",
+      "L5a": "L4",
+      "L5b": "L4",
+      "L5c": "L4",
+      "L5d": "L4",
+      "L6a": "L5a",
+      "L6b": "L5b",
+      "L6c": "L5c",
+      "L6d": "L5d"
+    },
+    "limits": {
+      "L1": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L2": {
+        "latency": 0.05,
+        "throughput": 0.05
+      },
+      "L3": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L4": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L5a": {
+        "latency": 0.25,
+        "throughput": 0.25
+      },
+      "L5b": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L5c": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L5d": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L6a": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L6b": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L6c": {
+        "latency": 0.1,
+        "throughput": 0.1
+      },
+      "L6d": {
+        "latency": 0.1,
+        "throughput": 0.1
+      }
+    },
+    "pairing": "L from paced cells, T from unpaced cells, matched by manifest hash, scene, repetition, instrumentation and rung; both L0 brackets required"
+  },
+  "clocks": {
+    "protocol": "atlas.gpu-clocks-v1",
+    "capture": "nvidia-smi timestamp,uuid,clocks.sm,pstate,power.draw at 100 ms; UTC CSV; raw samples retained",
+    "intervalMs": 100,
+    "bandEdgesMHz": [
+      270,
+      600,
+      1200
+    ],
+    "medianRatioMax": 1.1,
+    "bandShareMin": 0.9,
+    "sampleCoverageMin": 0.8,
+    "sampleGapMaxMs": 500,
+    "comparison": "Require same band and <=10% median spread separately for paced L and unpaced T, including both matching L0 brackets; otherwise inconclusive with no layer win/loss. Mixed regimes (<90% in median band) are inconclusive for comparison.",
+    "acceptance": "Report observed band; no required band. Missing telemetry cannot pass; application failures remain failed.",
+    "policy": "observe only; never change clocks or host NVIDIA configuration; no artificial warm load"
+  },
+  "unfencedCeiling": {
+    "classification": "separate diagnostic; never paired latency or acceptance",
+    "enabledByPairedRunner": false
+  },
+  "envelope": {
+    "version": "rec-g-p3-envelope-v1",
+    "internalMax": [
+      640,
+      360
+    ],
+    "iterationsMax": 64,
+    "stepsMax": 256,
+    "samples": 1,
+    "secondaryRays": 0,
+    "families": {
+      "mandelbulb": {
+        "power": [
+          7,
+          8
+        ]
+      },
+      "quaternion-julia": {
+        "C": [
+          -0.2,
+          0.8,
+          0,
+          0
+        ],
+        "kappa": [
+          0,
+          0.5
+        ]
+      },
+      "menger": {
+        "depth": [
+          1,
+          2
+        ]
+      },
+      "sphere": "analytic",
+      "box": "analytic"
+    },
+    "qualification": "executor must verify active group work <=8 ms over all registered workloads; raw fences alone do not subdivide"
+  },
+  "acceptance": "No incomplete rung can pass P3. Preserve all attempts, overruns need peer disposition before promotion.",
+  "instrumentedCompletion": "Timestamp repetitions hold the common completion boundary through timestamp copy-out to bound query storage. Record this extra synchronization; never mix with plain layer-cost results."
+}

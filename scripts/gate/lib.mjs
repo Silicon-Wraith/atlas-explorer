@@ -1,5 +1,6 @@
 // Pure evidence and classification rules for the unit runner and the Plane gate.
 // Nothing here launches a process or touches the file system.
+import { validateReferenceReport } from './reference-evidence.mjs';
 
 export const SUITE_STATES = Object.freeze(['passed', 'failed', 'deferred', 'not-run', 'incomplete']);
 
@@ -71,6 +72,7 @@ export function validateEvidence(suite, evidence) {
   }
   const report = evidence.report;
   if (report === undefined) return { ok: false, kind: 'missing', detail: `no report at ${suite.report}` };
+  if (suite.evidence === 'reference') return validateReferenceReport(suite, report);
   if (!Array.isArray(report) || report.length === 0) return { ok: false, kind: 'invalid', detail: 'report is empty or not a list' };
   if (suite.evidence === 'browser') {
     if (report.some(entry => entry?.name === 'FAIL')) return { ok: false, kind: 'invalid', detail: 'report records a failure' };
@@ -99,8 +101,12 @@ export function validateEvidence(suite, evidence) {
   return { ok: false, kind: 'invalid', detail: `unknown evidence kind ${suite.evidence}` };
 }
 
+// Suite runners emit this marker at column zero. TAP comments, test names and
+// quoted diagnostics are test data, not a runner-level cleanup declaration.
+export const hasCleanupFailureMarker = run => /^CLEANUP-UNCONFIRMED\b/m.test(`${run.stdout ?? ''}\n${run.stderr ?? ''}`);
+
 export function classifySuiteRun(run, evidenceResult) {
-  if (/CLEANUP-UNCONFIRMED/.test(`${run.stdout ?? ''}\n${run.stderr ?? ''}`)) return { state: 'incomplete', reason: 'cleanup-unconfirmed: the suite could not confirm closing its browser', cleanup: 'unconfirmed' };
+  if (hasCleanupFailureMarker(run)) return { state: 'incomplete', reason: 'cleanup-unconfirmed: the suite could not confirm closing its browser', cleanup: 'unconfirmed' };
   if (run.cleanup === 'unconfirmed') return { state: 'incomplete', reason: 'cleanup-unconfirmed: the process tree did not exit after SIGKILL', cleanup: 'unconfirmed' };
   if (run.timedOut) return { state: 'incomplete', reason: 'timeout' };
   if (run.spawnError) return { state: 'incomplete', reason: `launch-error: ${run.spawnError}` };

@@ -1,5 +1,35 @@
 # ATLAS session handoff
 
+## 2026-10-23 — Project 1b.1 B15 evidence and documentation handoff
+
+Plane is in `src/plane/`; Space is in `src/space/` (models, numerics, camera/navigation, workspace, render orchestration and the `render/webgpu/` backend). Shared scenes/history/scheduling stay in `src/shared/`; shell/activation UI stays in `src/ui/`. `src/app.js` composes both workspaces. Fresh startup opens Plane and acquires Space's device on first activation.
+
+`npm run dev:gpu` accepts `PORT` or `-- --port N` (CLI wins). A failed Space activation leaves Plane available and displays code-specific WebGPU enablement guidance. The user approved the flagged-Chrome route plus actionable ordinary-browser unavailability as §3 end-to-end behavior. Pending navigation drafts may publish within their still-valid stream; strict settled/refinement and picking rules remain.
+
+Space defaults to **L6b**, with GPU gating inside each navigation submission. L6a remains diagnostic; L6d is available but off. Settled/refinement outcome masks run in a Worker using unsliced typed-array decoding and incremental counts. Validation precedes presentation; a readback lease is held through the Worker acknowledgement.
+
+P3 uses `atlas.p3-timing-budget-v1`, evidence schema 5: at most three of the 2,315 inputs may be more than 4 ms late, none above 8 ms. All raw issuance timestamps are retained. The allowance can change a threshold verdict; application failures still take precedence, and older versions cannot be pooled with these trials. The timer itself still records every anomaly above 4 ms.
+
+Full gates passed on task candidate `bb239892add7ffc18fd30d460420f6472574c0bd` and its tree-identical promotion `31233b5438b8471654bc858c6cf7aca430d576fc`, now `feat/project1b1`. The [regenerated audit](docs/reports/project1b/gate-ledger-1b1.json) of pinned `main..31233b5` accepts all 167 rows: 97 accepted, 4 exceptions, 66 accounted WIP, zero unaccepted. It describes that committed range, not this later documentation change.
+
+The promotion gate's P3 reports passed bulb in 3/3 attempts, quaternion in 3/4 and Menger in 3/4. The [bulb](docs/reports/project1b/1b1-performance-bulb.json), [quaternion](docs/reports/project1b/1b1-performance-quaternion.json) and [Menger](docs/reports/project1b/1b1-performance-menger.json) snapshots retain every attempt, metrics, raw issuance timestamps and clock evidence; omitted event streams remain in the raw files identified by path and SHA-256 in each snapshot. Gate evidence and the live manifest are under `/mnt/ml_storage/scratch/b15-executor5/`.
+
+The separate rerun at `31233b5` records [4K retained-image replacement](docs/reports/project1b/1b1-memory-4k.json) completing in 8470.5/6404.5 ms, peak concurrent tracked allocation 911,524,192 bytes (911.5 MB, including the pool), and [16/16 investigation operations](docs/reports/project1b/1b1-investigation.md). These are exact copies from `/mnt/ml_storage/scratch/b15-final/evidence/`. The standalone records have `handoff: null`; their suite reports have no failure entries but do not provide a positive final cleanup receipt. Retain the original launch/exit receipts to close that provenance gap. The manual flag-routing/unavailability checks at `a593d97` are carried forward by the controller: the only product files changed since are `outcome-masks.js` and `mask-worker-service.js`.
+
+Run `npm test` and `npm run build` first. Diagnostic commands and the headed shell suite are:
+
+```sh
+ATLAS_URL=http://127.0.0.1:5195 ATLAS_GPU_HANDOFF="<who, when>" flock /mnt/ml_storage/scratch/atlas-gpu.lock npm run test:space -- --group shell
+ATLAS_GPU_HANDOFF="<who, when>" flock /mnt/ml_storage/scratch/atlas-gpu.lock node scripts/perf-smoke.mjs --scene all --port 5247
+node scripts/maskbench.mjs
+```
+
+Acceptance is headed installed Chrome on the physical GPU, with the full recorded Project 0 profile and confirmed cleanup. The `prewarm` group and three `tests/space-performance.mjs --scene <id>` suites require `ATLAS_COLD_CACHE_ROOT` under scratch. The `memory` group measures an actual 4K retained-image replacement; it does not force in-flight overlap. `--group shell --investigation` records the required workflow. The smoke script creates its own isolated cold caches and measures cadence, confirmation and strict 4 ms issuance anomalies; it is not P3 acceptance. Its `--stalls` mode is diagnostic only. The mask benchmark is CPU-only and reports cold/warm tile and close timings without timing assertions.
+
+The controller owns the remaining commit, gate and promotion. The docs-fast allowlist and output-summary list are empty; these reports and README/HANDOFF therefore take ordinary acceptance. Bring the current integration tip into the task branch, commit the prepared outputs, and full-gate that reviewed candidate. A staged `--no-ff` promotion with the same tree can use recorded fast checks and the candidate gate (plan rev 4.9); retain the historical docs-only-WIP boundary at the already fully gated `31233b5`. Re-audit the final staged head using an extended external manifest before advancing integration. Keep that final audit external so the committed ledger can remain an honest snapshot of `31233b5`. If the promotion changes the candidate tree, review and full-gate the merge. All browser/GPU runs take the exclusive lock; promotion to `main` still requires a reviewed PR and the required integration gate.
+
+The sections below preserve earlier project history.
+
 ## 2026-10-20 — Project 1a (Foundations) begins
 
 - The Plane modules now live in `src/plane/`; `icons.js` and `style.css` in `src/ui/`. `src/app.js` remains the entry point. Paths below that name `src/<module>.js` refer to `src/plane/<module>.js` (or `src/ui/`).

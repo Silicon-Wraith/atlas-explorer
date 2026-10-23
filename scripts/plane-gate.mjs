@@ -9,7 +9,7 @@ import { connect } from 'node:net';
 import { readFile, rm, mkdir, writeFile, appendFile, access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { runBounded, cleanUpGroup } from './gate/supervise.mjs';
-import { validateEvidence, classifySuiteRun, overallGate } from './gate/lib.mjs';
+import { validateEvidence, classifySuiteRun, overallGate, hasCleanupFailureMarker } from './gate/lib.mjs';
 
 export const GATE_PORT = 5190;
 export const SERVER_READY_MS = 15_000;
@@ -70,7 +70,7 @@ export async function runGate(deps) {
   let childEnv;
   const supervised = async (args, timeoutMs, extraEnv = {}) => {
     const run = await runBounded({ spawnFn, groupSignal, command: process.execPath, args, options: { cwd: root, env: { ...childEnv, ...extraEnv } }, timeoutMs, cleanupMs: CLEANUP_MS });
-    if (run.cleanup === 'unconfirmed' || run.exitCode === 125 || /CLEANUP-UNCONFIRMED/.test(`${run.stdout}\n${run.stderr}`)) cleanupConfirmed = false;
+    if (run.cleanup === 'unconfirmed' || run.exitCode === 125 || hasCleanupFailureMarker(run)) cleanupConfirmed = false;
     return run;
   };
 
@@ -78,6 +78,11 @@ export async function runGate(deps) {
     const manifest = await fs.readJson('tests/suites.manifest.json');
     if (!Array.isArray(manifest?.suites) || !Array.isArray(manifest?.build?.requiredFiles)) throw new Error('tests/suites.manifest.json is missing or malformed');
     record.requiredIds = ['unit', 'build', ...manifest.suites.map(suite => suite.id), 'cleanup'];
+    for (const suite of manifest.suites) {
+      const timeout = suite.timeoutMs ?? SUITE_MS;
+      if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > SUITE_MS) throw new Error(`invalid suite timeout: ${suite.id}`);
+      if (suite.server === false && suite.gpu) throw new Error(`CPU suite cannot require a GPU: ${suite.id}`);
+    }
 
     if (Boolean(env.ATLAS_GPU_HANDOFF) === Boolean(env.ATLAS_GPU_DEFERRED)) {
       record.notes.push('exactly one of ATLAS_GPU_HANDOFF or ATLAS_GPU_DEFERRED must name the GPU state');
@@ -109,7 +114,15 @@ export async function runGate(deps) {
 
     const toRun = [];
     for (const suite of manifest.suites) {
-      if (suite.gpu && env.ATLAS_GPU_DEFERRED) results[suite.id] = { state: 'deferred', reason: env.ATLAS_GPU_DEFERRED };
+      if (suite.server === false) {
+        stage = suite.id;
+        await fs.remove(suite.report);
+        const run = await supervised(suite.command, suite.timeoutMs ?? SUITE_MS);
+        const report = await fs.readJson(suite.report);
+        results[suite.id] = withTails(classifySuiteRun(run, validateEvidence(suite, { report })), run);
+        if (results[suite.id].state !== 'passed') return finish();
+        if (suite.evidence === 'reference') results[suite.id].evidence = report;
+      } else if (suite.gpu && env.ATLAS_GPU_DEFERRED) results[suite.id] = { state: 'deferred', reason: env.ATLAS_GPU_DEFERRED };
       else toRun.push(suite);
     }
     if (toRun.length) {
@@ -128,7 +141,7 @@ export async function runGate(deps) {
             if (!cleanupConfirmed) { results[suite.id] = { state: 'not-run', reason: 'an earlier suite\'s cleanup was unconfirmed; no further browser or GPU work starts' }; continue; }
             if (started.server.exited) { results[suite.id] = { state: 'incomplete', reason: 'the owned server exited' }; continue; }
             await fs.remove(suite.report);
-            const run = await supervised(suite.command, SUITE_MS, { ATLAS_URL: `http://127.0.0.1:${GATE_PORT}` });
+            const run = await supervised(suite.command, suite.timeoutMs ?? SUITE_MS, { ATLAS_URL: `http://127.0.0.1:${GATE_PORT}` });
             const report = await fs.readJson(suite.report);
             results[suite.id] = withTails(started.server.exited ? { state: 'incomplete', reason: 'the owned server exited during the suite' } : classifySuiteRun(run, validateEvidence(suite, { report })), run);
           }

@@ -1,6 +1,6 @@
 # ATLAS Workbench — Architectural Charter
 
-**Status:** approved by the user 2026-10-18; amended 2026-10-20 (A1, A2, §7) · **Date:** 2026-10-18
+**Status:** approved by the user 2026-10-18; amended 2026-10-20 (A1, A2, §7) and 2026-10-22 (A3, rev 6.0) · **Date:** 2026-10-18
 **Authors:** Claude and Codex, co-designed as peers
 **Governs:** every ATLAS Workbench project spec. A project spec may narrow this charter but not
 contradict it; changing the charter takes a revision approved by the user.
@@ -253,8 +253,9 @@ Project 3 does not commit anyone to building it.
 |---|---|---|
 | **0 — Qualification** | Hardware and numerical feasibility; selects the Space backend from workstation evidence; one bounded precision experiment. | Specified separately; approved with this charter |
 | **1a — Foundations** | Plane moved to `src/plane/` with behaviour unchanged. Versioned scene envelope and legacy adapters. Scene commands with undo/redo (one slider drag is one edit). Immutable render requests, generation identity, cancellation outcomes and render reports. | Proposed in outline |
-| **1b — Space** | Three milestones, each usable: **(1) render and recover:** analytic calibration objects and the finite-Menger test fixture, Mandelbulb, quaternion Julia, bounded scheduling, orbit and basic flight cameras, failure handling. **(2) connect and inspect:** the Plane↔Space quaternion bridge, an independent recurrence slice, the orbit inspector, view modes, precision reporting. **(3) complete the workflow:** scoped presets, compositions, discovery cards, viewport and 4K PNG export with scene and report. | Proposed in outline |
-| 2 — Investigation | Mandelbox; pin-and-diff comparison; parameter maps; a **Variations** grid with immutable lineage; a findings graph; expeditions; a bounded "survey nearby" guide; an exploration journal. | Candidate |
+| **1b — Space** | Three milestones, each usable: **(1) render and recover:** analytic calibration objects and the finite-Menger test fixture, Mandelbulb, quaternion Julia, bounded scheduling, orbit and basic flight cameras, failure handling. **(2) connect and inspect:** the Plane↔Space quaternion bridge, an independent recurrence slice, the orbit inspector, view modes, precision reporting. **(3) complete the workflow:** scoped presets, compositions, discovery cards, viewport and 4K PNG export with scene and report. Rev 6.0 inserts **1b.1x — Explore and compose** after (1) (initial scoped presets, fog and orbit colour move there; see A3). | Proposed in outline |
+| **Mandelbox increment** (rev 6.0, A3) | One bounded family increment after 1b.3 and before 1c.0: Mandelbox, one named conventional setting first, admitted under the A3 admission contract; ends in a qualified release or a recorded no-go. | Candidate (rev 6.0) |
+| 2 — Investigation | Pin-and-diff comparison; parameter maps; a **Variations** grid with immutable lineage; a findings graph; expeditions; a bounded "survey nearby" guide; an exploration journal. | Candidate |
 | 3 — Publication and motion | Render queue with immutable build snapshots; tiled stills; recorded flight re-rendered offline; keyframes with per-parameter interpolation; deterministic image sequences, then video; photo-mode depth of field; path tracing. | Candidate |
 | 4 — Formula authoring | A typed, bounded-iteration expression language compiled to a CPU evaluator and a shader. Capability types (recurrence, implicit field, density, distance). Automatic differentiation for derivatives, which does not certify bounds. | Candidate |
 | 5 — Extensions | Deep 3D precision research; volumes and attractors; hybrids; mesh export for fabrication. | Candidate |
@@ -314,7 +315,7 @@ renderer; native (non-browser) applications.
 3. Estimator honesty is an invariant (§3.4).
 4. Space promises validated detail ranges, never infinite zoom.
 5. Scenes are reproducible experiments; exports render immutable snapshots.
-6. Project 1 families are Mandelbulb and quaternion Julia; Mandelbox leads Project 2.
+6. Project 1 families are Mandelbulb and quaternion Julia; Mandelbox is its own bounded increment after 1b.3 and before 1c.0 (rev 6.0, A3); the rest of Project 2 is unmoved.
 7. Zero runtime dependencies unless a spec justifies one.
 8. Legacy ATLAS artefacts are migrated non-destructively.
 9. Project 1 splits into 1a (Foundations) and 1b (Space), with one shared acceptance demonstration.
@@ -362,3 +363,27 @@ approved charter and is read subject to this amendment.
 
 Project 0's frozen inputs, gates and evidence, and the approved Project 1a implementation plan, are
 unaffected.
+
+### A3 — Families roadmap, 1b.1x and the family admission contract (rev 6.0)
+
+Recorded as rev 6.0, Claude/Codex converged 2026-10-22 under the user's delegation of product direction ("you and Codex are running this… This is your show"); user informed. The text above remains the historical approved charter and is read subject to this amendment.
+
+- **§4, roadmap:** Mandelbox becomes its own bounded increment immediately after 1b.3 and before 1c.0. The order is 1b.3 → bounded Mandelbox increment → 1c.0 → qualified 1c.1 integration → remaining Project 2. The rest of Project 2 is unmoved. Mandelbox remains the first Project 2 family, explicitly delivered early.
+- **§4, 1b:** a release **1b.1x — Explore and compose** follows 1b.1 (Project 1 design §3, §13.11).
+- **§6, decision 6** reads as amended above.
+- **Boundaries.** Mandelbox starts with one named conventional setting and the full admission contract below. The increment ends with a qualified release or a recorded no-go, and unsuccessful qualification must not postpone 1c indefinitely. Shipping ordinary Mandelbox does not automatically add it to 1c's spike; a Mandelbox precision experiment needs its own formulation, references, scope and preregistered budget. The 1c go / partial / no-go consequences for Mandelbox are recorded in Project 1 design §21.1.
+- **The current model entries are not the feature ceiling.** They are two exploration families plus calibration models; Menger is a finite-stage fractal construction whose present role is a validation fixture, not a developed exploration workflow.
+
+**Family admission contract.**
+
+Every new family should pass the same admission contract:
+
+1. **Mathematical definition.** Specify the target set or finite construction, initialization, recurrence/folds, boundary conventions, bailout, enclosing volume, parameter domain and numerical profile. A cropped view is labelled as cropped if no enclosing bound is established.
+2. **Estimator category.** Default to heuristic. A scalar derivative accumulator, automatic differentiation or agreement with another renderer does not prove a conservative distance. Claims of exact distance or a bound require a derivation for the actual domain and implementation assumptions. Sphere tracing’s safe-step argument depends on a valid distance bound; small values alone still do not certify proximity. [Hart’s sphere-tracing paper](https://experts.illinois.edu/en/publications/sphere-tracing-a-geometric-method-for-the-antialiased-ray-tracing/)
+3. **Independent evidence.** Separate CPU recurrence tests, GPU readback comparisons, reference convergence and rendering validation. For Mandelbox, explicitly test fold boundaries, inversion thresholds, origin handling, scale signs, derivative growth and bailout/enclosure assumptions. Higher precision is a reference aid, not an automatic oracle.
+4. **Geometric evidence.** Preregister adversarial/grazing rays, silhouettes, depth, normals, unresolved outcomes and convergence studies. For finite constructions, compare against independently enumerated geometry at tractable depths; do not present the finite approximation as the infinite limit.
+5. **Product evidence.** Require usable overview and detail scenes, honest secondary lighting, bounded interaction, inspection, undo, save/reload and immutable export. Preserve failed strata and qualify only the demonstrated parameter/detail ranges.
+
+For hybrids, component qualifications do not automatically compose. Alternating recurrences, nonlinear warps and smooth combinations need their own estimator analysis, bounds and references. Formula authoring should expose that distinction through capability types: recurrence, implicit field and proven distance bound are different capabilities.
+
+**One-family-per-increment rule.** One family per bounded increment, chosen for a new kind of investigation. The charter’s rejection of “a formula catalogue as a goal” should protect that choice, not prevent ATLAS from growing.

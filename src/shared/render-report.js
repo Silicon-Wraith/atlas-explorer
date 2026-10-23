@@ -5,7 +5,7 @@ import { RENDER_OUTCOMES } from './render-request.js';
 
 export const UNAVAILABLE = 'unavailable';
 export const INAPPLICABLE = 'inapplicable';
-const EVENTS = Object.freeze(['admitted', 'submitted', 'completed', 'published', 'readback']);
+const EVENTS = Object.freeze(['admitted', 'submitted', 'completed', 'published', 'readback', 'preparing', 'prepared']);
 
 // An identity field is { value, source } when observed, or 'unavailable'.
 export function observed(value, source) {

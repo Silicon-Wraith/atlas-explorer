@@ -67,8 +67,12 @@ export function requireObject(value, path, keys) {
 export function createSceneCodec({ modelCodecs, maxSceneBytes = DEFAULT_MAX_SCENE_BYTES }) {
   if (!Number.isSafeInteger(maxSceneBytes) || maxSceneBytes <= 0) throw new RangeError(`maxSceneBytes must be a positive safe integer, not ${String(maxSceneBytes)}`);
   const registered = [...modelCodecs];
+  // Only snapshots produced and deeply frozen by this codec are eligible. Weak
+  // keys retain neither old orbit scenes nor caller-owned/shallow-frozen input.
+  const canonicalSnapshots = new WeakMap();
 
   function validate(input, depth = 0) {
+    if (depth === 0 && canonicalSnapshots.has(input)) return input;
     if (!isPlainObject(input)) throw new SceneError('invalid-value', 'a scene must be an object');
     if (input.application !== APPLICATION || input.schema !== SCENE_SCHEMA) throw new SceneError('unsupported-format', 'not an ATLAS scene');
     if (input.schemaVersion !== SCENE_SCHEMA_VERSION) throw new SceneError('unsupported-version', `scene schema version ${JSON.stringify(input.schemaVersion)} is not supported`, 'schemaVersion');
@@ -96,11 +100,14 @@ export function createSceneCodec({ modelCodecs, maxSceneBytes = DEFAULT_MAX_SCEN
       applicationVersion: input.applicationVersion, workspace: codec.workspace,
       model: { id: codec.id, version: codec.version }, ...fields, provenance,
     };
-    if (utf8Bytes(canonicalJson(scene)).length > maxSceneBytes) throw new SceneError('too-large', `the scene serializes to more than ${maxSceneBytes} bytes`);
-    return deepFreeze(scene);
+    const canonical = canonicalJson(scene);
+    if (utf8Bytes(canonical).length > maxSceneBytes) throw new SceneError('too-large', `the scene serializes to more than ${maxSceneBytes} bytes`);
+    deepFreeze(scene);
+    canonicalSnapshots.set(scene, canonical);
+    return scene;
   }
 
-  const serialize = scene => canonicalJson(scene);
+  const serialize = scene => canonicalSnapshots.get(scene) ?? canonicalJson(scene);
 
   function parse(text) {
     if (typeof text !== 'string') throw new SceneError('invalid-value', 'scene text must be a string');

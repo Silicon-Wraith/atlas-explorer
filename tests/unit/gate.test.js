@@ -5,6 +5,7 @@ import { parseTapSummary, classifyUnit, classifyRed, validateEvidence, classifyS
 import { runBounded, cleanUpGroup, probeGroup } from '../../scripts/gate/supervise.mjs';
 import { runGate, GATE_PORT } from '../../scripts/plane-gate.mjs';
 import { parseArgs, selectFiles } from '../../scripts/run-unit.mjs';
+import { APPROVED_REFERENCE_IDENTITIES, REFERENCE_CHECKS } from '../../scripts/gate/reference-evidence.mjs';
 
 const TAP_OK = '# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n';
 
@@ -180,6 +181,38 @@ function gateDeps({ env = { ATLAS_GPU_HANDOFF: 'test' }, porcelain = '', portInU
   };
 }
 
+test('B15-R23-Q2 quoted cleanup markers in passing TAP do not fail suite classification', () => {
+  const stdout = '# Subtest: CLEANUP-UNCONFIRMED is retained on failure\n'
+    + 'ok 1 - CLEANUP-UNCONFIRMED is retained on failure\n'
+    + '# CLEANUP-UNCONFIRMED P3 clock monitor: {"state":"unconfirmed"}\n'
+    + 'UNIT {"state":"passed","cleanup":"confirmed"}\n';
+  assert.equal(classifySuiteRun({ exitCode: 0, cleanup: 'confirmed', stdout }, { ok: true }).state, 'passed');
+});
+
+test('B15-R23-Q2 passing unit diagnostics do not poison overall gate cleanup', async () => {
+  const { deps, spawned } = gateDeps({ scripts: { unit: { stdout:
+    '# CLEANUP-UNCONFIRMED ladder session: injected failure\nUNIT {"state":"passed","cleanup":"confirmed"}\n' } } });
+  const record = await runGate(deps);
+  assert.equal(record.results.unit.state, 'passed');
+  assert.equal(record.results.cleanup.state, 'passed');
+  assert.equal(record.overall.state, 'passed');
+  assert.ok(spawned.includes('tests/graphics.mjs'), 'the fake gate reaches later suites');
+});
+
+test('B15-R23-Q2 real cleanup markers and structural failures remain fatal', () => {
+  for (const run of [
+    { stdout: 'other output\nCLEANUP-UNCONFIRMED browser: close timed out\n', exitCode: 0 },
+    { stderr: 'CLEANUP-UNCONFIRMED P3 clock monitor: failed\r\n', exitCode: 0 },
+    { stdout: 'CLEANUP-UNCONFIRMED\n', exitCode: 0 },
+    { cleanup: 'unconfirmed', exitCode: 0 },
+    { exitCode: 125 },
+  ]) {
+    const result = classifySuiteRun(run, { ok: true });
+    assert.equal(result.state, 'incomplete');
+    assert.equal(result.cleanup, 'unconfirmed');
+  }
+});
+
 test('a clean candidate with the GPU handed over passes every suite', async () => {
   const { deps, spawned } = gateDeps();
   const record = await runGate(deps);
@@ -313,4 +346,50 @@ test('an unsuccessful suite keeps the tail of its output in the record', async (
   assert.equal(typeof record.results.browser.stderrTail, 'string');
   assert.equal(record.results.graphics.state, 'passed');
   assert.equal(record.results.graphics.stdoutTail, undefined, 'a passing suite carries no tail');
+});
+
+test('CPU suites run without a server or port probe even when the GPU is deferred', async () => {
+  const subject = gateDeps({ env: { ATLAS_GPU_DEFERRED: 'held elsewhere' }, portInUse: true });
+  const readJson = subject.deps.fs.readJson;
+  subject.deps.fs.readJson = async path => path === 'tests/suites.manifest.json' ? {
+    build: { requiredFiles: ['dist/index.html'] },
+    suites: [{ id: 'cpu', gpu: false, server: false, timeoutMs: 600000, command: ['tests/cpu.mjs'], report: 'cpu.json', evidence: 'workflow', requiredPasses: ['A'] }],
+  } : path === 'cpu.json' ? [{ name: 'A' }] : readJson(path);
+  subject.deps.probePort = async () => { assert.fail('CPU suite must not probe a server port'); };
+  const record = await runGate(subject.deps);
+  assert.equal(record.results.cpu.state, 'passed');
+  assert.equal(record.overall.state, 'passed');
+  assert.deepEqual(subject.spawned, ['scripts/run-unit.mjs', 'scripts/build.mjs', 'tests/cpu.mjs']);
+  assert.ok(subject.removed.includes('cpu.json'), 'stale evidence is removed before execution');
+});
+
+test('a failed CPU suite prevents browser work and cannot pass on a stale report', async () => {
+  const subject = gateDeps({ scripts: { 'tests/cpu.mjs': { exitCode: 124 } } });
+  const readJson = subject.deps.fs.readJson;
+  subject.deps.fs.readJson = async path => {
+    if (path === 'tests/suites.manifest.json') {
+      const manifest = await readJson(path);
+      return { ...manifest, suites: [{ id: 'cpu', gpu: false, server: false, timeoutMs: 600000, command: ['tests/cpu.mjs'], report: 'cpu.json', evidence: 'workflow', requiredPasses: ['A'] }, ...manifest.suites] };
+    }
+    return path === 'cpu.json' ? [{ name: 'A' }] : readJson(path);
+  };
+  const record = await runGate(subject.deps);
+  assert.equal(record.results.cpu.state, 'incomplete');
+  assert.equal(record.overall.state, 'failed');
+  assert.ok(!subject.spawned.some(command => command.startsWith('scripts/serve.mjs')));
+  assert.equal(record.results.browser, undefined);
+});
+
+test('the gate retains reference counts and artifact identities for the commit audit', async () => {
+  const identities = { ...APPROVED_REFERENCE_IDENTITIES };
+  const report = Object.entries(REFERENCE_CHECKS).map(([name, checked]) => ({ name, state: 'passed', checked, identities, durationMs: 1 }));
+  const subject = gateDeps();
+  subject.deps.fs.readJson = async path => path === 'tests/suites.manifest.json' ? {
+    build: { requiredFiles: ['dist/index.html'] },
+    suites: [{ id: 'reference', gpu: false, server: false, timeoutMs: 600000, command: ['tests/reference.mjs'], report: 'reference.json', evidence: 'reference', requiredPasses: Object.keys(REFERENCE_CHECKS) }],
+  } : report;
+  const record = await runGate(subject.deps);
+  assert.equal(record.results.reference.state, 'passed');
+  assert.deepEqual(record.results.reference.evidence, report);
+  assert.ok(record.requiredIds.includes('reference'));
 });

@@ -5,10 +5,27 @@ affect 1a (recorded in §19.1 and applied throughout this revision): (1) camera 
 from undo; (2) a fresh start opens Plane; (3) this is greenfield development, so no backwards
 compatibility with existing ATLAS artefacts is kept (§12 records what was removed and why);
 (4) one Discoveries control, filtered per workspace and fed by discovery sources, with only the
-local source built in Project 1 (§13.10). · **Date:** 2026-10-20 · **Revision:** 4 (rev 2 was
+local source built in Project 1 (§13.10). · **Date:** 2026-10-21 · **Revision:** 6.0 (rev 6.0, Claude/Codex converged 2026-10-22 under the user's delegation of product direction ("you and Codex are running this… This is your show"); user informed) inserts **1b.1x Explore and compose** and defines its appearance, attribute, caching and verification contracts. Under the user’s product-direction delegation of 2026-10-22, Claude and Codex jointly converge on scope, specifications, plans and implementation order; each implementation receives the other peer’s review. The user is informed of decisions, evidence and limitations. This replaces a separate user-approval step for this increment, without waiving verification or permitting unilateral changes to acceptance rules. It also moves Mandelbox, as its own bounded family increment, to follow 1b.3 and precede 1c.0 (§3, §21.1; charter A3); rev 5.3 records the user's decisions of 2026-10-22 on the §7.2 Publishability bullet (the pending navigation-draft exception) and the §3 definition of "demonstrated end to end" for 1b.1; rev 5.1 records the user's approval of 2026-10-22 of the §11.4 quaternion-primary bounded recovery; rev 4.9 records the user-approved (2026-10-21) amendment on acceptance gates, §16.3 and plan rev 4.9; rev 4.8 records the user's decision of 2026-10-21 on B10 S1: §11.4 names `analytic-inspection-v1`, and ordinary analytic depth is qualified against a sampling-aware envelope; see plan rev 4.8; rev 4.7 applies the B05 camera rulings (Codex runs 20261021T123602Z-6e35 and 20261021T170807Z-a7ee) and the B06 §9.1 annex changes PC1–PC8 (Codex runs 20261021T163028Z-1356, 20261021T165312Z-f480 and 20261021T170126Z-88ca) with no new user decision; rev 4.6 records the user's decision of 2026-10-21 and applies agreed Claude/Codex corrections: (1) B04 — the USER-APPROVED P1 qualification amendment and sharded matrix storage (Codex B04 fix round, run 20261021T123550Z-fdcd; convergence run 20261021T114017Z-0210): overview grid, status-stable eligibility, floors 820/64, C=(2,0,0,0) non-surface-bearing, preregistered pass rules, power-7 bulb-generic floor 410→400 only, 18 raw JSON shards plus a SHA-256 index, test split into reference-points, reference-rays and reference-p3, B08/B10 index pinning; (2) B07 — scheduler window and failed-ticket rules (Codex B07 fix round, run 20261021T123558Z-2470; Claude B07 r2): 256-operation pending window, 0.5–2× band, eight-completion spacing, the B06 failed-ticket obligation, auxiliary requests for settled jobs rejected, any-lease failure fails the whole job; (3) B05 — B12 `equalCameras` note (Codex B05 fix round, run 20261021T123602Z-6e35; Claude B05 r2); the axis-lock heading sign correction (forward azimuth minus 90°) is not yet in the plan text and travels with B05's pending fix round; other B05 corrections are not applied here. Rev 4.5 applies three Claude/Codex corrections with no new user decision: (1) §11 model-record shape — records carry no `validation`, which lives in the §16.2 registry (Codex B03 r1 I4, run 20261021T110320Z-1652; analytic `derivationVersion` values are populated strings, only recurrence, initialization and escape metadata are null); (2) the §7.4 identity erratum refined (Codex B01 r2 Q1, run 20261021T075810Z-2dd6); (3) the B01 served-source provenance wording in the 1b.1 plan (Codex B01 r3, run 20261021T110827Z-86bb). Rev 2 was
 Codex-READY on 2026-10-19; rev 3 applies the user's decisions; 3.1–3.2 apply Codex's co-author reviews;
 rev 4 adds Project 1c, Space deep zoom, by the user's decision "Yes, add deep zoom as 1c in Project 1."
-(2026-10-20) — §21; rev 4 is a draft amendment awaiting the user's review)
+(2026-10-20) — §21; rev 4.2 applies the user's decisions of 2026-10-21: the §9.1 WebGPU backend annex
+adopted as normative, the anchored camera (§5.2/§10.1) approved for ordinary Space, §19.2 Q2, Q5
+and Q6 answered (§19.1) with gamepad exploration added to Space navigation (§13.3; supported controllers: Xbox-style standard
+layout, §19.1), and the §13.2
+precision-badge erratum; rev 4.3 applies the user's decision of 2026-10-21 "approve amending the
+adopted §9.1 annex to add allocate" (§9 method list, §9.1 Allocator and limits) together with the
+B00 contract clarifications agreed with Codex (run 20261021T060324Z-4e7f: pipeline descriptor
+ownership, epoch and ticket timing); rev 4.4 records rulings agreed between Claude and Codex, with
+no new user decision: B02 rulings 1–10 (Codex run 20261021T072056Z-9083, ruling 3 amended by Codex
+and accepted by Claude) — §5.2 Space anchors admitted through the shared anchor parser (≤ 400
+significant digits, explicit exponent magnitude ≤ 400, normalized leading position in [−400, 400])
+and the two-stage `Number`/`Math.fround` parameter conversion with non-finite results rejected;
+and the B01 joint rulings (Codex run 20261021T073220Z-227f) — (a) §9.1 distinguishes adapter,
+requested and granted limits, requests only task-needed increases (no blanket `requiredLimits`;
+`maxStorageTexturesPerShaderStage` is the binding risk; read-only inputs use sampled bindings;
+owner B06), (b) the §7.4 identity erratum (configuration-dependent: Chrome 151 empty, Chrome 155
+populated; the code asserts neither), (c) a developer-features isolation experiment, labelled a
+portability experiment, in B01's fix round (plan). **§21 (1c) remains a draft amendment awaiting the user's review.**)
 **Authors:** Claude and Codex, co-designed as peers. The verbatim exchange is archived in
 `docs/codesign/project1-log.md`, a project-specific log kept beside the protocol's
 `docs/codesign/conversation-log.md` (which holds the charter and Project 0 co-design).
@@ -73,7 +90,8 @@ latency 18–22 ms, 10 minutes stable on the RTX 6000 Ada; WGSL may fuse multipl
 precision-sensitive quaternion arithmetic requires remediation. The subsequent update relayed on
 2026-10-20 says E8 invalidated the G5-A formulation and identifies replacement work as G5-D. These
 reports do not establish qualification; the final recorded decision and numerical evidence control
-the product formulation. Chrome 151 reports empty adapter device strings; headless WebGPU is unreliable on
+the product formulation. Chrome 151 reported empty adapter device strings (historical; identity is configuration-dependent,
+§7.4 erratum, refined rev 4.5); headless WebGPU is unreliable on
 this host.
 
 ## 3. Releases and the acceptance demonstration
@@ -83,9 +101,11 @@ Each release is usable on its own.
 | Release | Usable outcome |
 |---|---|
 | **1a — Foundations** | Every existing Plane workflow preserved (in the new native formats); scenes round-trip; parameter edits undo and camera moves have back/forward history; exports capture immutable state; Plane discoveries are kept in the durable local store and shown by the Discoveries control. |
-| **1b.1 — Render and recover** | Explore the calibration objects, Mandelbulb and quaternion Julia; orbit and basic flight; recover from bad camera positions, cancellation, allocation failure and device loss; save and reopen scene JSON. Estimator category, pending marks and distinct statuses are present from this release. |
+| **1b.1 — Render and recover** | Explore the calibration objects, Mandelbulb and quaternion Julia; orbit and basic flight with mouse, trackpad, keyboard or a standard-layout gamepad (§13.3); recover from bad camera positions, cancellation, allocation failure and device loss; save and reopen scene JSON. Estimator category, pending marks and distinct statuses are present from this release. |
+| **1b.1x — Explore and compose** | Frame and navigate both fractal families comfortably; apply meaningful surface colour, bounded material and lighting controls, scoped presets and depth fog; inspect limitations; undo appearance edits and reproduce the composed view through scene JSON. |
 | **1b.2 — Connect and inspect** | Pick a parameter in Plane and open its quaternion Julia set; compare the invariant section with the independent complex-Julia instrument; inspect an orbit; read the precision indicator. |
-| **1b.3 — Complete the workflow** | Scoped presets, saved compositions, discovery cards, viewport and 4K PNG export with companion scene and report. |
+| **1b.3 — Complete the workflow** | Further scoped presets, saved compositions, discovery cards, viewport and 4K PNG export with companion scene and report. |
+| **Mandelbox increment** (Project 2's first family, delivered early; a bounded increment, not a Project 1 release) | One precisely specified Mandelbox formulation with a bounded parameter domain, admitted under the charter A3 admission contract and ending in a qualified release or a recorded no-go (§21.1). |
 | **1c.0 — Precision spike** (feasibility milestone, not a product release) | A preregistered, bounded feasibility study per family and numerical profile, with a go / partial / no-go decision report for the user (§21.2). |
 | **1c.1 — Deep zoom** | For each family the spike qualified: deep navigation, anchored tracing, deep inspection, discovery reload and immutable export within the frozen deep matrix (§21.3–§21.6). |
 
@@ -104,6 +124,16 @@ criterion, run as one recorded investigation, headed, on the physical GPU. It in
 edit that visibly changes the scene and an undo that restores it. Reload must restore the scene,
 the selected point, the inspector settings and the effective numerical parameters, not merely a
 similar-looking camera.
+
+The delivery order is 1b.1 → 1b.1x → 1b.2 → 1b.3 → the bounded Mandelbox increment → 1c.0 → qualified 1c.1 integration. Initial scoped presets, fog and the orbit-colour view move to 1b.1x. The orbit inspector remains in 1b.2. Saved compositions, discovery cards and image exports remain in 1b.3. “Compose” here means arranging a view and its appearance; it does not move the saved-composition strip forward.
+
+The complete seven-step investigation remains 1b.3’s exit criterion.
+
+If unchanged P3 establishes an application failure, conditional B15-G0/G1 remediation precedes acceptance of 1b.1. Its inclusion in this amendment does not authorize promotion of a failed candidate. Preserve failed evidence and accept only a candidate satisfying the applicable gates.
+
+(Recorded as rev 6.0, Claude/Codex converged 2026-10-22 under the user's delegation of product direction ("you and Codex are running this… This is your show"); user informed.)
+
+**User decision of 2026-10-22 (rev 5.3):** "demonstrated end to end" for 1b.1 is a documented flagged-Chrome launch route (`npm run dev:gpu`, which respects `PORT`/`--port`, or the documented flagged command) on this workstation, together with an actionable Space-unavailable message in ordinary Chrome that keeps Plane working. Stock flag-less browser support is a later item.
 
 1c does not change this demonstration or make 1b incomplete. It has its own recorded deep
 investigation as its exit criterion (§21.6).
@@ -124,6 +154,7 @@ src/
     places.js
   space/
     workspace.js  camera.js  navigation.js
+    gamepad.js              controller snapshot decoding and input state machine (§13.3)
     models/                 registry.js analytic.js menger.js mandelbulb.js quaternion-julia.js
     numerics/               parameters.js validation-domains.js
     render/                 renderer.js (pass graph) profiles.js backend.js webgpu/ (selected backend only)
@@ -238,22 +269,30 @@ A scene describes an experiment. Runtime state describes its execution and is no
   `[512, 1024, 2048, 4096, 8192, 16384][detail] + max(0, ceil((zoom − 3) · 32))` (today's
   `app.js:85`).
 - **Space camera:** `anchored-perspective-v1` (rev 4, so that 1b and 1c share one representation):
-  `{ kind: "anchored-perspective-v1", anchor: [x, y, z] exact decimal strings, scale: { mantissa,
+  `{ kind: "anchored-perspective-v1", anchor: [x, y, z] exact decimal strings` (admitted through the shared Space anchor parser: at
+  most 400 significant digits, explicit exponent magnitude at most 400, and nonzero normalized
+  leading decimal position in `[-400,400]`; zero bypasses only the leading-position check)`, scale: { mantissa,
   exponent } (a normalized finite mantissa and a bounded integer binary exponent), positionLocal,
   focusLocal: three CPU doubles each, orientationWxyz, verticalFovDegrees }`. The represented world
   position is `anchor + scale × positionLocal`. CPU navigation performs the anchor arithmetic at
-  controlled high precision; recentring preserves represented positions to a declared bound and never
+  controlled high precision; recentring admits only candidates whose exact aggregate L1 position-plus-focus error is at most `scale × 2⁻⁴⁰`, and refuses collapse of a previously distinct position and focus and never
   reconstructs a world position through a single `Number`. Ordinary Space (1b) uses the same
   representation at modest scales while its field evaluator stays binary32. The representation is
   defined before 1b implementation, so introducing 1c does not require a camera-format migration. World Z defines up. Orbit and basic flight use upright navigation without a
   dedicated roll control. The orientation control may set a full camera orientation; axis
   constraints and orientation reset remain available. Serialization preserves the orientation.
-- **Space parameters:** requested values remain decimal strings (for example
-  `C: ["-0.2", "0.8", "0", "0"]`, `kappa: "0"`, `power: "8"`). Ordinary-profile preparation derives
-  effective binary32 values and bit patterns. Deep-profile preparation derives the effective
+  **User decision (2026-10-21):** this representation is approved for ordinary Space as well as
+  for 1c ("APPROVE").
+- **Space parameters:** Requested fractal parameters C, kappa, and power remain decimal strings. Menger depth is
+  a JSON integer selector, 1 or 2. Ordinary-profile preparation derives effective binary64 values
+  with `Number(text)` and binary32 values with `Math.fround` of that binary64 result, preserving
+  this two-stage rounding definition and reporting its bits. Conversion helpers reject non-finite
+  results; underflow to subnormals or signed zero remains defined. Effective values never replace
+  requested scene values. Deep-profile preparation derives the effective
   parameter representation specified by its qualified numerical profile (§21.5). Requests, reports
   and inspection results identify that representation and its precision beside the requested
   strings; effective values never overwrite requested values.
+- **Space appearance (1b.1x).** Space appearance variants, their complete defaults, conversion rules and applicability are defined in §13.11. Whole-scene import remains strict. Explicit family-switch behavior is distinct from import validation.
 
 ## 6. Commands and history
 
@@ -263,7 +302,7 @@ A scene describes an experiment. Runtime state describes its execution and is no
   derived from before/after scenes, so a caller cannot mislabel a mathematical change as
   appearance-only.
 - **Gestures:** `begin → update* → commit | cancel`. Updates render as previews. One slider drag,
-  one camera drag or one wheel burst is one gesture. Cancel restores the pre-gesture scene. Commit
+  one camera drag, one wheel burst or one continuous controller run (§13.3) is one gesture. Cancel restores the pre-gesture scene. Commit
   does not trigger another render when the final preview already shows that state. Tours and
   palette animation never create one entry per frame.
 - **Exact restoration:** undo restores stored values, never an inverse floating-point delta. Undo
@@ -292,7 +331,7 @@ A scene describes an experiment. Runtime state describes its execution and is no
 - **Synchronization of the two histories:** camera history is seeded with the workspace's initial
   accepted camera, and its current entry always matches the committed camera. Every committed
   camera change outside Back/Forward, including undo or redo of a whole-scene restoration, appends
-  the resulting pose, suppresses consecutive identical poses, and truncates any forward branch.
+  the resulting pose, suppresses consecutive identical poses, and truncates any forward branch. For Space history, identity uses semantic camera equality: exact represented position/focus and FOV, with normalized rotations compared modulo quaternion sign within eight binary64 epsilons per component. This comparison does not define scene-file identity or cache/request keys.
   Content-only undo and redo leave camera history unchanged. (Start at A, open discovery B, undo:
   the camera returns to A and camera history reads A, B, A with the cursor on the last A, so Back
   goes to B.)
@@ -313,26 +352,31 @@ Requests are frozen. Every batch additionally identifies its pass, region and sa
 ### 7.2 Revisions and keys
 - **Revisions** are monotonic execution identities: `viewRevision` advances for every new requested
   state; `geometryRevision` and `appearanceRevision` advance when their dependencies change.
-- **Keys** identify resolved pass inputs, including request-specific settings, rather than scene
-  fields alone. The base geometry key includes model and numerical implementation versions,
-  effective mathematical inputs, camera and slice definitions, internal dimensions and sample
-  mapping, actual iteration and tracing limits, normal-evaluation settings, and the required orbit
-  attributes. A geometry sample additionally identifies the sampling-sequence version, seed and
-  sample index. (Resolution matters because the hit tolerance does: at t = 1 and a 60° vertical
-  field of view, τ ≈ 8.019 × 10⁻⁴ at height 720 and ≈ 2.673 × 10⁻⁴ at height 2160.)
-- The **appearance key** includes the resolved appearance settings and the actual lighting stage,
-  including shadow, AO and fog settings. **Accumulation** identifies the compatible geometry,
-  appearance and sampling sequence. Increasing the target sample count may extend an existing
-  compatible sequence; changing its inputs cannot mix old and new samples.
+- **Keys** identify resolved pass inputs, including request-specific settings, rather than scene fields alone.
+
+  The base geometry key includes model and numerical implementation versions, effective mathematical inputs, camera and slice definitions, internal dimensions and sample mapping, actual iteration and tracing limits, and normal-evaluation settings. A geometry sample additionally identifies sampling-sequence version, seed and sample index. (Resolution matters because the hit tolerance does: at t = 1 and a 60° vertical field of view, τ ≈ 8.019 × 10⁻⁴ at height 720 and ≈ 2.673 × 10⁻⁴ at height 2160.)
+
+  An **attribute key** identifies the geometry sample key, attribute-definition and implementation versions, and resolved iteration budget. Requesting, caching or dropping attributes never changes the geometry key or geometry revision.
+
+  A **secondary-lighting key** identifies the geometry sample, lighting implementation, actual lighting stage, effective key direction, shadow policy and bounds, AO policy and bounds, and enabled secondary evaluations. Colour, material finish, key/ambient colour and intensity, background and fog do not change this key.
+
+  The **appearance key** hashes the resolved fields relevant to the selected view and their evidence presentation:
+
+  - Shaded: the selected solid colour or orbit palette mapping, material finish, effective lighting inputs, background, enabled fog and diagnostic presentation version.
+  - Orbit colour: attribute identity, palette mapping and its diagnostic presentation version.
+  - Existing numerical diagnostics: their defined mapping and presentation version.
+
+  Inactive palette fields under solid colour, disabled fog parameters, and decorative settings in diagnostic views remain serialized but do not affect the appearance key. Requested settings still appear in the scene and report.
+
+  Accumulation identifies compatible geometry samples, required attributes, secondary lighting, appearance and sampling sequence. Increasing the target sample count may extend an existing compatible sequence; changing its inputs cannot mix old and new samples. Changed effective inputs reset dependent accumulation. Reused data must pass key, epoch, revision and resource-lifetime checks.
+
+  Scene edits always receive current request identity. Equal effective keys permit cache reuse, not revival of stale publications. Existing navigation-only pending-publication rules and A → B → A protections remain unchanged.
 - Dependency revisions advance whenever these resolved inputs change, including resize and
   quality-stage changes. Content-key equality permits cache consideration but never overrides the
   epoch, request-identity or resource-lifetime checks. An appearance edit and its undo leave
   geometry untouched. A geometry sequence A → B → A returns to A's key but receives a new geometry
   revision.
-- **Publishability:** a result is publishable only if its device epoch, view/request identity and
-  required dependency revisions all still match. Completed valid geometry may be rebound to a new
-  request after checking its key, device epoch and resource lifetime; a late completion from the
-  original A request never becomes publishable merely because its content matches again.
+- **Publishability:** settled and refinement results are publishable only if their device epoch, view/request identity and required dependency revisions still match. Interactive camera-navigation drafts have one explicit exception: the newest completed draft may publish with a visible pending mark while a newer request in the same monotonic navigation stream is outstanding. It retains its original request identity, camera, quality and report; it is not current geometry for picking. The exception requires the same view and live device epoch, unchanged non-camera scene inputs and output dimensions, and a still-valid navigation stream. Content or appearance edits, scene replacement, resize, deactivation, cancellation and device loss invalidate the affected older work. No older request may overwrite a newer published request. A historical validated-publication notification under §9.1 records validation of an already-submitted presentation; it does not make that request current or authorize another presentation. Such a notification must not replace the retained image or current workspace publication, change current diagnostic indicators, or establish picking, export or accepted-cache eligibility. Existing cancellation, invalidation and device-loss rules remain in force. Completed valid geometry may be rebound to a new request after checking its key, device epoch and resource lifetime; a late completion from the original A request never becomes publishable merely because its content matches again. (User-approved 2026-10-22, rev 5.3.)
 
 ### 7.3 Lifecycle and outcomes
 ```text
@@ -350,8 +394,12 @@ queued → preparing → running → completed
 ### 7.4 Render reports
 A report records: scene hash; request identity; model, numerics and shader versions; backend,
 browser and hardware identity, where every identity field may be `unavailable` and each observed
-field names its evidence source (Chrome 151 returns empty adapter strings, so no device string is
-ever invented); requested and completed dimensions, iterations, tracing settings and samples;
+field names its evidence source, and no device string is ever invented (**erratum, rev 4.4, refined rev 4.5:**
+Chrome 151 returned empty strings; in the paired Chrome 155.0.8059.84 experiment, vendor and
+architecture were observed in both launches, and device and description only with
+`--enable-webgpu-developer-features`; these are configuration-specific, so the code asserts
+neither universal emptiness nor universal population. Record each observed field with its source,
+otherwise `unavailable`); requested and completed dimensions, iterations, tracing settings and samples;
 outcome and its reason; counts of each ray termination status and of unavailable normals;
 estimator category, derivation version and applicable validation record; requested versus
 effective parameters and the sampling conditions; preparation, admission, submission, completion,
@@ -366,12 +414,12 @@ changing its scheduling behaviour.
 
 ### 7.5 Scheduler
 - At most **two outstanding Space batches per device epoch**, across all views and jobs.
-- A normal target of **8 ms of completed GPU work per batch**. This is a measured target adapted
+- A normal target of **8 ms of completed GPU work per batch**. Navigation drafts use whole-frame groups within an explicitly qualified workload and size envelope. Raw queue-fence latency alone does not subdivide those drafts. Unqualified workloads, device-limit violations or measured work exceeding the target retain bounded subdivision; settled/refinement tiling remains unchanged. This is a measured target adapted
   from completion evidence, not a hardware deadline. Batch descriptors also bound pixels, ray steps,
   recurrence iterations and secondary samples; bands subdivide horizontally when one row is too
   expensive.
 - A **5-second no-progress watchdog** stops admission and reports; it never claims cancellation.
-- One coalesced pending interactive request per view.
+- One coalesced pending interactive request per view. A navigation stream may have at most two live admitted drafts, each retaining its original identity and independently owned writable resources. The default qualified whole-frame draft uses one admitted compute/reduce/copy/GPU-gated-present operation under §9.1(b), with CPU diagnostic validation and successful completion required before validated publication. The epoch-wide limit remains two outstanding leases. The diagnostic §9.1(a) comparison uses a separate presentation operation after CPU validation; (c) and (d) remain injected diagnostics, and any restoration is separately admitted. Existing priority, pause/Update, visibility, budget, watchdog, cancellation, loss and monotonic-publication rules apply.
 - Priority: active navigation → explicit inspection → active-view refinement → export → background
   swatches. Secondary instruments update at most twice per second during interaction. Hidden views
   are paused. Exports may pause while the user interacts. A minimal export job exists; a general
@@ -402,12 +450,10 @@ rendering cadence.
 ### 8.1 Pass graph (`space/render/renderer.js`)
 1. Prepare pipelines (asynchronously, before interaction, with visible status) and validate
    resource requirements. Parameter edits update uniforms and buffers, never recompile.
-2. Trace primary rays into depth, termination status (with reason), step count and orbit-derived
-   attributes.
-3. Compute normals with explicit availability status.
-4. Evaluate direct lighting, bounded shadows and restrained AO, preserving secondary-ray failure
-   status (failures never turn into confident lighting). Apply enabled depth fog to each shaded
-   sample in linear colour. Diagnostic values bypass decorative lighting and fog.
+2. Trace primary rays into depth, termination status with reason/subreason, recovery evidence and step count.
+3. Compute normals with explicit availability.
+   3a. When required, a bounded attribute pass reads each completed primary sample and computes orbit attributes under §13.11. It never writes primary targets.
+4. Obtain compatible cached secondary-lighting data or evaluate bounded shadows and restrained AO, preserving secondary failure status. Apply the appearance equation. Apply enabled depth fog to each successfully shaded sample in linear colour. Legends and numerical diagnostics bypass fog and decorative lighting.
 5. Accumulate compatible complete samples in linear colour.
 6. Apply display mapping and present a complete image.
 
@@ -415,10 +461,8 @@ Fog is per sample, before accumulation, because the two orders differ: for two s
 (1, 0), depths (1, 2), unit density and black fog, averaging the fogged samples gives ≈ 0.18394,
 while fogging the average colour at the average depth gives ≈ 0.11157.
 
-- **Invalidation:** geometry changes invalidate geometry and dependent accumulation.
-  Lighting/appearance changes keep eligible geometry and reset appearance accumulation. Orbit-colour
-  controls reuse geometry only if the required orbit attributes were recorded. Samples under
-  different appearance keys are never accumulated together.
+- **Invalidation:** Geometry changes invalidate geometry and dependent work. Attribute and secondary-lighting changes invalidate their own dependent results. Appearance-only changes reuse eligible geometry, attributes and secondary data and reset affected colour accumulation. Missing attributes are computed from valid retained geometry without retracing. Samples under different effective identities never accumulate together.
+- **Sample-zero retention:** Retain sample zero’s compatible geometry, attributes and secondary data for interactive appearance edits. Other antialiasing samples remain independently traced. Repeatedly reshading sample zero does not count as additional antialiasing samples.
 - **Antialiasing traces seeded, jittered primary rays.** Reshading one centre-sampled geometry
   buffer is not silhouette antialiasing. Sample indices and seeds are independent of batch order.
   The current geometry sample may be retained for appearance reuse without storing every AA sample.
@@ -432,8 +476,7 @@ and decorative lighting. Invalid and unresolved values use explicit colours or p
 legends (Project 0 A.5 colours as the starting legend: unresolved magenta, numerical failure red,
 unavailable normal mid-grey). An unavailable normal does not erase an otherwise available
 approximate-hit depth; its normal-status flag stays visible. Step count is labelled computational
-cost, never estimator error. 1b.1 ships all modes except orbit colour, which arrives with the
-inspector in 1b.2.
+cost, never estimator error. 1b.1 ships all modes except orbit colour. Orbit colour arrives in 1b.1x; the inspector remains in 1b.2. Its serialized identifier is `orbit-color`.
 
 ### 8.3 Resources
 - Project 0's A.8 4K layout totals 405,995,520 B (387.1875 MiB); adding a separate 32-bit
@@ -449,6 +492,7 @@ inspector in 1b.2.
 ```text
 acquire()                      → identity (fields may be unavailable), limits, features
 prepare(pipelineSet)           → asynchronous, with progress events
+allocate({name, bytes, usage, data?}) → opaque buffer handle
 configureTargets(targetDesc)   → allocates through the tracked allocator
 submitBatch(batchDesc)         → ticket with completion identity (queue completion, labelled)
 readback(readbackDesc)         → asynchronous, banded staging
@@ -479,15 +523,151 @@ destroy()
 - **Fake backend:** a deterministic Node implementation of this interface, with controllable
   completion ordering, failures and loss notifications, drives scheduler, lifecycle and recovery
   tests (headless WebGPU is unreliable here).
-- **Backend annex.** The WebGPU specifics (pipeline set, G-buffer formats, timestamp-query use,
-  loss mapping) are finalized as an annex to this spec after Project 0 records its configuration.
+- **Backend annex.** The WebGPU specifics are §9.1 (adopted by the user, 2026-10-21).
+
+### 9.1 WebGPU backend annex (normative; user decision, 2026-10-21: "ADOPT")
+Project 0 recorded its configuration (E10, `webgpu-g5d-decision.json`, `launch-remediation.json`).
+This annex, proposed in the 1b.1 plan (rev 4.1) and adopted by the user on 2026-10-21, is normative
+for the WebGPU backend. Task identifiers (B00–B14) name the 1b.1 plan tasks that implement each part.
+Amended by user decision, 2026-10-21 ("approve amending the adopted §9.1 annex to add allocate"):
+the production `allocate` method and `maxUniformBufferBindingSize` (Allocator and Adapter bullets).
+
+- **Adapter and device.** `navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })`
+  once per acquisition attempt; `adapter.info` is read on the retained adapter before
+  `requestDevice`. Each identity field (`vendor`, `architecture`, `device`, `description`) is
+  recorded as observed (`{value, source: 'adapter.info'}`) or `unavailable`; nothing asserts that
+  Chrome always returns empty strings. `isFallbackAdapter` is recorded; a fallback adapter is a
+  software device and never satisfies a physical-GPU requirement; physical-GPU acceptance needs
+  corroborating evidence (`chrome://gpu`, the gate's hardware suite) when identity fields are
+  unavailable. Required features: none. Optional: `timestamp-query`. Limits recorded and checked:
+  `maxBufferSize`, `maxStorageBufferBindingSize`, `maxUniformBufferBindingSize`,
+  `maxTextureDimension2D`,
+  `maxComputeWorkgroupsPerDimension`, `maxComputeInvocationsPerWorkgroup`, `maxBindGroups`,
+  `maxStorageBuffersPerShaderStage`, `maxStorageTexturesPerShaderStage`. Adapter-supported,
+  requested and granted device limits are distinct and each is recorded; allocations and
+  pipeline layouts are validated against the granted limits. `requestDevice` passes no blanket
+  `requiredLimits`: the WebGPU defaults suffice for the specified workloads (the largest 4K
+  target texture is 126.5625 MiB, the 4K target set is ten textures rather than one buffer, and
+  texture allocations are not governed by the buffer-binding limits), so a task requests only an
+  increase it needs and the adapter supports, with that need stated. The binding risk is
+  `maxStorageTexturesPerShaderStage` (default 4): read-only inputs use sampled-texture bindings
+  (`textureLoad`) rather than storage textures. B06 owns this (rev 4.4, joint ruling with Codex
+  run 20261021T073220Z-227f).
+- **Epochs and loss.** Every acquisition attempt receives a fresh identity; the epoch is an
+  integer advanced on each successful acquisition, supplied to requests as
+  `generation.deviceEpoch` (no second editable epoch field). The epoch is zero if and only if the
+  backend is unavailable or destroyed; successful acquisitions receive increasing positive
+  epochs. Completed tickets carry observed completion timing; failed and interrupted tickets
+  have `queueCompletedAt: null`, `elapsedMs: null` and no timestamp duration, with the error
+  message (failed) or the loss reason (interrupted) as `reason`. A `device.lost.then(...)` observer is
+  attached immediately after acquisition and never awaited before returning. Observed loss
+  immediately makes the backend unavailable and invalidates its epoch before clients are notified
+  (`onLoss({epoch, reason: 'destroyed' | 'unknown' | <reason>, message})`); late callbacks from
+  retired attempts cannot replace current state; a loss observed before an acquisition is published refuses that acquisition (`device-lost`); outstanding tickets settle `interrupted`; a
+  resolved queue fence after loss does not establish successful work. `Backend.destroy()` is
+  terminal teardown and suppresses recovery; the test adapter destroys the underlying device
+  without terminal teardown to exercise real loss recovery, and injected notifications exercise
+  the same invalidation path.
+- **Admission.** Every operation that submits queue work — batches, probes, readback copies,
+  presentation — consumes one single-use scheduler admission lease for the current epoch; there
+  are no hidden submissions inside `prepare()` (the preparation probe runs through ordinary
+  admission).
+- **Pipelines.** Compute pipelines for field evaluation, tracing, normals, shading, accumulation
+  and display, prepared with `createComputePipelineAsync`, every required family variant for
+  trace, normals and secondary field evaluation enumerated and prewarmed during preparation
+  (`FIELD` is a pipeline-overridable constant; power and parameters are uniforms; no
+  interaction-time compilation). One separately prepared fullscreen render pipeline presents the
+  completed display texture to the canvas in its preferred unorm format with explicit scaling (a
+  draft is upscaled at presentation) and **no further transfer function**: accumulation stays
+  linear, `display_band` performs the sole sRGB encoding into `display`, and diagnostic legend
+  colours are defined in display space and written exactly. The display texture is never copied
+  directly to the canvas (`rgba8unorm` and `bgra8unorm` are not copy-compatible).
+- **Targets** (per internal resolution, through the tracked allocator): `depth` r32float (4),
+  `status` r32uint (4; bits 0–3 status, 4–7 reason, 8–11 subreason, 12–31 steps), `normal`
+  rgba16float (8; w = availability), `sampleColor` rgba16float (8), `lightingStatus` r32uint (4;
+  independent shadow and AO failure flags with reasons, simultaneous failures preserved),
+  `accumulationFlags` r32uint (4; diagnostic propagation across samples),
+  two ping-pong `accumulation` rgba32float (16 each; sum and count, read previous, write next),
+  `display` rgba8unorm (4), `retained` rgba8unorm (4; the previous complete image, shown with the
+  pending mark): 76 bytes per pixel, 630,374,400 B at 3840 × 2160 before staging, uniforms, model
+  buffers and overlapping generations. Each resource is counted at its actual dimensions. (Project
+  0 A.8's 405,995,520 B is a different layout and is not reused as the product figure.) `space-targets-v2` adds a tracked `recovery` r32uint geometry target, retained and released with the corresponding geometry. One target set totals 76 B per internal pixel, or 630,374,400 B at 3840×2160, before other allocations. The 1 GiB tracked-allocation cap is unchanged. (Rev 5.2, B11b-F9, Codex run 20261022T060300Z-5ca3; implementation consequence, no new user decision.)
+- **Pipeline descriptors.** B00 freezes the pipeline descriptor schema and binding/uniform
+  conventions. B06, B08, B10 and B11 freeze their concrete pipeline IDs, slots and layouts
+  alongside executable shader descriptors; B06 validates preparation with executable self-check pipelines; B08, B10 and
+  B11 add their descriptors and preparation assertions as their shaders come into existence; B11
+  verifies complete product prewarming before B14 enables interaction. Compute dispatch geometry is frozen ABI: every compute entry point declares `@workgroup_size(8, 8, 1)`; the backend dispatches `ceil(region.width / 8) × ceil(region.height / 8)` workgroups and injects nothing; each pass carries its region (origin, size) in its own uniform layout and bounds-checks invocations.
+- **Batches.** Retain the single-pass B00 Batch and its fields (identity, pipelineId, pass, region, sample, bounds, inputs/outputs, uniforms). For B15, grouping is permitted only if unchanged P3 still fails with the compatible fixes alone and uncontended diagnostic evidence supports bounded grouping as remediation. The B15 remediation record in the plan records satisfaction of this condition; settled work remains single-pass initially.
+  A BatchGroup contains a common request/job/generation/sample identity and region and an ordered list of validated, prepared Batch descriptors. Each member retains its pipeline identity, bindings, uniform snapshot and work bounds. Initial scope is navigation drafts at sample zero without secondary rays: trace → normals → shade → accumulate → display, with diagnostic packing in display. Trace and normals may be omitted only under the existing compatible-geometry rules. Optional attributes and required secondary work in later 1b.1x drafts require widening the pass-order allowlist and its validation before use; they are not enabled by this initial implementation. Preserve mathematical bounds, sample order and seed. Every grouped dependency must be valid within the same region; no uncompleted cross-region dependency is assumed.
+  One group is one command buffer, submission, admission lease and completion ticket. Validate every member and pack all uniforms before reserving all uniform snapshots transactionally; finish validation and reservation before consuming admission or submitting. Retain every constituent resource and uniform snapshot through the group's completion, failure or loss. Aggregate work accounts for every pass; the 8 ms adaptation target applies to the entire group. The epoch-wide limit remains two outstanding leases. A final queue fence is not evidence of individual intermediate completion.
+  For navigation drafts, the validated group descriptor may additionally declare diagnostic reduction and a staging copy in the same command buffer and submission. Reduction retains the existing 8×8 compute ABI. The versioned summary is 64 B for nonrecovering families and 96 B for recovering families. It preserves exact terminal/reason counts, hit-conditioned unavailable-normal counts, coverage and invalid-data flags; recovering families additionally preserve attempts, all outcome and stop counts, and summed midpoints and encounters. Every full-decode rejection condition remains enforced. Draft reports identify aggregate evidence and never claim retained per-pixel masks. Settled/refinement work retains full diagnostic readbacks and masks. One persistent CPU Worker per renderer owns full masks, recording, report-count decoding, recovery validation, union accumulation and clearing. Transfer the caller-owned readback buffer only after copy-out and unmap; no GPU handle enters the Worker. Replies identify the session, operation and accumulation/sample. At most two readbacks across all sessions of one renderer/scheduler admission domain await acknowledgement: each retains one of the scheduler epoch’s two global leases through the Worker reply, including settled/refinement fields and non-REC-G draft diagnostics. An injected mask service must not be shared across independent schedulers; the limit is global, not per session. The final readback retains its admission lease through complete sample validation; only then may presentation consume the validated snapshot, preserving §7.2. The Worker decodes aligned little-endian readbacks through typed-array views in unsliced loops, fusing mask and report counts; unaligned inputs preserve the same decoding and validation semantics. At sample close, one unsliced pixel pass validates recovery, ORs sample masks/reasons/recovery into their unions and builds the sample/union histograms once. Snapshots consume cached aggregates without pixel rescans. This B15 round-24 implementation amendment is a Claude/Codex peer decision under the user delegation (2026-10-23; user informed); validation rules, acknowledgement-bound leases and presentation admission are unchanged. Cancellation closes the session and rejects pending acknowledgements; loss/destruction terminates the owned Worker and fences late replies. Worker startup, transport or validation failures fail closed, without a main-thread decode fallback. Slicing remains an explicitly injected CPU diagnostic path. The frozen 4 ms rule measures main-thread scheduling delay, not Worker or end-to-end sample duration; unchanged P3 must establish acceptance.
+
+  **B15 r16 default selection (Claude/Codex, 2026-10-23; delegated product direction):** Select (b) for product navigation drafts; retain (a) for diagnostic comparison and (d) as an available, disabled-by-default diagnostic. Variant (b) retains CPU-confirmed publication and accepted counts; it does not enable variant (d) pending publication. In variants (a), (b) and (c), workspace `onPublish` exposes only validated publications, with `publishedAt` observed when that publication is emitted after validation. In variants (b) and (c), every originally eligible draft presentation that completes successfully and passes CPU diagnostic validation emits exactly one ordinary validated publication, even when a newer navigation presentation has made it historical. Mark such notifications `historical: true`. Preserve the original request/job/generation identity, sample index, camera, quality and validated counts, and include the observed presentation-submission time, successful presenter queue-completion evidence and CPU confirmation time. `publishedAt` must not precede confirmation. Historical notifications are accounting events and do not change the current image or workspace publication state. Pure navigation supersession must not suppress them; existing cancellation, invalidation, failure and loss rules remain unchanged. Variant (a) gains no second publication, and variant (d) retains its existing pending-original and terminal-update protocol. Internal pending frame records and terminal updates in variants (b) and (c) remain available through renderer diagnostic subscriptions but are not forwarded through workspace `onPublicationUpdate`. Early or provisional presentation alone never counts as publication. Preserve diagnostic indicators, failure reports, invalidation and restoration behavior. Settled/refinement validation and presentation ordering are unchanged. Executor-3 comparisons support this engineering choice but are exploratory, with paced issuance invalidations and incomplete clock-comparable layer evidence; they establish neither P3 acceptance nor a protocol-valid performance budget pass.
+
+  **(a), injected diagnostic CPU-gated comparison (L6a):** Creation/submission scopes, queue completion, mapping, copy-out, unmap and summary validation precede presentation. Presentation consumes a separate admission lease and completion ticket. Resources remain owned through their applicable ticket, mapping and retained-image lifetimes. This is a fixed two-operation plan; the epoch-wide cap remains two outstanding leases.
+
+  **(b), product default L6b (GPU-gated in-submission):** Rendering, summary reduction, staging copy and presentation share one command buffer under one admission lease and completion ticket for qualified drafts. The present pass reads a freshly initialized, identity-bound summary after reduction. Missing, malformed or inconsistent evidence fails closed to an unmistakable whole-frame validation-failure display; valid numerical diagnostic pixels retain their prescribed markings. CPU summary validation, creation/submission scopes and completion checks still determine publication and job outcome. Early GPU presentation is recorded separately and never backdated as validated publication. Invalid evidence, mapping failure, execution failure or loss cannot establish a successful publication. All resources remain owned through their ticket, mapping and retained-image lifetimes.
+
+  **(c), injected diagnostic provisional variant:** An unvalidated navigation draft may be displayed only with an unmistakable “Validating — provisional” mark visible from its first presentation. It emits a provisional-presentation event, retains the last validated image and supplies no validated publication, picking, export or accepted-cache result. Confirmation requires complete CPU diagnostic validation, successful creation/submission scopes and queue completion; the confirmation timestamp is observed then, never backdated. On rejection, cancellation, timeout or loss, invalidate the provisional result. Restore the retained image only if the rejected result still owns the displayed provisional generation; an older callback must never replace a newer image. Any GPU restoration uses ordinary admission and completion accounting, and no work is submitted to a lost epoch. Record provisional exposure and restoration costs. Provisional displays never satisfy P3 publication or completion requirements. The initial submission takes one lease/ticket; restoration takes another. A synchronous UI mark may be removed on confirmation without a GPU submission.
+
+  **(d), injected diagnostic asynchronous-record variant (GPU gate plus append-only records; available, off by default):** Settled and refinement images retain full diagnostic readback and validation before presentation. Navigation drafts may present GPU-complete frames before CPU diagnostic confirmation. This is an explicit draft-only exception to the completed-publication prerequisite; existing identity, navigation-stream, monotonic-display-order and prohibition of partial or mixed-generation images remain in force.
+
+  Rendering, diagnostic reduction, summary copy and presentation may share one validated command buffer, submission, admission lease and completion ticket. Per-pixel numerical markings remain mandatory. Before presentation, GPU checks enforce coverage, permitted status/reason values, recovery consistency and producer/sample identity. Frame-wide checks consume completed reduction output in the subsequent present pass. Missing or inconsistent evidence produces an unmistakable frame-level diagnostic display, never an apparently valid frame.
+
+  In variant (d), each eligible draft presentation creates an immutable, uniquely identified frame record containing its epoch, request/sample identity, camera, quality and observed presentation-submission time, initially with `diagnosticsState: pending` and unavailable counts. Expose that original through workspace `onPublish`, and append identity-matched terminal updates through workspace `onPublicationUpdate` to `confirmed`, `failed` or `interrupted`; never overwrite the original event. Forward historical terminal updates as well as updates for the currently displayed frame. Unknown, duplicate or identity-conflicting updates remain protocol failures and must not be silently filtered. Confirmation requires successful creation/submission scopes, queue completion, summary copy-out/unmap and complete diagnostic validation. Preserve exact full-decode aggregate semantics, including recovery evidence. Confirmation does not assert that all numerical outcomes succeeded.
+
+  Historical confirmation never republishes a superseded frame or changes a terminal job outcome. Observed loss interrupts pending records; late callbacks cannot revive them. A failed frame still displayed is visibly invalidated or replaced through ordinary admission, without replacing a newer frame. Pending diagnostic status is distinct from the navigation-pending indicator. Pending frames provide no validated picking, export or accepted-cache result.
+
+  Summary slots and resources remain owned through their applicable ticket, mapping and retained-image lifetimes. The bounded ring applies backpressure rather than overwriting pending evidence. Initially leases remain outstanding through diagnostic resolution, preserving existing limits, budgets and watchdog rules. Draft reports identify aggregate evidence; settled/refinement masks remain unchanged.
+
+  Constituent failure fails the whole group. Cancellation stops future admissions and drains admitted groups; timeout does not release resources; loss invalidates the epoch.
+  Uniform data is snapshotted before submission; storage owned by an outstanding ticket is never
+  overwritten; horizontal subdivision is the caller's (one lease per region); completion is `device.queue.onSubmittedWorkDone()`
+  labelled `queue-completion` (a fence includes preceding queued work and is not isolated shader
+  time); GPU timestamps are a separate measurement recorded only when granted, never a substitute
+  for completion. A watchdog timeout stops admission but neither settles the fence nor releases its
+  resources; loss retires the epoch; ordinary cancellation drains it.
+- **Readback.** One bounded region per call, at most 256 rows; a region whose staging (`alignUp(width × bytesPerTexel, 256) × rows`) would exceed `maxBufferSize` is refused `allocation-failed` before its lease is consumed, and the caller subdivides horizontally with one lease per region;
+  into a lazily allocated pool of at most two staging buffers sized
+  `alignUp(width × bytesPerTexel, 256) × rows`; `mapAsync(READ)`, copy out, `unmap`; the result
+  resolves after copy-out and unmap; mapping ownership survives queue completion; every readback
+  carries its epoch and identity.
+- **Configuration.** `configureTargets` is transactional: bytes are reserved and accounted first,
+  allocation and validation errors captured (`pushErrorScope`), and the old usable target set is
+  retained if replacement fails. Successful target handles are caller-owned until `release(handle)`: a replacement never releases the earlier set, so a published image can be presented while its replacement is pending; B09 releases obsolete working targets and retains its published display until the replacement is published. Failed configurations roll back their own new resources; loss and `destroy()` invalidate everything.
+  **B15 r14 amendment (2026-10-23; target-set pool and supersession-safe configuration):** A released target texture whose tickets, mappings and owners have ended may enter a tracked idle pool instead of being destroyed. Pooled bytes stay in `tracked` and count against the 1 GiB cap; `reserve` evicts idle pooled textures (oldest first) before refusing an allocation, so the pool never causes an `allocation-failed`, and live, retiring or retained targets are never evicted. Reuse is keyed by layout id, output size, the complete `TARGET_LAYOUT` (the family-requirements key) and each texture's own description (name, size, format); a reused texture receives a fresh handle and the released handle stays invalid. Textures with a recorded creation failure, and fresh sets abandoned before their error scope resolved, are destroyed, never pooled. Loss and `destroy()` empty the pool, so a new epoch never reuses memory. Pooled textures are not re-zeroed: every draft and sample-zero pass writes each target texel it later reads (accumulation reads its previous sample only for sample index > 0). A request reserves targets only after supersession is decided: the renderer serializes configurations, rechecks after every wait that the request is unfinished, uncancelled and executable (a non-executable one is cancelled, as dispatch would), and an abort signal releases a superseded request's reservation synchronously while its configure is pending. At most one configuration's fresh reservation is outstanding per renderer. The 4K settled spare-geometry path reuses partial sets under the same rules. The diagnostic ladder driver obtains its targets through the same `configureTargets`, so L0–L6 share the pool.
+
+  **B15 r15 O2 amendment (peer-converged pool residency policy):** The idle target pool has both a 44-texture entry bound and a 256 MiB (268,435,456 B) byte bound, in addition to the unchanged 1 GiB total tracked-allocation cap. Every `reclaim` trims the oldest idle entries until both idle bounds hold; idle bytes remain tracked. After a configuration has passed its error scopes and successfully resized the presenter, evict idle entries with incompatible output-size/layout/family keys. Invalidate pooling eligibility on incompatible live or retiring entries at the same time, so a late release, ticket completion, mapping completion or owner retirement cannot repopulate an obsolete key, even after a later return to that size. Never evict resources still held by a caller, ticket, mapping or retaining owner. Failed or superseded configuration does not activate its key; ordinary cap-pressure eviction remains permitted. Partial 4K reuse is retained within the idle-byte bound; verify both the spare-geometry/working-set path and 4K→720p transitions with held and late-released resources.
+
+  **B15 r16 F3 clarification:** Ticket retirement ends the ticket hold; it does not retire an idle pooled texture from allocation accounting. Once all caller, ticket, mapping and retaining-owner holds end, an eligible texture is `pooled`, remains in `tracked`, and is excluded from `retiring`. Only destruction or eviction removes its bytes. The 4K recovery check expects the released 33,177,600 B status texture to remain tracked with zero holds while its pool key is active, then disappear on incompatible configuration. The 44-entry/256 MiB idle bounds and the 1 GiB cap apply concurrently; peak tracked allocation includes live, retiring, retained and idle pooled resources.
+
+- **Allocator.** Every application-owned allocation passes through the tracked allocator, which
+  checks `tracked + bytes ≤ 1 GiB` before resource creation. The production method
+  `allocate({name, bytes, usage, data?}) → handle` creates a buffer in the current available device
+  epoch. `name` is nonempty; `bytes` is a positive safe integer divisible by four; `usage` is
+  `'storage'` or `'uniform'`; optional `data` is a `Uint8Array` whose byte length does not exceed
+  `bytes`. Initial data is defensively copied at creation and remaining bytes are zero. WebGPU
+  initializes supplied contents through `mappedAtCreation`, copies them into the mapped range, and
+  unmaps before returning; this performs no application queue submission and consumes no admission
+  lease. The backend derives native usage flags, including copy-source support for readback. There
+  is no production host-update method; admitted shader writes to storage buffers remain permitted.
+  `stage()` is a fake-only test control. `allocate` stays synchronous. Every native creation runs inside validation and out-of-memory error scopes, and a resource whose initialization throws is destroyed before the call fails. A creation error captured asynchronously marks the resource failed (`diagnostics().inventory[i].failure`). Every ticket that consumes a resource awaits that resource's creation scopes as well as its own scopes and fence, and settles `failed` with the creation message if any creation scope captured an error. Precedence: loss first (an outstanding ticket settles `interrupted` whatever its scopes report, and nothing settles while a loss is pending); then pre-queue failure (work that threw before `queue.submit` settles `failed` at once); then captured creation or submission errors (`failed` after scopes and fence); otherwise `completed` with timing observed at the fence.
+
+  `release(handle)` marks a resource retiring; bytes leave accounting only when every ticket,
+  mapping and retained-owner reference has ended. Uniform uploads, query/resolve storage, staging
+  and model buffers are counted. `diagnostics()` reports `{state, epoch, tracked, peak, retiring,
+  inventory}` using actual allocation sizes. Plane allocations remain separate.
+- **Launch (tests).** The complete recorded Project 0 launch profile (`--enable-gpu --use-angle=vulkan
+  --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan --enable-webgpu-developer-features`,
+  installed Chrome, headed, §16.5); requested and effective arguments recorded in every report.
 
 ## 10. Numerics and precision
 
 ### 10.1 Representation
-Space cameras use the anchored representation in §5.2. Anchor arithmetic uses controlled high
+Space cameras use the anchored representation in §5.2 (approved for ordinary Space by the user,
+2026-10-21). Anchor arithmetic uses controlled high
 precision; local camera coordinates, orientation and field of view use CPU doubles. Ordinary Space
-evaluates fields in binary32. Qualified 1c profiles use the reference, perturbation and range
+evaluates fields in binary32. Camera transport: `high = RN32(exact represented coordinate)` and `low = RN32(exact − high)`, in that order, using nearest rounding with ties to even and range checks before use; the reported bound is the absolute L1 world-space error. Zero error is reported as a null logarithmic bound with `exact: true`; otherwise the bound is its integer ceiling logarithm with `exact: false`. The `2⁻⁴⁶` relative property holds when high and low are binary32-normal; it is not an underflow guarantee. Qualified 1c profiles use the reference, perturbation and range
 representations specified by §21; their use of binary32 components does not require collapsing a
 represented point into one binary32 value.
 
@@ -560,10 +740,15 @@ recurrence D ← 8D + 1 from 0 first exceeds the binary32 maximum at update 44).
 
 Every model record:
 ```js
-{ id, recurrenceVersion, initialization, escapeRule, supportedParameters,
-  estimator: { category, semantics, derivationVersion },
-  validation: { recordId, implementationVersion, testedParameters, testedSamplingConditions } }
+{ id, version, recurrenceVersion, initialization, escapeRule, supportedParameters,
+  estimator: { category, semantics, derivationVersion } }
 ```
+Every static model record contains the following metadata fields. Empirical validation records are stored
+separately in the validation registry described by §16.2. Applicable evidence is selected by model,
+evidence class, implementation hashes, profile, effective parameters, sampling conditions and
+spatial domain. A model record does not itself assert validated coverage; absence of matching
+evidence is reported as “no matching validation”. For analytic models `derivationVersion` is a
+populated string; only the recurrence, initialization and escape metadata are null.
 Supported input ranges and empirically tested coverage stay separate. The category appears in model
 metadata, the inspector, diagnostics, reports, and as a compact viewport indicator from 1b.1.
 
@@ -616,7 +801,13 @@ specification and validation.
 ### 11.4 Tracing profile `surface-v1` and statuses
 - Hit tolerance τ(t) = max(10⁻⁶, 0.5·α·t), α = 2·tan(fov_y/2)/H_internal. A sampling rule, not an
   error certificate. A separately versioned inspection profile may tighten it for convergence
-  studies.
+  studies. `analytic-inspection-v1` (τ = 0.1·τ(t), unchanged multiplier and caps) is such a profile. On the unchanged eligible
+  analytic rays, qualification requires |t_GPU−t*| ≤ max(10⁻⁶,10⁻³|t*|), exact statuses and unchanged
+  numerical-failure rules. This profile scales the entire surface-v1 tolerance, including its floor, by 0.1; all
+  other tracing settings remain unchanged. CPU preflight does not establish GPU qualification or accuracy outside
+  the frozen sampling domain. Ordinary `surface-v1` analytic depth is qualified against a
+  sampling-aware envelope that budgets the hit rule's stopping displacement along the ray (approaching τ/|n·d| for a planar face; curved surfaces and competing features require the independent expanded-object envelope) (plan B04 P1; user-approved
+  amendment 2026-10-21, rev 4.8).
 - **Starting conditions.** Rays use model-native world coordinates and unit-length directions, so
   t measures world-space distance. The forward ray is intersected with the model's declared
   enclosing volume, using outward-safe bounds. An empty intersection gives **miss**; otherwise
@@ -637,6 +828,13 @@ specification and validation.
   2. A valid fractal orbit not escaped within its iteration budget → **unresolved**
      (`point-budget`). The ray stops; no interior distance is invented and no speculative step is
      taken.
+     **Exception, quaternion primary rays only (user-approved amendment 2026-10-22, rev 5.1):** recovery is entered only when an ordinary guarded `0.9·DE` advance from a resolved, non-hit exterior point reaches a point-budget result. An initial-point failure remains terminal.
+
+     Set `a` to the previous resolved ray parameter and `b` to the failed parameter. Evaluate at most eight effective midpoints `m = a + (b − a)/2`. Before each evaluation, require remaining primary evaluation budget, `a < m < b`, and an effective field-input position distinct from both endpoints. A recurrence, field-domain or arithmetic failure terminates as numerical failure; an escaped orbit without a usable estimate terminates as unresolved (`estimate-unavailable`). A valid exterior estimate strictly below `τ(m)` yields an approximate hit at `m`. Otherwise, a resolved non-hit sets `a = m`, and point-budget sets `b = m`. Recovery neither recursively restarts nor makes an ordinary forward advance.
+
+     Every evaluated midpoint counts toward the existing total primary field-evaluation cap and reported work. On exhaustion of eight midpoint evaluations, effective-parameter/coordinate collapse, or exhaustion of the total cap, return unresolved (`point-budget`), retaining the original cause and a separate recovery-stop detail.
+
+     Preserve the encountered point-budget evidence in recovery diagnostics even when recovery succeeds; distinguish these encounters from terminal unresolved outcomes. The interval is not a proven surface bracket, and non-escape establishes no interior occupancy. Shadow, AO and other families retain their existing rules.
   3. An escaped orbit without a usable estimate → **unresolved** (`estimate-unavailable`).
   4. Otherwise the hit and advancement rules below apply.
   - A valid exterior estimate below τ(t) → **approximate hit** (the only hit criterion).
@@ -699,21 +897,56 @@ graphics diagnostics (extended with the Space backend and its tracked inventory)
 
 **Start (user decision, 2026-10-20):** a fresh start opens **Plane** at its existing default view
 (`INITIAL_VIEW`, Seahorse valley, default appearance and detail) without acquiring a Space device.
-A supported Plane share link opens Plane with its scene; Space share-link support remains subject
-to §19.2 Q6. Project 1 does not restore the previous session on reload; reopening work is done
+A supported Plane share link opens Plane with its scene; Space share links are deferred beyond
+Project 1 (§19.1 Q6, user decision 2026-10-21). Project 1 does not restore the previous session on reload; reopening work is done
 through discoveries, scene files and share links.
 
 ### 13.2 Space layout
 Viewport; parameter panel (family, parameters, iterations, tracing, appearance); viewport indicators
-(estimator category, precision badge, pending, pause, view mode); docked instruments (1b.2); a
-composition strip (1b.3).
+(estimator category, precision badge (1b.2), pending, pause, view mode); docked instruments (1b.2); a
+composition strip (1b.3). (Erratum applied by user decision, 2026-10-21: the precision badge is
+1b.2, consistent with §3.) Space opens with the neutral inspection lighting (§19.1 Q2; presets
+arrive in 1b.1x, §13.7).
 
 ### 13.3 Navigation (1b.1)
 - Orbit, pan and dolly; focus on a point (asynchronous depth readback of the picked pixel); overview;
-  orientation reset; a Bryce-style orientation control with axis constraints and reset (§5.2).
-- Basic flight: look plus move and strafe, explicit speed. Escape releases input; blur or visibility
+  orientation reset; a Bryce-style orientation control with axis constraints and reset (§5.2). Navigation safety: navigation must refuse coincident results; recentre must also refuse a result that collapses a previously distinct position and focus; `dolly(0)` returns the input camera and positive factors that round onto the focus are likewise refused; externally supplied coincident cameras retain the documented no-op behavior for orbit, dolly, reset, flight, and a coincident `lookAt` target. Axis locking uses `Rz(z) Ry(y) Rx(x)`: canonical angles are extracted from the current and requested orientations, the requested locked coordinate is replaced with the current one, and the orientation is reconstructed; at gimbal lock `x = 0` and `z` is solved; labels are tilt/X, roll/Y, heading/Z; for upright cameras `x = 90° + forward elevation`, `y = 0`, and `z` is the right-vector heading, or forward azimuth minus 90° (modulo 360°); off upright these coordinates are coupled, and at `y = ±90°` X/Z are not independent physical locks. A pick whose reconstruction is unavailable (`{unavailable: true, reason: 'precision-limit'}`) is an unresolved pick: it starts no gesture and does not change the camera.
+- Basic flight: look plus move and strafe, with explicit speed in camera-local units per second; world speed is that value multiplied by camera scale. Escape releases input; blur or visibility
   loss stops movement immediately. No inertia, collision avoidance or vehicle model. Estimator-scaled
   slow-down is deferred unless it proves useful, and is never collision protection.
+- **Controller (gamepad) exploration (user decision, 2026-10-21: "We should support joystick for
+  exploration as well.").** For supported controller layouts, Space provides controller-driven
+  orbit, pan, dolly and basic flight. Continuous controller navigation follows the camera-history
+  rules. Losing input eligibility or the selected controller stops movement and commits the last
+  preview exactly once. Resuming requires neutral controls. Mouse and keyboard remain complete
+  alternatives.
+  - *Supported layouts in 1b.1:* browser Gamepad API devices reporting `mapping === "standard"`. A
+    connected device with another mapping is reported as connected with an unsupported layout and
+    drives nothing; its axes are never guessed. Non-standard joysticks and flight sticks are
+    deferred (§17; user answer to rev 4.2 Q11, §19.1: "Xbox style"). Physical devices are unqualified until one has been exercised.
+  - *Input:* the controller is polled once per workspace animation frame, before the flight tick,
+    with no second loop or timer; polling continues while input is eligible even when rendering is
+    idle, and elapsed time is clamped as for flight. A poll produces at most one camera preview,
+    which enters ordinary scheduler admission; controllers never change render cadence. Stick dead
+    zones are radial with a squared response that preserves direction; buttons act on rising edges.
+    Rates, mapping and dead-zone values are plan defaults, not spec constants.
+  - *History:* an orbit controller run is one camera-history entry: it begins at the first accepted
+    non-neutral motion and commits after the motion controls have been observed neutral for a short interval
+    (plan default 200 ms, measured from an observed neutral sample). Within flight, the flight run remains the single
+    entry. Overview and orientation reset stop navigation, commit any open run, then apply one
+    camera-only jump.
+  - *Eligibility and ownership:* input is accepted only while the Space workspace is the current
+    activation with prepared pipelines, the document is visible, the window is focused and viewport
+    navigation is enabled (parameter editing and modal dialogs suspend it). After connection,
+    resumption, controller replacement or ownership loss, controls must return to neutral before new
+    input is accepted. The lowest eligible controller is selected and kept until it disconnects; a
+    newly connected controller never takes control. Escape, stop, suspension and disconnection of
+    the selected controller always stop movement. A missing Gamepad API or a denied
+    `getGamepads()` makes controllers unavailable without affecting other navigation. Browsers may
+    expose a controller only after it is used: the interface invites "Press a controller button to
+    connect", and that interaction performs no navigation.
+  - Controller selection, button state and mapping preferences are runtime input settings, never part
+    of `atlas.scene`. Remapping is deferred (§17).
 - **Camera exterior status.** The CPU double evaluator classifies the camera position on each
   committed camera. Either an unresolved CPU classification or an unresolved evaluation under the
   renderer's effective inputs shows "camera exterior status unresolved" with overview and reset.
@@ -765,7 +998,7 @@ and evaluator precision; a one-point GPU evaluation is shown beside it with the 
 settings and evaluator version. Parameter edits keep the selected location and mark measurements
 stale.
 
-### 13.7 Scoped presets (1b.3)
+### 13.7 Scoped presets (initial set in 1b.1x)
 Appearance-only and lighting-only presets with explicit allowed fields, previewed on the current
 scene, undoable, never touching mathematics or camera; a neutral inspection lighting preset is always
 available. Swatches use immutable preview requests behind interaction and inspection: at most 12
@@ -787,7 +1020,7 @@ visible, a 24-entry cache keyed by scene, preset and renderer versions.
   A stale inspection never becomes a current-looking card silently: saving either refreshes it or
   records its stale provenance. Opening a card is a whole-scene restoration.
 
-### 13.9 Fog, pause and update (1b.3)
+### 13.9 Fog (1b.1x); pause and update (1b.3)
 Minimal exponential depth fog, applied in the appearance pass only, off in diagnostic modes, with an
 obvious off switch. Pause and update per §7.3.
 
@@ -839,6 +1072,260 @@ save with B or the bookmark button, a thumbnail list, open, delete, and the empt
   Project 1 adds no network code, account, sharing or remote source; the interface exists so a
   later source can be added without changing the control or the record.
 
+### 13.11 Explore and compose (1b.1x)
+
+*Added in rev 6.0, Claude/Codex converged 2026-10-22 under the user's delegation of product direction ("you and Codex are running this… This is your show"); user informed.*
+
+#### Purpose and interaction
+
+Space opens with neutral inspection lighting and a deliberately framed overview. The initial gallery contains three appearance-only and three lighting-only presets, including neutral inspection.
+
+Preset payloads have explicit field allowlists. Appearance presets may change material, palette, background and fog. Lighting presets may change the lighting object. Neither changes mathematics, camera, iteration, tracing, sampling, view mode or requested lighting-quality stage.
+
+The primary panel contains these ten groups:
+
+| Primary label | Exact meaning |
+|---|---|
+| Object | Model identity; separate Fractals and Calibration groups |
+| Shape | Model parameters |
+| Look preset | Scoped appearance preset |
+| Light preset | Scoped lighting preset |
+| Colour | Solid/orbit source, applicable colour/palette and phase |
+| Finish | Specular strength and exponent |
+| Light | Camera-relative direction and key intensity |
+| Shadows & depth shading | Shadow enablement and ambient occlusion |
+| Atmosphere | Background and depth fog |
+| View | Shaded, orbit colour and numerical diagnostics |
+
+Navigation controls and status indicators are excluded from this count. Advanced contains numerical budgets, individual coefficients and less frequently edited settings.
+
+Every control has a visible label and keyboard-accessible explanation. Tooltips supplement these. Iterations and ray steps remain distinct, with their exact terms and effects explained. Compact estimator/category/applicability disclosure remains visible.
+
+Continuous orientation preserves axis constraints, reset and camera history. The ±15° controls remain a keyboard alternative. One orientation gesture creates one camera-history entry; one appearance drag creates one undo entry.
+
+First-run hints are dismissible and reopenable. Persistence uses a guarded local preference; denied or full storage never blocks exploration. Hint state is not scene data.
+
+New product cameras do not replace qualification cameras. Overview framing keeps the silhouette visible within the unobscured viewport. Overview, reset, Escape and blur preserve existing recovery behavior.
+
+#### Appearance schema and defaults
+
+New scenes use `appearance.profile: "space-compose-v1"` within `atlas.scene`.
+
+Every field below is required. Numbers must be finite. RGB values are linear-light triples with channels in `[0,1]`; UI sRGB colours are explicitly decoded. Unknown fields, profiles and out-of-range values are rejected rather than repaired.
+
+| Field | Accepted values |
+|---|---|
+| `profile` | `"space-compose-v1"` |
+| `material.colorSource` | `"solid"` or `"orbit"` |
+| `material.baseColor` | RGB |
+| `material.specularStrength` | `[0,1]` |
+| `material.shininess` | `[4,128]` |
+| `palette.id` | Registered shared palette |
+| `palette.phase` | `[0,1)` |
+| `palette.frequency` | `[0.25,8]` |
+| `lighting.directionCamera` | Unit vector within `10⁻⁶`; right, up, toward-viewer components |
+| `lighting.keyColor`, `lighting.ambientColor` | RGB |
+| `lighting.keyIntensity` | `[0,2]` |
+| `lighting.ambientIntensity` | `[0,1]` |
+| `lighting.shadows` | Boolean |
+| `lighting.aoStrength` | `[0,0.6]` |
+| `lightingQuality` | `"direct"` or `"full"` |
+| `background.top`, `background.bottom` | RGB |
+| `fog.enabled` | Boolean |
+| `fog.color` | RGB |
+| `fog.density` | `[2⁻⁸,64]` when `fog.enabled`, inverse model-world units; turning fog off is the only way to get no fog |
+| `viewMode` | Existing modes plus `"orbit-color"` |
+
+The complete default is:
+
+```json
+{
+  "profile": "space-compose-v1",
+  "material": {
+    "colorSource": "solid",
+    "baseColor": [0.72, 0.72, 0.72],
+    "specularStrength": 0.21176470588235294,
+    "shininess": 32
+  },
+  "palette": {
+    "id": "ember",
+    "phase": 0,
+    "frequency": 1
+  },
+  "lighting": {
+    "directionCamera": [
+      -0.4504281101536532,
+      0.6005708135382042,
+      0.6606278948920247
+    ],
+    "keyColor": [1, 1, 1],
+    "keyIntensity": 0.85,
+    "ambientColor": [1, 1, 1],
+    "ambientIntensity": 0.16,
+    "shadows": true,
+    "aoStrength": 0.6
+  },
+  "lightingQuality": "full",
+  "background": {
+    "top": [0.01, 0.013, 0.022],
+    "bottom": [0.01, 0.013, 0.022]
+  },
+  "fog": {
+    "enabled": false,
+    "color": [0.01, 0.013, 0.022],
+    "density": 0.5
+  },
+  "viewMode": "shaded"
+}
+```
+
+Finish resolves to:
+
+- Matte: `(specularStrength, shininess) = (0,32)`.
+- Satin: `(0.21176470588235294,32)`.
+- Glossy: `(0.35,96)`.
+
+These are artistic Blinn–Phong coefficients, not physically based roughness or metallic response.
+
+Orbit colouring is supported for Mandelbulb and quaternion Julia. Analytic fixtures use solid colour. Palette controls are disabled with an explanation when neither the surface source nor the selected view uses them. Lighting controls are similarly inapplicable in unlit diagnostic views.
+
+#### Explicit B15 conversion and family switching
+
+The exact B15 appearance shape remains readable. It resolves for rendering through this fixed conversion:
+
+| B15 field | Resolved value |
+|---|---|
+| `material: "neutral"` | Default solid base colour and satin coefficients |
+| `palette: id` | `{id, phase: 0, frequency: 1}` |
+| `lighting: "inspection"` | Default lighting object |
+| `lightingQuality` | Copied |
+| `viewMode` | Copied |
+| `fog: {enabled:false}` | Default disabled fog object |
+| No background field | Default background |
+| No profile field | Resolved `space-compose-v1` |
+
+There is one product shading equation. The original B15 source and evidence remain archived, not maintained as a second production shading implementation.
+
+Reading or serializing a B15-shaped scene does not rewrite its canonical bytes or hash. Editing it performs the explicit conversion within the same undoable command. No conversion depends on current UI settings.
+
+The conversion is exact as a data mapping. Rendering equivalence is tested separately: matched resolved lighting samples have a one-unorm8-step colour tolerance; changed diagnostic patterns use their new tests. Any changed secondary outcomes are reported and assessed independently, never concealed through pixel exclusions chosen after measurement.
+
+Changing to a model without orbit support resolves `material.colorSource` to `"solid"` and `viewMode: "orbit-color"` to `"shaded"`, where applicable, inside the same whole-scene command. A notice names the adjustments; undo restores the prior complete scene.
+
+This explicit user action does not authorize repairing imported scenes. An imported unsupported orbit request is rejected.
+
+#### Shading, secondary data and fog
+
+For a valid shaded sample, let:
+
+- `B` be the solid or orbit-derived linear base colour.
+- `D = max(dot(n,l),0)`.
+- `V` be shadow visibility.
+- `O` be the existing weighted occlusion estimate from resolved AO samples.
+- `A = 1 − aoStrength·O`.
+
+The new shading equation is:
+
+```text
+B ⊙ (ambientColor·ambientIntensity·A
+     + keyColor·keyIntensity·D·V)
++ keyColor·keyIntensity·specularStrength·max(dot(n,h),0)^shininess·V
+```
+
+The specular term is zero when `D=0` or the half-vector is undefined.
+
+The existing shadow algorithm, one-ray/64-step ceiling, AO locations and five-sample ceiling remain unchanged. Non-escape never establishes occlusion. Existing unresolved-secondary handling remains explicitly reported.
+
+`shadows:false`, `aoStrength:0` and direct quality skip the corresponding evaluation. Reports say **not performed**, not passed. Numeric placeholder factors do not assert known visibility or occlusion.
+
+Retained sample zero includes `V`, `O`, lighting status and evaluation-state metadata. Colour, finish, key/ambient colour or intensity, background and fog edits reuse compatible secondary data. Their secondary evidence is bit-identical. Direction and shadow-policy edits invalidate the affected secondary cache. Changing `aoStrength` from one nonzero value to another reuses the retained AO. Changing it to or from 0 changes whether AO is performed and invalidates the cache.
+
+Caching is keyed to the actual sample and secondary inputs, not merely to the scene. A direct-quality cache cannot satisfy requested full-quality secondary data. Reused sample zero is not overwritten while later samples refine.
+
+A cached appearance edit publishes its first complete full-resolution sample-zero image at the requested lighting quality. It does not insert a direct-light flash when valid full-lighting data is already available.
+
+Background colour interpolates between bottom and top using the jittered sample’s vertical coordinate normalized by internal height. This gives drafts and settled images the same normalized mapping.
+
+For a valid shaded hit at ray distance `t`:
+
+```text
+T = exp(-fog.density · t)
+fogged = T·surface + (1-T)·fog.color
+```
+
+Fog is per sample before accumulation. It never applies to legend-coloured samples. Misses use the background. Density retains world-distance meaning; focus changes do not rescale it. The UI provides an off switch and logarithmic density adjustment.
+
+Shaded and orbit-colour images accumulate linear RGB and receive one sRGB encoding. Existing numerical diagnostics retain their specified mappings.
+
+#### Orbit colour: `radial-min-v1`
+
+This is an artistic measurement of an escaped orbit prefix, not distance, error or membership evidence.
+
+At each approximate-hit sample, reconstruct the same effective field position using the primary ray’s uniforms, jitter and arithmetic order. Use the same effective parameters and resolved iteration budget `N`.
+
+- Mandelbulb: include `z₁ … zₖ`; exclude the common `z₀=0`.
+- Quaternion Julia: include `q₀ … qₖ`, retaining all four components.
+- Include the first escaping iterate, including initialization escape. Stop at escape or `N` updates.
+
+Define:
+
+```text
+m = min_j ||orbit_j|| / R
+u = fract(palette.phase + palette.frequency · min(m,1))
+```
+
+`R` is the existing family escape radius. The clamp is part of the artistic definition, not a mathematical claim that every admitted hit has `m≤1`. Zero is a valid minimum.
+
+Evaluate the shared palette’s unrounded sRGB-stop smoothstep interpolation directly from its stops, then perform explicit sRGB decoding. Do not introduce an 8-bit lookup table or hardware-filtered approximation. Cyclic endpoint equality is retained.
+
+Each jittered sample computes its own attribute. Averaging distinct samples is antialiasing; recomputing the same attribute does not add samples.
+
+Under `surface-v1`, an accepted fractal hit requires an escaped orbit with a usable exterior estimate. Therefore:
+
+| Attribute state | Meaning and behavior |
+|---|---|
+| `available` | Valid escaped prefix and finite minimum; use its colour |
+| `not-applicable` | Primary miss or non-hit; use the primary view behavior |
+| `unavailable-position` | Effective hit position cannot be reconstructed; mark unavailable |
+| `attribute-inconsistent` | Re-evaluation at a hit does not escape or lacks the required usable exterior result; mark unavailable |
+| `numerical-failure` | Invalid/nonfinite attribute computation; show failure indication |
+
+There is no `available-budget` state at an accepted hit. No failure becomes a zero attribute, shortened successful prefix or guessed colour.
+
+The attribute pipeline shares the unchanged recurrence-update helpers and preserves their operation order. Its separately instrumented loop records the minimum and corresponding point-evaluation result. Existing primary field functions and assembled primary modules are not modified for this purpose.
+
+GPU qualification compares the instrumented result with the original GPU point evaluator at identical effective positions. CPU reference comparisons separately measure recurrence sensitivity and numerical agreement. Neither comparison proves geometric correctness of the underlying heuristic estimator.
+
+Moving drafts compute attributes at their actual draft iteration budget. There is no settled-only colour fallback.
+
+A changed artistic definition receives a new version and identities; it cannot relabel existing `radial-min-v1` evidence.
+
+#### Diagnostic presentation
+
+All indications are generated from accumulated flags after fog and sRGB encoding. They are never baked into albedo.
+
+- Primary numerical failure and unresolved outcomes retain their solid legend overrides.
+- Lighting-unresolved pixels use a diagonal pattern with a four-pixel period and contrast backing.
+- Orbit-unavailable pixels use a four-pixel neutral checker with contrast backing.
+- Orbit numerical failure has an explicit failure flag and legend.
+- Simultaneous flags remain in raw evidence even where the presentation has a priority order.
+
+A tint alone does not satisfy the indication requirement. Pattern backing must retain contrast against the underlying colour, including colours equal to the existing tint. The display contract includes isolated flagged pixels, thin regions, mixed flags, extreme fog and every shipped palette/preset combination. A labelled diagnostic mask remains available for inspecting the exact affected pixels.
+
+Existing numerical diagnostic modes bypass decorative appearance. `orbit-color` is unlit and undecorated, uses `TERMINATION_MISS` for misses, does not require normals, and uses its own linear-colour accumulation/sRGB display path.
+
+#### Evidence boundaries
+
+Preserve B15 scene bytes, manifests, implementation identities, raw results and failed/deferred evidence.
+
+For identical primary inputs and samples, appearance variants must preserve depth, terminal status/reasons, recovery and normals. Secondary changes receive fresh secondary evidence. Attribute failures are a separate class.
+
+Unchanged primary evidence may carry forward only when its relevant assembled source hashes, descriptors, effective inputs and profiles match. A separate attribute pipeline does not itself require regenerating P1/P2. Changes to a qualified numerical implementation require new identities and affected qualification. Mandatory integration gates remain binding.
+
+Every shipped lighting preset must satisfy B11b’s thresholds on the five required frozen scenes at full lighting. Quaternion is still rendered and reported as diagnostic evidence with unchanged thresholds. All initial lighting presets enable shadows and nonzero AO; disabling these evaluations cannot discharge a frozen lighting gate or the deferred quaternion investigation.
+
+New beauty scenes supplement the frozen numerical, visual and performance scenes. They never replace their cameras, denominators or thresholds.
+
 ## 14. Persistence and export
 
 - **Persistence:** IndexedDB stores discovery records and their thumbnail blobs, reports and
@@ -851,7 +1338,7 @@ save with B or the bookmark button, a thumbnail list, open, delete, and the empt
   base64url UTF-8. It carries every coordinate digit and every scene field; opening one is a
   whole-scene restoration after whole-scene validation. An invalid or unsupported link at startup
   opens the fresh-start view (§13.1) with a notice; one encountered during an existing investigation
-  (a `hashchange`) reports the problem without replacing its scene or either history. Space share links remain an open question (§19 Q6).
+  (a `hashchange`) reports the problem without replacing its scene or either history. Space share links are deferred beyond Project 1 (§19.1 Q6, user decision 2026-10-21); Space scenes travel as scene files (1b.1) and discovery cards (1b.3).
 - **Export invariant (normative, Plane and Space):** the complete export request is captured
   **before the first asynchronous wait**. Later edits may update the live scene but cannot alter the
   export's geometry, appearance, dimensions, sampling, companion data or report. The export publishes
@@ -879,10 +1366,12 @@ save with B or the bookmark button, a thumbnail list, open, delete, and the empt
 | Repeated device loss | Automatic retry stops; saved scenes and Plane remain available. |
 | Allocation failure | §14; the cap is checked before allocating. |
 | Invalid numerical domain | Guards before operations; `numerical failure` as its own status. |
+| Orbit-attribute failure | Separate evidence class and unavailable/failure marking; never a guessed colour. |
 | Competing linked views | Priority order and throttling (§7.5); hidden views paused. |
 | Parameter edits | Probes, inspections, comparisons and thumbnails marked stale. |
 | Import over limits | Whole-scene validation; reported, never silently changed. |
 | Lost or stuck input | Blur stops movement; overview, orientation reset and camera history one action away. |
+| Controller disconnected or input suspended | Movement stops and the last preview commits exactly once; held controls cannot resume movement until they return to neutral; mouse and keyboard keep working (§13.3). |
 
 ## 16. Verification
 
@@ -891,28 +1380,38 @@ save with B or the bookmark button, a thumbnail list, open, delete, and the empt
 |---|---|---|
 | Scene, history, discoveries | Node | Exact strings, canonical serialization and hashes, whole-scene validation (invalid values reported, never clamped; old formats rejected), share-link and scene-file round trips, domain-scoped undo, grouped gestures, camera-history rules, discovery-record validation, source failure and timeout isolation, write cancellation before and after commit, a timeout followed by a committed result, late list results after a workspace switch, the A → open B → undo → Back/Forward case, local-store save, list, delete and storage failure |
 | Scheduler and lifecycle | Node, fake backend | Stale results, A → B → A late completions, epoch races, queue depth, cancellation outcomes, priority, retiring resource accounting; resize, draft-to-settled transitions, sample identity and direct-light-to-shadowed refinement as well as scene edits (direct-light-only samples never enter the accumulator for the later shadowed/AO appearance) |
-| Mathematical models | Node, `tests/reference/` | Analytic answers, recurrence identities, full four-component quaternion updates, escape bounds, singular and range cases, stagnation including coordinate collapse |
+| Mathematical models | Node, `tests/reference/` | Analytic answers, recurrence identities, full four-component quaternion updates, escape bounds, singular and range cases, stagnation including coordinate collapse; independent attribute references (1b.1x) |
 | GPU numerics | Headed installed Chrome, physical GPU | Readback against independent references with preregistered tolerances and exclusions |
-| Rendering | Headed, physical GPU | Silhouettes, depth, normals and termination coverage before colour; adversarial rays; convergence studies |
-| Interaction and recovery | Browser | Intermediate frames, workspace switching, pause/edit/update, blur, cancellation, device loss (destroy and injected), failed allocation, stale instruments, both export races |
+| Rendering | Headed, physical GPU | Silhouettes, depth, normals and termination coverage before colour; adversarial rays; convergence studies; appearance invariance of primary buffers (1b.1x) |
+| Interaction and recovery | Browser | Intermediate frames, workspace switching, pause/edit/update, blur, scripted controller input through an injected `navigator.getGamepads` (a physical controller is never a gate dependency), cancellation, device loss (destroy and injected), failed allocation, stale instruments, both export races |
 | Complete workflow | Headed browser, recorded | All seven acceptance steps, reload, immutable export, reproduction |
 
 ### 16.2 Validation matrix (frozen in the plan before any GPU comparison)
 All seven bulb powers; origin and polar-axis cases; full off-plane quaternion parameters; nonzero κ;
 supported-domain boundaries; iteration budgets 64, 128, 256 and 512; detail approaches with
 independently prepared anchors and reference-convergence checks (after Project 0 A.10). Samples,
-exclusions and quantity-specific tolerances are frozen before GPU comparison. Nothing is validated
+exclusions and quantity-specific tolerances are initially frozen before GPU comparison. The user-approved rev 4.8 analytic-depth amendment is explicitly post-discovery; revised artifacts are re-frozen before renewed qualification, preserving the original failed evidence. The four iteration budgets apply to point arithmetic strata; overview tracing uses budget 128 and the plan's frozen integer-pixel sampling and status-stability screen. Fractal overview depth acceptance is profile-scaled and is distinct from analytic-oracle depth accuracy. The plan preregisters which views require positive-hit coverage; a zero hit floor does not establish an empty slice. A CPU-infeasible sampling definition or coverage floor may change only through a recorded amendment before GPU comparison, followed by fresh preflight and re-freezing of the artifacts. (User-approved amendment, 2026-10-21, rev 4.6.) Nothing is validated
 merely because Project 0 tested power 8 and one quaternion parameter.
 
 ### 16.3 Plane gate (every 1a commit)
+From the Project 1b.1 rev 4.9 cutover, gate acceptance follows the plan's acceptance rule. The full gate runs on every merged feature candidate and at integration boundaries. A promotion merge whose tree is identical to its gated candidate takes fast checks. Intermediate task-branch commits are non-promotable WIP. 1a's per-commit records stand (user-approved amendment, 2026-10-21).
 `npm test`, `npm run test:browser` (SwiftShader and `--hardware`), `npm run test:navigation`,
 `npm run test:graphics` and `npm run build` stay green, including the deep-coordinate and actual
 worker checks at 10¹⁰⁰⁰ and the deliberately delayed navigation tests. Shared and Space suites are
 added beside them, never replacing Plane coverage.
 
 ### 16.4 Performance acceptance (Space, frozen Project 1 workload)
-Project 0's measurement discipline: per-trial results; completed work, publication and readback
-reported separately; coverage checks; visible-output verification; no single average-FPS figure.
+**B15 P17-1 instrumentation clarification:** Record the scheduling mode, configured lead time and enabled instrumentation in each attempt. Judged measurements disable the continuous MessageChannel stall probe and main-thread busy-spin scheduling. Diagnostic early-wake runs additionally report observed spin time. Preserve every attempt, its actual issuance timestamps and its classification. The 4 ms anomaly threshold, workload targets, trial counts and application-failure precedence remain unchanged. P21-1 explicitly relaxes P3 attempt timing validity through policy `atlas.p3-timing-budget-v1`; it does not change the scheduler, absolute input targets, request-to-publication clocks or application metrics. This allowance applies regardless of anomaly cause and does not establish that issuance error cannot affect a measured result. All publications, completions and latency observations remain in their applicable metrics; tolerated anomalies authorize neither sample removal nor timestamp correction. A proposed replacement acceptance scheduler requires a recorded protocol amendment and validation of its effect on application scheduling; fewer late callbacks alone do not establish equivalence.
+
+**B15 P21-1 attempt classification:** An established application target failure makes the attempt `failed` regardless of timing anomalies. Exclusion requires a demonstrated harness failure without an established application failure. Under P3 timing policy `atlas.p3-timing-budget-v1`, an attempt is timing-eligible only if the complete frozen input schedule is recorded, no input is issued early, no issuance is more than 8 ms late, and at most three issuances are more than 4 ms late. Count anomalies across the entire attempt’s orbit, interaction and stress phases together; do not reset the allowance at phase boundaries. Compare unrounded observed lateness without an added numerical tolerance: exactly 4 ms is not an anomaly, exactly 8 ms is within the maximum, and exactly three anomalies are within the allowance. Every issuance more than 4 ms late remains a recorded timing anomaly, including its phase, input index, target and actual issuance timestamp. Anomalies within the allowance are tolerated, never relabelled explained or environmental. Missing, duplicate, malformed or early input observations do not qualify for the allowance. Timing ineligibility makes the attempt `inconclusive`, except where the preceding application-failure or demonstrated-harness-failure rule determines its classification. Timing eligibility alone does not establish a passing attempt.
+
+**P21-1 provenance and prospective use:** This is a post-discovery acceptance-policy amendment under Claude/Codex’s delegated product direction, informed by the observed scheduling anomalies. The numerical allowance is an engineering choice, not a demonstrated environmental correction or a statistical validation result. Freeze the policy before new judged runs. Preserve previous evidence and its original classifications; do not retrospectively promote those attempts or pool attempts from different timing policies. Fresh acceptance requires all existing non-timing prerequisites and targets, at least three passing trials within five attempts per scene, and no established application failure. Control and smoke runs remain separate evidence and do not acquire P3 acceptance status. Peer decision: Claude/Codex, 2026-10-23, under the user’s delegation; the user is informed. This tolerance can change a threshold verdict. This amendment asserts no unavoidable timer floor, no exclusion of `nvidia-smi` as a cause, and no claim about the effect of changing sessions.
+
+Performance evidence schema version 5 records `measurement.schedulingMode`, `measurement.leadTimeMs`, instrumentation flags and `measurement.timingPolicy` on every attempt before work begins and in its page trial. P21-1 judged attempts use `measurement.timingPolicy: 'atlas.p3-timing-budget-v1'`. Preserve every raw input observation and record expected and observed input counts, the count strictly above 4 ms, maximum lateness, strict timing invalidation and policy timing invalidation. The complete frozen schedule contains 2,315 inputs, with its existing phase counts and identities. Derive policy eligibility from those observations; missing evidence is non-accepting. Keep `scheduleAbsolute` unchanged, including its strict `invalidated` flag for any lateness above 4 ms. P3’s classifier applies the aggregate policy separately; other timing-helper consumers do not silently inherit this allowance. Record `schemaVersion: 5` on the evidence envelope and each attempt. Schema-version-4 attempts and attempts under another or missing timing policy cannot pass under this policy or be pooled with version-5 acceptance trials. Retain the raw `trial.issued` entries `{phase, index, target, issuedAt, lateByMs}` in the page performance clock, with `trial.timeOriginMs` and phase windows. Record `timing.expectedInputCount`, `observedInputCount`, `lateOver4Count`, `maxLateByMs`, `strictInvalidated` and `policyInvalidated`, including partial attempts; the classifier derives eligibility from the raw entries rather than trusting these summaries.
+
+**B15 P19-1 publication accounting (Claude/Codex, 2026-10-23; delegated product direction):** P3 published draft cadence and consecutive-publication intervals count every originally eligible, successfully completed and CPU-validated draft presentation once, including the historical notifications from variants (b) and (c) under §9.1. These are displayed-validated frames: presentation evidence is presenter queue completion, not independently observed compositor visibility. Use the observed publication emission time within the orbit measurement window; neither submission nor earlier confirmation backdates a notification into that window. Keep completed-report throughput separate. Variant (a) retains ordinary publication and variant (d) retains strict original/update pairing and its existing acceptance-time rule. Preserve all frozen targets, workload settings, trial counts and failure precedence. Earlier failed evidence remains failed; acceptance requires fresh measurements.
+
+Project 0's measurement discipline: per-trial results; completed work, publication and readback reported separately; coverage checks; visible-output verification; no single average-FPS figure. Rendering implementation tasks shall maintain an injected diagnostic performance ladder from a minimal execution baseline to the complete product path. Before measurement, freeze each rung, workload, comparison endpoint, queue depth, instrumentation, run order and incremental latency/throughput budget. Compare matched workloads and report clocks, active GPU duration, CPU work and synchronization delays separately. Unfenced deep-queue ceilings are separate diagnostics. Incomplete rungs cannot satisfy acceptance gates. Preserve every result; budget overruns require investigation and a recorded peer disposition before promotion. Existing acceptance thresholds, quality, resource limits and lifecycle budgets remain unchanged.
 Initial targets at 1280 × 720: ≥ 30 completed drafts per second with consecutive-interval p95
 ≤ 50 ms; interaction p95 ≤ 100 ms; stress replacement ≤ 250 ms; no application main-thread task over
 50 ms; and the settled target of ≤ 2 s from the settled request to publication of the first complete
@@ -930,13 +1429,17 @@ stability acceptance requirements.
 Project 1 does not reinterpret Project 0's G1 requirements.
 
 ## 17. Deferred
-Temporal reprojection, path tracing, volumetrics and meshing (charter); Mandelbox; fractional and
+Temporal reprojection, path tracing, volumetrics and meshing (charter); Mandelbox (a separate bounded increment after 1b.3, §3 and §21.1, not part of 1a or 1b); shadow softness, glow, rim/Fresnel controls, metals, transparency, multiple lights and environment maps (rev 6.0); fractional and
 higher bulb powers; arbitrary 4D slice rotations; section clipping and cut faces; for 1c (§21):
 general formula perturbation, reference reuse across parameter changes and speculative reference
 prediction, a general GPU arbitrary-precision framework, a second runtime backend or an interactive
 CPU Space fallback, and unlimited depth, universal accuracy claims or guaranteed performance at every
 admitted depth; estimator-scaled flight assist (unless it proves useful); inertia and collision; general render
-queues; tiled giant stills; parameter maps, variations and publication animation.
+queues; tiled giant stills; parameter maps, variations and publication animation. User decisions of 2026-10-21:
+touch and mobile Space navigation (Plane's mobile behaviour is preserved); Space share URLs (scene
+files from 1b.1 and discovery cards from 1b.3 carry Space scenes). Also deferred: controller
+navigation in Plane; controller remapping and invert options, and non-standard controller layouts
+(the user's controller is Xbox style, §19.1); controller focus picking.
 
 **User-stated future direction (2026-10-20), outside Project 1:** a landing page that presents the
 project, its goals and what others are doing; and shared discoveries served from a centrally hosted
@@ -962,7 +1465,7 @@ own spec (hosting, identity, moderation, privacy and trust of remote records) an
 
 ## 19. Questions for the user
 
-### 19.1 Answered (2026-10-20)
+### 19.1 Answered (2026-10-20 and 2026-10-21)
 - **Fresh start** (rev 2 Q1): open Plane (§13.1).
 - **Camera moves in undo** (rev 2 Q4): separate camera history, as recommended (§6).
 - **Legacy output** (rev 2 Q7) and legacy reading: "No this is green field development. No need to
@@ -977,26 +1480,50 @@ own spec (hosting, identity, moderation, privacy and trust of remote records) an
 - **Deep zoom** (2026-10-20): "Yes, add deep zoom as 1c in Project 1." Applied as §21 and charter
   amendment A2.
 
+- **Space's initial look** (rev 2 Q2; user decision, 2026-10-21): neutral inspection lighting
+  (§13.2); atmospheric looks remain available as presets (1b.3, §13.7).
+  Presets move to 1b.1x under revision 6.0; neutral initial lighting remains unchanged.
+- **Touch/mobile Space navigation** (rev 2 Q5; user decision, 2026-10-21): desktop/laptop first —
+  mouse, trackpad and keyboard; no Space touch gestures in Project 1; Plane keeps its mobile
+  behaviour. The user added: "We should support joystick for exploration as well." Applied as
+  controller exploration of Space in 1b.1 (§13.3), co-designed with Codex (runs
+  20261021T033701Z-268a and 20261021T034408Z-2f95, READY for the standard-layout scope); Plane controller
+  navigation is deferred (§17).
+- **Space share URLs** (rev 2 Q6; user decision, 2026-10-21): scene files only in 1b.1 (discovery
+  cards in 1b.3); Space share URLs are deferred beyond Project 1 (§13.1, §14, §17).
+- **Backend annex and anchored camera** (user decisions, 2026-10-21): the §9.1 WebGPU backend annex is
+  adopted as normative text, and the anchored camera (§5.2, §10.1) is approved for ordinary Space;
+  the §13.2 precision-badge erratum ("(1b.2)") is applied.
+- **Controller models** (rev 4.2 Q11; user decision, 2026-10-21): "Xbox style". Standard-layout
+  gamepads (`mapping === "standard"`, which Xbox-style controllers report) are sufficient for 1b.1;
+  non-standard joysticks and flight sticks, mapping profiles and remapping stay deferred (§17).
+- **Production `allocate`** (user decision, 2026-10-21: "approve amending the adopted §9.1 annex to
+  add allocate"): §9 gains `allocate({name, bytes, usage, data?}) → opaque buffer handle` and the
+  §9.1 Allocator bullet specifies it (rev 4.3), so B08/B09 model and points buffers have a
+  production route; proposed in the 1b.1 B00 review and agreed by Codex (run 20261021T060324Z-4e7f).
+
 ### 19.2 Open
 These affect only 1b and 1c; the architecture supports either answer to each.
-2. **Space's initial look:** neutral inspection or atmospheric exploration? Both remain available as
-   presets.
 3. **Bridge flow:** should the bridge open the linked instruments immediately, or offer a compact
    "Compare the section" action?
-5. **Touch/mobile Space navigation** in Project 1, or desktop-first? (Plane's mobile behaviour is
-   preserved regardless.)
-6. **Space share URLs** in Project 1, or files and discovery cards only? (Plane's native share links
-   exist from 1a regardless.)
 9. **USER DECISION — partial deep zoom:** if the Mandelbulb spike is partial or no-go, may 1c ship
    quaternion-Julia deep zoom while the bulb stays at ordinary precision (recommended), or must 1c
    wait for both families?
 10. **USER DECISION — deepest-range interaction:** at the deepest supported settings, is progressive
     exploration with visible reference-preparation pauses acceptable (recommended), or is
     continuous interactive motion a release requirement?
+    **User answers (2026-10-20):**
+    - **Q9:** yes. 1c may ship quaternion-Julia deep zoom while the bulb stays at ordinary
+      precision.
+    - **Q10:** the 1c spike proposes the reference-preparation pause budgets (typical and deepest)
+      for the user's approval before acceptance. The user's stated expectation is that pauses are
+      "way lower than a second".
+
 
 ## 20. Revision triggers
 None of these affects 1a.
-- Project 0 records its decision: confirm or revise §2, §9 (backend annex) and §10.3.
+- Project 0 records its decision: confirm or revise §2, §9 (backend annex) and §10.3. (§9: resolved by
+  §9.1, adopted by the user on 2026-10-21.)
 - Project 0's precision section reports: revisit §10.5 and the §16.2 matrix.
 - **Project-0-dependent (1b, §10):** per the relayed execution decision E8, Project 0's G5-A
   compensated evaluation was defeated by compiler reassociation and recorded as invalid; replacement
@@ -1014,7 +1541,15 @@ None of these affects 1a.
 ## 21. Project 1c — Space deep zoom (rev 4; user decision, 2026-10-20)
 
 ### 21.1 Placement and gates
-- 1c follows 1b.3 and never delays 1b or its acceptance demonstration.
+- 1c follows 1b.3 and the bounded Mandelbox increment (charter A3), and never delays 1b or its acceptance demonstration. (Rev 6.0 ordering: 1b.3 → bounded Mandelbox increment → 1c.0 → qualified 1c.1 integration → remaining Project 2; rev 6.0, Claude/Codex converged 2026-10-22 under the user's delegation of product direction ("you and Codex are running this… This is your show"); user informed.)
+- **Mandelbox boundaries.** Mandelbox starts with one named conventional setting and the full admission contract (charter A3). The increment ends with a qualified release or a recorded no-go; unsuccessful qualification must not postpone 1c indefinitely. Shipping ordinary Mandelbox does not automatically add it to 1c's spike: the specified quaternion-first, bulb-conditional study stays bounded, and a Mandelbox precision experiment needs its own formulation, references, scope and preregistered budget (a separately scoped amendment).
+- **1c outcomes and Mandelbox.** The spike's results change subsequent investment, not whether ordinary Mandelbox was worth shipping:
+
+  | 1c outcome | Consequence |
+  |---|---|
+  | **Go** | Integrate the qualified deep profiles. Shared arithmetic and resource-management findings may inform a later Mandelbox study, but provide no inherited family qualification. |
+  | **Partial** | Deliver the demonstrated families/domains and keep the others at ordinary precision. Decide any Mandelbox precision study on its own evidence and expected value. |
+  | **No-go** | Publish the measured limitation and continue ordinary-precision investigation features. Distinguish a shared arithmetic obstacle from a family-specific failure; neither automatically settles Mandelbox feasibility. |
 - It starts only after Project 0 records its selected backend and arithmetic formulation. That
   record is a prerequisite, not evidence that 1c's additional formulations work. A failed 1c
   experiment does not reopen Project 0 or block the ordinary-precision 1b release.
