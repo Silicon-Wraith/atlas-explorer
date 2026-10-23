@@ -18,5 +18,6 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
     }
     console.log(JSON.stringify([...groups].map(([key,results])=>({group:JSON.parse(key),...compareLadder(results,manifest)})),null,2));
   }
-  else {if(args.length!==2||args[0]!=='--cell'||!/^\d+$/.test(args[1])||!cells[Number(args[1])])throw Error('usage: --list | --cell <registered index> | --compare <evidence directory>');process.env.ATLAS_LADDER_CELL=JSON.stringify(cells[Number(args[1])]);process.argv=[process.argv[0],process.argv[1],'--group','performance-ladder'];await import('./space.mjs');}
+  else if(args.length===1&&args[0]==='--all'){delete process.env.ATLAS_LADDER_CELL;process.argv=[process.argv[0],process.argv[1],'--group','performance-ladder'];await import('./space.mjs');}
+  else {if(args.length!==2||args[0]!=='--cell'||!/^\d+$/.test(args[1])||!cells[Number(args[1])])throw Error('usage: --all | --list | --cell <registered index> | --compare <evidence directory>');process.env.ATLAS_LADDER_CELL=JSON.stringify(cells[Number(args[1])]);process.argv=[process.argv[0],process.argv[1],'--group','performance-ladder'];await import('./space.mjs');}
 }

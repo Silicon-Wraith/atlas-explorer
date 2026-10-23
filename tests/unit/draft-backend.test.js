@@ -71,3 +71,23 @@ test('r4-F2 real backend loss emits interrupted before any late renderer summary
     assert.ok(h.updates.at(-1).identity.generation.deviceEpoch > frames[0].identity.generation.deviceEpoch);
   } finally { h.gpu.control.maps.release(); h.renderer.destroy(); h.real.destroy(); }
 });
+
+test('B15 r14 unpaced newest-wins cannot accumulate reservations behind a held configure', async () => {
+  const h = await setup(), jobs = [];
+  const baseline = h.gpu.control.natives.filter(n=>n.kind==='texture').length;
+  try {
+    h.gpu.control.scopes.held = true;
+    for (let i = 0; i < 80; i++) {
+      const request = h.request();
+      jobs.push(h.renderer.render(request, {currentNavigation:()=>1}).done);
+      await flush();
+    }
+    const textures = h.gpu.control.natives.filter(n => n.kind === 'texture');
+    assert.ok(textures.length <= baseline + 11, `bounded configuration lane, saw ${textures.length} native textures`);
+    assert.equal(h.real.diagnostics().inventory.filter(e=>e.width && e.state!=='pooled').length, 0, 'superseded configure holds no target reservation');
+    h.gpu.control.scopes.release();
+    const results = await Promise.all(jobs);
+    assert.equal(results.at(-1).outcome, 'completed');
+    assert.ok(results.slice(0,-1).every(r=>r.outcome==='superseded'));
+  } finally { h.gpu.control.scopes.release(); await Promise.allSettled(jobs); h.renderer.destroy(); h.real.destroy(); }
+});

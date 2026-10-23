@@ -46,3 +46,27 @@ test('B15-REC-G the registered ladder freezes targets budgets workload hash and 
   assert.equal(comparisons.find(c=>c.rung==='L5a').latency,.2);assert.equal(comparisons.find(c=>c.rung==='L5b').latency,0);
   assert.equal(compareLadder(results.slice(1),manifest).state,'incomplete');
 });
+
+test('B15 r14 lower ladder drafts reuse the tracked product target pool', async () => {
+  const gpu=createRendererDeviceDouble(productPipelineSet(),{limits:{maxComputeWorkgroupsPerDimension:65535}});
+  const driver=await createDraftLadderDriver({canvas:gpu.canvas,clock:()=>0,scene:createSpaceScene({model:'sphere'}),rung:'L0',acquire:gpu.acquire,loadSource:gpu.loadSource,format:'bgra8unorm'});
+  try {
+    await driver.submit(); const count=gpu.control.natives.filter(n=>n.kind==='texture').length;
+    await driver.submit();
+    assert.equal(gpu.control.natives.filter(n=>n.kind==='texture').length,count);
+    assert.ok(driver.backend.diagnostics().tracked>=640*360*76);
+  } finally { await driver.destroy(); }
+});
+
+test('B15 r14 ladder metrics use orbit window and preserve phase latency', async () => {
+  const {ladderMetrics}=await import('../support/space-performance-ladder.mjs');
+  const events=[];
+  for(const [id,at,latency,phase] of [['a',1000,10,'orbit'],['b',1500,20,'orbit'],['c',31000,200,'interaction']]) {
+    const identity={requestId:id};
+    events.push({type:'request',identity,requestedAt:at,phase},{type:'presenter-completion',identity,queueCompletedAt:at+latency},{type:'benchmark-completion',identity,at:at+latency});
+  }
+  const metrics=ladderMetrics(events,68000,{orbit:{start:1000,end:31000},interaction:{start:31000,end:61000}});
+  assert.equal(metrics.benchmarkDraftsPerSecond,2/30);
+  assert.equal(metrics.latencyP95Ms,20);
+  assert.equal(metrics.phases.interaction.latencyP95Ms,200);
+});

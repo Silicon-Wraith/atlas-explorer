@@ -12,7 +12,7 @@ async function measureInPage(scene) {
   const {TRACING_VERSION}=await import('/src/space/render/webgpu/passes.js');
   const canvas=document.createElement('canvas');document.body.append(canvas);
   const backend=createWebGPUBackend({canvas,clock:performance}),versions={kernelVersion:KERNEL_VERSION,tracingVersion:TRACING_VERSION};
-  const snapshots=[],observe=label=>{const d=backend.diagnostics();snapshots.push({label,at:performance.now(),tracked:d.tracked,retiring:d.retiring,peak:d.peak});};
+  const snapshots=[],observe=label=>{const d=backend.diagnostics();snapshots.push({label,at:performance.now(),tracked:d.tracked,retiring:d.retiring,pooled:d.inventory.filter(e=>e.state==='pooled').reduce((sum,e)=>sum+e.bytes,0),peak:d.peak});};
   const proxy={...backend};
   for(const method of ['allocate','release','submitBatch','readback','present'])proxy[method]=(...args)=>{try{return backend[method](...args);}finally{observe(method);}};
   proxy.configureTargets=async(...args)=>{try{return await backend.configureTargets(...args);}finally{observe('configureTargets');}};
@@ -32,7 +32,7 @@ async function measureInPage(scene) {
     const changed=structuredClone(scene);changed.camera.positionLocal[0]+=0.1;
     const second=await renderer.render(request(changed),{currentGeneration:generation}).done;observe('replacement-settled');
     return {case:'settled retained-image replacement; no forced in-flight overlap',peakRetiringObserved:Math.max(0,...snapshots.map(s=>s.retiring)),dimensions:{width:3840,height:2160},layout:'space-targets-v2',layoutBytesPerPixel:76,first:first.outcome,replacement:second.outcome,
-      peakConcurrentTracked:backend.diagnostics().peak,snapshots,reports,publications,driverAllocations:'unavailable; allocator tracks application-owned resources only'};
+      peakConcurrentTracked:backend.diagnostics().peak,poolIncluded:true,finalInventory:backend.diagnostics().inventory,snapshots,reports,publications,driverAllocations:'unavailable; allocator tracks application-owned resources only'};
   } finally {renderer.destroy();backend.destroy();canvas.remove();}
 }
 export async function runMemory({page,url,environment,report,pass}) {

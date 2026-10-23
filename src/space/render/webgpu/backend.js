@@ -333,8 +333,9 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       return createScoped(() => allocator.allocate(description)).value;
     }),
     // Transactional: every byte reserved first; creation errors captured; nothing earlier is released.
-    configureTargets: ({ epoch: requestedEpoch, layoutId, internalSize: requestedInternal, outputSize: requestedOutput } = {}) => timedAsync('configure', async () => {
+    configureTargets: ({ epoch: requestedEpoch, layoutId, internalSize: requestedInternal, outputSize: requestedOutput, signal } = {}) => timedAsync('configure', async () => {
       checkEpoch(requestedEpoch);
+      if (signal?.aborted) throw new BackendError('unavailable', 'target configuration superseded');
       if (layoutId !== TARGET_LAYOUT_ID) invalid('unknown target layoutId');
       const internalSize = size(requestedInternal, 'internalSize'), outputSize = size(requestedOutput, 'outputSize');
       const maxDimension = attempt.limits.maxTextureDimension2D;
@@ -344,11 +345,20 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
         names.push([name, index, layout.count]);
         descs.push(Object.freeze({ name: layout.count === 1 ? name : `${name}-${index}`, width: internalSize.width, height: internalSize.height, format: layout.format, bytesPerTexel: layout.bytesPerTexel, bytes: internalSize.width * internalSize.height * layout.bytesPerTexel }));
       }
-      const { value: created, status } = createScoped(() => allocator.transaction(descs));
-      const error = await status;
+      // The complete layout is the family-requirements key (all current families include recovery).
+      // Partial releases can be reused individually, including the non-geometry spare at 4K.
+      const pool = JSON.stringify([layoutId, outputSize, TARGET_LAYOUT]);
+      const { value: created, status } = allocator.canReuse(descs, pool)
+        ? { value: allocator.transaction(descs, { pool }), status: Promise.resolve(null) }
+        : createScoped(() => allocator.transaction(descs, { pool }));
+      const abandon = () => created.forEach(handle => allocator.release(handle, { discard: true }));
+      signal?.addEventListener('abort', abandon, { once: true });
+      let error;
+      try { error = await Promise.race([status, current.lost]); } finally { signal?.removeEventListener('abort', abandon); }
       if (current.lossPending) { await current.lost; throw new BackendError('device-lost', 'the device was lost during configuration'); }
       if (current !== attempt) throw new BackendError('device-lost', 'the device was lost during configuration');
-      if (error) { created.forEach(handle => allocator.release(handle)); throw new BackendError('allocation-failed', `target ${error}`); }
+      if (signal?.aborted) throw new BackendError('unavailable', 'target configuration superseded');
+      if (error) { abandon(); throw new BackendError('allocation-failed', `target ${error}`); }
       const handles = {}, descriptions = {};
       names.forEach(([name, index, total], position) => {
         if (total === 1) { handles[name] = created[position]; descriptions[name] = descs[position]; }

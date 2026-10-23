@@ -98,10 +98,10 @@ export async function createDraftLadderDriver({ canvas, scene, rung, clock = () 
       }throw error;
     }finally{if(lastValidated!==slot)free(slot);}
   }
-  async function submit(nextScene,{settled=false,requestedAt=clock()}={}){
+  async function submit(nextScene,{settled=false,requestedAt=clock(),phase='orbit'}={}){
     if(destroyed)throw Error('driver destroyed');if(active.size>=2)throw Error('two live frame slots exhausted');
     revision++;const request=createSpaceRequest({scene:sceneCodec.validate(nextScene??scene),purpose:'interactive',width:1280,height:720,profile:settled?'settled':'draft',generation:generation(),viewId:config.lifecycle||settled?'ladder-product':'ladder',versions});
-    const at=requestedAt;emit('request',{identity:identity(request),requestedAt:at,settled});
+    const at=requestedAt;emit('request',{identity:identity(request),requestedAt:at,settled,phase});
     let work;
     if(config.lifecycle||settled)work=product.render(request,{currentGeneration:generation,currentNavigation:()=>1,currentNavigationContent:()=>navigationContentKey(request.sceneSnapshot,request.output),requestedAt:at}).done;
     else work=lower(request);

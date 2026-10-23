@@ -151,6 +151,18 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   let current = null, interactive = null, published = null, geometryCache = null, destroyed = false;
   let preparation = null, prepared = null, acquisition = null, acquiring = null, serial = 0, auxSerial = 0;
   let requestOrder = 0, displayOrder = -1;
+  let targetConfiguration = Promise.resolve();
+  async function configure(record, description) {
+    const previous = targetConfiguration, lane = deferred();
+    targetConfiguration = lane.promise;
+    try {
+      await previous;
+      // Recheck after every asynchronous wait, before any reservation. A waiting newest-wins
+      // request owns no targets, and an aborted configure drains its scopes before the next one.
+      if (record.result || record.cancelled || !executable(record)) return null;
+      return await backend.configureTargets({ ...description, signal: record.configuration.signal });
+    } finally { lane.resolve(); }
+  }
   const emit = (name, value) => { for (const listener of listeners[name]) { try { listener(deepFreeze(value)); } catch { /* isolate observers */ } } };
   const subscribe = name => listener => { if (typeof listener !== 'function') throw new TypeError('listener must be a function'); listeners[name].add(listener); return () => listeners[name].delete(listener); };
   const frameRecords = createDraftRecords({ clock: now, onUpdate: update => emit('PublicationUpdate', update) });
@@ -197,6 +209,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   function finish(record, result) {
     if (record.result) return;
     if (!RENDER_OUTCOMES.includes(result.outcome)) throw new RangeError('unknown job outcome');
+    record.configuration?.abort();
     if (record.internal) {
       record.result = result; release(record.handles); jobs.delete(record.request.jobId);
       record.done.resolve(result); return;
@@ -759,7 +772,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       effective: effectiveParameters(model.id, request.sceneSnapshot.parameters).effective,
       requestedAt, builder: createReportBuilder(request, { implementation: versions, clock: now,
         environment: () => ({ backend: observed('Space backend interface', 'renderer backend contract'), device: acquisition?.identity ?? UNAVAILABLE }) }),
-      done: deferred(), handles: [], geometryRequestId: request.requestId, geometrySerial: 0, samplesCompleted: 0,
+      done: deferred(), configuration: new AbortController(), handles: [], geometryRequestId: request.requestId, geometrySerial: 0, samplesCompleted: 0,
       milestones: {}, counts: emptyCounts(), queueElapsedMs: 0, completionCount: 0, timestampCount: 0, timestampMs: 0, outstanding: 0, outstandingMax: 0 };
     if (request.output.purpose === 'interactive') {
       // Running drafts may finish within this navigation stream. The scheduler
@@ -809,13 +822,16 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         if (request.quality.sampling.targetSamples > 1) {
           // The annex allocates complete target sets. Keep only the spare geometry
           // before allocating working targets, bounding the transient allocation.
-          const extra = await backend.configureTargets(description), all = flatHandles(extra); hold(all);
+          const extra = await configure(record, description);
+          if (!extra) return;
+          const all = flatHandles(extra); hold(all);
           if (record.result || destroyed) { release(all); return; }
           spare = Object.fromEntries(geometryNames.map(name => [name, extra.handles[name]]));
           const kept = Object.values(spare); release(all.filter(handle => !kept.includes(handle)));
           record.handles.push(...kept);
         }
-        const targets = await backend.configureTargets(description);
+        const targets = await configure(record, description);
+        if (!targets) return;
         hold(flatHandles(targets));
         if (record.result || destroyed) { release(flatHandles(targets)); return; }
         record.handles.push(...flatHandles(targets)); record.targets = targets;
@@ -861,6 +877,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   function cancel(jobId) {
     const record = jobs.get(jobId); if (!record || record.internal) return scheduler.cancel(jobId);
     record.cancelled = true;
+    record.configuration.abort();
     if (draftConfig.mode === 'provisional' && record.frame) rejectFrame(record, 'cancelled');
     if (record.scheduled) return scheduler.cancel(jobId);
     record.cancellation ??= deferred();

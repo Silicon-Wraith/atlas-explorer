@@ -51,7 +51,11 @@ function parseArgs(argv) {
 
 const options = parseArgs(process.argv.slice(2));
 const { chromium } = await import('playwright');
-installSuiteDeadline(`space-${options.group}`);
+// The registered ladder executes all cells in one Chrome session; each cell retains its
+// own 500 s evaluation bound plus bounded probe/setup/cleanup. Other suites keep their bound.
+const ladderCount=options.group==='performance-ladder'&&!process.env.ATLAS_LADDER_CELL
+  ? (await import('./support/space-performance-ladder.mjs')).ladderCells(JSON.parse(await readFile('tests/reference/performance-ladder-v1.json'))).length : 1;
+installSuiteDeadline(`space-${options.group}`,LIMITS.suite*ladderCount);
 await mkdir('artifacts/runtime', { recursive: true });
 process.env.TMPDIR = resolve('artifacts/runtime');
 await mkdir(CHROME_TMPDIR, { recursive: true }); // installed Chrome's socket path must fit (bounded.mjs)

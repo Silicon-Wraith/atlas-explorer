@@ -36,8 +36,14 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
   if (!Number.isSafeInteger(cap) || cap < 0) throw new TypeError('cap must be a non-negative safe integer');
   let currentEpoch = epoch, tracked = 0, peak = 0, next = 0, failNext = false;
   const resources = new Map(), issued = new WeakSet(), holders = new Map();
+  const pooled = new Set(); // idle target textures, still included in resources/tracked
+  const poolKey = (description, group) => group ? JSON.stringify([group, description]) : null;
+  function evict(entry) {
+    pooled.delete(entry); resources.delete(entry.handle); tracked -= entry.description.bytes; destroyNative(entry.native);
+  }
 
   function reserve(bytes) {
+    for (const entry of pooled) { if (tracked + bytes <= cap) break; evict(entry); }
     if (tracked + bytes > cap) throw new BackendError('allocation-failed', `tracked allocation cap exceeded (${tracked} + ${bytes} > ${cap} bytes)`);
     if (failNext) { failNext = false; throw new BackendError('allocation-failed', 'injected allocation failure'); }
   }
@@ -45,17 +51,21 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
     try { return factory.create(data === undefined ? description : { ...description, data }); }
     catch (error) { throw new BackendError('allocation-failed', `${description.name}: ${error?.message ?? error}`); }
   }
-  function record(description, native) {
+  function record(description, native, key = null) {
     const handle = Object.freeze({ id: `space-resource-${++next}`, epoch: currentEpoch });
     issued.add(handle);
-    resources.set(handle, { handle, epoch: currentEpoch, description, native, retiring: false, tickets: new Set(), mappings: new Set(), owners: new Set(), allocatedAt: now() });
+    resources.set(handle, { handle, epoch: currentEpoch, description, native, poolKey: key, retiring: false, tickets: new Set(), mappings: new Set(), owners: new Set(), allocatedAt: now() });
     tracked += description.bytes; peak = Math.max(peak, tracked);
     return handle;
   }
   function destroyNative(native) { try { factory.destroy(native); } catch { /* a lost device may refuse; nothing else holds it */ } }
   function reclaim(entry) {
     if (!entry.retiring || entry.tickets.size || entry.mappings.size || entry.owners.size || !resources.has(entry.handle)) return;
-    resources.delete(entry.handle); tracked -= entry.description.bytes; destroyNative(entry.native);
+    if (entry.poolKey && !entry.failure) {
+      pooled.add(entry);
+      // Four complete v2 sets worth of idle textures. Live/retiring owners are never evicted.
+      while (pooled.size > 44) evict(pooled.values().next().value);
+    } else evict(entry);
   }
   function lookup(handle, { allowRetiring = false } = {}) {
     const entry = resources.get(handle);
@@ -71,21 +81,40 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
     },
     // Several resources as one reservation: the sum is checked first; any creation failure destroys
     // what was created and restores current tracking, while peak keeps the temporary pressure.
-    transaction(descs) {
+    transaction(descs, { pool = null } = {}) {
       if (!Array.isArray(descs) || !descs.length) invalid('a transaction needs at least one description');
       const parsed = descs.map(describe);
-      reserve(parsed.reduce((sum, item) => sum + item.description.bytes, 0));
+      const reused = parsed.map(item => [...pooled].find(entry => entry.poolKey === poolKey(item.description, pool)));
+      // Remove candidates from the eviction queue before reserving only the missing bytes.
+      reused.forEach(entry => { if (entry) pooled.delete(entry); });
+      try { reserve(parsed.reduce((sum, item, index) => sum + (reused[index] ? 0 : item.description.bytes), 0)); }
+      catch (error) { reused.forEach(entry => { if (entry) pooled.add(entry); }); throw error; }
       // Each created resource counts toward the lifetime peak at once; a rollback restores current
       // tracking but never erases the evidence of that temporary pressure.
       const natives = [];
       let created = 0;
-      try { for (const item of parsed) { natives.push(create(item)); created += item.description.bytes; peak = Math.max(peak, tracked + created); } }
-      catch (error) { natives.forEach(destroyNative); throw error; }
-      return Object.freeze(parsed.map((item, index) => record(item.description, natives[index])));
+      try { for (const [index, item] of parsed.entries()) {
+        natives.push(reused[index]?.native ?? create(item));
+        if (!reused[index]) created += item.description.bytes;
+        peak = Math.max(peak, tracked + created);
+      } }
+      catch (error) {
+        natives.forEach((native, index) => { if (!reused[index]) destroyNative(native); });
+        reused.forEach(entry => { if (entry) pooled.add(entry); }); throw error;
+      }
+      return Object.freeze(parsed.map((item, index) => {
+        const old = reused[index];
+        if (old) { resources.delete(old.handle); tracked -= old.description.bytes; }
+        return record(item.description, natives[index], poolKey(item.description, pool));
+      }));
     },
-    release(handle) {
+    canReuse(descs, pool) {
+      return descs.every(desc => [...pooled].some(entry => entry.poolKey === poolKey(describe(desc).description, pool)));
+    },
+    release(handle, { discard = false } = {}) {
       if (!issued.has(handle)) invalid('unknown resource handle');
       const entry = resources.get(handle); if (!entry) return;
+      if (discard) entry.poolKey = null;
       entry.retiring = true; reclaim(entry);
     },
     retain(handle, owner) {
@@ -114,7 +143,7 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
     // Loss or teardown: every native resource is destroyed and tracking returns to zero; peak persists.
     destroyAll() {
       for (const entry of resources.values()) destroyNative(entry.native);
-      resources.clear(); holders.clear(); tracked = 0;
+      resources.clear(); holders.clear(); pooled.clear(); tracked = 0;
     },
     setEpoch(value) {
       if (!Number.isSafeInteger(value) || value < 1) throw new RangeError('epoch must be a positive integer');
@@ -124,10 +153,10 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
     diagnostics() {
       let retiring = 0;
       const inventory = [...resources.values()].map(entry => {
-        if (entry.retiring) retiring += entry.description.bytes;
+        if (entry.retiring && !pooled.has(entry)) retiring += entry.description.bytes;
         const extra = Object.fromEntries(INVENTORY_KEYS.filter(key => entry.description[key] !== undefined).map(key => [key, entry.description[key]]));
         return Object.freeze({ id: entry.handle.id, epoch: entry.epoch, name: entry.description.name, bytes: entry.description.bytes, ...extra,
-          state: entry.retiring ? 'retiring' : 'live', tickets: entry.tickets.size, mappings: entry.mappings.size, owners: entry.owners.size, allocatedAt: entry.allocatedAt,
+          state: pooled.has(entry) ? 'pooled' : entry.retiring ? 'retiring' : 'live', tickets: entry.tickets.size, mappings: entry.mappings.size, owners: entry.owners.size, allocatedAt: entry.allocatedAt,
           ...(entry.failure === undefined ? {} : { failure: entry.failure }) });
       });
       return Object.freeze({ tracked, peak, retiring, inventory: Object.freeze(inventory) });
