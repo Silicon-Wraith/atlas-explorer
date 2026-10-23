@@ -8,11 +8,17 @@
 // desaturated LIGHTING_TINT, in display space so that it marks every flagged pixel whatever its brightness and
 // however few of its samples failed; it never uses the primary-failure magenta. The presenter adds no transfer
 // function. Bindings: APPEARANCE_BINDINGS.
-struct DisplayUniforms { origin: vec2<u32>, size: vec2<u32>, lighting_stage: u32, view_mode: u32 };
+struct DisplayUniforms { origin: vec2<u32>, size: vec2<u32>, lighting_stage: u32, view_mode: u32, diagnostic_stride: u32, producer_token: u32 };
 @group(0) @binding(0) var<uniform> u: DisplayUniforms;
 @group(0) @binding(1) var accumulation_in: texture_2d<f32>;
 @group(0) @binding(2) var flags_in: texture_2d<u32>;
 @group(0) @binding(3) var display_out: texture_storage_2d<rgba8unorm, write>;
+// Only display_draft_band statically accesses these resources. The settled
+// display entry retains its existing four bindings and identical colour work.
+@group(0) @binding(4) var status_in: texture_2d<u32>;
+@group(0) @binding(5) var normal_in: texture_2d<f32>;
+@group(0) @binding(6) var recovery_in: texture_2d<u32>;
+@group(0) @binding(7) var<storage, read_write> diagnostics_out: array<u32>;
 
 const STAGE_DIAGNOSTIC: u32 = 2u;
 const VIEW_SHADED: u32 = 0u;
@@ -43,8 +49,7 @@ fn srgb(value: vec3<f32>) -> vec3<f32> {
   return select(high, c * 12.92, c <= vec3<f32>(0.0031308));
 }
 
-@compute @workgroup_size(8, 8, 1)
-fn display_band(@builtin(global_invocation_id) gid: vec3<u32>) {
+fn display_pixel(gid: vec3<u32>) {
   if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
   let px = u.origin + gid.xy;
   let dims = textureDimensions(display_out);
@@ -70,3 +75,28 @@ fn finite_rgb(v: vec3<f32>) -> bool {
   let bits = bitcast<vec3<u32>>(v) & vec3<u32>(0x7f800000u);
   return all(bits != vec3<u32>(0x7f800000u));
 }
+
+
+@compute @workgroup_size(8, 8, 1)
+fn display_band(@builtin(global_invocation_id) gid: vec3<u32>) {
+  display_pixel(gid);
+}
+
+// Draft diagnostic packet v1, written in the existing display pass, never a
+// grouped/multi-pass ticket. A zero-initialized/unwritten pixel lacks the marker.
+fn display_packet(gid: vec3<u32>, marker: u32) {
+  display_pixel(gid);
+  if (gid.x >= u.size.x || gid.y >= u.size.y) { return; }
+  let px = u.origin + gid.xy;
+  let dims = textureDimensions(status_in);
+  if (px.x >= dims.x || px.y >= dims.y) { return; }
+  let p = vec2<i32>(px);
+  let offset = (px.y * dims.x + px.x) * u.diagnostic_stride;
+  diagnostics_out[offset] = textureLoad(status_in, p, 0).x;
+  diagnostics_out[offset + 1u] = marker | select(0u, 1u, textureLoad(normal_in, p, 0).w != 0.0);
+  if (u.diagnostic_stride == 3u) { diagnostics_out[offset + 2u] = textureLoad(recovery_in, p, 0).x; }
+}
+@compute @workgroup_size(8, 8, 1)
+fn display_draft_band(@builtin(global_invocation_id) gid: vec3<u32>) { display_packet(gid, 0x41540000u); }
+@compute @workgroup_size(8, 8, 1)
+fn display_summary_band(@builtin(global_invocation_id) gid: vec3<u32>) { display_packet(gid, u.producer_token << 1u); }

@@ -1,21 +1,25 @@
+import { buildSpaceBatch } from './frame-batch.js';
 // Space pass orchestration. Resource ownership and execution identities stay here;
 // the scheduler owns admission/outcomes and the backend owns queue completion.
-import { deepFreeze } from '../../shared/scene.js';
+import { deepFreeze, canonicalJson } from '../../shared/scene.js';
 import { createScheduler } from '../../shared/scheduler.js';
 import { createRenderRequest, isPublishable, RENDER_OUTCOMES, RUNTIME_ID } from '../../shared/render-request.js';
 import { createReportBuilder, observed, UNAVAILABLE } from '../../shared/render-report.js';
 import { createSpaceRequest, spaceWorkspaceFields } from '../render-adapter.js';
-import { effectiveParameters, escapeRadius } from '../numerics/parameters.js';
+import { effectiveParameters } from '../numerics/parameters.js';
 import { getModel } from '../models/registry.js';
-import { VIEW_MODES } from '../scene-adapter.js';
 import { admitPointModel, decodePointResults, encodePoints, mengerBoxData, pointBounds, pointRegion,
   pointsPipelineId, pointUniforms, sentinelResults, POINT_BATCH_PASS, POINT_RESULT_BYTES } from './webgpu/kernels.js';
-import { basis, encodeOrdinaryOrigin } from '../camera.js';
+import { encodeOrdinaryOrigin } from '../camera.js';
 import { appearanceKey, accumulationKey, sampleKey } from './keys.js';
-import { unpackStatus, unpackLightingStatus, POINT_STATUS, STATUS_LABELS } from './status.js';
+import { unpackStatus, POINT_STATUS, STATUS_LABELS } from './status.js';
 import { createOutcomeMasks } from './outcome-masks.js';
+import { createMaskProcessor } from './mask-processor.js';
 import { RECOVERING_FAMILIES } from './webgpu/passes.js';
-import { assertBackend, BackendError, createAdmission, createBatch, createJobPlan, createPickRequest, createPipelineSet,
+import { draftExecution as selectDraftExecution, qualifiedDraft } from './draft-execution.js';
+import { draftSummaryBytes, validateDraftSummary, DRAFT_SUMMARY_VERSION } from './draft-summary.js';
+import { createDraftRecords } from './draft-records.js';
+import { assertBackend, BackendError, createAdmission, createBatch, createBatchGroup, createJobPlan, createPickRequest, createPipelineSet,
   sampleJitter, TARGET_LAYOUT_ID, TARGET_LAYOUT, LIGHTING_BOUNDS_DEFAULT } from './backend.js';
 
 const WINDOW_LIMIT = 256, INITIAL_PIXELS = 32768, MIN_PIXELS = INITIAL_PIXELS / 4, PREPARATION_BOUND_MS = 60000;
@@ -27,7 +31,28 @@ const flatHandles = targets => Object.values(targets.handles).flat();
 const stale = () => ({ stale: true });
 // The per-sample geometry targets, kept, reused and cached together (B11c: the recovery word is geometry).
 const GEOMETRY_TARGETS = Object.freeze(['depth', 'status', 'normal', 'recovery']);
-let preparationId = 0;
+let preparationId = 0, producerToken = 0;
+
+export function navigationContentKey(scene, output) {
+  const {camera, ...content} = scene;
+  return canonicalJson({content, output});
+}
+export function navigationDraftEligible({record, current, interactive, viewId, epoch, destroyed}) {
+  try {
+    return !destroyed && !record.result && !record.cancelled && record.navigation !== null &&
+      record.request.output.purpose === 'interactive' && record.request.quality.preview &&
+      current === interactive && !interactive?.cancelled && record.request.viewId === viewId &&
+      record.request.generation.deviceEpoch === epoch &&
+      record.navigation === record.currentNavigation() &&
+      record.navigation === interactive?.navigation &&
+      record.navigationContent === interactive?.navigationContent &&
+      record.navigationContent === record.currentNavigationContent() &&
+      record.currentGeneration().deviceEpoch === epoch &&
+      record.currentGeneration().viewRevision >= record.request.generation.viewRevision &&
+      record.currentGeneration().geometryRevision >= record.request.generation.geometryRevision &&
+      record.request.generation.appearanceRevision === record.currentGeneration().appearanceRevision;
+  } catch { return false; }
+}
 
 // admit() transfers leases for the entire scheduler, not just the calling view.
 // All Space views sharing it therefore share one dispatcher. A second subscriber
@@ -72,39 +97,16 @@ function emptyCounts() {
   return { rayTermination: { hit: 0, miss: 0, unresolved: { pointBudget: 0, estimateUnavailable: 0, rayStepBudget: 0, stagnation: { rayParameter: 0, fieldCoordinate: 0 } }, numericalFailure: 0 },
     unavailableNormals: 0, lightingFailures: { shadow: 0, ao: 0, both: 0 } };
 }
-// B11b measurement fix: an unavailable normal is counted only where the same sample's status is a hit (the
-// joint hit/normal mask from `masks`, whose status phase completes before the normal phase of that sample).
-function countReadback(counts, field, bytes, region, masks) {
-  if (field === 'recovery') return; // B11c: recovery words are diagnostics, kept by the outcome masks only
-  const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (field === 'normal') {
-    for (let row = 0, k = 0; row < region.height; row++) for (let col = 0; col < region.width; col++, k++) {
-      const index = (region.y + row) * masks.width + region.x + col;
-      if (!masks.statusSeen(index)) throw new BackendError('invalid-descriptor', 'a normal readback precedes its status readback');
-      if (masks.hitAt(index) && (data.getUint16(8 * k + 6, true) & 0x7fff) === 0) counts.unavailableNormals++;
-    }
-  } else for (let i = 0; i < bytes.byteLength; i += 4) {
-    const word = data.getUint32(i, true);
-    if (field === 'lightingStatus') {
-      const { shadow, ao } = unpackLightingStatus(word);
-      if (shadow) counts.lightingFailures.shadow++; if (ao) counts.lightingFailures.ao++; if (shadow && ao) counts.lightingFailures.both++;
-    } else {
-      const { status, reason, subreason } = unpackStatus(word), rays = counts.rayTermination;
-      if (status === 0) rays.hit++;
-      else if (status === 1) rays.miss++;
-      else if (status === 3) rays.numericalFailure++;
-      else if (status === 2 && reason >= 1 && reason <= 3) rays.unresolved[['', 'pointBudget', 'estimateUnavailable', 'rayStepBudget'][reason]]++;
-      else if (status === 2 && reason === 4 && [1, 2].includes(subreason)) rays.unresolved.stagnation[subreason === 1 ? 'rayParameter' : 'fieldCoordinate']++;
-      else throw new BackendError('invalid-descriptor', 'invalid ray status readback');
-    }
-  }
-}
-
 // An injected scheduler is dedicated to Space rendering: every submitting view
 // must have a registered Space renderer. Admission cannot be peeked at or returned,
 // so a foreign dispatcher must use a different scheduler. Injected infrastructure
 // remains caller-owned; destroying this renderer releases only its own resources.
-export function createSpaceRenderer({ backend, scheduler, clock, viewId, versions, pipelineSet }) {
+// groupDrafts=false is an injected diagnostic/test comparison path; product callers
+// use grouping. It changes submission boundaries, never draft quality or diagnostics.
+export function createSpaceRenderer({ backend, scheduler, clock, viewId, versions, pipelineSet, groupDrafts = true, draftExecution, maskWork, maskProcessor }) {
+  const masksService = maskProcessor ?? createMaskProcessor();
+  const draftConfig = selectDraftExecution(draftExecution);
+  if (!draftConfig.lifecycle) throw new RangeError('L0–L5 use the diagnostic ladder driver; the product renderer supports L6 variants only');
   assertBackend(backend);
   const now = typeof clock === 'function' ? clock : clock?.now;
   if (typeof now !== 'function') throw new TypeError('renderer requires a clock');
@@ -113,13 +115,30 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   scheduler ??= createScheduler({ clock: now, makeAdmission: createAdmission, setTimer, clearTimer });
   if (!scheduler.snapshot().views.some(view => view.viewId === viewId)) scheduler.registerView(viewId);
   const pipelines = createPipelineSet(pipelineSet);
-  const listeners = Object.fromEntries(['Publish', 'Present', 'Report', 'Status'].map(name => [name, new Set()]));
-  const jobs = new Map(), owners = new Map(), auxiliary = new Map();
+  const listeners = Object.fromEntries(['Publish', 'Present', 'Report', 'Status', 'PublicationUpdate', 'PublicationRecord', 'Provisional', 'Restoration'].map(name => [name, new Set()]));
+  const jobs = new Map(), owners = new Map(), auxiliary = new Map(), tileLearning = new Map(), excessiveDraftWork = new Set();
   const submittedJobs = new Set(), submittedRequests = new Set();
   let current = null, interactive = null, published = null, geometryCache = null, destroyed = false;
   let preparation = null, prepared = null, acquisition = null, acquiring = null, serial = 0, auxSerial = 0;
+  let requestOrder = 0, displayOrder = -1;
+  let targetConfiguration = Promise.resolve();
+  async function configure(record, description) {
+    const previous = targetConfiguration, lane = deferred();
+    targetConfiguration = lane.promise;
+    try {
+      await previous;
+      // Recheck after every asynchronous wait, before any reservation. A waiting newest-wins
+      // request owns no targets, and an aborted configure drains its scopes before the next one.
+      // A finished or cancelled record is already on a terminal path. A record that is merely
+      // no longer executable must be ended here, as dispatch would end it, or it waits forever.
+      if (record.result || record.cancelled || destroyed) return null;
+      if (!executable(record)) { cancel(record.request.jobId); return null; }
+      return await backend.configureTargets({ ...description, signal: record.configuration.signal });
+    } finally { lane.resolve(); }
+  }
   const emit = (name, value) => { for (const listener of listeners[name]) { try { listener(deepFreeze(value)); } catch { /* isolate observers */ } } };
   const subscribe = name => listener => { if (typeof listener !== 'function') throw new TypeError('listener must be a function'); listeners[name].add(listener); return () => listeners[name].delete(listener); };
+  const frameRecords = createDraftRecords({ clock: now, onUpdate: update => emit('PublicationUpdate', update) });
   function hold(handles) { for (const handle of handles) owners.set(handle, (owners.get(handle) ?? 0) + 1); }
   function release(handles) {
     for (const handle of handles) {
@@ -139,11 +158,17 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   }
   function fresh(record) {
     try { return !destroyed && current === record && !record.result && !record.cancelled && record.request.viewId === viewId &&
+      (!record.request.quality.preview || record.navigation === null || record.navigation === record.currentNavigation() && record.navigationContent === record.currentNavigationContent()) &&
       record.request.generation.deviceEpoch === backend.currentEpoch() && isPublishable(record.request, record.currentGeneration()); }
     catch { return false; }
   }
+  // The caller owns the monotonic navigation stream. This exception is opt-in:
+  // shared isPublishable and all settled/inspection paths remain strict.
+  const navigationDraft = record => navigationDraftEligible({record, current, interactive, viewId, epoch: backend.currentEpoch(), destroyed});
+  const executable = record => fresh(record) || navigationDraft(record);
+  const publishable = record => executable(record) && record.order >= displayOrder && (!published || record.order >= published.record.order);
   function publishedCurrent(snapshot) {
-    return !destroyed && snapshot && published === snapshot && snapshot.request.viewId === viewId &&
+    return !destroyed && snapshot && published === snapshot && snapshot.record.order === displayOrder && snapshot.request.viewId === viewId &&
       snapshot.request.generation.deviceEpoch === backend.currentEpoch();
   }
   function classifiable(record) {
@@ -157,10 +182,13 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   function finish(record, result) {
     if (record.result) return;
     if (!RENDER_OUTCOMES.includes(result.outcome)) throw new RangeError('unknown job outcome');
+    record.configuration?.abort();
     if (record.internal) {
       record.result = result; release(record.handles); jobs.delete(record.request.jobId);
       record.done.resolve(result); return;
     }
+    if (record.frame && result.outcome !== 'completed') rejectFrame(record, result.reason ?? result.outcome);
+    record.masks?.close?.('render job finished');
     record.builder.mark('completed');
     const fields = spaceWorkspaceFields({ request: record.request, counts: record.publishedCounts,
       samplesCompleted: record.samplesCompleted, milestones: record.milestones,
@@ -171,7 +199,15 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const report = record.builder.finish(result.outcome, { reason: result.reason ?? '', completed: record.samplesCompleted ? {
       ...record.request.quality.internalSize, iteration: record.request.quality.iteration, tracing: record.request.quality.tracing,
       samples: record.samplesCompleted, lighting: record.publishedQuality.lighting,
-    } : null, details: { ...fields, outcomeMasks: record.publishedMasks ?? UNAVAILABLE, geometryRequestId: record.geometryRequestId, appearanceRebound: record.geometryRequestId !== record.request.requestId,
+    } : null, details: { ...fields,
+      diagnosticReadback: record.request.quality.preview ? { format: record.recg ? DRAFT_SUMMARY_VERSION : 'draft-diagnostics-v1',
+        ...(record.recg ? { bytes: draftSummaryBytes(RECOVERING_FAMILIES.includes(record.model.id)), evidence: 'aggregate; per-pixel masks not retained' } : { bytesPerPixel: (record.diagnosticStride ?? (RECOVERING_FAMILIES.includes(record.model.id) ? 3 : 2)) * 4 }),
+        secondaryFlags: 'exactly zero: direct/diagnostic draft shading evaluates no secondary rays' } : { format: 'separate-textures' },
+      operations: { completed: record.completionCount, byPass: structuredClone(record.operationMetrics ?? {}) },
+      outcomeMasks: record.publishedMasks ?? UNAVAILABLE, geometryRequestId: record.geometryRequestId, appearanceRebound: record.geometryRequestId !== record.request.requestId,
+      ...(record.summary ? { outcomeAggregates: record.summary } : {}),
+      ...(record.frame ? { draftRecord: { frameId: record.frame.frameId, presentationSubmittedAt: record.frame.presentationSubmittedAt,
+        confirmationAt: record.confirmationAt ?? UNAVAILABLE, diagnosticsState: record.diagnosticsState ?? 'pending' } } : {}),
       ...(result.continuation ? { continuation: result.continuation } : {}), ...(result.submitted ? { submitted: result.submitted } : {}),
     } });
     record.result = Object.freeze({ ...result, ...(record.error?.code === undefined ? {} : { errorCode: record.error.code }), report });
@@ -186,7 +222,8 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     if (record.scheduled) scheduler.cancel(record.request.jobId);
   }
   function pipeline(pass, record, stage) {
-    const entry = pass === 'probe' ? 'probe' : pass === 'shade' && stage === 'diagnostic'
+    const entry = pass === 'reduce' ? 'reduce_draft_summary' : pass === 'display' && record.recg ? (draftConfig.summary ? 'display_summary_band' : 'display_band')
+      : pass === 'display' && record.request.quality.preview ? 'display_draft_band' : pass === 'probe' ? 'probe' : pass === 'shade' && stage === 'diagnostic'
       ? `diagnostic_${record.request.sceneSnapshot.appearance.viewMode}` : `${pass}_band`;
     const candidates = pipelines.descriptors.filter(item => item.kind === 'compute' && item.entryPoint === entry);
     // Until the product families are assembled, fixtures may use one descriptor per
@@ -203,64 +240,88 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   }
   function batch(record, pass, region, sample, quality, extra = {}) {
     const descriptor = pipeline(pass, record, quality.lighting.stage), handles = record.targets?.handles ?? {};
-    const alias = { ...handles, probe_target: handles.status,
-      previous: handles.accumulation?.[sample & 1], next: handles.accumulation?.[(sample + 1) & 1],
-      accumulation: handles.accumulation?.[(sample + 1) & 1], display: record.displayHandle, menger_boxes: record.mengerBoxes, ...extra.handles };
-    const inputs = {}, outputs = {};
-    for (const binding of descriptor.bindings) {
-      if (binding.type === 'uniform-buffer' && descriptor.uniformLayout.byteLength) continue;
-      const handle = alias[binding.slot];
-      if (!handle || Array.isArray(handle)) throw new BackendError('invalid-descriptor', `no renderer binding for ${binding.slot}`);
-      if (binding.access !== 'write') inputs[binding.slot] = handle;
-      if (binding.access !== 'read') outputs[binding.slot] = handle;
-    }
-    const sampling = quality.sampling, jitter = sampleJitter({ seed: sampling.seed, sampleIndex: sample, pixel: [region.x, region.y] });
-    const effective = record.effective ?? {}, camera = record.request.sceneSnapshot.camera;
-    const fields = { origin: [region.x, region.y], size: [region.width, region.height], internalSize: Object.values(quality.internalSize),
-      sampleIndex: sample, seed: sampling.seed, lightingStage: quality.lighting.stage === 'full' ? 1 : quality.lighting.stage === 'diagnostic' ? 2 : 0,
-      jitter: [jitter.dx, jitter.dy], maxIterations: quality.iteration.maxIterations, maxSteps: quality.tracing.maxSteps,
-      stepMultiplier: quality.tracing.stepMultiplier, toleranceFloor: quality.tracing.toleranceFloor,
-      // B10: τ(t) = max(toleranceFloor, toleranceFactor·α·t), and the quaternion's outward-rounded B02 R(C).
-      toleranceFactor: quality.tracing.toleranceFactor, bound: effective.C ? escapeRadius(effective.C).bound : undefined,
-      power: effective.power, C: effective.C, kappa: effective.kappa, depth: effective.depth,
-      // B11: the shading stage's secondary-ray work (B00 bounds) and the view mode code (scene-adapter VIEW_MODES order).
-      shadowSteps: quality.lighting.shadowSteps, shadowRays: quality.lighting.shadowRays, aoSamples: quality.lighting.aoSamples,
-      viewMode: record.request.sceneSnapshot.appearance ? VIEW_MODES.indexOf(record.request.sceneSnapshot.appearance.viewMode) : undefined, ...extra.uniforms };
-    // Camera transport is evaluated only when a descriptor asks for it. No world
-    // position is collapsed into a Number; B05 supplies high/low binary32 parts.
-    if (camera && descriptor.uniformLayout.fields.some(field => ['originHigh', 'originLow', 'forward', 'right', 'up', 'alpha'].includes(field.name))) {
-      const origin = encodeOrdinaryOrigin(camera); if (origin.unavailable) throw new BackendError('invalid-descriptor', origin.reason);
-      Object.assign(fields, { originHigh: origin.highF32, originLow: origin.lowF32, ...basis(camera),
-        alpha: 2 * Math.tan(camera.verticalFovDegrees * Math.PI / 360) / quality.internalSize.height });
-    }
-    const uniforms = Object.fromEntries(descriptor.uniformLayout.fields.map(field => {
-      if (fields[field.name] === undefined) throw new BackendError('invalid-descriptor', `no renderer uniform for ${field.name}`);
-      return [field.name, fields[field.name]];
-    }));
-    return createBatch({ identity: identity(record.request), pipelineId: descriptor.pipelineId, pass,
-      region, sample: { sequence: sampling.sequence, seed: sampling.seed, index: sample },
-      bounds: { pixels: region.width * region.height, iterations: quality.iteration.maxIterations, raySteps: quality.tracing.maxSteps,
-        normalFieldSamples: quality.lighting.normalFieldSamples, shadowRays: quality.lighting.shadowRays,
-        shadowSteps: quality.lighting.shadowSteps, aoSamples: quality.lighting.aoSamples }, inputs, outputs, uniforms });
+    return buildSpaceBatch({ descriptor, record, pass, region, sample, quality, extra });
   }
-  function publish(record, meta, display) {
-    if (!fresh(record)) return false;
-    const geometry = { sample: meta.sample, status: record.targets.handles.status, depth: record.targets.handles.depth };
-    const handles = [display, geometry.status, geometry.depth], old = published; hold(handles);
-    published = { request: record.request, record, display, geometry, handles }; if (old) release(old.handles);
+  function validatePublication(record, meta) {
+    if (record.validatedOrdinal === meta.ordinal) return;
+    // The Worker validates and closes the sample before its last readback lease
+    // completes. Presentation consumes only that acknowledged snapshot. The
+    // explicitly injected maskWork diagnostic seam yields CPU slices instead.
+    if (record.recg) {
+      if (!record.summary) throw new BackendError('invalid-descriptor', 'draft summary not validated');
+      record.validatedMasks = UNAVAILABLE;
+    } else {
+      if (!record.masks.closed(maskIdentity(record, meta))) throw new BackendError('invalid-descriptor', 'outcome masks not validated');
+      record.counts = record.masks.counts(); record.validatedMasks = record.masks.snapshot();
+    }
+    record.validatedOrdinal = meta.ordinal;
+  }
+  function acceptPublication(record, meta) {
     record.builder.mark('published'); record.samplesCompleted = meta.sample + 1;
     record.publishedCounts = structuredClone(record.counts); record.publishedQuality = meta.quality;
     // B11b: the sample's outcome masks close here (every readback of this ordinal completed before its presentation).
-    record.masks.end(maskIdentity(record, meta)); record.publishedMasks = record.masks.snapshot();
+    record.publishedMasks = record.validatedMasks;
     const elapsed = now() - record.requestedAt;
     if (!record.request.quality.preview && meta.ordinal === 0) record.milestones.settledFirstImageMs = elapsed;
     if (meta.last) record.milestones.fullQualityMs = elapsed;
+  }
+  function publicationData(record, meta) {
     const appearance = appearanceKey(record.request.sceneSnapshot, meta.quality);
-    emit('Publish', { kind: record.request.quality.preview ? 'draft' : meta.ordinal === 0 ? 'settled-first' : 'refinement',
-      requestId: record.request.requestId, geometryRequestId: record.geometryRequestId, samples: meta.sample + 1, sampleIndex: meta.sample, pending: false,
+    return { kind: record.request.quality.preview ? 'draft' : meta.ordinal === 0 ? 'settled-first' : 'refinement',
+      request: record.request, requestId: record.request.requestId, identity: identity(record.request), createdAt: record.requestedAt,
+      sceneHash: record.request.sceneHash, camera: record.request.sceneSnapshot.camera,
+      model: record.request.sceneSnapshot.model.id, internalSize: { ...meta.quality.internalSize },
+      output: { width: record.request.output.width, height: record.request.output.height },
+      geometryRequestId: record.geometryRequestId, samples: meta.sample + 1, sampleIndex: meta.sample, pending: !fresh(record),
       appearanceKey: appearance, accumulationKey: accumulationKey(record.request.keys.geometryKey, appearance, record.request.quality.sampling),
-      quality: meta.quality, publishedAt: now(), rayTermination: record.publishedCounts.rayTermination });
-    emit('Status', { pending: false }); return true;
+      quality: meta.quality, publishedAt: now(), rayTermination: record.publishedCounts?.rayTermination ?? null };
+  }
+  function publish(record, meta, display, { emitPublication = true, presentationEvidence } = {}) {
+    if (!publishable(record)) return false;
+    const geometry = { sample: meta.sample, status: record.targets.handles.status, depth: record.targets.handles.depth };
+    const handles = [display, geometry.status, geometry.depth], old = published; hold(handles);
+    published = { request: record.request, record, display, geometry, handles }; if (old) release(old.handles);
+    acceptPublication(record, meta);
+    const snapshot = published, active = current, event = { ...publicationData(record, meta), ...presentationEvidence };
+    if (emitPublication) emit('Publish', event);
+    // A synchronous subscriber may stop refinement after this complete image. Its
+    // accepted status is unchanged; a subscriber's replacement request owns its own status.
+    if (published === snapshot && current === active) emit('Status', { pending: event.pending, diagnosticsState: 'confirmed' });
+    return true;
+  }
+  function beginFrame(record, meta, ticket) {
+    const event = frameRecords.begin({ ...publicationData(record, meta), presentationSubmittedAt: ticket.presentationSubmittedAt ?? now(), eligible: true });
+    record.frame = event; record.diagnosticsState = 'pending';
+    frameRecords.displayed(event.frameId); displayOrder = record.order;
+    emit('PublicationRecord', event);
+    if (draftConfig.mode === 'async') emit('Publish', event);
+    if (draftConfig.mode === 'provisional') emit('Provisional', event);
+    emit('Status', { diagnosticsState: 'pending', provisional: draftConfig.mode === 'provisional' });
+  }
+  function rejectFrame(record, reason) {
+    if (!record.frame) return;
+    const update = frameRecords.reject(record.frame.frameId, record.frame.identity, String(reason));
+    if (!update) return;
+    record.diagnosticsState = update.diagnosticsState;
+    if (!update.historical && record.order === displayOrder) {
+      emit('Status', { diagnosticsState: 'failed', reason: String(reason) });
+      restoreFrame(record);
+    }
+  }
+  function restoreFrame(record) {
+    const snapshot = published;
+    if (!snapshot || destroyed || record.request.generation.deviceEpoch !== backend.currentEpoch()) return;
+    const frameId = record.frame.frameId, jobId = `${record.request.jobId}/restore-${++auxSerial}`;
+    const id = { ...identity(record.request), jobId, requestId: `${record.request.requestId}/restore` };
+    const operation = { id: jobId, kind: 'presentation', dependsOn: [], descriptor: { identity: id, display: snapshot.display } }, done = deferred();
+    const valid = () => !destroyed && backend.currentEpoch() === id.generation.deviceEpoch && frameRecords.displayedFrame() === frameId && displayOrder === record.order;
+    hold([snapshot.display]);
+    auxiliary.set(operation.id, { record, done, valid, restoration: frameId });
+    try {
+      const job = scheduler.requestAuxiliary(viewId, { jobId, priority: 'inspection', operation });
+      job.done.finally(() => { auxiliary.delete(operation.id); release([snapshot.display]); });
+      pump();
+    } catch { auxiliary.delete(operation.id); release([snapshot.display]); }
   }
 
   // The outcome-mask identity of one ordinal: its accumulation key (the direct sample of a full request has its own)
@@ -269,17 +330,70 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const key = accumulationKey(record.request.keys.geometryKey, appearanceKey(record.request.sceneSnapshot, meta.quality), record.request.quality.sampling);
     return { accumulationKey: key, sample: meta.sample };
   }
+  function draftWorkKey(record) { return canonicalJson({ family: record.model.id, effective: record.effective, quality: record.request.quality }); }
+  function makeDraftPlan(record) {
+    const request = record.request, region = { x: 0, y: 0, ...request.quality.internalSize };
+    const m = { ordinal: 0, sample: 0, quality: request.quality, last: true, phase: 'draft-group' };
+    const reuse = record.geometry?.sample === 0 && record.geometry.sampleKey === sampleKey(request.keys.geometryKey, request.quality.sampling, 0);
+    record.displayHandle = record.targets.handles.display;
+    const passes = [...(reuse ? [] : ['trace', 'normals']), 'shade', 'accumulate', 'display', ...(draftConfig.summary ? ['reduce'] : [])]
+      .map(pass => batch(record, pass, region, 0, request.quality));
+    const grouped = createBatchGroup({ identity: identity(request), region, sample: passes[0].sample, passes,
+      draft: { mode: draftConfig.mode, summary: record.draftSummary ?? null, producerToken: record.producerToken,
+        recovery: record.diagnosticStride === 3, display: record.displayHandle } });
+    const computeId = `${request.jobId}/compute`, presentId = `${request.jobId}/present`;
+    const operations = [{ id: computeId, dependsOn: [], kind: 'batch', batch: grouped },
+      ...(draftConfig.mode === 'compute' ? [{ id: presentId, dependsOn: [computeId], kind: 'presentation', descriptor: { identity: identity(request), display: record.displayHandle } }] : [])];
+    record.metadata = new Map(operations.map(op => [op.id, m]));
+    let completions = 0;
+    const plan = createJobPlan({ request, operations, onAdvance(op, evidence) {
+      completions++;
+      if (op.id !== computeId) return;
+      if (evidence.timestampMs > evidence.targetMs) {
+        excessiveDraftWork.add(draftWorkKey(record));
+        if (excessiveDraftWork.size > 256) excessiveDraftWork.delete(excessiveDraftWork.values().next().value);
+      }
+      if (!reuse) {
+        record.geometry = { sample: 0, sampleKey: sampleKey(request.keys.geometryKey, request.quality.sampling, 0), serial: record.geometrySerial };
+        record.geometryRequestId = request.requestId;
+        if (fresh(record)) {
+          forgetGeometry(); const handles = GEOMETRY_TARGETS.map(name => record.targets.handles[name]); hold(handles);
+          geometryCache = { ...record.geometry, handles, request, geometryRequestId: record.geometryRequestId };
+        }
+      }
+    } });
+    return Object.freeze({ ...plan, diagnostics: () => ({ fixed: true, pendingCount: operations.length - completions, completions, replacements: 0, boundaryReplacements: 0, pendingSamples: completions === operations.length ? [] : ['direct:0'] }) });
+  }
   function makePlan(record) {
+    if (record.recg) return makeDraftPlan(record);
     const request = record.request, target = request.quality.sampling.targetSamples;
     // B11c: a recovering family (spec §11.4 rev 5.1, quaternion Julia) also reads back each sample's recovery words.
     const recovers = RECOVERING_FAMILIES.includes(record.model?.id);
-    record.masks = createOutcomeMasks(request.quality.internalSize, { recovery: recovers });
+    const maskOptions = { recovery: recovers, strict: true,
+      valid: () => !destroyed && !record.result && !record.cancelled && request.generation.deviceEpoch === backend.currentEpoch() };
+    // maskWork is the explicit CPU diagnostic/test seam. Product callers use the
+    // Worker service; unavailable/crashed Workers fail closed, never scan on main.
+    record.masks = maskWork && !maskProcessor
+      ? createOutcomeMasks(request.quality.internalSize, { ...maskOptions, work: maskWork })
+      : masksService.open(request.quality.internalSize, maskOptions);
     const full = request.quality.lighting.stage === 'full';
     const sampleCount = full ? target + 1 : target;
-    let ordinal = 0, phaseIndex = 0, x = 0, y = 0, sequence = 0, pixels = INITIAL_PIXELS;
+    let ordinal = 0, phaseIndex = 0, x = 0, y = 0, rowHeight = 0, sequence = 0;
     let windowIds = [], windowLeft = 0, phaseEnded = false, completions = 0, replacements = 0, boundaries = 0, lastReplacement = 0;
+    let comparison = null;
     const metadata = new Map(), remaining = new Set();
-    const phases = ['trace', 'normals', 'shade', 'accumulate', 'display', 'status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus', 'present'];
+    const grouped = request.quality.preview && groupDrafts;
+    const groupPhase = skipGeometry() ? 'draft-reuse' : 'draft-group';
+    const phases = grouped ? [groupPhase, 'draftDiagnostics', 'present']
+      : ['trace', 'normals', 'shade', 'accumulate', 'display',
+        ...(request.quality.preview ? ['draftDiagnostics'] : ['status', ...(recovers ? ['recovery'] : []), 'normal', 'lightingStatus']), 'present'];
+    const workload = (phase, quality) => canonicalJson({ epoch: request.generation.deviceEpoch, family: record.model.id, effective: record.effective, profile: quality.profile, phase, width: quality.internalSize.width, iteration: quality.iteration, tracing: quality.tracing, lighting: quality.lighting, viewMode: request.sceneSnapshot.appearance.viewMode });
+    function tileBatch(phase, region, m) {
+      if (!phase.startsWith('draft-')) return batch(record, phase, region, m.sample, m.quality);
+      const passes = (phase === 'draft-reuse' ? ['shade', 'accumulate', 'display'] : ['trace', 'normals', 'shade', 'accumulate', 'display'])
+        .map(pass => batch(record, pass, region, m.sample, m.quality));
+      return createBatchGroup({ identity: identity(request), region, sample: passes[0].sample, passes });
+    }
     function meta() {
       const sample = full && ordinal > 0 ? ordinal - 1 : ordinal;
       return { ordinal, sample, quality: stageQuality(request, ordinal), last: ordinal === sampleCount - 1 };
@@ -289,9 +403,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     }
     function nextWindow(dependencies = []) {
       if (ordinal >= sampleCount) return [];
-      while (phaseIndex < 2 && skipGeometry()) phaseIndex++;
+      while (!grouped && phaseIndex < 2 && skipGeometry()) phaseIndex++;
       const phase = phases[phaseIndex], m = meta(), operations = [];
-      if (phase === 'trace' && x === 0 && y === 0) {
+      if (['trace', 'draft-group'].includes(phase) && x === 0 && y === 0) {
         record.targets = { ...record.targets, handles: { ...record.targets.handles, ...record.geometrySets[m.sample % record.geometrySets.length] } };
       }
       record.displayHandle = record.targets.handles[ordinal % 2 === 0 ? 'display' : 'retained'];
@@ -299,32 +413,42 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       phaseEnded = false;
       do {
         const id = `${request.jobId}/${++sequence}`;
-        let op;
+        let op, learning = null;
         if (phase === 'present') { op = { id, dependsOn: dependencies, kind: 'presentation', descriptor: { identity: identity(request), display: record.displayHandle } }; phaseEnded = true; }
-        else {
+        else if (phase === 'draftDiagnostics') {
+          op = { id, dependsOn: dependencies, kind: 'readback', descriptor: { identity: identity(request), source: record.draftDiagnostics,
+            region: { x: 0, y: 0, width: size.width * size.height * record.diagnosticStride * 4, height: 1 }, fields: ['draftDiagnostics'] } };
+          phaseEnded = true;
+        } else {
           const readback = ['status', 'recovery', 'normal', 'lightingStatus'].includes(phase), bpt = readback ? TARGET_LAYOUT[phase].bytesPerTexel : 0;
+          // Texture copies retain their separate row/alignment limits. Compute is
+          // sized only from this workload's completed evidence and device limits.
+          const pixels = tileLearning.get(workload(phase, m.quality))?.pixels ?? INITIAL_PIXELS;
+          const maxComputeSide = (acquisition?.limits?.maxComputeWorkgroupsPerDimension ?? 65535) * 8;
           const maxBuffer = acquisition?.limits?.maxBufferSize ?? 2 ** 28;
-          const maxWidth = readback ? Math.floor(maxBuffer / 256) * 256 / bpt : size.width;
-          const tileWidth = Math.min(size.width, pixels, maxWidth);
+          const maxWidth = readback ? Math.floor(maxBuffer / 256) * 256 / bpt : maxComputeSide;
+          const tileWidth = Math.min(size.width, readback ? maxWidth : Math.min(pixels, maxWidth));
           const width = Math.min(size.width - x, tileWidth);
           if (width < 1) throw new BackendError('allocation-failed', 'a single aligned readback row exceeds maxBufferSize');
-          const rows = Math.min(size.height - y, Math.max(1, Math.floor(pixels / tileWidth)),
-            readback ? Math.min(256, Math.floor(maxBuffer / (Math.ceil(tileWidth * bpt / 256) * 256))) : 256);
-          const region = { x, y, width, height: rows };
+          const nominalRows = readback ? Math.min(256, Math.floor(maxBuffer / (Math.ceil(tileWidth * bpt / 256) * 256)))
+            : Math.min(Math.max(1, Math.floor(pixels / tileWidth)), maxComputeSide);
+          if (x === 0) rowHeight = Math.min(size.height - y, nominalRows);
+          const rows = rowHeight, region = { x, y, width, height: rows };
+          if (!readback && width === tileWidth && rows === nominalRows) learning = { pixels, area: width * rows };
           op = readback ? { id, dependsOn: dependencies, kind: 'readback', descriptor: { identity: identity(request), source: record.targets.handles[phase], region, fields: [phase] } }
-            : { id, dependsOn: dependencies, kind: 'batch', batch: batch(record, phase, region, m.sample, m.quality) };
+            : { id, dependsOn: dependencies, kind: 'batch', batch: tileBatch(phase, region, m) };
           x += width;
           if (x === size.width) { x = 0; y += rows; }
           if (y === size.height) phaseEnded = true;
         }
-        metadata.set(id, { ...m, phase }); remaining.add(id); operations.push(op);
+        metadata.set(id, { ...m, phase, learning }); remaining.add(id); operations.push(op);
       } while (!phaseEnded && operations.length < WINDOW_LIMIT);
       windowIds = operations.map(op => op.id); windowLeft = operations.length;
       return operations;
     }
     function phaseComplete() {
       const phase = phases[phaseIndex], m = meta();
-      if (phase === 'normals') {
+      if (phase === 'normals' || phase === 'draft-group') {
         record.geometry = { sample: m.sample, sampleKey: sampleKey(request.keys.geometryKey, request.quality.sampling, m.sample), serial: record.geometrySerial };
         record.geometryRequestId = request.requestId;
         // Only centre geometry is reusable as the first sample of a fresh sequence.
@@ -342,18 +466,45 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const initial = nextWindow();
     const plan = createJobPlan({ request, operations: initial, onAdvance(operation, evidence, pendingOperations) {
       completions++; remaining.delete(operation.id); windowLeft--;
+      // Fence latency includes queue/service overhead: it is an upper bound, not
+      // per-pixel shader time. Use the minimum of four comparable observations,
+      // never extrapolate a clipped edge or a subdivided tile, and ignore old-size
+      // completions after a sizing decision. A 0.5–2x band prevents timing jitter
+      // from continually resizing tiles. Persist decisions across windows/jobs.
+      const elapsed = evidence.timestampMs ?? evidence.elapsedMs;
+      let sustainedSlow = false;
+      if (operation.kind === 'batch') {
+        const m = metadata.get(operation.id), key = workload(m.phase, m.quality), previous = tileLearning.get(key);
+        const method = evidence.timestampMs === undefined ? 'queue-completion' : 'timestamp';
+        if (m.learning) {
+          const comparisonKey = `${key}:${m.learning.area}:${method}`;
+          if (comparison?.key !== comparisonKey) comparison = { key: comparisonKey, times: [] };
+          comparison.times.push(elapsed); if (comparison.times.length > 4) comparison.times.shift();
+          sustainedSlow = comparison.times.length === 4 && Math.min(...comparison.times) > 2 * evidence.targetMs;
+        }
+        if (m.learning && m.learning.pixels === (previous?.pixels ?? INITIAL_PIXELS)) {
+          const comparable = previous?.area === m.learning.area && previous?.method === method;
+          const observations = (comparable ? previous.observations : 0) + 1;
+          const minimumMs = Math.min(comparable ? previous.minimumMs : Infinity, Math.max(0.001, elapsed));
+          let pixels = m.learning.pixels;
+          if (observations >= 4 && (minimumMs <= evidence.targetMs / 2 || minimumMs > 2 * evidence.targetMs)) {
+            pixels = Math.min(INITIAL_PIXELS * 8, Math.max(MIN_PIXELS, Math.floor(m.learning.area * evidence.targetMs / minimumMs)));
+          }
+          tileLearning.delete(key); tileLearning.set(key, { pixels, area: m.learning.area, method,
+            observations: observations >= 4 ? 0 : observations, minimumMs: observations >= 4 ? Infinity : minimumMs });
+          if (tileLearning.size > 256) tileLearning.delete(tileLearning.keys().next().value);
+        }
+      }
       if (windowLeft === 0) {
         if (phaseEnded) phaseComplete();
         const next = nextWindow(windowIds);
         if (!next.length) return undefined;
         boundaries++; replacements++; lastReplacement = completions; return [...pendingOperations, ...next];
       }
-      if (evidence.elapsedMs >= 0.5 * evidence.targetMs && evidence.elapsedMs <= 2 * evidence.targetMs || completions - lastReplacement < 8) return undefined;
-      if (evidence.elapsedMs < 0.5 * evidence.targetMs) { pixels = Math.min(INITIAL_PIXELS * 8, pixels * 2); return undefined; }
+      if (!sustainedSlow || completions - lastReplacement < 8) return undefined;
       // A long slow stream must not recursively reduce every later pass to single
       // pixels. The tile budget bottoms at one quarter of its initial value;
       // row/edge rounding and readback limits may still require smaller regions.
-      pixels = Math.max(MIN_PIXELS, Math.floor(pixels / 2));
       if (pendingOperations.length >= WINDOW_LIMIT - 1) return undefined;
       const candidate = pendingOperations.find(op => {
         if (op.kind !== 'batch') return false;
@@ -365,9 +516,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       const firstRegion = { ...region, [dimension]: Math.floor(region[dimension] / 2) };
       const secondRegion = { ...region, [axis]: region[axis] + firstRegion[dimension], [dimension]: region[dimension] - firstRegion[dimension] };
       const m = metadata.get(candidate.id), childId = `${request.jobId}/${++sequence}`;
-      const child = { ...candidate, id: childId, batch: batch(record, candidate.batch.pass, firstRegion, m.sample, m.quality) };
-      const barrier = { ...candidate, dependsOn: [childId], batch: batch(record, candidate.batch.pass, secondRegion, m.sample, m.quality) };
-      metadata.set(childId, m); remaining.add(childId); windowIds.push(childId); windowLeft++;
+      const child = { ...candidate, id: childId, batch: tileBatch(m.phase, firstRegion, m) };
+      const barrier = { ...candidate, dependsOn: [childId], batch: tileBatch(m.phase, secondRegion, m) };
+      metadata.set(candidate.id, { ...m, learning: null }); metadata.set(childId, { ...m, learning: null }); remaining.add(childId); windowIds.push(childId); windowLeft++;
       replacements++; lastReplacement = completions;
       return pendingOperations.flatMap(op => op === candidate ? [child, barrier] : [op]);
     } });
@@ -383,6 +534,13 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     if (!record) { scheduler.failed(admission, new Error('renderer does not own admitted job')); return; }
     const meta = record.metadata?.get(operation.id);
     record.builder?.mark('admitted'); record.builder?.mark('submitted');
+    if (!record.internal && !aux && !record.result) {
+      const key = operation.kind === 'batch' ? descriptor.passes ? meta.phase : descriptor.pass : operation.kind === 'readback' ? `readback:${descriptor.fields[0]}` : 'present';
+      record.operationMetrics ??= {};
+      const metric = record.operationMetrics[key] ??= { submitted: 0, pixelsOrBytes: 0, maxRegionHeight: 0 };
+      metric.submitted++; metric.pixelsOrBytes += descriptor.region ? descriptor.region.width * descriptor.region.height : 0;
+      metric.maxRegionHeight = Math.max(metric.maxRegionHeight, descriptor.region?.height ?? 0);
+    }
     record.outstanding = (record.outstanding ?? 0) + 1; record.outstandingMax = Math.max(record.outstandingMax ?? 0, record.outstanding);
     let counted = true;
     const retire = () => { if (counted) { counted = false; record.outstanding--; } };
@@ -400,10 +558,10 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         else aux.done.resolve(stale());
       }
     };
-    let ticket;
+    let ticket, didPresent = false;
     try {
       if (aux && !aux.valid()) throw new BackendError('stale-epoch', 'auxiliary snapshot replaced before submission');
-      if (!record.internal && !aux && !fresh(record)) {
+      if (!record.internal && !aux && (!executable(record) || ((operation.kind === 'presentation' || operation.batch?.draft?.mode && operation.batch.draft.mode !== 'compute') && !publishable(record)))) {
         // The lease exists but no backend work has entered the queue. Cancelling
         // first makes a pre-submission rejection terminal drain evidence, without
         // turning the stale job into a failed job or drawing an obsolete image.
@@ -411,15 +569,21 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         throw new BackendError('stale-epoch', 'request superseded before submission');
       }
       if (operation.kind === 'batch') {
-        if (operation.batch.pass === 'trace') {
+        if (operation.batch.pass === 'trace' || operation.batch.passes?.[0].pass === 'trace') {
           record.geometry = null; record.geometrySerial = ++serial;
           if (geometryCache?.handles.some(handle => handle === record.targets.handles.depth)) forgetGeometry();
         }
+        if (operation.batch.draft?.mode === 'provisional') emit('Status', { diagnosticsState: 'pending', provisional: true });
         ticket = backend.submitBatch(operation.batch, { admission });
+        if (operation.batch.draft && operation.batch.draft.mode !== 'compute' && ticket.presentationSubmittedAt !== null) {
+          beginFrame(record, meta, ticket); didPresent = true;
+        }
       } else if (operation.kind === 'readback') ticket = backend.readback(operation.descriptor, { admission });
       else {
+        if (!record.internal && !aux) validatePublication(record, meta);
         ticket = backend.present(operation.descriptor, { admission });
-        if (!record.internal && fresh(record)) publish(record, meta, operation.descriptor.display);
+        if (aux?.restoration) emit('Restoration', { frameId: aux.restoration, identity: descriptor.identity, submittedAt: now() });
+        else if (!record.internal) { frameRecords.supersedeDisplay(); displayOrder = record.order; didPresent = publish(record, meta, operation.descriptor.display); }
       }
     } catch (error) {
       retire();
@@ -440,10 +604,14 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           aux?.done.resolve(stale()); return;
         }
         if (completion.outcome === 'failed') {
+          if (record.frame) rejectFrame(record, completion.reason);
           retire();
           if (aux) discardAuxiliary(completion.reason);
           else scheduler.failed(admission, new Error(completion.reason));
           aux?.done.resolve(stale()); return;
+        }
+        if (operation.batch?.draft?.mode && operation.batch.draft.mode !== 'compute' && didPresent) {
+          emit('Present', { identity: identity(record.request), frameId: record.frame.frameId, queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
         }
         if (!record.internal && !record.result) {
           // A completed queue fence remains timing evidence even if subsequent
@@ -464,14 +632,43 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           if (record.internal) {
             if (result.data.byteLength !== 4 || new DataView(result.data.buffer, result.data.byteOffset, 4).getUint32(0, true) !== 0x41544c53) throw new BackendError('preparation-failed', 'ATLS probe mismatch');
           } else if (!aux && !record.result) {
-            const field = operation.descriptor.fields[0], expected = operation.descriptor.region.width * operation.descriptor.region.height * TARGET_LAYOUT[field].bytesPerTexel;
-            if (result.data.byteLength !== expected) throw new BackendError('invalid-descriptor', 'incomplete status readback');
-            const region = operation.descriptor.region;
-            record.masks.record(maskIdentity(record, meta), field, region, result.data);
-            countReadback(record.counts, field, result.data, region, record.masks);
+            const field = operation.batch?.draft ? 'draftSummary' : operation.descriptor.fields[0];
+            if (field === 'draftSummary') {
+              record.summary = validateDraftSummary(result.data, { pixels: descriptor.region.width * descriptor.region.height,
+                recovery: record.diagnosticStride === 3, producerToken: record.producerToken });
+              record.counts = record.summary.counts;
+            } else if (field === 'draftDiagnostics') {
+              const region = { x: 0, y: 0, ...record.request.quality.internalSize };
+              await record.masks.ingestDraft(maskIdentity(record, meta), region, result.data);
+            } else {
+              const expected = operation.descriptor.region.width * operation.descriptor.region.height * TARGET_LAYOUT[field].bytesPerTexel;
+              if (result.data.byteLength !== expected) throw new BackendError('invalid-descriptor', 'incomplete status readback');
+              const region = operation.descriptor.region;
+              await record.masks.ingest(maskIdentity(record, meta), field, region, result.data);
+            }
           }
         }
-        if (operation.kind === 'presentation' && fresh(record)) emit('Present', { identity: identity(record.request), queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
+        if (record.frame && !aux && record.diagnosticsState === 'pending' && record.summary) {
+          validatePublication(record, meta);
+          const update = frameRecords.confirm(record.frame.frameId, record.frame.identity, { rayTermination: record.counts.rayTermination,
+            outcomeAggregates: record.summary, completion: { outcome: 'completed', queueCompletedAt: completion.queueCompletedAt } });
+          if (update) {
+            record.diagnosticsState = 'confirmed'; record.confirmationAt = update.confirmationAt;
+            acceptPublication(record, meta);
+            const ordinary = draftConfig.mode === 'gated' || draftConfig.mode === 'provisional';
+            const presentationEvidence = ordinary ? { historical: update.historical, eligible: record.frame.eligible,
+              presentationSubmittedAt: record.frame.presentationSubmittedAt, completion: update.completion,
+              confirmationAt: update.confirmationAt } : undefined;
+            if (!record.cancelled && !record.result) {
+              if (!update.historical) publish(record, meta, record.displayHandle, { emitPublication: draftConfig.mode !== 'async', presentationEvidence });
+              // Navigation supersession changes the current image, not the fact
+              // that this admitted presentation completed and validated. Keep
+              // other invalidation fences; retain no historical image handles.
+              else if (ordinary && executable(record)) emit('Publish', { ...publicationData(record, meta), ...presentationEvidence });
+            }
+          }
+        }
+        if (operation.kind === 'presentation' && didPresent && !record.cancelled && executable(record)) emit('Present', { identity: identity(record.request), queueCompletedAt: completion.queueCompletedAt, evidence: 'presenter-queue-completion' });
         // completed() notifies the dispatcher synchronously. Copy-out is finished;
         // remove this ticket before a replacement lease can increment the count.
         retire();
@@ -479,6 +676,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           ...(completion.timing.timestampMs === undefined ? {} : { timestampMs: completion.timing.timestampMs }) });
         aux?.done.resolve(result ?? completion);
       } catch (error) {
+        if (record.frame) rejectFrame(record, error.message ?? error);
         retire();
         if (aux) discardAuxiliary(error);
         else { record.error = error; scheduler.failed(admission, error); }
@@ -488,13 +686,17 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     })();
   }
   const unsubscribeLoss = backend.onLoss(event => {
-    prepared = null; preparation = null; published = null; geometryCache = null; owners.clear();
+    if (!maskProcessor) masksService.reset('device lost');
+    else for (const record of jobs.values()) record.masks?.close?.('device lost');
+    frameRecords.interrupt(event.epoch);
+    for (const record of jobs.values()) if (record.frame && record.diagnosticsState === 'pending' && record.request.generation.deviceEpoch === event.epoch) record.diagnosticsState = 'interrupted';
+    prepared = null; preparation = null; published = null; geometryCache = null; owners.clear(); tileLearning.clear(); excessiveDraftWork.clear();
     scheduler.interrupted(event.epoch); scheduler.setEpoch(0);
     for (const record of jobs.values()) if (!record.scheduled) finish(record, { outcome: 'interrupted', reason: 'device-lost' });
     emit('Status', { phase: 'interrupted', epoch: event.epoch });
   });
   function schedule(record, plan, priority, kind) {
-    record.scheduled = scheduler.request(viewId, { jobId: record.request.jobId, requestId: record.request.requestId, priority, kind, plan });
+    record.scheduled = scheduler.request(viewId, { jobId: record.request.jobId, requestId: record.request.requestId, priority, kind, plan, navigationStream: record.navigation ?? null });
     record.scheduled.done.then(result => finish(record, result)); pump();
   }
   async function acquire() {
@@ -545,23 +747,34 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     })();
     return attempt.promise;
   }
-  function render(request, { currentGeneration = () => request.generation } = {}) {
+  function render(request, { currentGeneration = () => request.generation, currentNavigation = null, currentNavigationContent = null, requestedAt = now() } = {}) {
     if (destroyed) throw new BackendError('unavailable', 'renderer destroyed');
     if (request.viewId !== viewId) throw new TypeError('request belongs to another view');
     if (submittedJobs.has(request.jobId) || submittedRequests.has(request.requestId)) throw new TypeError('execution identity already submitted');
     const model = getModel(request.sceneSnapshot.model.id, request.sceneSnapshot.model.version);
     submittedJobs.add(request.jobId); submittedRequests.add(request.requestId);
     pending();
-    const record = { request, model, currentGeneration: typeof currentGeneration === 'function' ? currentGeneration : () => currentGeneration,
+    const navigation = currentNavigation?.() ?? null;
+    if (navigation !== null && (!Number.isSafeInteger(navigation) || navigation < 0)) throw new TypeError('navigation stream must be a nonnegative integer');
+    if (!Number.isFinite(requestedAt) || requestedAt > now()) throw new TypeError('requestedAt must be a finite creation time no later than now');
+    const navigationContent = navigationContentKey(request.sceneSnapshot, request.output);
+    const record = { request, model, order: ++requestOrder, navigation, currentNavigation, navigationContent,
+      currentNavigationContent: currentNavigationContent ?? (() => navigationContent),
+      currentGeneration: typeof currentGeneration === 'function' ? currentGeneration : () => currentGeneration,
       effective: effectiveParameters(model.id, request.sceneSnapshot.parameters).effective,
-      requestedAt: now(), builder: createReportBuilder(request, { implementation: versions, clock: now,
+      requestedAt, builder: createReportBuilder(request, { implementation: versions, clock: now,
         environment: () => ({ backend: observed('Space backend interface', 'renderer backend contract'), device: acquisition?.identity ?? UNAVAILABLE }) }),
-      done: deferred(), handles: [], geometryRequestId: request.requestId, geometrySerial: 0, samplesCompleted: 0,
+      done: deferred(), configuration: new AbortController(), handles: [], geometryRequestId: request.requestId, geometrySerial: 0, samplesCompleted: 0,
       milestones: {}, counts: emptyCounts(), queueElapsedMs: 0, completionCount: 0, timestampCount: 0, timestampMs: 0, outstanding: 0, outstandingMax: 0 };
     if (request.output.purpose === 'interactive') {
-      // Every earlier interactive request was already cancelled by its successor.
-      // Avoid scanning a burst of registrations whose done microtasks are pending.
-      if (interactive && !interactive.result) cancel(interactive.request.jobId);
+      // Running drafts may finish within this navigation stream. The scheduler
+      // still coalesces unissued requests; invalidated streams stop admission.
+      for (const previous of jobs.values()) {
+        if (previous.request.output.purpose !== 'interactive' || previous.result) continue;
+        if (!(navigation !== null && previous.navigation === navigation && previous.navigationContent === navigationContent && previous.request.quality.preview &&
+          previous.request.generation.deviceEpoch === request.generation.deviceEpoch &&
+          previous.request.generation.appearanceRevision === request.generation.appearanceRevision)) cancel(previous.request.jobId);
+      }
       interactive = record;
     }
     current = record;
@@ -590,6 +803,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         await acquire(); register();
         if (prepared?.epoch !== backend.currentEpoch()) { record.builder.mark('preparing'); await prepare(); record.builder.mark('prepared'); }
         if (record.result) return;
+        if (!await record.scheduled.preparation || record.result) return;
         if (request.generation.deviceEpoch !== backend.currentEpoch()) throw new BackendError('device-lost');
         // Configuration is the only pre-admission dependency. Never wait for a
         // timer/frame after the resources needed by this immutable plan exist.
@@ -600,13 +814,16 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
         if (request.quality.sampling.targetSamples > 1) {
           // The annex allocates complete target sets. Keep only the spare geometry
           // before allocating working targets, bounding the transient allocation.
-          const extra = await backend.configureTargets(description), all = flatHandles(extra); hold(all);
+          const extra = await configure(record, description);
+          if (!extra) return;
+          const all = flatHandles(extra); hold(all);
           if (record.result || destroyed) { release(all); return; }
           spare = Object.fromEntries(geometryNames.map(name => [name, extra.handles[name]]));
           const kept = Object.values(spare); release(all.filter(handle => !kept.includes(handle)));
           record.handles.push(...kept);
         }
-        const targets = await backend.configureTargets(description);
+        const targets = await configure(record, description);
+        if (!targets) return;
         hold(flatHandles(targets));
         if (record.result || destroyed) { release(flatHandles(targets)); return; }
         record.handles.push(...flatHandles(targets)); record.targets = targets;
@@ -626,6 +843,23 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
           const boxes = backend.allocate({ name: `menger-boxes-${record.effective.depth}`, bytes: data.byteLength, usage: 'storage', data });
           hold([boxes]); record.handles.push(boxes); record.mengerBoxes = boxes;
         }
+        if (request.quality.preview) {
+          if (request.quality.lighting.stage === 'full' || request.quality.lighting.shadowRays || request.quality.lighting.aoSamples) throw new BackendError('invalid-descriptor', 'packed draft diagnostics require zero secondary-ray work');
+          record.diagnosticStride = RECOVERING_FAMILIES.includes(model.id) ? 3 : 2;
+          record.recg = groupDrafts && qualifiedDraft(request, record.effective, acquisition?.limits) && !excessiveDraftWork.has(draftWorkKey(record)) &&
+            pipelines.descriptors.some(d => d.pipelineId === 'reduce_draft_summary');
+          if (record.recg) {
+            if (producerToken >= 0x7fffffff) throw new BackendError('unavailable', 'draft producer token space exhausted');
+            record.producerToken = ++producerToken;
+            if (draftConfig.summary) {
+              record.draftSummary = backend.allocate({ name: DRAFT_SUMMARY_VERSION, bytes: draftSummaryBytes(record.diagnosticStride === 3), usage: 'storage' });
+              hold([record.draftSummary]); record.handles.push(record.draftSummary);
+            }
+          }
+          const bytes = request.quality.internalSize.width * request.quality.internalSize.height * record.diagnosticStride * 4;
+          record.draftDiagnostics = backend.allocate({ name: 'draft-diagnostics-v1', bytes, usage: 'storage' });
+          hold([record.draftDiagnostics]); record.handles.push(record.draftDiagnostics);
+        }
         readyPlan = makePlan(record);
         scheduler.ready(request.jobId, { epoch: request.generation.deviceEpoch });
       } catch (error) { fail(record, error); record.cancellation?.resolve({ outcome: 'cancelled', submitted: 'none' }); }
@@ -635,6 +869,9 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   function cancel(jobId) {
     const record = jobs.get(jobId); if (!record || record.internal) return scheduler.cancel(jobId);
     record.cancelled = true;
+    record.masks?.close?.('render job cancelled');
+    record.configuration.abort();
+    if (draftConfig.mode === 'provisional' && record.frame) rejectFrame(record, 'cancelled');
     if (record.scheduled) return scheduler.cancel(jobId);
     record.cancellation ??= deferred();
     return { accepted: true, done: record.cancellation.promise };
@@ -765,8 +1002,11 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       pending(); cancel(previous.jobId); current = null; forgetGeometry(); return next;
     },
     onPublish: subscribe('Publish'), onPresent: subscribe('Present'), onReport: subscribe('Report'), onStatus: subscribe('Status'),
+    onPublicationUpdate: subscribe('PublicationUpdate'), onPublicationRecord: subscribe('PublicationRecord'), onProvisional: subscribe('Provisional'), onRestoration: subscribe('Restoration'),
     destroy() {
       if (destroyed) return; destroyed = true;
+      if (!maskProcessor) masksService.destroy();
+      frameRecords.interrupt(backend.currentEpoch(), 'destroyed');
       unsubscribeLoss();
       for (const record of jobs.values()) { scheduler.cancel(record.request.jobId); finish(record, { outcome: 'interrupted', reason: 'destroyed' }); }
       for (const aux of auxiliary.values()) scheduler.cancel(aux.record.request.jobId);

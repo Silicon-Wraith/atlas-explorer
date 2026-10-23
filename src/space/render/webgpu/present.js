@@ -14,9 +14,10 @@ export function createPresenter({ device, canvas, format = globalThis.navigator?
     resize({ width, height }) { if (canvas.width !== width) canvas.width = width; if (canvas.height !== height) canvas.height = height; },
     size: () => ({ width: canvas.width, height: canvas.height }),
     // Encodes one render pass into the current canvas texture; bind group from the pipeline's own layout.
-    encode(encoder, { pipeline, display, uniforms }) {
+    encode(encoder, { pipeline, display, uniforms, summary }) {
       const bindGroup = device.createBindGroup({ label: 'present', layout: pipeline.getBindGroupLayout(0), entries: [
         { binding: 0, resource: { buffer: uniforms } }, { binding: 1, resource: display.createView() },
+        ...(summary ? [{ binding: 2, resource: { buffer: summary } }] : []),
       ] });
       const pass = encoder.beginRenderPass({ label: 'present', colorAttachments: [{ view: context.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 1 } }] });
       pass.setPipeline(pipeline); pass.setBindGroup(0, bindGroup); pass.draw(3); pass.end();

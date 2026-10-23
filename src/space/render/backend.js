@@ -1,7 +1,7 @@
 // Space-owned portable descriptors. No backend API or GPU handles cross into shared/.
-import { deepFreeze, isPlainObject } from '../../shared/scene.js';
+import { deepFreeze, isPlainObject, canonicalJson } from '../../shared/scene.js';
 
-export const PASSES = Object.freeze(['probe', 'trace', 'normals', 'shade', 'accumulate', 'display']);
+export const PASSES = Object.freeze(['probe', 'trace', 'normals', 'shade', 'accumulate', 'display', 'reduce']);
 // B11c (spec §11.4 rev 5.1): space-targets-v2 adds `recovery`, the per-pixel quaternion-primary recovery word that
 // trace_band writes beside depth and status; it is geometry, kept and reused with them (v1 was B06's layout).
 export const TARGET_LAYOUT_ID = 'space-targets-v2';
@@ -25,8 +25,8 @@ export const LIGHTING_BOUNDS_DEFAULT = Object.freeze({ normalFieldSamples: 7, sh
 export const BACKEND_METHODS = Object.freeze(['acquire', 'prepare', 'allocate', 'configureTargets', 'submitBatch', 'readback', 'present', 'release', 'onLoss', 'currentEpoch', 'diagnostics', 'destroy']);
 const ERROR_CODES = ['allocation-failed', 'device-lost', 'preparation-failed', 'invalid-descriptor', 'stale-epoch', 'no-admission', 'unavailable'];
 export class BackendError extends Error {
-  constructor(code, message = code) {
-    super(message);
+  constructor(code, message = code, options) {
+    super(message, options);
     if (!ERROR_CODES.includes(code)) throw new RangeError(`unknown backend error code ${code}`);
     this.name = 'BackendError'; this.code = code;
   }
@@ -100,6 +100,37 @@ export function createBatch(value) {
     region: area, sample: sample(value.sample), bounds, inputs: slots(value.inputs), outputs: slots(value.outputs), uniforms: data(value.uniforms),
   });
 }
+// A draft region is one ordered queue operation. Each member keeps the ordinary
+// Batch contract; opaque handles keep their identity, data and uniforms are copied.
+export function createBatchGroup(value) {
+  object(value, 'batch group', ['identity', 'region', 'sample', 'passes', ...(Object.hasOwn(value, 'draft') ? ['draft'] : [])]);
+  const id = identity(value.identity), area = region(value.region), sampling = sample(value.sample);
+  if (!Array.isArray(value.passes)) invalid('group passes must be an array');
+  const passes = value.passes.map(createBatch);
+  const order = passes.map(batch => batch.pass).join(',');
+  const orders = ['trace,normals,shade,accumulate,display', 'shade,accumulate,display'];
+  if (!orders.includes(order) && !(value.draft && orders.map(order => `${order},reduce`).includes(order))) invalid('invalid draft group pass order');
+  if (sampling.index !== 0) invalid('draft groups require sample zero');
+  for (const batch of passes) {
+    if (canonicalJson(batch.identity) !== canonicalJson(id) || canonicalJson(batch.region) !== canonicalJson(area) || canonicalJson(batch.sample) !== canonicalJson(sampling)) invalid('group members must share identity, region and sample');
+    if (batch.bounds.shadowRays || batch.bounds.shadowSteps || batch.bounds.aoSamples) invalid('draft groups cannot contain secondary-ray work');
+  }
+  let draft;
+  if (value.draft) {
+    object(value.draft, 'draft completion', ['mode', 'summary', 'producerToken', 'recovery', 'display']);
+    const d = value.draft;
+    if (!['compute', 'gated', 'provisional', 'async', 'audit', 'unchecked'].includes(d.mode) || typeof d.recovery !== 'boolean') invalid('invalid draft completion mode');
+    if ((d.mode === 'unchecked') !== (d.summary === null) || (d.summary !== null) !== (passes.at(-1).pass === 'reduce')) invalid('summary reduction and copy must be declared together');
+    const producerToken = count(d.producerToken, 'producerToken', 0x7fffffff, 1);
+    const display = passes.find(batch => batch.pass === 'display');
+    if (display.outputs.display !== d.display || (d.summary && (display.uniforms.producerToken !== producerToken ||
+        passes.at(-1).outputs.summary !== d.summary || passes.at(-1).inputs.draftDiagnostics !== display.outputs.draftDiagnostics ||
+        passes.at(-1).uniforms.producerToken !== producerToken || passes.at(-1).uniforms.diagnosticStride !== (d.recovery ? 3 : 2)))) invalid('draft producer/summary binding mismatch');
+    draft = { mode: d.mode, summary: d.summary === null ? null : handle(d.summary), producerToken, recovery: d.recovery, display: handle(d.display) };
+  }
+  return deepFreeze({ identity: id, region: area, sample: sampling, passes, ...(draft ? { draft } : {}) });
+}
+export const createBatchSubmission = value => Object.hasOwn(value ?? {}, 'passes') ? createBatchGroup(value) : createBatch(value);
 export function createPickRequest(value) {
   object(value, 'pick', ['identity', 'pixel', 'dimensions', 'geometryRevision', 'sampleIndex']);
   const id = identity(value.identity);
@@ -169,13 +200,16 @@ export function createPipelineSet({ id, descriptors }) {
   if (new Set(snapshots.map(item => item.pipelineId)).size !== snapshots.length) invalid('duplicate pipelineId');
   return deepFreeze({ id, descriptors: snapshots });
 }
-function operation(value, requestIdentity) {
+function operation(value, requestIdentity, preview) {
   const payload = value?.kind === 'batch' ? 'batch' : 'descriptor';
   object(value, 'operation', ['id', 'dependsOn', 'kind', payload]); string(value.id, 'operation id');
   if (!Array.isArray(value.dependsOn) || new Set(value.dependsOn).size !== value.dependsOn.length) invalid('dependsOn must contain unique operation ids');
   value.dependsOn.forEach(id => string(id, 'dependency'));
   let descriptor;
-  if (value.kind === 'batch') descriptor = createBatch(value.batch);
+  if (value.kind === 'batch') {
+    descriptor = createBatchSubmission(value.batch);
+    if (descriptor.passes && preview !== true) invalid('BatchGroup is only permitted for draft requests');
+  }
   else if (value.kind === 'readback') {
     const desc = object(value.descriptor, 'readback', ['identity', 'source', 'region', 'fields']), area = region(desc.region);
     if (area.height > 256) invalid('readback is limited to 256 rows');
@@ -210,7 +244,7 @@ export function createJobPlan({ request, operations, onAdvance }) {
   if (!Array.isArray(operations)) invalid('operations must be an array');
   if (onAdvance !== undefined && typeof onAdvance !== 'function') invalid('onAdvance must be a function');
   const snapshot = deepFreeze(data(request));
-  let items = operations.map(op => operation(op, id)), byId = graph(items);
+  let items = operations.map(op => operation(op, id, snapshot.quality?.preview)), byId = graph(items);
   const reserved = new Set(), completed = new Set();
   return Object.freeze({ request: snapshot,
     next() {
@@ -229,20 +263,22 @@ export function createJobPlan({ request, operations, onAdvance }) {
       const replacements = onAdvance?.(op, deepFreeze(data(completion)), Object.freeze(pending));
       if (replacements !== undefined) {
         if (!Array.isArray(replacements)) invalid('onAdvance must return pending operations or undefined');
-        const next = replacements.map(item => operation(item, id));
+        const next = replacements.map(item => operation(item, id, snapshot.quality?.preview));
         if (pending.some(item => !next.some(candidate => candidate.id === item.id))) invalid('subdivision must preserve pending completion barriers');
         const kept = items.filter(item => reserved.has(item.id) || completed.has(item.id));
         const combined = [...kept, ...next], validated = graph(combined);
-        const ancestors = operationId => {
-          const found = new Set(), visit = target => {
-            for (const dependency of validated.get(target).dependsOn) if (!found.has(dependency)) { found.add(dependency); visit(dependency); }
-          };
-          visit(operationId); return found;
+        // Every original dependency must remain an ancestor. The search stops once all
+        // are found, so it does not walk the job's completed history per pending item.
+        const retainsDependencies = previous => {
+          const missing = new Set(previous.dependsOn), seen = new Set(), stack = [previous.id];
+          while (missing.size && stack.length) {
+            for (const dependency of validated.get(stack.pop()).dependsOn) if (!seen.has(dependency)) {
+              seen.add(dependency); missing.delete(dependency); stack.push(dependency);
+            }
+          }
+          return !missing.size;
         };
-        for (const previous of pending) {
-          const dependencies = ancestors(previous.id);
-          if (previous.dependsOn.some(dependency => !dependencies.has(dependency))) invalid('subdivision cannot bypass a dependency');
-        }
+        for (const previous of pending) if (!retainsDependencies(previous)) invalid('subdivision cannot bypass a dependency');
         items = combined; byId = validated;
       }
       reserved.delete(op.id); completed.add(op.id);

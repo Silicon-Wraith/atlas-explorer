@@ -101,8 +101,12 @@ export function validateEvidence(suite, evidence) {
   return { ok: false, kind: 'invalid', detail: `unknown evidence kind ${suite.evidence}` };
 }
 
+// Suite runners emit this marker at column zero. TAP comments, test names and
+// quoted diagnostics are test data, not a runner-level cleanup declaration.
+export const hasCleanupFailureMarker = run => /^CLEANUP-UNCONFIRMED\b/m.test(`${run.stdout ?? ''}\n${run.stderr ?? ''}`);
+
 export function classifySuiteRun(run, evidenceResult) {
-  if (/CLEANUP-UNCONFIRMED/.test(`${run.stdout ?? ''}\n${run.stderr ?? ''}`)) return { state: 'incomplete', reason: 'cleanup-unconfirmed: the suite could not confirm closing its browser', cleanup: 'unconfirmed' };
+  if (hasCleanupFailureMarker(run)) return { state: 'incomplete', reason: 'cleanup-unconfirmed: the suite could not confirm closing its browser', cleanup: 'unconfirmed' };
   if (run.cleanup === 'unconfirmed') return { state: 'incomplete', reason: 'cleanup-unconfirmed: the process tree did not exit after SIGKILL', cleanup: 'unconfirmed' };
   if (run.timedOut) return { state: 'incomplete', reason: 'timeout' };
   if (run.spawnError) return { state: 'incomplete', reason: `launch-error: ${run.spawnError}` };

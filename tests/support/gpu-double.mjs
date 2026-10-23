@@ -25,7 +25,7 @@ export function createGpuDouble({ limits = {} } = {}) {
   installGpuGlobals();
   const control = {
     fences: gate(), scopes: gate(), maps: gate(), losses: gate(),
-    natives: [], submissions: [], scopeDepthAtCreate: [],
+    natives: [], submissions: [], commandBuffers: [], scopeDepthAtCreate: [],
     // One-shot injections: {op, filter, message} queued errors raised in the innermost matching scope.
     errors: [], failInitialMapping: false, failGetMappedRange: false, failMapAsync: false,
     loseDuringAcquire: false, rejectPipelines: false, devices: [],
@@ -76,9 +76,16 @@ export function createGpuDouble({ limits = {} } = {}) {
       createComputePipelineAsync: async descriptor => { if (control.rejectPipelines) throw Object.assign(new Error('injected pipeline rejection'), { name: 'GPUPipelineError', reason: 'internal' }); return { descriptor, getBindGroupLayout: () => ({}) }; },
       createRenderPipelineAsync: async descriptor => ({ descriptor, getBindGroupLayout: () => ({}) }),
       createBindGroup(descriptor) { raise('createBindGroup'); return { descriptor }; },
-      createCommandEncoder() {
+      createCommandEncoder({ label } = {}) {
+        const commands = [];
         const pass = { setPipeline() {}, setBindGroup() {}, dispatchWorkgroups() {}, draw() {}, end() {} };
-        return { beginComputePass: () => pass, beginRenderPass: () => pass, copyTextureToBuffer() {}, copyBufferToBuffer() {}, finish: () => ({}) };
+        return { beginComputePass({ label } = {}) {
+          const command = { label }; commands.push(command);
+          return { setPipeline(pipeline) { command.pipeline = pipeline; }, setBindGroup(index, group) { command.group = group; },
+            dispatchWorkgroups(...dimensions) { command.dimensions = dimensions; }, end() { command.ended = true; } };
+        }, beginRenderPass: () => pass, copyTextureToBuffer() {}, copyBufferToBuffer() {}, finish() {
+          const buffer = { label, commands }; control.commandBuffers.push(buffer); return buffer;
+        } };
       },
       queue: {
         submit(buffers) { control.submissions.push(buffers.length); raise('submit'); },

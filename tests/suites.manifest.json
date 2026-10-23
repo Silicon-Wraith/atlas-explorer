@@ -14,14 +14,132 @@
     { "id": "space-coexistence", "gpu": true, "command": ["tests/space.mjs", "--group", "coexistence"], "report": "artifacts/space-coexistence-report.json", "evidence": "browser",
       "requiredPasses": ["WebGL 2 and WebGPU contexts coexist in one page", "Adapter identity reports observed or unavailable fields truthfully", "A representative pipeline set prepares within the bound with progress events"] },
     { "id": "space-recovery", "gpu": true, "command": ["tests/space.mjs", "--group", "recovery"], "report": "artifacts/space-recovery-report.json", "evidence": "browser",
-      "requiredPasses": ["Self-check pipelines prepare asynchronously with progress and the probe readback is ATLS through ordinary admission", "A batch completes with queue-completion timing and a 256-row banded readback returns the staged pattern", "Presentation renders the display texture to the preferred canvas format at the output size without a second transfer function", "A real device loss through the test adapter settles outstanding tickets interrupted, marks the backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a new epoch", "Configuration failure keeps the previous target set usable", "A 4K target set allocates within the cap at 76 bytes per pixel and is reclaimed after the last ticket retires"] },
+      "requiredPasses": ["Self-check pipelines prepare asynchronously with progress and the probe readback is ATLS through ordinary admission", "A batch completes with queue-completion timing and a 256-row banded readback returns the staged pattern", "Presentation renders the display texture to the preferred canvas format at the output size without a second transfer function", "A real device loss through the test adapter settles outstanding tickets interrupted, marks the backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a new epoch", "Configuration failure keeps the previous target set usable", "A 4K target set allocates within the cap at 76 bytes per pixel and stays tracked while idle pooled after ticket retirement"] },
     { "id": "space-numerics", "gpu": true, "command": ["tests/space.mjs", "--group", "numerics"], "report": "artifacts/space-numerics-report.json", "evidence": "browser",
       "requiredPasses": ["Bulb kernels match the frozen references for every power, mandatory stratum and budget", "Quaternion kernels match the frozen references across off-plane C, nonzero κ and the boundary strata including every component", "κ = ±4 strata report empty slices and initialization escapes exactly", "The 20 adversarial point cases give their expected statuses on the GPU", "Derivative range safety holds on the GPU beyond update 44", "Validation records are registered only for passed mandatory strata"] },
     { "id": "space-rendering", "gpu": true, "command": ["tests/space.mjs", "--group", "rendering"], "report": "artifacts/space-rendering-report.json", "evidence": "browser",
-      "requiredPasses": ["Analytic rays trace to the oracle depth with exact statuses", "The detail ladders record agreement or exceedance per distance under ladder-v1 as diagnostic evidence", "The 12 adversarial ray cases terminate with their expected status and subreason", "Every mandatory overview stratum passes under surface-v1", "Normals require distinct resolved samples and a finite nonzero gradient, and unavailable normals keep their depth", "The sphere silhouette equals the analytic disc except within one pixel of the edge", "The quaternion default view's termination distribution matches the independently predicted one within 5 points", "A pick returns the pinned sample's depth and reconstructs an anchored hit, and a stale pick is rejected", "Product camera classification agrees with the CPU at the resolved budget for every model family", "A settled image accumulates eight jittered samples and the result is bit-identical across completion orders", "Shadowed samples never enter a direct-light accumulation and the first settled direct-light image precedes full quality", "Diagnostic modes show the legend colours exactly for the status words", "Secondary-ray failures remain visibly diagnostic and are counted", "Diagnostic outcomes survive accumulation", "The complete product pipeline set prewarms within the bound and its preparation time is recorded", "sample 0 after an appearance reset on poisoned accumulation and flag targets equals a fresh allocation, for subdivided regions and the following samples", "Five required frozen scenes meet visual acceptance"] },
+      "requiredPasses": ["Analytic rays trace to the oracle depth with exact statuses", "The detail ladders record agreement or exceedance per distance under ladder-v1 as diagnostic evidence", "The 12 adversarial ray cases terminate with their expected status and subreason", "Every mandatory overview stratum passes under surface-v1", "Normals require distinct resolved samples and a finite nonzero gradient, and unavailable normals keep their depth", "The sphere silhouette equals the analytic disc except within one pixel of the edge", "The quaternion default view's termination distribution matches the independently predicted one within 5 points", "A pick returns the pinned sample's depth and reconstructs an anchored hit, and a stale pick is rejected", "Product camera classification agrees with the CPU at the resolved budget for every model family", "A settled image accumulates eight jittered samples and the result is bit-identical across completion orders", "Shadowed samples never enter a direct-light accumulation and the first settled direct-light image precedes full quality", "Diagnostic modes show the legend colours exactly for the status words", "Secondary-ray failures remain visibly diagnostic and are counted", "Diagnostic outcomes survive accumulation", "The complete product pipeline set prewarms within the bound and its preparation time is recorded", "sample 0 after an appearance reset on poisoned accumulation and flag targets equals a fresh allocation, for subdivided regions and the following samples", "Five required frozen scenes meet visual acceptance",
+        "Known unequal linear samples average before the GPU sRGB transfer",
+        "GPU depth normalisation matches independent depths with normals available and unavailable",
+        "Packed draft diagnostics equal independent GPU texture readbacks and preserve display bytes"] },
     { "id": "space-shell", "gpu": false, "command": ["tests/space-shell.mjs"], "report": "artifacts/space-shell-headless-report.json", "evidence": "browser",
       "requiredPasses": ["Space reports unavailable without WebGPU and Plane keeps working", "Switching to Space and back preserves the Plane scene and both histories", "A share link received while Space is active restores Plane or is reported", "Plane held during Space preparation is inert to the keyboard and stays until Space first presents"] },
     { "id": "space-interaction", "gpu": true, "command": ["tests/space.mjs", "--group", "shell"], "report": "artifacts/space-shell-report.json", "evidence": "browser",
-      "requiredPasses": ["The first switch to Space prepares pipelines with visible status and renders the bulb overview", "Each family renders with its estimator category shown", "Orbit, wheel dolly, focus, overview and flight each produce one camera-history entry", "Undo of a parameter edit restores the scene without moving the camera", "A saved scene file reopens to the same scene hash", "A device loss during interaction recovers once and a repeated loss stops automatic retry with the scene intact", "An allocation failure offers a lower-cost choice and never changes the request", "A camera inside the set shows the unresolved exterior status with overview and reset available", "Switching during a Plane export does not interrupt the export", "Keyboard focus, capture and flight end on blur and on switching", "A scripted gamepad orbits and flies, each run is one camera-history entry, and a disconnect stops flight", "No browser runtime errors"] }
+      "requiredPasses": ["The first switch to Space prepares pipelines with visible status and renders the bulb overview", "Each family renders with its estimator category shown", "Orbit, wheel dolly, focus, overview and flight each produce one camera-history entry", "Undo of a parameter edit restores the scene without moving the camera", "A saved scene file reopens to the same scene hash", "A device loss during interaction recovers once and a repeated loss stops automatic retry with the scene intact", "An allocation failure offers a lower-cost choice and never changes the request", "A camera inside the set shows the unresolved exterior status with overview and reset available", "Switching during a Plane export does not interrupt the export", "Keyboard focus, capture and flight end on blur and on switching", "A scripted gamepad orbits and flies, each run is one camera-history entry, and a disconnect stops flight", "No browser runtime errors"] },
+    {
+      "id": "space-performance-bulb",
+      "gpu": true,
+      "benchmark": true,
+      "timeoutMs": 600000,
+      "command": [
+        "tests/space-performance.mjs",
+        "--scene",
+        "bulb"
+      ],
+      "report": "artifacts/space-performance-bulb-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "P3 completed draft cadence",
+        "P3 consecutive draft interval p95",
+        "P3 interaction p95",
+        "P3 stress replacement",
+        "P3 application main-thread tasks",
+        "P3 first settled image",
+        "P3 coverage and visible output"
+      ]
+    },
+    {
+      "id": "space-performance-quaternion",
+      "gpu": true,
+      "benchmark": true,
+      "timeoutMs": 600000,
+      "command": [
+        "tests/space-performance.mjs",
+        "--scene",
+        "quaternion"
+      ],
+      "report": "artifacts/space-performance-quaternion-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "P3 completed draft cadence",
+        "P3 consecutive draft interval p95",
+        "P3 interaction p95",
+        "P3 stress replacement",
+        "P3 application main-thread tasks",
+        "P3 first settled image",
+        "P3 coverage and visible output"
+      ]
+    },
+    {
+      "id": "space-performance-menger",
+      "gpu": true,
+      "benchmark": true,
+      "timeoutMs": 600000,
+      "command": [
+        "tests/space-performance.mjs",
+        "--scene",
+        "menger"
+      ],
+      "report": "artifacts/space-performance-menger-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "P3 completed draft cadence",
+        "P3 consecutive draft interval p95",
+        "P3 interaction p95",
+        "P3 stress replacement",
+        "P3 application main-thread tasks",
+        "P3 first settled image",
+        "P3 coverage and visible output"
+      ]
+    },
+    {
+      "id": "space-prewarm",
+      "gpu": true,
+      "command": ["tests/space.mjs", "--group", "prewarm"],
+      "report": "artifacts/space-prewarm-report.json",
+      "evidence": "browser",
+      "timeoutMs": 600000,
+      "requiredPasses": [
+        "Cold first-operation product prewarm completes within the preparation bound",
+        "No browser runtime errors"
+      ]
+    },
+    { "id": "performance-entry", "gpu": false, "server": false, "timeoutMs": 30000,
+      "command": ["tests/performance-entry.mjs"], "report": "artifacts/performance-entry-report.json", "evidence": "workflow",
+      "requiredPasses": ["Registered P3 entry points terminate without a circular module wait"] },
+    { "id": "acceptance-audit", "gpu": false, "server": false, "timeoutMs": 30000,
+      "command": ["tests/audit-acceptance.mjs"], "report": "artifacts/acceptance-audit-report.json", "evidence": "workflow",
+      "requiredPasses": ["The audit wrapper validates a real Git range and large shards with pinned evidence"] }
+  ],
+  "diagnostics": [
+    {
+      "id": "space-performance-ladder",
+      "gpu": true,
+      "command": [
+        "tests/space-performance-ladder.mjs",
+        "--cell",
+        "<registered index>"
+      ],
+      "runManifest": "tests/reference/performance-ladder-v1.json",
+      "enumerate": [
+        "tests/space-performance-ladder.mjs",
+        "--list"
+      ],
+      "acceptance": false
+    },
+    {
+      "id": "space-draft-summary",
+      "gpu": true,
+      "command": [
+        "tests/space.mjs",
+        "--group",
+        "draft-summary"
+      ],
+      "report": "artifacts/space-draft-summary-report.json",
+      "requiredPasses": [
+        "REC-G GPU summaries equal full decode of the same packets"
+      ],
+      "acceptance": false
+    }
   ]
 }

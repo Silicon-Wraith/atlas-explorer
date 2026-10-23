@@ -1,3 +1,4 @@
+import { installMaskWorkerDouble } from './mask-worker-double.mjs';
 // A minimal fake browser for Node unit tests of workspaces (plan B14). It never renders: elements
 // keep listeners, attributes, values and focus; `#id` lookups create elements on demand; animation
 // frames are collected and run only when a test calls runFrames(). Nothing here launches a browser.
@@ -112,8 +113,9 @@ export function createFakeDocument({ width = 800, height = 600 } = {}) {
 // run only by runFrames(time), so no Plane render (and no Worker) ever starts unless a test asks.
 export function installFakeBrowser({ width = 800, height = 600 } = {}) {
   const saved = {}, keys = ['document', 'window', 'addEventListener', 'removeEventListener', 'dispatchEvent', 'matchMedia', 'location', 'history',
-    'requestAnimationFrame', 'cancelAnimationFrame', 'innerWidth', 'innerHeight', 'devicePixelRatio', 'listenerCount'];
+    'requestAnimationFrame', 'cancelAnimationFrame', 'innerWidth', 'innerHeight', 'devicePixelRatio', 'listenerCount', 'Worker'];
   for (const key of keys) saved[key] = Object.getOwnPropertyDescriptor(globalThis, key);
+  installMaskWorkerDouble();
   const document = createFakeDocument({ width, height });
   const window = listenerHost({});
   let frames = new Map(), nextFrame = 0;

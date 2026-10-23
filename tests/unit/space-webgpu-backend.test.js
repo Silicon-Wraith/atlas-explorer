@@ -119,7 +119,7 @@ test('reconfiguration keeps earlier target handles caller-owned until release', 
   assert.equal((await presented.done).outcome, 'completed', 'the previous image can still be presented');
   for (const handle of Object.values(first.handles).flat()) backend.release(handle);
   const ids = new Set(Object.values(second.handles).flat().map(handle => handle.id));
-  assert.ok(backend.diagnostics().inventory.filter(item => item.name !== 'readback-staging-0' && !item.name.startsWith('uniforms')).every(item => ids.has(item.id)), 'released earlier targets are reclaimed');
+  assert.ok(backend.diagnostics().inventory.filter(item => item.name !== 'readback-staging-0' && !item.name.startsWith('uniforms') && item.state !== 'pooled').every(item => ids.has(item.id)), 'released earlier targets are pooled, never caller-live');
 });
 
 test('configuration snapshots its sizes before awaiting', async () => {
@@ -200,4 +200,300 @@ test('a pipeline rejection while a loss is pending waits for the loss and report
   await destroyed; await flush();
   assert.deepEqual(outcome, ['device-lost']);
   assert.equal(backend.diagnostics().state, 'unavailable'); assert.equal(backend.currentEpoch(), 0);
+});
+
+const draftGroup = (backend, handles) => {
+  const base = probe(backend, handles[0]);
+  return { identity: base.identity, region: base.region, sample: base.sample,
+    passes: ['trace', 'normals', 'shade', 'accumulate', 'display'].map((pass, i) => ({ ...base, pass, outputs: { probe_target: handles[i] } })) };
+};
+test('B15-R10-F2 backend groups submit once and retain every resource and uniform until their fence', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), handles = [set.handles.status, set.handles.recovery, set.handles.depth, set.handles.lightingStatus, set.handles.accumulationFlags];
+    gpu.control.fences.held = true;
+    const before = gpu.control.submissions.length, options = lease(backend); let ticket;
+    const input = draftGroup(backend, handles);
+    input.passes = input.passes.map((batch, i) => ({ ...batch, uniforms: { ...batch.uniforms, origin: [i, 0] } }));
+    assert.doesNotThrow(() => { ticket = backend.submitBatch(input, options); });
+    input.passes[0].uniforms.origin[0] = 999;
+    assert.equal(options.admission.consume(), false); assert.equal(gpu.control.submissions.length, before + 1);
+    assert.equal(gpu.control.submissions.at(-1), 1, 'one command buffer');
+    const commands = gpu.control.commandBuffers.at(-1).commands;
+    assert.equal(commands.length, 5);
+    for (const [i, command] of commands.entries()) {
+      assert.equal(command.ended, true); assert.deepEqual(command.dimensions, [1, 1]);
+      const buffer = command.group.descriptor.entries.find(e => e.resource.buffer)?.resource.buffer;
+      assert.equal(new DataView(buffer.data.buffer).getUint32(0, true), i, 'ordered immutable per-member uniform snapshots');
+    }
+    const uniforms = backend.diagnostics().inventory.filter(e => e.name.startsWith('uniforms:'));
+    assert.equal(uniforms.length, 5); assert.ok(uniforms.every(e => e.state === 'retiring'));
+    for (const handle of handles) { backend.release(handle); assert.equal(entryOf(backend, handle).state, 'retiring'); }
+    gpu.control.fences.release(); assert.equal((await ticket.done).outcome, 'completed');
+    for (const handle of handles) assert.equal(entryOf(backend, handle)?.state, 'pooled');
+    assert.ok(backend.diagnostics().inventory.every(e => !e.name.startsWith('uniforms:')));
+  } finally { backend.destroy(); }
+});
+
+test('B15-R10-F2 invalid later group members consume no lease and submit no partial work', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), input = draftGroup(backend, Array(5).fill(set.handles.status));
+    const before = backend.diagnostics().tracked, submissions = gpu.control.submissions.length, options = lease(backend);
+    input.passes[4] = { ...input.passes[4], pipelineId: 'unprepared-final-pass' };
+    assert.throws(() => backend.submitBatch(input, options), code('preparation-failed'));
+    assert.equal(options.admission.consume(), true); assert.equal(gpu.control.submissions.length, submissions);
+    assert.equal(backend.diagnostics().tracked, before);
+  } finally { backend.destroy(); }
+});
+
+test('B15-R10-F2 group loss and captured failure settle the entire ticket and release all snapshots', async () => {
+  for (const outcome of ['interrupted', 'failed']) {
+    const { gpu, backend } = await ready();
+    try {
+      const set = await targets(backend), handle = set.handles.status;
+      gpu.control.fences.held = true;
+      if (outcome === 'failed') gpu.control.errors.push({ op: 'createBindGroup', filter: 'validation', message: 'group binding failed' });
+      const ticket = backend.submitBatch(draftGroup(backend, Array(5).fill(handle)), lease(backend));
+      backend.release(handle);
+      if (outcome === 'interrupted') backend.testAdapter.injectLoss({ reason: 'group lost' });
+      gpu.control.fences.release();
+      const result = await ticket.done;
+      assert.equal(result.outcome, outcome); assert.equal(result.timing.elapsedMs, null);
+      assert.equal(entryOf(backend, handle)?.state, outcome === 'interrupted' ? undefined : 'pooled');
+      assert.ok(backend.diagnostics().inventory.every(e => !e.name.startsWith('uniforms:')));
+    } finally { backend.destroy(); }
+  }
+});
+
+test('B15-R10-F2 group snapshot allocation failure rolls back before consuming admission', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), options = lease(backend), before = backend.diagnostics().tracked;
+    backend.testAdapter.failNextAllocation();
+    assert.throws(() => backend.submitBatch(draftGroup(backend, Array(5).fill(set.handles.status)), options), code('allocation-failed'));
+    assert.equal(options.admission.consume(), true); assert.equal(gpu.control.submissions.length, 0);
+    assert.equal(backend.diagnostics().tracked, before);
+  } finally { backend.destroy(); }
+});
+
+test('B15-R11-F1 a third uniform allocation failure rolls back the entire group transaction', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), options = lease(backend), baseline = backend.diagnostics().tracked;
+    const device = gpu.control.devices[0], createBuffer = device.createBuffer;
+    const allocated = []; let attempts = 0;
+    device.createBuffer = descriptor => {
+      if (descriptor.label.startsWith('uniforms:') && ++attempts === 3) throw new Error('third uniform failed');
+      const buffer = createBuffer(descriptor); allocated.push(buffer); return buffer;
+    };
+    assert.throws(() => backend.submitBatch(draftGroup(backend, Array(5).fill(set.handles.status)), options), code('allocation-failed'));
+    assert.equal(attempts, 3); assert.equal(allocated.length, 2);
+    assert.equal(backend.diagnostics().tracked, baseline, 'earlier uniforms must not leak tracked bytes');
+    assert.ok(allocated.every(buffer => buffer.destroyed), 'earlier native uniforms must also be destroyed');
+    assert.equal(options.admission.consume(), true, 'failure precedes lease consumption');
+    assert.equal(gpu.control.submissions.length, 0);
+  } finally { backend.destroy(); }
+});
+
+test('B15-R11-F1 rejected admission releases every reserved group uniform without submitting', async () => {
+  const { gpu, backend } = await ready();
+  try {
+    const set = await targets(backend), baseline = backend.diagnostics().tracked;
+    const options = lease(backend), nativeCount = gpu.control.natives.length;
+    let consumed = 0;
+    options.admission = { ...options.admission, consume() {
+      consumed++;
+      assert.equal(backend.diagnostics().tracked, baseline + 5 * 16, 'all five snapshots are reserved before consume');
+      return false;
+    } };
+    assert.throws(() => backend.submitBatch(draftGroup(backend, Array(5).fill(set.handles.status)), options), code('no-admission'));
+    assert.equal(consumed, 1);
+    const uniforms = gpu.control.natives.slice(nativeCount);
+    assert.equal(uniforms.length, 5);
+    assert.equal(backend.diagnostics().tracked, baseline, 'consume rejection must roll back all snapshots');
+    assert.ok(uniforms.every(buffer => buffer.destroyed));
+    assert.equal(gpu.control.submissions.length, 0);
+  } finally { backend.destroy(); }
+});
+
+test('B15 r14 released target sets remain tracked and reuse native memory with fresh handles', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const first = await targets(backend), bytes = backend.diagnostics().tracked;
+    Object.values(first.handles).flat().forEach(h => backend.release(h));
+    assert.equal(backend.diagnostics().tracked, bytes, 'idle pool bytes remain charged');
+    const count = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    const second = await targets(backend);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, count, 'no new native textures');
+    assert.notEqual(second.handles.status, first.handles.status, 'released handles cannot become valid again');
+    backend.release(first.handles.status);
+    assert.ok(entryOf(backend, second.handles.status));
+    assert.throws(() => backend.submitBatch(probe(backend, first.handles.status), lease(backend)), code('invalid-descriptor'));
+    await backend.testAdapter.destroyDevice();
+    assert.equal(backend.diagnostics().tracked, 0);
+    await backend.acquire(); await targets(backend);
+    assert.ok(gpu.control.natives.filter(n => n.kind === 'texture').length > count, 'new epoch uses new memory');
+  } finally { backend.destroy(); }
+});
+
+test('B15 r14 superseded configuration releases its reservation before validation resolves', async () => {
+  const {gpu, backend} = await ready();
+  const controller = new AbortController();
+  try {
+    gpu.control.scopes.held = true;
+    const pending = backend.configureTargets({epoch:backend.currentEpoch(),layoutId:LAYOUT,internalSize:{width:640,height:360},outputSize:{width:1280,height:720},signal:controller.signal});
+    await flush(); assert.ok(backend.diagnostics().tracked > 0);
+    controller.abort();
+    assert.equal(backend.diagnostics().tracked, 0, 'cancelled reservation released synchronously');
+    gpu.control.scopes.release();
+    await assert.rejects(pending, /superseded/);
+  } finally { gpu.control.scopes.release(); backend.destroy(); }
+});
+
+test('B15 r14 pool never reuses retained or mapping-held targets and keys output dimensions', async () => {
+  const {gpu, backend}=await ready();
+  try {
+    const first=await targets(backend);gpu.control.maps.held=true;
+    const read=readOf(backend,first.handles.status);await read.done;await flush();
+    for(const [name,handles] of Object.entries(first.handles))if(name!=='display')for(const h of [handles].flat())backend.release(h);
+    const before=gpu.control.natives.filter(n=>n.kind==='texture').length;
+    const second=await targets(backend);
+    assert.equal(gpu.control.natives.filter(n=>n.kind==='texture').length,before+2,'held status and retained display need distinct memory');
+    assert.equal(entryOf(backend,first.handles.status).state,'retiring');
+    assert.equal(entryOf(backend,first.handles.display).state,'live');
+    gpu.control.maps.release();await read.result;
+    assert.equal(entryOf(backend,first.handles.status).state,'pooled');
+    for(const h of Object.values(second.handles).flat())backend.release(h);
+    const count=gpu.control.natives.filter(n=>n.kind==='texture').length;
+    await targets(backend,2,2,{width:4,height:4});
+    assert.equal(gpu.control.natives.filter(n=>n.kind==='texture').length,count+11,'different output size is a distinct set key');
+  } finally {gpu.control.maps.release();backend.destroy();}
+});
+
+test('B15 r14 4K spare geometry and working sets reuse partial pool under the tracked cap', async () => {
+  const {backend}=await ready({gpu:{limits:{maxStorageBufferBindingSize:256*2**20}}});
+  const geometry=new Set(['depth','status','normal','recovery']);
+  try {
+    const draft=await targets(backend,640,360,{width:1280,height:720});
+    Object.values(draft.handles).flat().forEach(h=>backend.release(h));
+    const spare=await targets(backend,3840,2160);
+    for(const [name,handles] of Object.entries(spare.handles))if(!geometry.has(name))for(const h of [handles].flat())backend.release(h);
+    const work=await targets(backend,3840,2160);
+    assert.ok(backend.diagnostics().tracked >= 3840*2160*96);
+    assert.ok(backend.diagnostics().peak <= TRACKED_ALLOCATION_CAP);
+    // The successful resize now evicts the old draft cache. Supply a current-key idle
+    // texture and enough explicit pressure to exercise reserve's eviction separately.
+    backend.release(work.handles.accumulation[0]);
+    const padding=backend.allocate({name:'pressure-padding',bytes:16*2**20,usage:'storage'});
+    const before=backend.diagnostics().tracked;
+    // A normal allocation evicts idle textures first; live and retained targets survive.
+    const buffer=backend.allocate({name:'pressure',bytes:256*2**20,usage:'storage'});
+    assert.ok(backend.diagnostics().tracked<=TRACKED_ALLOCATION_CAP);
+    assert.ok(backend.diagnostics().tracked<before+256*2**20);
+    assert.equal(entryOf(backend,work.handles.display).state,'live');
+    backend.release(buffer);backend.release(padding);
+  } finally {backend.destroy();}
+});
+
+test('B15 r14 a superseded configuration served from the pool returns its textures to the pool', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const first = await targets(backend);
+    Object.values(first.handles).flat().forEach(h => backend.release(h));
+    const textures = () => gpu.control.natives.filter(n => n.kind === 'texture' && !n.destroyed).length, before = textures();
+    const controller = new AbortController();
+    const pending = backend.configureTargets({epoch:backend.currentEpoch(),layoutId:LAYOUT,internalSize:{width:2,height:2},outputSize:{width:2,height:2},signal:controller.signal});
+    controller.abort();
+    await assert.rejects(pending, /superseded/);
+    assert.equal(textures(), before, 'no healthy pooled texture was destroyed');
+    assert.equal(backend.diagnostics().inventory.filter(e => e.width && e.state === 'pooled').length, 11);
+    const again = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    await targets(backend);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, again, 'the next configuration still reuses the set');
+  } finally { backend.destroy(); }
+});
+
+test('B15 r14b a configuration served from the pool is still error-scoped (spec §9.1 Configuration)', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const first = await targets(backend);
+    Object.values(first.handles).flat().forEach(h => backend.release(h));
+    const created = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    gpu.control.scopes.held = true;
+    let settled = false;
+    const pending = targets(backend).then(value => { settled = true; return value; });
+    await flush(); await flush();
+    assert.equal(settled, false, 'the pool-served configure awaits its error scope like a fresh one');
+    gpu.control.scopes.release();
+    await pending;
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, created, 'still served from the pool');
+  } finally { gpu.control.scopes.release(); backend.destroy(); }
+});
+
+test('B15-O2 reclaim bounds idle bytes while 4K partial reuse preserves held geometry under the total cap', async () => {
+  const {gpu, backend} = await ready();
+  const geometry = new Set(['depth', 'status', 'normal', 'recovery']);
+  try {
+    const spare = await targets(backend, 3840, 2160);
+    const held = Object.entries(spare.handles).filter(([name]) => geometry.has(name)).flatMap(([, handles]) => [handles].flat());
+    for (const [name, handles] of Object.entries(spare.handles)) if (!geometry.has(name)) for (const handle of [handles].flat()) {
+      backend.release(handle);
+      const idle = backend.diagnostics().inventory.filter(e => e.state === 'pooled');
+      assert.ok(idle.reduce((sum, e) => sum + e.bytes, 0) <= 256 * 2**20, 'reclaim trims bytes immediately');
+      assert.ok(idle.length <= 44);
+    }
+    const idleCount = backend.diagnostics().inventory.filter(e => e.state === 'pooled').length;
+    assert.ok(idleCount > 0 && idleCount < 7, 'some 4K working textures survive, some are trimmed');
+    const before = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    const work = await targets(backend, 3840, 2160);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length - before, 11 - idleCount);
+    assert.ok(backend.diagnostics().peak <= TRACKED_ALLOCATION_CAP);
+    assert.ok(held.every(h => entryOf(backend, h)?.state === 'live'), 'spare geometry never evicted');
+    Object.values(work.handles).flat().forEach(h => backend.release(h));
+    held.forEach(h => backend.release(h));
+    assert.ok(backend.diagnostics().tracked <= 256 * 2**20, 'fully idle 4K cache stays bounded');
+  } finally { backend.destroy(); }
+});
+
+test('B15-O2 successful 4K to 720p configure evicts incompatible idle keys and late releases cannot refill them', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const large = await targets(backend, 3840, 2160);
+    gpu.control.maps.held = true;
+    const read = readOf(backend, large.handles.status); await read.done; await flush();
+    for (const [name, handles] of Object.entries(large.handles)) if (name !== 'display') for (const handle of [handles].flat()) backend.release(handle);
+    const status = entryOf(backend, large.handles.status);
+    assert.equal(status.state, 'retiring'); assert.equal(entryOf(backend, large.handles.display).state, 'live');
+    const small = await targets(backend, 1280, 720);
+    assert.equal(backend.diagnostics().inventory.filter(e => e.state === 'pooled' && e.width === 3840).length, 0);
+    assert.equal(entryOf(backend, large.handles.status).state, 'retiring', 'mapping survives resize');
+    assert.equal(entryOf(backend, large.handles.display).state, 'live', 'caller-held display survives resize');
+    gpu.control.maps.release(); await read.result;
+    backend.release(large.handles.display);
+    assert.equal(entryOf(backend, large.handles.status), undefined); assert.equal(entryOf(backend, large.handles.display), undefined);
+    Object.values(small.handles).flat().forEach(h => backend.release(h));
+    assert.ok(backend.diagnostics().inventory.filter(e => e.state === 'pooled').every(e => e.width === 1280));
+    const before = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    await targets(backend, 1280, 720);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, before, 'current-size cache still works');
+  } finally { gpu.control.maps.release(); backend.destroy(); }
+});
+
+test('B15-O2 a failed output-size configuration preserves the prior idle key', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const first = await targets(backend);
+    Object.values(first.handles).flat().forEach(h => backend.release(h));
+    gpu.control.scopes.held = true;
+    gpu.control.errors.push({ op: 'createTexture', filter: 'out-of-memory', message: 'new output rejected' });
+    const failed = targets(backend, 2, 2, { width: 4, height: 4 });
+    const rejected = assert.rejects(failed, /new output rejected/);
+    assert.equal(backend.diagnostics().inventory.filter(e => e.state === 'pooled').length, 11, 'scope still pending');
+    gpu.control.scopes.release(); await rejected;
+    assert.equal(backend.diagnostics().inventory.filter(e => e.state === 'pooled').length, 11, 'failed configure did not activate its key');
+    const before = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    await targets(backend);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, before);
+  } finally { gpu.control.scopes.release(); backend.destroy(); }
 });

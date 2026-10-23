@@ -163,7 +163,7 @@ test('the target layout counts both accumulation images and the recovery word an
   });
   const bytes = Object.values(TARGET_LAYOUT).reduce((sum, item) => sum + item.bytesPerTexel * item.count, 0);
   assert.equal(bytes, 76); assert.equal(bytes * 3840 * 2160, 630374400); assert.equal(TRACKED_ALLOCATION_CAP, 2 ** 30);
-  assert.deepEqual(PASSES, ['probe', 'trace', 'normals', 'shade', 'accumulate', 'display']);
+  assert.deepEqual(PASSES, ['probe', 'trace', 'normals', 'shade', 'accumulate', 'display', 'reduce']);
 });
 
 test('batch snapshots preserve opaque handles and reject malformed identities, slots, samples and uniforms', () => {
@@ -312,4 +312,53 @@ test('adaptive replacement must retain every original pending operation id', () 
   ], onAdvance() { return []; } });
   const reserved = plan.next(); invalid(() => plan.advance(reserved, { epoch: 1, elapsedMs: 1 }));
   assert.equal(plan.exhausted(), false); assert.equal(plan.next(), null);
+});
+
+test('B15-R10-F2 BatchGroup snapshots members and rejects mismatched identities regions samples and pass order', () => {
+  assert.equal(typeof backendModule.createBatchGroup, 'function');
+  const base = batchInput();
+  const member = pass => ({ ...base, pass, bounds: { ...base.bounds, shadowRays: 0, shadowSteps: 0, aoSamples: 0 } });
+  const input = { identity: base.identity, region: base.region, sample: { ...base.sample, index: 0 },
+    passes: ['trace', 'normals', 'shade', 'accumulate', 'display'].map(pass => ({ ...member(pass), sample: { ...base.sample, index: 0 } })) };
+  const group = backendModule.createBatchGroup(input);
+  assert.ok(Object.isFrozen(group.passes)); assert.ok(Object.isFrozen(group.passes[0].uniforms));
+  input.passes[0].uniforms = { changed: true }; assert.notDeepEqual(group.passes[0].uniforms, input.passes[0].uniforms);
+  for (const patch of [{ identity: { ...base.identity, jobId: 'foreign' } }, { region: { ...base.region, x: 1 } }, { sample: { ...base.sample, index: 1 } }]) {
+    invalid(() => backendModule.createBatchGroup({ ...group, passes: group.passes.map((p, i) => i === 1 ? { ...p, ...patch } : p) }));
+  }
+  invalid(() => backendModule.createBatchGroup({ ...group, passes: [...group.passes].reverse() }));
+  invalid(() => backendModule.createBatchGroup({ ...group, passes: group.passes.slice(1) }));
+  assert.equal(backendModule.createBatchGroup({ ...group, passes: group.passes.slice(2) }).passes.length, 3);
+  const op = { id: 'group', dependsOn: [], kind: 'batch', batch: group };
+  invalid(() => createJobPlan({ request: request(), operations: [op] }));
+  const plan = createJobPlan({ request: { ...request(), quality: { preview: true } }, operations: [op] });
+  const reserved = plan.next(); assert.equal(reserved.batch.passes.length, 5); assert.equal(plan.next(), null);
+  plan.advance(reserved, { epoch: 1, elapsedMs: 8, targetMs: 8 }); assert.equal(plan.exhausted(), true);
+});
+
+test('B15-R10-F3 BackendError preserves the acquisition cause without changing its boundary code', () => {
+  const cause = Object.assign(new Error('adapter unavailable'), { code: 'no-adapter' });
+  const error = new BackendError('unavailable', 'acquisition failed', { cause });
+  assert.equal(error.cause, cause); assert.equal(error.code, 'unavailable');
+});
+
+const draftGroupInput = () => {
+  const base = batchInput();
+  base.bounds = { ...base.bounds, shadowRays: 0, shadowSteps: 0, aoSamples: 0 };
+  return { identity: base.identity, region: base.region, sample: base.sample,
+    passes: ['trace', 'normals', 'shade', 'accumulate', 'display'].map(pass => ({ ...base, pass })) };
+};
+test('B15-R11-F1 draft groups reject a matching nonzero sample in every member', () => {
+  const input = draftGroupInput();
+  input.sample = { ...input.sample, index: 1 };
+  input.passes = input.passes.map(pass => ({ ...pass, sample: input.sample }));
+  invalid(() => backendModule.createBatchGroup(input));
+});
+
+test('B15-R11-F1 draft groups reject each kind of secondary-ray work', () => {
+  for (const field of ['shadowRays', 'shadowSteps', 'aoSamples']) {
+    const input = draftGroupInput();
+    input.passes[2] = { ...input.passes[2], bounds: { ...input.passes[2].bounds, [field]: 1 } };
+    invalid(() => backendModule.createBatchGroup(input));
+  }
 });

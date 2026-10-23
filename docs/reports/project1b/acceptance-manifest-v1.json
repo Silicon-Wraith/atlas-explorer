@@ -1,0 +1,969 @@
+{
+  "schema": "atlas.acceptance",
+  "schemaVersion": 1,
+  "policyVersion": 1,
+  "base": "9ace5feca45e60a78bbc13e676535f29b1924311",
+  "head": "579f08457cbab19feae9891506df8043687cde9f",
+  "cutover": "76de54b1df64b67a8764b05918671c218df93da0",
+  "approval": {
+    "approvedBy": "user",
+    "date": "2026-10-21",
+    "source": "Plan rev 4.9; progress.md cutover entry; 526d1b7 merged at 76de54b"
+  },
+  "retrospective": [
+    {
+      "commit": "40fecc3194529ce26a7ee4cd03176805998eb834",
+      "disposition": "validated-later",
+      "candidate": "123fb965d4320f5bc81cd02807a30f6e15789176"
+    },
+    {
+      "commit": "85820e580471b7656b15a8e1f3cd786cd343a164",
+      "disposition": "wip"
+    },
+    {
+      "commit": "b46e2159171f342c227b907b366f36d313b4328e",
+      "disposition": "wip"
+    },
+    {
+      "commit": "9f7875cd455e0bec90e75314babad5ff52a0e600",
+      "disposition": "wip"
+    }
+  ],
+  "docsFastAllowlist": [],
+  "commits": [
+    {
+      "commit": "f8d73e1a2a350e8056e29f9aae4c728daeee68e0",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "2097c07e6e3c7ac93823b418c5296249cec6f92f",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "c6fb8f15ab570c17a77f77722434334bedc8e0b5",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "6f06bcbc38856fa061b3fd15048d55b2b5398aac",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "081e74e63a38014a44b3c8c7062c100dacad329c",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "5914fc9294b4cffcdc5e47b299d8b99638606030",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "5ce1dbcbdf5f4395ada97e94d907ad6b64f039cd",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "39571aaeec56fcf220baef2def14d41de3c41205",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "0f6968cd1e043717fe9757d25d7c956c3bbe71b3",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T03-51-16-191Z-0f6968cd1e04.json"
+    },
+    {
+      "commit": "01395c38982e08376dd8af7525769fc01373f27c",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "683183c33d7728ffaa563c62ebfde7ce5404ea88",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "f8f07ebec152731eabc3e02006b677af8d892d9e",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "9ccc3971316d6cbb6af86b3e73c4090f27ff9903",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T06-51-13-547Z-9ccc3971316d.json"
+    },
+    {
+      "commit": "514d27e0175210f773dce832415bb362b1e0268f",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T06-49-58-588Z-514d27e01752.json"
+    },
+    {
+      "commit": "401c3a571a920c95c5e41d244e02ba75ff48c452",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T06-52-26-509Z-401c3a571a92.json"
+    },
+    {
+      "commit": "82ba41d07f344a6ffa3d2db1a0ead4246d227319",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "7402187f6b7e48a72a15e801f04dd8a5cb33617a",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T07-50-47-448Z-7402187f6b7e.json"
+    },
+    {
+      "commit": "40a4d7d2a32d054011f1c4c6db6f55db3d5958e2",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T07-47-22-549Z-40a4d7d2a32d.json"
+    },
+    {
+      "commit": "a5e0bc933f093ae7940674723733077debe36ccc",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T07-54-15-838Z-a5e0bc933f09.json"
+    },
+    {
+      "commit": "4fac9347ac8c8498a64be24402e21be33c354d97",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T07-31-45-462Z-4fac9347ac8c.json"
+    },
+    {
+      "commit": "4547180f77f312b010735f6a710f66cc0aaf4680",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T07-57-53-446Z-4547180f77f3.json"
+    },
+    {
+      "commit": "dba9e7a226354190296ab79e1c4b232666a1d9a1",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T07-59-14-717Z-dba9e7a22635.json"
+    },
+    {
+      "commit": "1a5ca1185a9e5295232540c4ec5ef62ac39d5384",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-08-16-616Z-1a5ca1185a9e.json"
+    },
+    {
+      "commit": "875b6fb21e1f6ecd3b797df367a156a7245997f0",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-09-34-843Z-875b6fb21e1f.json"
+    },
+    {
+      "commit": "50f847411f447726a34ac6039842ecb9787b40d9",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-15-59-997Z-50f847411f44.json"
+    },
+    {
+      "commit": "d6d1aaf9d40388811109436ad1000704fde44b2c",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-19-29-515Z-d6d1aaf9d403.json"
+    },
+    {
+      "commit": "7b8b31c195344364bd70a640a34e0800fffd82f7",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "25595ac2b30880bcc48734767bda05fbc52c6755",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "0a24aa54def32070c5c61b3c879063e91124998b",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-28-38-748Z-0a24aa54def3.json"
+    },
+    {
+      "commit": "1ea5c0a1c7be4d9a0cf83cb03eea01e9816f2a1a",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-24-46-691Z-1ea5c0a1c7be.json"
+    },
+    {
+      "commit": "d0e26b6640bbbdbe9ace853785d365c8818ad0f9",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-26-01-762Z-d0e26b6640bb.json"
+    },
+    {
+      "commit": "58d53cce9d959bae855028821b822bc8e9eacb7b",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-27-24-361Z-58d53cce9d95.json"
+    },
+    {
+      "commit": "60b0b3acc843bc7847f7ba3806640018880cfa7d",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T11-29-55-496Z-60b0b3acc843.json"
+    },
+    {
+      "commit": "560facbf9667f386206c1a4eabebc885c6f5844f",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T12-58-59-451Z-560facbf9667.json"
+    },
+    {
+      "commit": "976ffe534bb7fe2d1d0f15cdf533452f7e592acf",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T13-00-13-983Z-976ffe534bb7.json"
+    },
+    {
+      "commit": "d11c337ec71c5de57cf65f424b91e05500c40eaf",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T16-26-11-348Z-d11c337ec71c.json"
+    },
+    {
+      "commit": "fffd490be15ffebbd6aa4b54f2206b3d8c9853bc",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "4df8c4b5ee5fb929db5b99521d328836fc35fa32",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "b46dcc4bca759d3b524d1f431f1460ad3a7a8e1a",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T16-30-01-194Z-b46dcc4bca75.json"
+    },
+    {
+      "commit": "1d703acb13602d76ab9973b96b10ac879635e2e4",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T16-52-56-944Z-1d703acb1360.json"
+    },
+    {
+      "commit": "7dc71e65318ab17664eebb80ab3c24159ec84f9c",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T17-01-18-205Z-7dc71e65318a.json"
+    },
+    {
+      "commit": "a99071c9bb7b9af5cd2e2187accaa8a3d44b759d",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T18-17-25-717Z-a99071c9bb7b.json"
+    },
+    {
+      "commit": "3b3485f87f99c7eb55d0e18a108a62bfbfa1e87f",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T17-08-03-035Z-3b3485f87f99.json"
+    },
+    {
+      "commit": "3f8d82bc2067b900164828692769cb7e396f0583",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T17-09-20-557Z-3f8d82bc2067.json"
+    },
+    {
+      "commit": "3aa149b009c8260c9fa4113d4f978d49a9e6ebe8",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T17-17-29-365Z-3aa149b009c8.json"
+    },
+    {
+      "commit": "3041978a349cdfee3d84ace7371c9c4bdf6a9a06",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T18-19-57-962Z-3041978a349c.json"
+    },
+    {
+      "commit": "88c90e93acac061827d0d623b07952d073a2446f",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T18-29-12-980Z-88c90e93acac.json"
+    },
+    {
+      "commit": "8da1f7e8b10894ac60e6ff9716284ccc133812cc",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T18-38-29-308Z-8da1f7e8b108.json"
+    },
+    {
+      "commit": "8175e7313c480e61b27a19de0b7ac63c4e8b1593",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "dabab258cb03a58ce624f5530e5c5b7b30f94ab0",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T18-47-49-821Z-dabab258cb03.json"
+    },
+    {
+      "commit": "d95299674754ef0838b7bc4dff7a4587eccd7f34",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T19-06-30-934Z-d95299674754.json"
+    },
+    {
+      "commit": "7b2de28ef83a264446c0ab86835ee1a81606c54c",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T19-34-32-630Z-7b2de28ef83a.json"
+    },
+    {
+      "commit": "6e99c4b3f9fadc2768d434b37034958ff51a04c6",
+      "disposition": "legacy"
+    },
+    {
+      "commit": "c511240363ebbc43e98c6e67a4c892966dd77113",
+      "disposition": "legacy"
+    },
+    {
+      "commit": "99767edb74873c2fbb3b7913770bf935cd433078",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T20-58-56-940Z-99767edb7487.json"
+    },
+    {
+      "commit": "97648d93477d8f1de33884500bd5b77fdcb73c1a",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T21-17-46-587Z-97648d93477d.json"
+    },
+    {
+      "commit": "bca9c7685f3b44f313f31873e0573734b64eda42",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T18-57-06-862Z-bca9c7685f3b.json"
+    },
+    {
+      "commit": "dca82488af6d13afa3c59f0137b39fc703504845",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T19-15-50-433Z-dca82488af6d.json"
+    },
+    {
+      "commit": "2e94cb4ab0f171bd5c403f8ec6af6cba964cd1c2",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T19-25-10-167Z-2e94cb4ab0f1.json"
+    },
+    {
+      "commit": "a67676f3e2ab27d391d15940b80d7b60693558c9",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T19-53-11-684Z-a67676f3e2ab.json"
+    },
+    {
+      "commit": "21ac89f9dfad40f0fb0cef89d28f0a43760cedf7",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T20-02-30-902Z-21ac89f9dfad.json"
+    },
+    {
+      "commit": "cc1e213fa81f95f2076a514ba925f450e24608b7",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T19-43-50-865Z-cc1e213fa81f.json"
+    },
+    {
+      "commit": "46eb83a27abcb05e0e52cd097cdee10d05cb11bc",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T20-11-44-223Z-46eb83a27abc.json"
+    },
+    {
+      "commit": "123fb965d4320f5bc81cd02807a30f6e15789176",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T21-27-30-852Z-123fb965d432.json"
+    },
+    {
+      "commit": "40fecc3194529ce26a7ee4cd03176805998eb834",
+      "disposition": "validated-later",
+      "candidate": "123fb965d4320f5bc81cd02807a30f6e15789176",
+      "gate": "artifacts/gates/2026-10-21T21-27-30-852Z-123fb965d432.json"
+    },
+    {
+      "commit": "85820e580471b7656b15a8e1f3cd786cd343a164",
+      "disposition": "wip",
+      "boundary": "704cf9b9b70026137627651b19287b20713411c6",
+      "provenance": "approved retrospective WIP"
+    },
+    {
+      "commit": "b46e2159171f342c227b907b366f36d313b4328e",
+      "disposition": "wip",
+      "boundary": "704cf9b9b70026137627651b19287b20713411c6",
+      "provenance": "approved retrospective WIP"
+    },
+    {
+      "commit": "7062c728685e0a6f5efecaff9934f6b3992f2b55",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "6f9d384375d6de526cba42a0cebe0670b299c257",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "448d16ba10e8f9f7528920f05a1189b2a414aab3",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T20-49-11-296Z-448d16ba10e8.json"
+    },
+    {
+      "commit": "399115fabcae3b3cf28c9ec1e482669d19223a7f",
+      "disposition": "legacy",
+      "gate": "artifacts/gates/2026-10-21T21-08-08-718Z-399115fabcae.json"
+    },
+    {
+      "commit": "9f7875cd455e0bec90e75314babad5ff52a0e600",
+      "disposition": "wip",
+      "boundary": "704cf9b9b70026137627651b19287b20713411c6",
+      "provenance": "approved retrospective WIP"
+    },
+    {
+      "commit": "d5fe295c9a6bb85dd46e969b34836e4715d2706b",
+      "disposition": "wip",
+      "boundary": "704cf9b9b70026137627651b19287b20713411c6",
+      "fast": "artifacts/gates/fast/d5fe295c9a6bb85dd46e969b34836e4715d2706b.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "423775fca2d0b7f13bcc32b033fd52490ce06ccb",
+      "disposition": "wip",
+      "boundary": "704cf9b9b70026137627651b19287b20713411c6",
+      "fast": "artifacts/gates/fast/423775fca2d0b7f13bcc32b033fd52490ce06ccb.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "e2d424415969a39b3151464b3722dee44f396d8b",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "86c65761e59653d3154355cf1984c07514492ce8",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "dc51d130f675a81710e47f67ea5a3af2edba1e71",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "526d1b769d8832f2bf7a8445e26a6034521c8a95",
+      "disposition": "historical-docs-only"
+    },
+    {
+      "commit": "76de54b1df64b67a8764b05918671c218df93da0",
+      "disposition": "merge-gated",
+      "gate": "artifacts/gates/2026-10-21T21-54-09-748Z-76de54b1df64.json"
+    },
+    {
+      "commit": "704cf9b9b70026137627651b19287b20713411c6",
+      "disposition": "feature-gated",
+      "integrationBase": "76de54b1df64b67a8764b05918671c218df93da0",
+      "reviewedCandidate": "704cf9b9b70026137627651b19287b20713411c6",
+      "gate": "artifacts/gates/2026-10-21T22-23-28-365Z-704cf9b9b700.json"
+    },
+    {
+      "commit": "edeb4108672971b76acb1b33b4153ec48afb6539",
+      "disposition": "merge-tree-identical",
+      "candidate": "704cf9b9b70026137627651b19287b20713411c6",
+      "integrationBase": "76de54b1df64b67a8764b05918671c218df93da0",
+      "verifiedIntegration": "76de54b1df64b67a8764b05918671c218df93da0",
+      "parents": [
+        "76de54b1df64b67a8764b05918671c218df93da0",
+        "704cf9b9b70026137627651b19287b20713411c6"
+      ],
+      "tree": "5cc9435c1dc0bb5b6ab5a1c473d16b7d046916f3",
+      "candidateTree": "5cc9435c1dc0bb5b6ab5a1c473d16b7d046916f3",
+      "fast": "artifacts/gates/fast/edeb4108672971b76acb1b33b4153ec48afb6539.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "7a0f8caafade040b2b637181c9ba77e511445428",
+      "disposition": "wip",
+      "boundary": "31e5c48935944ad4bccad122604aa689d6568510",
+      "fast": "artifacts/gates/fast/7a0f8caafade040b2b637181c9ba77e511445428.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "89fa983e27cedbda82c410b294dda17be737d335",
+      "disposition": "wip",
+      "boundary": "31e5c48935944ad4bccad122604aa689d6568510",
+      "fast": "artifacts/gates/fast/89fa983e27cedbda82c410b294dda17be737d335.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "84e06a6ae1fc55ecd3ed5a2dd287d80be0e0c41c",
+      "disposition": "wip",
+      "boundary": "15fe073da3407c1740cec4bcd5095f4b874b2d45",
+      "fast": "artifacts/gates/fast/84e06a6ae1fc55ecd3ed5a2dd287d80be0e0c41c.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "15fe073da3407c1740cec4bcd5095f4b874b2d45",
+      "disposition": "feature-gated",
+      "integrationBase": "edeb4108672971b76acb1b33b4153ec48afb6539",
+      "reviewedCandidate": "15fe073da3407c1740cec4bcd5095f4b874b2d45",
+      "gate": "artifacts/gates/2026-10-21T22-47-20-110Z-15fe073da340.json"
+    },
+    {
+      "commit": "5a647b66f1881ba5892d6b045a5ffd702a27468f",
+      "disposition": "merge-tree-identical",
+      "candidate": "15fe073da3407c1740cec4bcd5095f4b874b2d45",
+      "integrationBase": "edeb4108672971b76acb1b33b4153ec48afb6539",
+      "verifiedIntegration": "edeb4108672971b76acb1b33b4153ec48afb6539",
+      "parents": [
+        "edeb4108672971b76acb1b33b4153ec48afb6539",
+        "15fe073da3407c1740cec4bcd5095f4b874b2d45"
+      ],
+      "tree": "3da656d26465769de1a5518804bb1b81226f2abf",
+      "candidateTree": "3da656d26465769de1a5518804bb1b81226f2abf",
+      "fast": "artifacts/gates/fast/5a647b66f1881ba5892d6b045a5ffd702a27468f.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "474c847ba455d125e3043ddf242817bc1be8a54f",
+      "disposition": "wip",
+      "boundary": "b691ffd4f69828fb35a7d32deccea8eb9168eb61",
+      "fast": "artifacts/gates/fast/474c847ba455d125e3043ddf242817bc1be8a54f.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "e555d89c5d1c5e58e0ef6bf8b0dbb29c7951b984",
+      "disposition": "wip",
+      "boundary": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
+      "fast": "artifacts/gates/fast/e555d89c5d1c5e58e0ef6bf8b0dbb29c7951b984.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "6fea024e9041e13625c49b841df1f49fb3ad031d",
+      "disposition": "wip",
+      "boundary": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
+      "fast": "artifacts/gates/fast/6fea024e9041e13625c49b841df1f49fb3ad031d.json",
+      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "c71f7e81161edf28c39f1663d77abd280e8ad25e",
+      "disposition": "wip",
+      "boundary": "f80bf6af3b57d737fc7a45458f7084a9929fc45d",
+      "fast": "artifacts/gates/fast/c71f7e81161edf28c39f1663d77abd280e8ad25e.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "2f91343fe82e08a915b7de81bfd87c46baa0e35c",
+      "disposition": "exception",
+      "boundary": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
+      "fast": "/mnt/ml_storage/scratch/b15-executor2/fast/implementation-attempt-1/artifacts/gates/fast/2f91343fe82e08a915b7de81bfd87c46baa0e35c.json",
+      "provenance": "B15-P17-2, Claude/Codex, 2026-10-23, under the user delegation of product direction; user informed. Explicit historical accounting exception only; failed unit evidence is retained, and no passing fast-check, gate or promotion eligibility is granted. See the independently pinned knownFailures rule and progress.md round 18.",
+      "exceptionId": "B15-P17-2",
+      "promotable": false,
+      "priorProvenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable."
+    },
+    {
+      "commit": "d7cf20dd35b43e0f01a52ef09293dd1dacc03c0e",
+      "disposition": "wip",
+      "boundary": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
+      "fast": "artifacts/gates/fast/d7cf20dd35b43e0f01a52ef09293dd1dacc03c0e.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "7aa3dc81ac7f6292cbd41c146ac367dad27a8122",
+      "disposition": "wip",
+      "boundary": "e19082b981af6fb2cb02fad081961a67f53708b1",
+      "fast": "artifacts/gates/fast/7aa3dc81ac7f6292cbd41c146ac367dad27a8122.json",
+      "provenance": "task/design intermediate; descendant boundary and typed fast evidence required",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "e19082b981af6fb2cb02fad081961a67f53708b1",
+      "disposition": "feature-gated",
+      "integrationBase": "5a647b66f1881ba5892d6b045a5ffd702a27468f",
+      "reviewedCandidate": "e19082b981af6fb2cb02fad081961a67f53708b1",
+      "gate": "artifacts/gates/2026-10-21T22-57-55-091Z-e19082b981af.json"
+    },
+    {
+      "commit": "a95c5afd862c3b8a49d0b76ea4feef99b50576d3",
+      "disposition": "merge-tree-identical",
+      "candidate": "e19082b981af6fb2cb02fad081961a67f53708b1",
+      "integrationBase": "5a647b66f1881ba5892d6b045a5ffd702a27468f",
+      "verifiedIntegration": "5a647b66f1881ba5892d6b045a5ffd702a27468f",
+      "parents": [
+        "5a647b66f1881ba5892d6b045a5ffd702a27468f",
+        "e19082b981af6fb2cb02fad081961a67f53708b1"
+      ],
+      "tree": "dbd927bff69ded20c990048558459a647724afd2",
+      "candidateTree": "dbd927bff69ded20c990048558459a647724afd2",
+      "fast": "artifacts/gates/fast/a95c5afd862c3b8a49d0b76ea4feef99b50576d3.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "f80bf6af3b57d737fc7a45458f7084a9929fc45d",
+      "disposition": "feature-gated",
+      "integrationBase": "a95c5afd862c3b8a49d0b76ea4feef99b50576d3",
+      "reviewedCandidate": "f80bf6af3b57d737fc7a45458f7084a9929fc45d",
+      "gate": "artifacts/gates/2026-10-21T23-19-33-700Z-f80bf6af3b57.json"
+    },
+    {
+      "commit": "1fe82813576a26464b5088e12547d0bd46cbebf6",
+      "disposition": "merge-tree-identical",
+      "candidate": "f80bf6af3b57d737fc7a45458f7084a9929fc45d",
+      "integrationBase": "a95c5afd862c3b8a49d0b76ea4feef99b50576d3",
+      "verifiedIntegration": "a95c5afd862c3b8a49d0b76ea4feef99b50576d3",
+      "parents": [
+        "a95c5afd862c3b8a49d0b76ea4feef99b50576d3",
+        "f80bf6af3b57d737fc7a45458f7084a9929fc45d"
+      ],
+      "tree": "b4bbc27c2111c61c839ff025cff975db7efa567a",
+      "candidateTree": "b4bbc27c2111c61c839ff025cff975db7efa567a",
+      "fast": "artifacts/gates/fast/1fe82813576a26464b5088e12547d0bd46cbebf6.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
+      "disposition": "feature-gated",
+      "integrationBase": "1fe82813576a26464b5088e12547d0bd46cbebf6",
+      "reviewedCandidate": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
+      "gate": "artifacts/gates/2026-10-21T23-29-53-671Z-a90537061ae2.json"
+    },
+    {
+      "commit": "baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4",
+      "disposition": "merge-tree-identical",
+      "candidate": "a90537061ae2585f70bc4a6ac8934c44348a47e3",
+      "integrationBase": "1fe82813576a26464b5088e12547d0bd46cbebf6",
+      "verifiedIntegration": "1fe82813576a26464b5088e12547d0bd46cbebf6",
+      "parents": [
+        "1fe82813576a26464b5088e12547d0bd46cbebf6",
+        "a90537061ae2585f70bc4a6ac8934c44348a47e3"
+      ],
+      "tree": "0eab8aa24108c52283decb52baf2251d554cc54b",
+      "candidateTree": "0eab8aa24108c52283decb52baf2251d554cc54b",
+      "fast": "/mnt/ml_storage/scratch/b15-executor2/fast/contemporaneous-attempt-1/artifacts/gates/fast/baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated; B15-P17-2 binds the existing executor2 retrospective record and pinned contemporaneous index for repair containment.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "b691ffd4f69828fb35a7d32deccea8eb9168eb61",
+      "disposition": "feature-gated",
+      "integrationBase": "baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4",
+      "reviewedCandidate": "b691ffd4f69828fb35a7d32deccea8eb9168eb61",
+      "gate": "artifacts/gates/2026-10-21T23-48-55-310Z-b691ffd4f698.json"
+    },
+    {
+      "commit": "f4c19f78e0d1dd96f610ae89f89abb054bc78e3b",
+      "disposition": "merge-tree-identical",
+      "candidate": "b691ffd4f69828fb35a7d32deccea8eb9168eb61",
+      "integrationBase": "baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4",
+      "verifiedIntegration": "baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4",
+      "parents": [
+        "baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4",
+        "b691ffd4f69828fb35a7d32deccea8eb9168eb61"
+      ],
+      "tree": "7ab057b7514138b79079d2198f2ce21066be70fb",
+      "candidateTree": "7ab057b7514138b79079d2198f2ce21066be70fb",
+      "fast": "artifacts/gates/fast/f4c19f78e0d1dd96f610ae89f89abb054bc78e3b.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "31e5c48935944ad4bccad122604aa689d6568510",
+      "disposition": "feature-gated",
+      "integrationBase": "f4c19f78e0d1dd96f610ae89f89abb054bc78e3b",
+      "reviewedCandidate": "31e5c48935944ad4bccad122604aa689d6568510",
+      "gate": "artifacts/gates/2026-10-21T23-59-22-186Z-31e5c4893594.json"
+    },
+    {
+      "commit": "4693328af8a8f77c0d88b971752d426b644330a9",
+      "disposition": "merge-tree-identical",
+      "candidate": "31e5c48935944ad4bccad122604aa689d6568510",
+      "integrationBase": "f4c19f78e0d1dd96f610ae89f89abb054bc78e3b",
+      "verifiedIntegration": "f4c19f78e0d1dd96f610ae89f89abb054bc78e3b",
+      "parents": [
+        "f4c19f78e0d1dd96f610ae89f89abb054bc78e3b",
+        "31e5c48935944ad4bccad122604aa689d6568510"
+      ],
+      "tree": "06a7ebfb1c145e00442b52d64d506969ab2e4c08",
+      "candidateTree": "06a7ebfb1c145e00442b52d64d506969ab2e4c08",
+      "fast": "artifacts/gates/fast/4693328af8a8f77c0d88b971752d426b644330a9.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "41f26e22fe431572fa665ae732b4159b21ead956",
+      "disposition": "wip",
+      "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
+      "fast": "artifacts/gates/fast/41f26e22fe431572fa665ae732b4159b21ead956.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "c044425ad659a2869e01390932eaf15d6317e58e",
+      "disposition": "wip",
+      "boundary": "676bfc03db7a431ae3c32cc05436c71018ebb778",
+      "fast": "artifacts/gates/fast/c044425ad659a2869e01390932eaf15d6317e58e.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "d1da1d66283901049e92380b2cea925b86ae3768",
+      "disposition": "wip",
+      "boundary": "676bfc03db7a431ae3c32cc05436c71018ebb778",
+      "fast": "artifacts/gates/fast/d1da1d66283901049e92380b2cea925b86ae3768.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "676bfc03db7a431ae3c32cc05436c71018ebb778",
+      "disposition": "feature-gated",
+      "integrationBase": "4693328af8a8f77c0d88b971752d426b644330a9",
+      "reviewedCandidate": "676bfc03db7a431ae3c32cc05436c71018ebb778",
+      "gate": "artifacts/gates/2026-10-22T00-25-03-676Z-676bfc03db7a.json"
+    },
+    {
+      "commit": "3992e38adac8c6b19239b3364e2516d4764ef4bb",
+      "disposition": "merge-tree-identical",
+      "candidate": "676bfc03db7a431ae3c32cc05436c71018ebb778",
+      "integrationBase": "4693328af8a8f77c0d88b971752d426b644330a9",
+      "verifiedIntegration": "4693328af8a8f77c0d88b971752d426b644330a9",
+      "parents": [
+        "4693328af8a8f77c0d88b971752d426b644330a9",
+        "676bfc03db7a431ae3c32cc05436c71018ebb778"
+      ],
+      "tree": "9260a2510438c5c131bbce45f658b72062e9c5da",
+      "candidateTree": "9260a2510438c5c131bbce45f658b72062e9c5da",
+      "fast": "artifacts/gates/fast/3992e38adac8c6b19239b3364e2516d4764ef4bb.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "3ef8776d64a57c73d66efbdf3079444dcb76d7f7",
+      "disposition": "wip",
+      "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
+      "fast": "artifacts/gates/fast/3ef8776d64a57c73d66efbdf3079444dcb76d7f7.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "ed1186ed39ddd0cb58a4646ffa45d833b5e1afef",
+      "disposition": "wip",
+      "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
+      "fast": "artifacts/gates/fast/ed1186ed39ddd0cb58a4646ffa45d833b5e1afef.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "fdea06ebc7ed6a622ba3ce8a4f6ab494949dcec1",
+      "disposition": "wip",
+      "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
+      "fast": "artifacts/gates/fast/fdea06ebc7ed6a622ba3ce8a4f6ab494949dcec1.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "0fb9fb1aabb84a3fa611482b35c54fe6cae616d7",
+      "disposition": "wip",
+      "boundary": "4ce718387708e39d6b49e4b5e15f607a89339337",
+      "fast": "artifacts/gates/fast/0fb9fb1aabb84a3fa611482b35c54fe6cae616d7.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "35c81df7e5f556605b6b8493369cd54aa6108515",
+      "disposition": "docs-only-wip",
+      "boundary": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "1833a1892a9a56bd9b207e89ff2e188dc110046f",
+      "disposition": "docs-only-wip",
+      "boundary": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "e4c53b231753606468f10d65da03704430baddaa",
+      "disposition": "docs-only-wip",
+      "boundary": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "d02892a00bed6d93a67c30317cb10b7b0d576448",
+      "disposition": "docs-only-wip",
+      "boundary": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+      "disposition": "merge-gated",
+      "gate": "artifacts/gates/2026-10-22T02-17-28-944Z-31c91e798c62.json"
+    },
+    {
+      "commit": "4ce718387708e39d6b49e4b5e15f607a89339337",
+      "disposition": "feature-gated",
+      "integrationBase": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+      "reviewedCandidate": "4ce718387708e39d6b49e4b5e15f607a89339337",
+      "gate": "artifacts/gates/2026-10-22T02-34-14-928Z-4ce718387708.json"
+    },
+    {
+      "commit": "197162d1336560452db37c21bdad7d5384e474b0",
+      "disposition": "merge-tree-identical",
+      "candidate": "4ce718387708e39d6b49e4b5e15f607a89339337",
+      "integrationBase": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+      "verifiedIntegration": "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+      "parents": [
+        "31c91e798c62fae4d0ccf851cc599494ff4f4739",
+        "4ce718387708e39d6b49e4b5e15f607a89339337"
+      ],
+      "tree": "83c431e4ed876543e663b19ea142a664e120e136",
+      "candidateTree": "83c431e4ed876543e663b19ea142a664e120e136",
+      "fast": "artifacts/gates/fast/197162d1336560452db37c21bdad7d5384e474b0.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "d39543f2275f73e882a6091da0b35b7e5b54650b",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/d39543f2275f73e882a6091da0b35b7e5b54650b.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "7c1f38bd680132284e0409a427fcb071aed37531",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/7c1f38bd680132284e0409a427fcb071aed37531.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "98586162a4cecbc7f4e848bdd149ebfba071337b",
+      "disposition": "docs-only-wip",
+      "boundary": "d62b9da9f1e569bee1d1f257121278c8d9e67384",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "11497c534f6133c5e783130c72623a26db6a7d4f",
+      "disposition": "docs-only-wip",
+      "boundary": "d62b9da9f1e569bee1d1f257121278c8d9e67384",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "d62b9da9f1e569bee1d1f257121278c8d9e67384",
+      "disposition": "merge-gated",
+      "gate": "artifacts/gates/2026-10-22T04-06-19-696Z-d62b9da9f1e5.json"
+    },
+    {
+      "commit": "8ffff47b5585398d4e833ee163a71a32eab1cf36",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/8ffff47b5585398d4e833ee163a71a32eab1cf36.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "1f7acd208093f2190d352f8dc449e00b11e63453",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/1f7acd208093f2190d352f8dc449e00b11e63453.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "515d2a9a12ba4aba250f89801f2c7559e508593b",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/515d2a9a12ba4aba250f89801f2c7559e508593b.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "9a58d67a766c7f8dbd0244be53aed9380f9e3944",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/9a58d67a766c7f8dbd0244be53aed9380f9e3944.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "ff4d1cb543a7811104d46242505bbbf8a2bd271f",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/ff4d1cb543a7811104d46242505bbbf8a2bd271f.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "77867c194429d03eee32bc478ce39cdbdc6d4bae",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/77867c194429d03eee32bc478ce39cdbdc6d4bae.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "ca5343d364ad254cc63f303715784bac06a8f221",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/ca5343d364ad254cc63f303715784bac06a8f221.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "bb4c3bfa11e3a3e05b7070d27e4978c621c3e052",
+      "disposition": "docs-only-wip",
+      "boundary": "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "e7a9db68445193b18421c566dd55ccc1568becfe",
+      "disposition": "docs-only-wip",
+      "boundary": "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "10a919560667d52422263fa3f7dabccfa5959e42",
+      "disposition": "docs-only-wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "2907d6c5bd096eda1c96aa20bace9696885ad670",
+      "disposition": "docs-only-wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "provenance": "User 2026-10-22, B15 round 9: pinned design-branch docs-only WIP; first-parent docs diff and gated descendant merge required; non-promotable."
+    },
+    {
+      "commit": "02eb149a1498f4814deb23ce1604d56ee6efa14a",
+      "disposition": "wip",
+      "boundary": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "fast": "artifacts/gates/fast/02eb149a1498f4814deb23ce1604d56ee6efa14a.json",
+      "provenance": "User 2026-10-22, B15 round 9: pinned implementation WIP; retrospective typed own-commit fast checks alone; failed re-runs fail; non-promotable.",
+      "requiresRetrospectiveFast": true
+    },
+    {
+      "commit": "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
+      "disposition": "merge-gated",
+      "gate": "artifacts/gates/2026-10-22T05-40-51-712Z-d017b4b7e5b5.json"
+    },
+    {
+      "commit": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "disposition": "feature-gated",
+      "integrationBase": "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
+      "reviewedCandidate": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "gate": "artifacts/gates/2026-10-22T06-42-03-311Z-b8a11fe5e1ed.json"
+    },
+    {
+      "commit": "579f08457cbab19feae9891506df8043687cde9f",
+      "disposition": "merge-tree-identical",
+      "candidate": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "integrationBase": "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
+      "verifiedIntegration": "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
+      "parents": [
+        "d017b4b7e5b50291e9c188ca70332ad134d2c7e0",
+        "b8a11fe5e1ed547bcd3127dd975c10184cee424f"
+      ],
+      "tree": "3bad2b2089f35fd0d5038b9acbca58f402e26528",
+      "candidateTree": "3bad2b2089f35fd0d5038b9acbca58f402e26528",
+      "fast": "artifacts/gates/fast/579f08457cbab19feae9891506df8043687cde9f.json",
+      "provenance": "progress.md: tree-identical promotion; typed fast record required, not fabricated",
+      "requiresRetrospectiveFast": true
+    }
+  ],
+  "exceptionInputs": [
+    {
+      "file": "docs/reports/project1b/gate-exceptions-1b1.json",
+      "base": "dabab258cb03a58ce624f5530e5c5b7b30f94ab0",
+      "head": "99767edb74873c2fbb3b7913770bf935cd433078"
+    }
+  ],
+  "stratumEvidence": [
+    {
+      "file": "artifacts/space-numerics-report.json",
+      "commit": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "sha256": "92da6e9a6e2d67b98dead97903598c8896558abba7dbeae0403e65a347cd193b",
+      "group": "numerics"
+    },
+    {
+      "file": "artifacts/space-rendering-report.json",
+      "commit": "b8a11fe5e1ed547bcd3127dd975c10184cee424f",
+      "sha256": "db238bc49917cbeae1edd0eb0cf535044199f4a46c2b0a86a7b3e24720fbed40",
+      "group": "rendering"
+    }
+  ],
+  "note": "Scope is main..implementationHead, with main pinned at base. Controller must reconcile this seed, add byte-pinned contemporaneous ledger references, actual retrospective typed fast evidence, and current full-SHA stratum reports. No record is manufactured by this manifest. Round 9 applies only the pinned 27 implementation WIP and 10 docs-only WIP approvals; the 12 contemporaneous passes use the explicit commit-time-lower-bound basis. No passing result is implied; every gate and re-run must still pass. B15 round 18 adds only the converged P17-2 historical failure exception and its evidence references/pins; this seed is not a claim that the complete audit passes.",
+  "contemporaneousFastInputs": [
+    {
+      "file": "/mnt/ml_storage/scratch/b15-executor/contemporaneous/index.json",
+      "sha256": "ab327e86056882de06df8855c7bb4b650f0454789244dc582210df262ffc45fc"
+    }
+  ],
+  "historicalDocsOnlyPolicySha256": "f10b7531ec9c4bc3d2ef62ea89c7f97b8dda85c3ec218db2a7d15c4aabb0eaaf",
+  "wipEvidencePolicySha256": "392479c11614dc4ebb6677891820ca6edaeead42ff03914be39bed02736a0cca",
+  "historicalWipExceptionSha256": "230935368c85f47b41c380023e7b6a79edf580fc7139d7c16421082bfe862556"
+}

@@ -4,12 +4,16 @@ export const APPEARANCE_HASHES = Object.freeze({
   sources: Object.freeze({
     "shade": "62c31af83c8bcdd0e3836f085df10d9503d63acca3f92f02f32c0170cc7362cb",
     "accumulate": "d58c7e0467d12e007f3be6fd4f15e791da8b5234bb1e6da7c051453febd82223",
-    "display": "e53fce263ce9b22bac18ee30eed2211e0142458e411cf625c1f4f4825d122fda"
+    "display": "7f3096f566a1e5504329dcb7f235e5d4623a866839ec316622c0e136a32e366e",
+    "draft-summary": "181447e7b3e4990b195d68e07d0d98a6f93646122e7f015a22ff550589d0f1a6",
+    "present-draft": "a14990fe235940a9138b12cb1724aa6d3afe9e43b46e3abbe6efeaacc5594072"
   }),
   assembled: Object.freeze({
     "fields+menger-absent+trace+shade": "3453f868fe2d5926c74256939e04c952e5fcd57e6aa15fce9bccb0f93cb7413c",
     "fields+menger-sample+trace+shade": "ceaa40ac269bf88a26f228b348058ba7f8623c7f6f9887df96a2d3c715943870",
     "accumulate": "89e8f26b87bfd87704757f2bea09565e918de1bace90691dd5fb7bb59f29d6bd",
-    "display": "2e93fcb80796339a9b0dcb3bf8aa390bfbc36fa79550b50b6500c248d3b9dcd1"
+    "display": "402cdc3204104f89db639e3a70f69f8894433ca2cc099d8e9d18f020034752d0",
+    "draft-summary": "12e2c20a1ae428890c3430b6d6db2fa6c9f79e729c64e2c451a5bd56fe40ce2d",
+    "present-draft": "3441d1f0fe78c0e833e4ae0fa96a1061b4a917182ab2287ba575182a4c721b45"
   }),
 });

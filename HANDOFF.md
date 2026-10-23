@@ -1,5 +1,23 @@
 # ATLAS session handoff
 
+## 2026-10-22 — Project 1b.1 B15 implementation under review
+
+Plane is in `src/plane/`; Space is in `src/space/` (models, numerics, camera/navigation, workspace, render orchestration and the `render/webgpu/` backend). Shared scenes/history/scheduling stay in `src/shared/`; shell/activation UI stays in `src/ui/`. `src/app.js` composes both workspaces. Fresh startup opens Plane and acquires Space's device on first activation.
+
+`npm run dev:gpu` accepts `PORT` or `-- --port N` (CLI wins). A failed Space activation leaves Plane available and displays code-specific WebGPU enablement guidance. The user approved the flagged-Chrome route plus actionable ordinary-browser unavailability as §3 end-to-end behavior. Pending navigation drafts may publish within their still-valid stream; strict settled/refinement and picking rules remain.
+
+Run `npm test` and `npm run build` first. Space browser/GPU runs use the exclusive lock:
+
+```sh
+ATLAS_URL=http://127.0.0.1:5195 ATLAS_GPU_HANDOFF="<who, when>" flock /mnt/ml_storage/scratch/atlas-gpu.lock npm run test:space -- --group shell
+```
+
+Acceptance is headed installed Chrome on the physical GPU, with the full recorded Project 0 profile and confirmed cleanup. The `prewarm` group and three `tests/space-performance.mjs --scene <id>` suites require `ATLAS_COLD_CACHE_ROOT` under scratch. The `memory` group measures an actual 4K retained-image replacement; it does not force in-flight overlap. `--group shell --investigation` records the required workflow. No B15 performance, cold-prewarm, 4K or investigation result is established by this handoff.
+
+The controller owns commits and gates. The live acceptance manifest and raw records stay outside the commits they describe; audit pinned `main..implementationHead`. Retrospective fast checks use the exact historical checkout, current timestamps and a matching contemporaneous ledger pass; they do not invent old records or make WIP promotable. All browser/GPU runs take `flock /mnt/ml_storage/scratch/atlas-gpu.lock`. Promotions to `main` require a reviewed PR.
+
+The sections below preserve earlier project history.
+
 ## 2026-10-20 — Project 1a (Foundations) begins
 
 - The Plane modules now live in `src/plane/`; `icons.js` and `style.css` in `src/ui/`. `src/app.js` remains the entry point. Paths below that name `src/<module>.js` refer to `src/plane/<module>.js` (or `src/ui/`).

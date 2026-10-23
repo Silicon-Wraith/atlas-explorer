@@ -14,12 +14,14 @@
 //   - Target handles are caller-owned until release(): reconfiguration never releases the earlier set.
 //   - Compute dispatch geometry is frozen ABI: @workgroup_size(8, 8, 1), ceil(region / 8) workgroups;
 //     each pass carries its region in its own uniforms (the backend injects nothing).
-import { BackendError, createBatch, TARGET_LAYOUT_ID, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../backend.js';
+import { BackendError, createBatchSubmission, TARGET_LAYOUT_ID, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../backend.js';
 import { deepFreeze, isPlainObject } from '../../../shared/scene.js';
 import { acquireDevice, IDENTITY_FIELDS } from './device.js';
 import { createTrackedAllocator } from './allocator.js';
 import { packUniforms, preparePipelines, PREPARATION_BOUND_MS, PRESENT_PIPELINE_ID, validateBindings, WORKGROUP_SIZE } from './pipelines.js';
 import { createPresenter } from './present.js';
+import { draftSummaryBytes } from '../draft-summary.js';
+import { draftExecution as selectDraftExecution } from '../draft-execution.js';
 
 const invalid = message => { throw new BackendError('invalid-descriptor', message); };
 const count = (value, label, min = 0) => { if (!Number.isSafeInteger(value) || value < min) invalid(`${label} must be a safe integer >= ${min}`); return value; };
@@ -56,13 +58,14 @@ const message = error => String(error?.message ?? error);
 // readback; staging is map-read; target textures are storage-writable, sampled (read-only inputs use
 // textureLoad, ruling (a)) and copyable to staging.
 const BUFFER_USAGE = {
-  storage: () => GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  storage: () => GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
   uniform: () => GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_SRC,
   staging: () => GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
 };
 const TEXTURE_USAGE = () => GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;
 
-export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, enableTimestamps = false, preparationBoundMs = PREPARATION_BOUND_MS, loadSource, onPhase, cap = TRACKED_ALLOCATION_CAP, format } = {}) {
+export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, enableTimestamps = false, preparationBoundMs = PREPARATION_BOUND_MS, loadSource, onPhase, cap = TRACKED_ALLOCATION_CAP, format, draftExecution } = {}) {
+  const draftConfig = selectDraftExecution(draftExecution);
   const now = typeof clock === 'function' ? clock : clock?.now?.bind(clock);
   if (typeof now !== 'function') throw new TypeError('createWebGPUBackend requires an injected clock');
   if (!canvas) throw new TypeError('createWebGPUBackend requires a canvas');
@@ -72,6 +75,7 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
   // GPU timestamps are a separate measurement (§9.1 Batches); B06 does not implement them and never
   // reports timestampMs. Requesting them is refused rather than silently ignored.
   if (enableTimestamps) throw new BackendError('unavailable', 'GPU timestamp measurement is not implemented in B06');
+  let rawPending = 0;
   let state = 'unavailable', epoch = 0, lastEpoch = 0, attempt = null, acquiring = false, nextTicket = 0;
   const pipelines = new Map(), pending = new Set(), mappings = new Set(), preparations = new Set(), listeners = new Set(), stagingPool = [], errors = [];
   const lostAttempts = new Set(), creations = new WeakMap();
@@ -188,6 +192,7 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       const encoder = device.createCommandEncoder({ label });
       encode(encoder);
       device.queue.submit([encoder.finish()]);
+      item.queuedAt = now();
     });
     if (thrown) { captured.then(() => {}); settle(item, 'failed', `${label}: ${message(thrown)}`); return; }
     let fenceAt = null;
@@ -275,7 +280,7 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       acquiring = true;
       let result;
       try { result = await acquire({ onLost: observeLoss }); }
-      catch (error) { throw new BackendError('unavailable', `acquisition failed: ${message(error)}`); }
+      catch (error) { throw new BackendError('unavailable', `acquisition failed: ${message(error)}`, { cause: error }); }
       finally { acquiring = false; }
       const { device } = result;
       const discard = () => { try { device.destroy(); } catch { /* ignore */ } };
@@ -328,8 +333,9 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       return createScoped(() => allocator.allocate(description)).value;
     }),
     // Transactional: every byte reserved first; creation errors captured; nothing earlier is released.
-    configureTargets: ({ epoch: requestedEpoch, layoutId, internalSize: requestedInternal, outputSize: requestedOutput } = {}) => timedAsync('configure', async () => {
+    configureTargets: ({ epoch: requestedEpoch, layoutId, internalSize: requestedInternal, outputSize: requestedOutput, signal } = {}) => timedAsync('configure', async () => {
       checkEpoch(requestedEpoch);
+      if (signal?.aborted) throw new BackendError('unavailable', 'target configuration superseded');
       if (layoutId !== TARGET_LAYOUT_ID) invalid('unknown target layoutId');
       const internalSize = size(requestedInternal, 'internalSize'), outputSize = size(requestedOutput, 'outputSize');
       const maxDimension = attempt.limits.maxTextureDimension2D;
@@ -339,11 +345,24 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
         names.push([name, index, layout.count]);
         descs.push(Object.freeze({ name: layout.count === 1 ? name : `${name}-${index}`, width: internalSize.width, height: internalSize.height, format: layout.format, bytesPerTexel: layout.bytesPerTexel, bytes: internalSize.width * internalSize.height * layout.bytesPerTexel }));
       }
-      const { value: created, status } = createScoped(() => allocator.transaction(descs));
-      const error = await status;
+      // The complete layout is the family-requirements key (all current families include recovery).
+      // Partial releases can be reused individually, including the non-geometry spare at 4K.
+      const pool = JSON.stringify([layoutId, outputSize, TARGET_LAYOUT]);
+      // Every configuration is error-scoped (§9.1), including a set served wholly from the pool.
+      // The earlier scope/skip latency comparison was confounded by GPU clocks (B15 O1b).
+      // The scope requirement stands independently of those diagnostic measurements.
+      const reused = allocator.canReuse(descs, pool);
+      const { value: created, status } = createScoped(() => allocator.transaction(descs, { pool }));
+      // An abandoned fresh set may carry an unobserved creation error: never pool it. A pooled set
+      // was validated when first created and returns to the pool.
+      const abandon = () => created.forEach(handle => allocator.release(handle, { discard: !reused }));
+      signal?.addEventListener('abort', abandon, { once: true });
+      let error;
+      try { error = await Promise.race([status, current.lost]); } finally { signal?.removeEventListener('abort', abandon); }
       if (current.lossPending) { await current.lost; throw new BackendError('device-lost', 'the device was lost during configuration'); }
       if (current !== attempt) throw new BackendError('device-lost', 'the device was lost during configuration');
-      if (error) { created.forEach(handle => allocator.release(handle)); throw new BackendError('allocation-failed', `target ${error}`); }
+      if (signal?.aborted) throw new BackendError('unavailable', 'target configuration superseded');
+      if (error) { abandon(); throw new BackendError('allocation-failed', `target ${error}`); }
       const handles = {}, descriptions = {};
       names.forEach(([name, index, total], position) => {
         if (total === 1) { handles[name] = created[position]; descriptions[name] = descs[position]; }
@@ -351,38 +370,104 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       });
       for (const name of Object.keys(handles)) if (Array.isArray(handles[name])) { Object.freeze(handles[name]); Object.freeze(descriptions[name]); }
       current.presenter.resize(outputSize);
+      allocator.activatePool(pool);
       return Object.freeze({ epoch, layoutId, internalSize, outputSize, handles: Object.freeze(handles), descriptions: Object.freeze(descriptions) });
     }),
     submitBatch: (input, options) => timed('submit', () => {
-      const batch = createBatch(input), consume = admissionFor(batch.identity, options);
-      const prepared = pipelines.get(batch.pipelineId);
-      if (!prepared) throw new BackendError('preparation-failed', `pipeline ${batch.pipelineId} is not prepared`);
-      if (prepared.descriptor.kind !== 'compute') invalid('submitBatch requires a compute pipeline; present uses the render pipeline');
-      validateBindings(batch, prepared.descriptor, handle => entry(handle));
-      const handles = [...new Set([...Object.values(batch.inputs), ...Object.values(batch.outputs)])];
-      for (const handle of handles) {
-        const { description } = entry(handle);
-        if (description.width !== undefined && (batch.region.x + batch.region.width > description.width || batch.region.y + batch.region.height > description.height)) invalid('batch region outside resource');
-      }
-      const groups = [Math.ceil(batch.region.width / WORKGROUP_SIZE[0]), Math.ceil(batch.region.height / WORKGROUP_SIZE[1])];
-      if (Math.max(...groups) > attempt.limits.maxComputeWorkgroupsPerDimension) invalid('batch region needs more workgroups than maxComputeWorkgroupsPerDimension; subdivide it');
-      const layout = prepared.descriptor.uniformLayout;
-      // The uniform snapshot is a counted, scoped allocation, reserved before the lease is consumed.
-      const uniforms = layout.byteLength ? createScoped(() => allocator.allocate({ name: `uniforms:${batch.pipelineId}`, bytes: layout.byteLength, usage: 'uniform', data: packUniforms(layout, batch.uniforms) })).value : null;
-      try { consume(); } catch (error) { if (uniforms) allocator.release(uniforms); throw error; }
-      const item = makeTicket(batch.identity, uniforms ? [...handles, uniforms] : handles, { batch });
-      if (uniforms) allocator.release(uniforms); // retiring at once; the ticket holds it
-      submit(item, batch.pipelineId, encoder => {
-        const entries = prepared.descriptor.bindings.map((binding, index) => {
-          if (binding.type === 'uniform-buffer' && layout.byteLength) return { binding: index, resource: { buffer: entry(uniforms, true).native } };
-          const native = entry(batch.inputs[binding.slot] ?? batch.outputs[binding.slot]).native;
-          return { binding: index, resource: binding.type.endsWith('buffer') ? { buffer: native } : native.createView() };
-        });
-        const bindGroup = attempt.device.createBindGroup({ label: batch.pipelineId, layout: prepared.pipeline.getBindGroupLayout(0), entries });
-        const pass = encoder.beginComputePass({ label: batch.pipelineId });
-        pass.setPipeline(prepared.pipeline); pass.setBindGroup(0, bindGroup); pass.dispatchWorkgroups(groups[0], groups[1]); pass.end();
+      const submission = createBatchSubmission(input);
+      checkEpoch(submission.identity.generation.deviceEpoch);
+      // Only injected L0/L1 omit application leases; ordinary operations always require one.
+      const consume = submission.draft && !draftConfig.leases ? () => {} : admissionFor(submission.identity, options);
+      // Validate every member, including uniform packing, before allocating or
+      // consuming the sole lease. A bad final member cannot submit a prefix.
+      const members = (submission.passes ?? [submission]).map(batch => {
+        const prepared = pipelines.get(batch.pipelineId);
+        if (!prepared) throw new BackendError('preparation-failed', `pipeline ${batch.pipelineId} is not prepared`);
+        if (prepared.descriptor.kind !== 'compute') invalid('submitBatch requires a compute pipeline; present uses the render pipeline');
+        validateBindings(batch, prepared.descriptor, handle => entry(handle));
+        const handles = [...new Set([...Object.values(batch.inputs), ...Object.values(batch.outputs)])];
+        for (const handle of handles) {
+          const { description } = entry(handle);
+          if (description.width !== undefined && (batch.region.x + batch.region.width > description.width || batch.region.y + batch.region.height > description.height)) invalid('batch region outside resource');
+        }
+        const groups = [Math.ceil(batch.region.width / WORKGROUP_SIZE[0]), Math.ceil(batch.region.height / WORKGROUP_SIZE[1])];
+        if (Math.max(...groups) > attempt.limits.maxComputeWorkgroupsPerDimension) invalid('batch region needs more workgroups than maxComputeWorkgroupsPerDimension; subdivide it');
+        const layout = prepared.descriptor.uniformLayout;
+        const data = packUniforms(layout, batch.uniforms);
+        return { batch, prepared, handles, groups, layout, data };
       });
-      return item.ticket;
+      const uniformDescriptions = members.filter(member => member.layout.byteLength).map(({ batch, layout, data }) =>
+        ({ name: `uniforms:${batch.pipelineId}`, bytes: layout.byteLength, usage: 'uniform', data }));
+      const draft = submission.draft, summaryBytes = draft ? draftSummaryBytes(draft.recovery) : 0;
+      let presentation = null, staging = null;
+      if (draft) {
+        if (draft.mode !== draftConfig.mode) invalid('draft submission does not match the injected execution rung');
+        if (submission.region.x || submission.region.y) invalid('combined draft operation requires a complete frame');
+        const display = entry(draft.display);
+        if (display.description.format !== 'rgba8unorm' || display.description.width !== submission.region.width || display.description.height !== submission.region.height) invalid('combined draft display dimensions');
+        if (draft.summary && (entry(draft.summary).description.bytes !== summaryBytes || entry(draft.summary).description.usage !== 'storage')) invalid('draft summary storage size');
+        if (draft.mode !== 'compute') {
+          const prepared = pipelines.get(draft.summary ? 'present_draft' : PRESENT_PIPELINE_ID);
+          if (!prepared) throw new BackendError('preparation-failed', 'draft presentation pipeline missing');
+          const output = attempt.presenter.size(), internal = display.description;
+          const values = { internal_size: [internal.width, internal.height], output_size: [output.width, output.height],
+            producerToken: draft.producerToken, summaryWords: summaryBytes / 4, mode: draft.mode === 'provisional' ? 2 : ['gated', 'async'].includes(draft.mode) ? 1 : 0 };
+          const layout = prepared.descriptor.uniformLayout;
+          uniformDescriptions.push({ name: 'uniforms:present-draft', bytes: layout.byteLength, usage: 'uniform',
+            data: packUniforms(layout, Object.fromEntries(layout.fields.map(field => [field.name, values[field.name]]))) });
+          presentation = { prepared, display };
+        }
+      }
+      // Reserve all snapshots transactionally; hold all group resources until its
+      // one ticket settles, including creation scopes and cancellation/loss drain.
+      const uniforms = uniformDescriptions.length ? createScoped(() => allocator.transaction(uniformDescriptions)).value : [];
+      try { if (draft?.summary) staging = stagingFor(summaryBytes, summaryBytes); consume(); }
+      catch (error) { uniforms.forEach(handle => allocator.release(handle)); throw error; }
+      if (staging) staging.busy = true;
+      const handles = [...members.flatMap(member => member.handles), ...uniforms, ...(draft ? [draft.display] : []), ...(staging ? [staging.handle] : [])];
+      const encode = encoder => {
+        if (draft?.summary) encoder.clearBuffer(entry(draft.summary).native);
+        let uniformIndex = 0;
+        for (const { batch, prepared, groups, layout } of members) {
+          const uniform = layout.byteLength ? uniforms[uniformIndex++] : null;
+          const entries = prepared.descriptor.bindings.map((binding, index) => {
+            if (binding.type === 'uniform-buffer' && layout.byteLength) return { binding: index, resource: { buffer: entry(uniform, true).native } };
+            const native = entry(batch.inputs[binding.slot] ?? batch.outputs[binding.slot]).native;
+            return { binding: index, resource: binding.type.endsWith('buffer') ? { buffer: native } : native.createView() };
+          });
+          const bindGroup = attempt.device.createBindGroup({ label: batch.pipelineId, layout: prepared.pipeline.getBindGroupLayout(0), entries });
+          const pass = encoder.beginComputePass({ label: batch.pipelineId });
+          pass.setPipeline(prepared.pipeline); pass.setBindGroup(0, bindGroup); pass.dispatchWorkgroups(groups[0], groups[1]); pass.end();
+        }
+        if (staging) encoder.copyBufferToBuffer(entry(draft.summary).native, 0, entry(staging.handle).native, 0, summaryBytes);
+        if (presentation) attempt.presenter.encode(encoder, { pipeline: presentation.prepared.pipeline, display: presentation.display.native,
+          uniforms: entry(uniforms.at(-1), true).native, ...(draft.summary ? { summary: entry(draft.summary).native } : {}) });
+      };
+      if (draft && !draftConfig.tickets) {
+        // Bounded L0 has the common benchmark fence but no application ticket,
+        // scopes, admission or diagnostic readback. The driver owns both frame slots.
+        if (rawPending >= 2) { uniforms.forEach(handle => allocator.release(handle)); invalid('bounded L0 depth exceeded'); }
+        const startedAt = now(), current = attempt; rawPending++;
+        try {
+          const encoder = current.device.createCommandEncoder({ label: 'diagnostic-L0' }); encode(encoder);
+          current.device.queue.submit([encoder.finish()]);
+          const done = current.device.queue.onSubmittedWorkDone().then(() => {
+            if (current !== attempt) throw new BackendError('device-lost');
+            return { outcome: 'completed', queueCompletedAt: now(), timing: { method: 'benchmark-fence', elapsedMs: now() - startedAt } };
+          }).finally(() => { rawPending--; uniforms.forEach(handle => allocator.release(handle)); });
+          return Object.freeze({ identity: submission.identity, diagnostic: 'bounded-L0', done });
+        } catch (error) { rawPending--; uniforms.forEach(handle => allocator.release(handle)); throw error; }
+      }
+      const item = makeTicket(submission.identity, handles, { batch: submission, ...(staging ? {
+        result: deferred(), staging, mapping: {}, region: { x: 0, y: 0, width: summaryBytes, height: 1 }, fields: Object.freeze(['draftSummary']),
+        copy: { staging, bytes: summaryBytes, rowBytes: summaryBytes, bytesPerRow: summaryBytes, rows: 1 },
+      } : {}) });
+      if (staging) {
+        allocator.hold(draft.summary, item.mapping, 'mapping'); allocator.hold(staging.handle, item.mapping, 'mapping'); mappings.add(item);
+      }
+      uniforms.forEach(handle => allocator.release(handle)); // retiring; the ticket owns them
+      submit(item, submission.passes ? 'draft-group' : submission.pipelineId, encode);
+      return draft && draft.mode !== 'compute' ? Object.freeze({ ...item.ticket, presentationSubmittedAt: item.queuedAt ?? null }) : item.ticket;
     }),
     // One bounded region (≤ 256 rows) into a pooled staging buffer (≤ 2) with 256-byte row pitch. A
     // region whose staging would exceed maxBufferSize is refused before its lease is consumed: the

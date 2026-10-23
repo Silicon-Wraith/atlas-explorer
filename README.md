@@ -2,7 +2,7 @@
 
 **An infinite landscape. One equation. Endless discovery.**
 
-A local Mandelbrot observatory with adaptive-precision coordinates, GPU rendering, and 24-bit RGB color. Plain JavaScript, WebGL 2, Web Workers, and a small Node.js server. No runtime packages, accounts, API keys, or external asset requests.
+A local fractal workbench: an adaptive-precision Mandelbrot Plane and a WebGPU Space for calibration objects, Mandelbulbs and quaternion Julia sets. Plain JavaScript, WebGL 2, WebGPU, Web Workers, and a small Node.js server. No runtime packages, accounts, API keys, or external asset requests.
 
 ![Seahorse valley, calculated by ATLAS](assets/seahorse.png)
 
@@ -26,13 +26,21 @@ On this Linux/NVIDIA workstation, Chrome's default graphics path selected Mesa *
 
 ```sh
 npm run dev:gpu
+# PORT also works; --port takes precedence:
+npm run dev:gpu -- --port 5195
 ```
 
 This starts the server if necessary and opens installed Google Chrome using a separate profile under `artifacts/runtime/chrome-gpu/`. It uses `--use-angle=vulkan` and `--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`; Chrome's sandbox remains enabled. Close that window to exit the launcher. Your existing Chrome profile and its bookmarks/settings are untouched; ATLAS discoveries in the separate profile are separate too.
 
 Click the engine status at the bottom of ATLAS, or open **Help → Graphics details**, to see the actual renderer and any initialization failure. `GPU` means a disclosed hardware renderer, `SOFTWARE WEBGL` means a recognized CPU graphics implementation, and `CPU` means ATLAS's worker fallback. `WEBGL` alone means the device identity is unknown. The verified device here is **ANGLE / NVIDIA RTX 6000 Ada / Vulkan**, not llvmpipe or SwiftShader. A static view does not continuously redraw, so idle GPU power alone cannot identify the renderer. Chromium documents the [Vulkan backend option](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/gpu/using-gpu-hardware-in-headless-chrome.md); the visible-window configuration above was also tested locally.
 
-## Explore
+## Space
+
+A fresh page opens Plane. Select **Space** to prepare its WebGPU pipelines and open the bulb overview. Space preserves its scene and camera history when switching workspaces. Use the family and parameter controls, orbit, dolly, double-click focus, overview and flight; save/open a scene JSON file to carry the investigation between sessions. A pending draft keeps its own camera/quality identity and is visibly marked pending until current work publishes. Settled images and picking require current geometry.
+
+If WebGPU or an adapter is unavailable, Plane stays usable and the message explains Chrome graphics acceleration, HTTPS/localhost and the separate-profile `npm run dev:gpu` route. The release's end-to-end route is flagged Chrome plus actionable unavailability in an ordinary browser (user decision, 2026-10-22). This does not claim flag-free support on every driver. Quaternion visual captures designated diagnostic by plan rev 5.2 are not acceptance evidence. B15 performance acceptance and its recorded investigation remain pending until the executor's evidence passes.
+
+## Explore Plane
 
 - Scroll to zoom toward the pointer; drag to pan. Double-click to dive four times deeper.
 - On touchscreens, drag with one finger or pinch with two. The settings icon opens the complete instrument panel.
@@ -76,11 +84,23 @@ The mathematical approach follows [Claude Heiland-Allen's deep-zoom notes](https
 npm test                 # Node unit tests (numerical, worker, contracts); never a browser or GPU
 npm run build            # Copy the static application into dist/
 npm run start -- --dist  # Serve the built application
-ATLAS_GPU_DEFERRED="<reason>" npm run gate   # Plane gate without the GPU suites (exit 2 = pending)
-ATLAS_GPU_HANDOFF="<who, when>" npm run gate # Full Plane gate (exit 0 = passed)
+ATLAS_GPU_DEFERRED="<reason>" flock /mnt/ml_storage/scratch/atlas-gpu.lock npm run gate   # Plane gate without the GPU suites (exit 2 = pending)
+ATLAS_GPU_HANDOFF="<who, when>" ATLAS_B15_REPORT_DIR=artifacts/b15-reports ATLAS_COLD_CACHE_ROOT=/mnt/ml_storage/scratch/atlas-cold flock /mnt/ml_storage/scratch/atlas-gpu.lock npm run gate # Full gate (exit 0 = passed)
 ```
 
-The gate runs only on a clean commit. It starts its own server on port 5190, runs the unit tests, the build and every browser suite under hard time limits, classifies each one (`passed`, `failed`, `deferred`, `not-run`, `incomplete`), and records the result in `artifacts/gates/`.
+Every browser/GPU run takes `flock /mnt/ml_storage/scratch/atlas-gpu.lock`. Space acceptance uses installed Chrome headed, sandbox enabled, with the recorded Project 0 Vulkan/WebGPU profile; a software or headless result cannot qualify Space numerical/rendering/performance targets. Use an uncontended standalone port such as 5195. The three P3 suites and the cold-prewarm group require `ATLAS_COLD_CACHE_ROOT`; each launch gets empty isolated cache directories and a fresh browser profile.
+
+```sh
+ATLAS_URL=http://127.0.0.1:5195 ATLAS_GPU_HANDOFF="<who, when>" flock /mnt/ml_storage/scratch/atlas-gpu.lock npm run test:space -- --group shell
+ATLAS_URL=http://127.0.0.1:5195 ATLAS_GPU_HANDOFF="<who, when>" ATLAS_COLD_CACHE_ROOT=/mnt/ml_storage/scratch/atlas-cold flock /mnt/ml_storage/scratch/atlas-gpu.lock node tests/space.mjs --group prewarm
+# With those environment variables exported: --scene bulb, quaternion, or menger
+flock /mnt/ml_storage/scratch/atlas-gpu.lock node tests/space-performance.mjs --scene bulb
+node tests/audit-acceptance.mjs # Offline real-Git audit integration; no browser/GPU
+```
+
+Promotions to `main` use a reviewed PR only. Feature, WIP, promotion and integration evidence follow the versioned 1b.1 acceptance manifest; fast-check records cannot substitute for full gates. The 1b.1 audit range is pinned `main..implementationHead`, excluding histories already shipped on main.
+
+For the full gate, `ATLAS_B15_REPORT_DIR=artifacts/b15-reports` keeps live P3/prewarm evidence outside the tracked documentation tree; copy reviewed snapshots to `docs/reports/project1b/` afterward. The gate runs only on a clean commit. It starts its own server on port 5190, runs the unit tests, the build and every browser suite under hard time limits, classifies each one (`passed`, `failed`, `deferred`, `not-run`, `incomplete`), and records the result in `artifacts/gates/`.
 
 Browser tests use Playwright as the only development dependency:
 
@@ -113,6 +133,10 @@ Regenerate the actual fractal thumbnails with `npm run thumbnails`. This CPU ope
 | --- | --- |
 | `src/plane/math.js` | Adaptive coordinates, reference orbits, independent exact recurrence |
 | `src/plane/perturbation.js` | CPU perturbation and extended-range arithmetic |
+| `src/space/workspace.js`, `src/ui/workspace-switcher.js` | Space scene/history, navigation, preparation, recovery and workspace activation |
+| `src/space/models/`, `src/space/numerics/`, `src/space/camera.js` | GPU-independent model/numerical/camera contracts |
+| `src/space/render/`, `src/space/render/webgpu/` | Space orchestration, tracked resources, WebGPU passes and WGSL |
+| `tests/space.mjs`, `tests/space-performance.mjs` | Headed Space suites, investigation, cold prewarm, allocation measurement and frozen P3 workloads |
 | `src/plane/reference.worker.js` | Reference calculation and CPU rendering off the main thread |
 | `src/plane/shaders.js` | Direct, perturbation, extended-range, and color shaders |
 | `src/plane/renderer.js` | GPU resources, render targets, CPU fallback |
@@ -135,3 +159,5 @@ Git is in use; Project 1a was developed on `feat/project1a`. Read `AGENTS.md` fo
 The Project 1a gate audit distinguishes commits with their own passing gate (`accepted`) from explicit user-approved exceptions (`accepted-by-exception`). Exceptions are recorded in `docs/reports/project1a/gate-exceptions.json`; the audit summary lists each decision and both gate records in `docs/reports/project1a/gate-ledger.json`.
 
 Licensed under MIT; see [LICENSE](LICENSE).
+
+The inspection API `atlas.space.requestCamera(pose, {phase})` defaults to a settled `commit`; `preview` follows the drag path and the final commit records one history entry. `onRequest` covers requests created by the workspace submission path, before handing them to recovery. Workspace resize submissions are included; direct renderer calls and internal recovery replays are excluded; their results remain visible through `onReport`. These are developer inspection APIs, not user controls.

@@ -14,11 +14,11 @@ const load = async id => readFileSync(new URL(`shaders/${id}.wgsl`, root), 'utf8
 // B10: every tracing descriptor is fields + a Menger adapter + the trace core + one entry source.
 const TRACING_ASSEMBLIES = ['menger-absent', 'menger-sample'].flatMap(adapter => ['trace-band', 'normals', 'trace-rays'].map(entry => ['fields', adapter, 'trace', entry]));
 // B11: shade.wgsl follows fields, a Menger adapter and the trace core; accumulate and display stand alone.
-const APPEARANCE_ASSEMBLIES = [...['menger-absent', 'menger-sample'].map(adapter => ['fields', adapter, 'trace', 'shade']), ['accumulate'], ['display']];
+const APPEARANCE_ASSEMBLIES = [...['menger-absent', 'menger-sample'].map(adapter => ['fields', adapter, 'trace', 'shade']), ['accumulate'], ['display'], ['draft-summary'], ['present-draft']];
 const TARGETS = [
   { file: 'kernel-hashes.js', name: 'KERNEL_HASHES', sources: ['fields', 'points'], assemblies: [['fields', 'points']] },
   { file: 'tracing-hashes.js', name: 'TRACING_HASHES', sources: ['trace', 'trace-band', 'normals', 'trace-rays', 'menger-sample', 'menger-absent'], assemblies: TRACING_ASSEMBLIES },
-  { file: 'appearance-hashes.js', name: 'APPEARANCE_HASHES', sources: ['shade', 'accumulate', 'display'], assemblies: APPEARANCE_ASSEMBLIES },
+  { file: 'appearance-hashes.js', name: 'APPEARANCE_HASHES', sources: ['shade', 'accumulate', 'display', 'draft-summary', 'present-draft'], assemblies: APPEARANCE_ASSEMBLIES },
 ];
 
 let stale = false;

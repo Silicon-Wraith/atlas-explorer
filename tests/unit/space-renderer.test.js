@@ -3,13 +3,19 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createFakeClock } from '../support/fake-clock.mjs';
 import { createFakeBackend } from '../support/fake-backend.mjs';
+import { rendererWithProbe } from '../support/renderer-probe.mjs';
 import { createScheduler } from '../../src/shared/scheduler.js';
 import { BackendError, createAdmission, createPipelineSet, createPickRequest, sampleJitter } from '../../src/space/render/backend.js';
 import { packStatus, packLightingStatus } from '../../src/space/render/status.js';
 import { createSpaceScene, sceneCodec } from '../../src/space/scene-adapter.js';
 import { createSpaceRequest } from '../../src/space/render-adapter.js';
-import { createSpaceRenderer } from '../../src/space/render/renderer.js';
-import { productPipelineSet } from '../../src/space/render/webgpu/appearance.js';
+import { createSpaceRenderer, navigationDraftEligible } from '../../src/space/render/renderer.js';
+import { createMaskProcessor } from '../../src/space/render/mask-processor.js';
+import { MaskWorkerDouble, installMaskWorkerDouble } from '../support/mask-worker-double.mjs';
+installMaskWorkerDouble();
+import { createMaskWork } from '../../src/space/render/mask-work.js';
+import { stageDraftDiagnostics } from '../support/fake-space-backend.mjs';
+import { productPipelineSet, appearancePipelineDescriptors } from '../../src/space/render/webgpu/appearance.js';
 import { FIELD_IDS, POINT_INPUT_BYTES, POINT_RESULT_BYTES, RESULT_SENTINEL, decodePointResults,
   fieldPipelineDescriptors, mengerBoxData } from '../../src/space/render/webgpu/kernels.js';
 import { effectiveParameters, escapeRadius } from '../../src/space/numerics/parameters.js';
@@ -42,16 +48,17 @@ const fixture = createPipelineSet({ id: 'b09-fixture', descriptors: [
   ...['normals', 'depth', 'steps', 'termination'].map(mode => compute(`diagnostic-${mode}`, `diagnostic_${mode}`, [read('depth'), read('status'), read('normal'), write('sampleColor'), write('lightingStatus')])),
   compute('accumulate', 'accumulate_band', [read('sampleColor'), read('lightingStatus'), read('previous'), write('next'), { slot: 'accumulationFlags', type: 'storage-texture', access: 'read-write' }]),
   compute('display', 'display_band', [read('accumulation'), read('accumulationFlags'), write('display')]),
+  ...appearancePipelineDescriptors().filter(d => d.pipelineId === 'display_draft_band'),
   ...fieldPipelineDescriptors(),
   { pipelineId: 'present', kind: 'render', sourceIds: ['fixture-only'], vertexEntryPoint: 'present_vertex', fragmentEntryPoint: 'present_fragment', constants: {}, bindings: [read('display')], uniformLayout: { byteLength: 0, fields: [] } },
 ] });
-const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); await new Promise(resolve => setImmediate(resolve)); };
 const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
-async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
+async function rig({ pipelineSet = fixture, draftExecution, maskProcessor, maskWork = createMaskWork({ yieldTask: () => new Promise(resolve => setImmediate(resolve)) }), testProbe, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, recoveryWords, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock, limits });
   const hooks = {}, discarded = [], failed = [], auxiliaryJobs = [];
-  const tickets = [], submissions = [], publications = [], presents = [], statuses = [], reports = [], plans = [], targets = [];
+  const tickets = [], submissions = [], publications = [], publicationUpdates = [], publicationRecords = [], presents = [], statuses = [], reports = [], plans = [], targets = [];
   let prepared = false, releaseConfiguration, releaseReadbacks;
   const readbacksBlocked = new Promise(resolve => { releaseReadbacks = resolve; });
   const blocked = new Promise(resolve => { releaseConfiguration = resolve; });
@@ -72,17 +79,18 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
     },
   };
   for (const method of ['submitBatch', 'readback', 'present']) backend[method] = (desc, options) => {
-    hooks.before?.(method, desc, options);
+    if (method === 'submitBatch') stageDraftDiagnostics(fake, desc, { statusWords, normals, recoveryWords });
+    for (const member of desc.passes ?? [desc]) hooks.before?.(method, member, options);
     if (method === 'readback' && desc.fields.includes('probe')) fake.stage(desc.source, words([probe]));
     if (method === 'readback' && desc.fields.includes('cameraClassification') && classificationWords) fake.stage(desc.source, words(classificationWords));
     const ticket = fake[method](desc, options);
-    const replacement = hooks.after?.(method, desc, ticket);
+    const replacement = (desc.passes ?? [desc]).map(member => hooks.after?.(method, member, ticket)).find(Boolean);
     const record = { method, desc, admission: options.admission, ticket, pending: true };
     tickets.push(record); submissions.push(record);
     ticket.done.then(() => { record.pending = false; });
     if (replacement) return replacement;
     if (stalePickReadback && method === 'readback' && desc.fields.includes('depth')) return { ...ticket, result: ticket.result.then(result => ({ ...result, identity: { ...result.identity, requestId: 'obsolete-request' } })) };
-    return prepared && holdReadbacks && method === 'readback'
+    return prepared && holdReadbacks && ticket.result
       ? { ...ticket, result: ticket.result.then(async result => { await readbacksBlocked; return result; }) } : ticket;
   };
   const rawScheduler = createScheduler({ clock, makeAdmission: createAdmission, setTimer: clock.schedule, clearTimer: clock.clear });
@@ -101,17 +109,19 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
     discarded.push({ admission, reason, accepted }); return accepted;
   };
   let renderer;
-  assert.doesNotThrow(() => { renderer = createSpaceRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet }); }, 'the importable renderer must implement its constructor');
+  const makeRenderer = testProbe ? await rendererWithProbe() : createSpaceRenderer;
+  assert.doesNotThrow(() => { renderer = makeRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet, draftExecution, maskProcessor, maskWork, testProbe }); }, 'the importable renderer must implement its constructor');
   renderer.onPublish(value => publications.push(value)); renderer.onPresent(value => presents.push(value));
+  renderer.onPublicationUpdate(value => publicationUpdates.push(value)); renderer.onPublicationRecord(value => publicationRecords.push(value));
   renderer.onStatus(value => statuses.push(value)); renderer.onReport(value => reports.push(value));
-  const complete = async (order = 'oldest', elapsedMs = 8) => {
-    await flush(); const pending = tickets.filter(item => item.pending);
+  const complete = async (order = 'oldest', elapsedMs = 8, stop = () => false) => {
+    await flush(); if (stop()) return false; const pending = tickets.filter(item => item.pending);
     const item = order === 'newest' ? pending.at(-1) : pending[0];
     if (!item) return false;
     clock.advance(0.1); fake.complete(item.ticket, { elapsedMs }); await flush(); return item;
   };
   const until = async (predicate, order = 'oldest', limit = 20000) => {
-    for (let i = 0; i < limit; i++) { await flush(); if (predicate()) return; await complete(order); }
+    for (let i = 0; i < limit; i++) { await flush(); if (predicate()) return; await complete(order, 8, predicate); }
     assert.fail('bounded fake-backend driver did not reach its condition');
   };
   const finish = async (job, order = 'oldest') => {
@@ -121,13 +131,198 @@ async function rig({ pipelineSet = fixture, limits = {}, probe = 0x41544c53, sta
   let receipt, failure; preparing.then(value => { receipt = value; }, error => { failure = error; });
   await until(() => receipt !== undefined || failure !== undefined);
   prepared = true;
-  return { renderer, fake, backend, scheduler, clock, hooks, discarded, failed, auxiliaryJobs, tickets, submissions, publications, presents, statuses, reports, plans, targets, receipt, failure, complete, until, finish, releaseConfiguration, releaseReadbacks };
+  return { renderer, fake, backend, scheduler, clock, hooks, discarded, failed, auxiliaryJobs, tickets, submissions, publications, publicationUpdates, publicationRecords, presents, statuses, reports, plans, targets, receipt, failure, complete, until, finish, releaseConfiguration, releaseReadbacks };
 }
-const batches = (h, jobId) => h.submissions.filter(x => x.method === 'submitBatch' && x.desc.identity.jobId === jobId).map(x => x.desc);
+const batches = (h, jobId) => h.submissions.filter(x => x.method === 'submitBatch' && x.desc.identity.jobId === jobId).flatMap(x => x.desc.passes ?? [x.desc]);
 const auxiliaryResult = async (h, promise) => { let result; promise.then(value => { result = value; }); await h.until(() => result !== undefined); return result; };
 
 const inventoryEntry = (h, handle) => h.fake.diagnostics().inventory.find(entry => entry.id === handle.id && entry.epoch === handle.epoch);
 const pixelsIn = r => r.quality.internalSize.width * r.quality.internalSize.height;
+
+test('B15-R16-F8 settled presentation waits for yielded mask validation', async () => {
+  let release, yielded = false;
+  const held = new Promise(resolve => { release = resolve; });
+  const maskWork = createMaskWork({ yieldTask: async () => { yielded = true; await held; } });
+  const h = await rig({ maskWork });
+  try {
+    const job = h.renderer.render(request(directScene(), generation(), 'settled'));
+    await h.until(() => yielded || h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId));
+    assert.equal(yielded, true, 'settled masks must yield to a browser task before publication');
+    assert.equal(h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId), false);
+    release();
+    assert.equal((await h.finish(job)).outcome, 'completed');
+    assert.equal(h.publications.length, 1);
+    assert.equal(h.failed.length, 0);
+  } finally { release(); h.renderer.destroy(); }
+});
+
+test('B15-R16-F8 cancellation and loss during yielded masks cannot present or strand a lease', async () => {
+  for (const action of ['cancel', 'loss']) {
+    let release, yielded = false;
+    const held = new Promise(resolve => { release = resolve; });
+    const h = await rig({ maskWork: createMaskWork({ yieldTask: async () => { yielded = true; await held; } }) });
+    try {
+      const job = h.renderer.render(request(directScene(), generation(), 'settled'));
+      await h.until(() => yielded);
+      assert.ok(h.scheduler.snapshot().outstanding > 0, 'CPU validation retains the readback lease');
+      if (action === 'cancel') h.renderer.cancel(job.jobId); else h.fake.lose({ reason: 'loss during yielded masks' });
+      release();
+      assert.equal((await h.finish(job)).outcome, action === 'cancel' ? 'cancelled' : 'interrupted');
+      assert.equal(h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId), false);
+      assert.equal(h.scheduler.snapshot().outstanding, 0);
+      if (action === 'cancel') assert.equal((await h.finish(h.renderer.render(request(directScene(), generation(2), 'settled')))).outcome, 'completed');
+    } finally { release(); h.renderer.destroy(); }
+  }
+});
+
+test('B15-R23c readback admissions remain owned until Worker acknowledgement and drain before replacement', async () => {
+  const worker = new MaskWorkerDouble(); worker.held = true;
+  const maskProcessor = createMaskProcessor({ createWorker: () => worker }), h = await rig({ maskProcessor });
+  try {
+    const job = h.renderer.render(request(directScene(), generation(), 'settled', { width: 16, height: 600 }));
+    await h.until(() => worker.messages.filter(m => m.type === 'record').length === 2);
+    const reads = h.submissions.filter(s => s.method === 'readback' && s.desc.identity.jobId === job.jobId);
+    assert.equal(reads.length, 2, 'two unacknowledged readbacks retain both admissions; no early third tile');
+    assert.equal(h.scheduler.snapshot().outstanding, 2);
+    h.renderer.cancel(job.jobId);
+    assert.equal((await h.finish(job)).outcome, 'cancelled');
+    assert.equal(h.scheduler.snapshot().outstanding, 0);
+    assert.equal(h.fake.diagnostics().retiring, 0);
+    worker.release();
+    const replacement = h.renderer.render(request(directScene(), generation(2), 'settled'));
+    assert.equal((await h.finish(replacement)).outcome, 'completed');
+    assert.ok(h.fake.diagnostics().peak <= 2 ** 30);
+  } finally { h.renderer.destroy(); maskProcessor.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R16-F8 renderer awaits Worker validation before settled presentation', async () => {
+  const worker = new MaskWorkerDouble(); worker.held = true;
+  const maskProcessor = createMaskProcessor({ createWorker: () => worker });
+  const h = await rig({ maskProcessor });
+  try {
+    const job = h.renderer.render(request(directScene(), generation(), 'settled'));
+    await h.until(() => worker.messages.length || h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId));
+    assert.ok(worker.messages.length, 'the product path must transfer masks to its Worker');
+    assert.equal(h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId), false);
+    assert.ok(h.scheduler.snapshot().outstanding > 0, 'validation still owns the readback lease');
+    worker.release();
+    assert.equal((await h.finish(job)).outcome, 'completed');
+    assert.equal(h.publications.length, 1);
+    assert.equal(h.reports[0].outcomeMasks.union.hits, 128);
+  } finally { worker.release(); h.renderer.destroy(); maskProcessor.destroy(); }
+});
+
+test('B15-R16-F8 Worker cancellation loss destruction and validation failure cannot present or strand leases', async () => {
+  for (const action of ['cancel', 'loss', 'destroy', 'crash', 'invalid-final']) {
+    const worker = new MaskWorkerDouble(); worker.held = true;
+    if (action === 'invalid-final') {
+      const handle = worker.handle; worker.handle = message => { const reply = handle(message); return reply?.closed ? { ...reply, error: 'invalid final sample' } : reply; };
+    }
+    const maskProcessor = createMaskProcessor({ createWorker: () => worker }), h = await rig({ maskProcessor });
+    try {
+      const job = h.renderer.render(request(directScene(), generation(), 'settled'));
+      await h.until(() => worker.messages.some(m => m.type === 'record'));
+      if (action === 'cancel') h.renderer.cancel(job.jobId);
+      else if (action === 'loss') h.fake.lose({ reason: 'loss during Worker validation' });
+      else if (action === 'destroy') h.renderer.destroy();
+      else if (action === 'crash') worker.onerror({ message: 'Worker failed' });
+      worker.release();
+      const result = await h.finish(job);
+      assert.equal(result.outcome, action === 'cancel' ? 'cancelled' : ['loss', 'destroy'].includes(action) ? 'interrupted' : 'failed', action);
+      await h.until(() => h.scheduler.snapshot().outstanding === 0);
+      assert.equal(h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId), false, action);
+      assert.equal(h.publications.length, 0);
+    } finally { worker.release(); h.renderer.destroy(); maskProcessor.destroy(); }
+  }
+});
+
+test('a completed navigation draft publishes pending while a newer camera request waits', async () => {
+  const h = await rig();
+  let live = generation(), stream = 1;
+  const options = { currentGeneration: () => live, currentNavigation: () => stream };
+  const a = request(scene(), live), ja = h.renderer.render(a, options);
+  await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === ja.jobId));
+  live = { ...live, viewRevision: live.viewRevision + 1, geometryRevision: live.geometryRevision + 1 };
+  const b = request(scene(), live), jb = h.renderer.render(b, options);
+  await h.until(() => h.publications.some(p => p.requestId === a.requestId));
+  const old = h.publications.find(p => p.requestId === a.requestId);
+  assert.equal(old.pending, true);
+  assert.equal(h.statuses.at(-1)?.pending, true, 'status preserves the navigation-pending publication');
+  assert.equal(old.kind, 'draft');
+  assert.equal(old.identity.requestId, a.requestId);
+  await h.finish(jb);
+  assert.equal(h.publications.at(-1).requestId, b.requestId);
+  assert.equal(h.publications.at(-1).pending, false);
+  assert.equal((await ja.done).outcome, 'completed');
+  h.renderer.destroy();
+});
+
+test('navigation invalidation rejects old drafts even when content returns to A', async () => {
+  const h = await rig(); let live = generation(), stream = 1;
+  const options = { currentGeneration: () => live, currentNavigation: () => stream };
+  const a = request(scene(), live), job = h.renderer.render(a, options);
+  await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === job.jobId));
+  stream += 2; live = { ...live, viewRevision: live.viewRevision + 2, geometryRevision: live.geometryRevision + 2 };
+  const replacement = h.renderer.render(request(scene(), live), options);
+  await h.finish(replacement);
+  assert.equal(h.publications.some(p => p.requestId === a.requestId), false);
+  h.renderer.destroy();
+});
+
+test('an older draft cannot overwrite a newer settled publication', async () => {
+  const h = await rig(); let live = generation();
+  const options = { currentGeneration: () => live, currentNavigation: () => 1 };
+  const a = request(scene(), live), old = h.renderer.render(a, options);
+  await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === old.jobId));
+  live = { ...live, viewRevision: live.viewRevision + 1, geometryRevision: live.geometryRevision + 1 };
+  const settled = request(scene(), live, 'settled'), latest = h.renderer.render(settled, options);
+  await h.finish(latest, 'newest');
+  const index = h.publications.findIndex(p => p.requestId === settled.requestId);
+  await h.finish(old);
+  assert.ok(index >= 0);
+  assert.ok(h.publications.slice(index).every(p => p.requestId === settled.requestId));
+  h.renderer.destroy();
+});
+
+test('an invalidated navigation stream or live device epoch cannot publish even without a replacement request', async () => {
+  for (const change of ['stream', 'epoch']) {
+    const h = await rig(); let stream = 1, live = generation();
+    const job = h.renderer.render(request(scene(), live), { currentNavigation: () => stream, currentGeneration: () => live });
+    await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === job.jobId));
+    if (change === 'stream') stream++; else live = { ...live, deviceEpoch: live.deviceEpoch + 1 };
+    await h.finish(job);
+    assert.equal(h.publications.some(p => p.requestId === job.requestId), false, change);
+    h.renderer.destroy();
+  }
+});
+
+test('cancelling the newest navigation request fences its older pending drafts', async () => {
+  const h = await rig(); let live = generation();
+  try {
+    const options = {currentGeneration:()=>live,currentNavigation:()=>1};
+    const a = h.renderer.render(request(scene(), live), options);
+    await h.until(()=>h.tickets.some(t=>t.pending&&t.desc.identity.jobId===a.jobId));
+    live = generation(2, 1);
+    const b = h.renderer.render(request(scene(), live), options);
+    assert.equal(h.renderer.cancel(b.jobId).accepted, true);
+    await h.finish(a); await h.finish(b);
+    assert.equal(h.publications.length, 0);
+  } finally {h.renderer.destroy();}
+});
+
+test('presentation completion rejects a cancelled request or invalidated navigation stream', async () => {
+  for (const invalidation of ['cancel', 'stream']) {
+    const h = await rig(); let stream = 1;
+    try {
+      const job = h.renderer.render(request(), {currentNavigation:()=>stream});
+      await h.until(()=>h.tickets.some(t=>t.pending&&t.method==='present'&&t.desc.identity.jobId===job.jobId));
+      assert.equal(h.publications.length, 1, 'the image was encoded before invalidation');
+      if(invalidation==='cancel') h.renderer.cancel(job.jobId); else stream++;
+      await h.finish(job);
+      assert.equal(h.presents.length, 0, invalidation);
+    } finally {h.renderer.destroy();}
+  }
+});
 
 test('releaseObsolete preserves the live viewport cache after a different export fails', async () => {
   const h = await rig(), a = request(directScene(), generation(), 'settled');
@@ -316,7 +511,7 @@ test('job results preserve preparation and copy-out error codes without parsing 
   assert.equal(preparation.outcome, 'failed'); assert.equal(preparation.errorCode, 'preparation-failed');
   bad.renderer.destroy(); bad.fake.destroy();
   const h = await rig();
-  h.hooks.after = (method, desc, ticket) => method === 'readback' && desc.fields[0] === 'status'
+  h.hooks.after = (method, desc, ticket) => method === 'readback' && desc.fields[0] === 'draftDiagnostics'
     ? { ...ticket, result: ticket.result.then(() => { throw new BackendError('invalid-descriptor', 'opaque copy-out failure'); }) } : undefined;
   const result = await h.finish(h.renderer.render(request()));
   assert.equal(result.outcome, 'failed'); assert.equal(result.errorCode, 'invalid-descriptor');
@@ -340,7 +535,7 @@ test('a draft replaces the published image only when complete and the retained i
   const job = h.renderer.render(b); assert.deepEqual(h.statuses.at(-1), { pending: true, since: h.clock.now() });
   await h.complete(); assert.equal(h.publications.length, 1, 'partial trace cannot replace the image');
   assert.ok(!h.fake.log.some(x => x.method === 'release' && x.args[0] === display), 'the published handle remains caller-owned');
-  const result = await h.finish(job); assert.equal(result.outcome, 'completed');
+  const result = await h.finish(job); assert.equal(result.outcome, 'completed', result.reason);
   assert.deepEqual(h.publications.map(x => x.requestId), [a.requestId, b.requestId]);
   assert.equal(h.publications[1].pending, false);
   assert.ok(h.fake.log.some(x => x.method === 'release' && x.args[0] === display));
@@ -481,6 +676,16 @@ test('a quaternion report keeps per-sample recovery diagnostics from a recovery 
   const plain = (await h.finish(h.renderer.render(sphere))).report;
   assert.equal(recoveryReads(sphere.jobId), 0); assert.equal(plain.outcomeMasks.recovery, null);
   h.renderer.destroy();
+});
+
+test('B15-REC-G recovery consistency rejection happens before any presentation submission', async () => {
+  const h = await rig({ statusWords: [packStatus({ status: 0, reason: 0, subreason: 0, steps: 1 })], recoveryWords: [0x411], normals: [true] });
+  try {
+    const r = request(scene({ model: 'quaternion-julia' }));
+    const result = await h.finish(h.renderer.render(r));
+    assert.equal(result.outcome, 'failed');
+    assert.equal(h.submissions.filter(s => s.method === 'present' && s.desc.identity.jobId === r.jobId).length, 0, 'masks.end must validate recovery before submitting present');
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
 });
 
 test('the first settled direct-light image and full-quality completion are separate milestones', async () => {
@@ -695,7 +900,7 @@ test('a shared scheduler dispatches each lease to the renderer that owns its vie
 });
 
 test('outstanding accounting retires completion before synchronous replenishment and includes readback copy-out', async () => {
-  const h = await rig({ holdReadbacks: true }), r = request(directScene(), generation(), 'settled', { width: 1024, height: 256 });
+  const h = await rig({ holdReadbacks: true }), r = request(directScene(), generation(), 'settled', { width: 1024, height: 512 });
   let peak = 0;
   const unsubscribe = h.scheduler.subscribe(() => { peak = Math.max(peak, h.scheduler.snapshot().outstanding); });
   const job = h.renderer.render(r);
@@ -1024,7 +1229,7 @@ test('F3 4K phases span bounded windows with exact coverage', async () => {
   }
   assert.equal(plan.exhausted(), true); assert.equal(rows.size, 8);
   for (const [phase, bands] of rows) {
-    assert.ok(windows.get(phase) >= 2, `${phase} spans multiple windows`);
+    if (['trace', 'normals', 'shade', 'accumulate', 'display'].includes(phase)) assert.ok(windows.get(phase) >= 2, `${phase} spans multiple compute windows`);
     for (const intervals of bands) {
       let end = 0;
       for (const [a, b] of intervals.sort((a, b) => a[0] - b[0])) { assert.equal(a, end, `${phase} has no holes or overlaps`); end = b; }
@@ -1035,13 +1240,13 @@ test('F3 4K phases span bounded windows with exact coverage', async () => {
 });
 
 test('F3 adaptation respects both band edges after eight completions', async () => {
-  for (const [elapsed, replacements, nextPixels] of [[20, 1, 16384], [15.2, 0, 32768], [3.2, 0, 65536], [4.8, 0, 32768]]) {
+  for (const [elapsed, replacements] of [[20, 1], [15.2, 0], [3.2, 0], [4.8, 0]]) {
     const { h, plan } = await structuralPlan({ width: 1024, height: 1024 });
-    for (let i = 0; i < 8; i++) advance(plan, plan.next(), i === 7 ? elapsed : 8);
+    for (let i = 0; i < 8; i++) advance(plan, plan.next(), elapsed);
     assert.equal(plan.diagnostics().replacements, replacements, `eighth completion at ${elapsed / 8}x`);
     let next;
     do { next = plan.next(); if (next.batch.pass === 'trace') advance(plan, next); } while (next.batch.pass === 'trace');
-    assert.equal(next.batch.bounds.pixels, nextPixels, `future tiles at ${elapsed / 8}x`);
+    assert.equal(next.batch.bounds.pixels, 32768, 'normal tiles have an independent workload estimate');
     h.renderer.destroy(); h.fake.destroy();
   }
 });
@@ -1050,7 +1255,7 @@ test('F3 fast evidence caps tile growth and narrow readbacks never exceed 256 ro
   const { h, plan } = await structuralPlan({ width: 4096, height: 2048 });
   let op;
   do { op = plan.next(); if (op.batch.pass === 'trace') advance(plan, op, 1); } while (op.batch.pass === 'trace');
-  assert.equal(op.batch.bounds.pixels, 32768 * 8);
+  assert.equal(op.batch.bounds.pixels, 32768, 'fast trace evidence cannot enlarge another pass');
   h.renderer.destroy(); h.fake.destroy();
   const narrow = await rig();
   const r = request(directScene(), generation(), 'settled', { width: 1, height: 1024 });
@@ -1349,4 +1554,511 @@ test('B09c F2 draft classification uses 64 iterations when the scene permits an 
     assert.equal(batch.bounds.iterations, r.quality.iteration.maxIterations);
   }
   h.renderer.destroy(); h.fake.destroy();
+});
+
+
+test('each pending draft guard independently rejects changed content appearance current request and newest stream', () => {
+  function fixture() {
+    let liveContent = 'unchanged';
+    const record = {navigation:1,navigationContent:'unchanged',currentNavigationContent:()=>liveContent,
+      currentNavigation:()=>1,currentGeneration:()=>generation(2,1),
+      request:{output:{purpose:'interactive'},quality:{preview:true},viewId:'space',generation:generation(1,1)}};
+    const interactive = {navigation:1,navigationContent:'unchanged',cancelled:false};
+    return {record,interactive,current:interactive,viewId:'space',epoch:1,destroyed:false,setContent:value=>{liveContent=value;}};
+  }
+  const defects = {
+    'content changed without another submission':x=>x.setContent('changed'),
+    'newest content differs':x=>{x.interactive.navigationContent='changed';},
+    'appearance revision changed':x=>{x.record.currentGeneration=()=>generation(2,2);},
+    'another purpose became current':x=>{x.current={};},
+    'newest request belongs to another stream':x=>{x.interactive.navigation=2;},
+    'live stream was invalidated':x=>{x.record.currentNavigation=()=>2;},
+    'newest request was cancelled':x=>{x.interactive.cancelled=true;},
+    'live epoch changed':x=>{x.record.currentGeneration=()=>({...generation(2,1),deviceEpoch:2});},
+  };
+  for(const [name,mutate] of Object.entries(defects)) {
+    const x=fixture();assert.equal(navigationDraftEligible(x),true,`valid baseline: ${name}`);
+    mutate(x);assert.equal(navigationDraftEligible(x),false,name);
+  }
+});
+
+
+test('draft diagnostics use one packed readback with exact status normal and recovery counts', async () => {
+  for (const model of ['mandelbulb', 'quaternion-julia', 'menger']) {
+    const status = [0, 1, packStatus({ status: 2, reason: 4, subreason: 2, steps: 9 }), 3];
+    // B15-R8-F5: valid, varied nonzero recovery words (approximate hit at the hit, numerical failure at the failure).
+    const recoveryWords = [3 | 2 << 4 | 1 << 8, 0, 0, 5 | 3 << 4 | 2 << 8];
+    const h = await rig({ statusWords: status, normals: [false, false, true, true], recoveryWords });
+    // The draft profile renders at half resolution: an 8×1 output has 4×1 internal pixels, one per scripted word.
+    const r = request(scene({ model }), generation(), 'draft', { width: 8, height: 1 });
+    assert.equal(pixelsIn(r), status.length, 'one internal pixel per scripted status word');
+    const { report } = await h.finish(h.renderer.render(r)); assert.equal(report.outcome, 'completed', report.reason);
+    const reads = h.submissions.filter(s => s.method === 'readback' && s.desc.identity.jobId === r.jobId);
+    assert.equal(reads.length, 1, 'one buffer transfer replaces every draft diagnostic texture transfer');
+    assert.deepEqual(reads[0].desc.fields, ['draftDiagnostics']);
+    assert.equal(reads[0].desc.region.height, 1); assert.equal(reads[0].desc.region.width, pixelsIn(r) * (model === 'quaternion-julia' ? 12 : 8));
+    assert.deepEqual([report.rayTermination.hit, report.rayTermination.miss, report.rayTermination.numericalFailure, report.rayTermination.unresolved.stagnation.fieldCoordinate], [1, 1, 1, 1]);
+    assert.equal(report.unavailableNormals, 1); assert.equal(report.outcomeMasks.union.hits, 1);
+    assert.deepEqual(report.lightingFailures, { shadow: 0, ao: 0, both: 0 });
+    assert.match(report.diagnosticReadback.secondaryFlags, /zero.*direct|direct.*zero/);
+    if (model !== 'quaternion-julia') assert.equal(report.outcomeMasks.recovery, null);
+    else {
+      assert.deepEqual(report.outcomeMasks.recovery.samples, [{ sample: 0, attempts: 2,
+        outcomes: { 'approximate hit': 1, 'numerical failure': 1, 'estimate-unavailable': 0, 'point-budget': 0 },
+        stops: { 'midpoint-limit': 0, 'parameter-collapse': 0, 'coordinate-collapse': 0, 'evaluation-cap': 0 }, midpoints: 8, encounters: 5 }], 'exact packed recovery values and counts');
+      assert.equal(report.outcomeMasks.recovery.union.attempted, 2);
+      assert.equal(report.outcomeMasks.recovery.union.outcomes['approximate hit'], 1); assert.equal(report.outcomeMasks.recovery.union.outcomes['numerical failure'], 1);
+    }
+    h.renderer.destroy();
+  }
+});
+
+test('tile learning persists by workload and pass and permits compute regions taller than 256 rows', async () => {
+  const h = await rig();
+  async function renderFast(model, revision) {
+    const base = scene({ model });
+    const direct = changed(base, { appearance: { ...base.appearance, lightingQuality: 'direct' }, sampling: { ...base.sampling, targetSamples: 1 } });
+    const r = request(direct, generation(revision), 'settled', { width: 640, height: 360 });
+    let result; h.renderer.render(r).done.then(value => { result = value; });
+    for (let i = 0; !result && i < 1000; i++) {
+      await flush(); const pending = h.tickets.find(t => t.pending);
+      const work = (pending?.desc.bounds?.pixels ?? 32768) / 32768;
+      await h.complete('oldest', work * (pending?.desc.pass === 'normals' ? 8 : 1));
+    }
+    assert.equal(result?.outcome, 'completed', result?.reason); return r;
+  }
+  await renderFast('mandelbulb', 1);
+  const warm = await renderFast('mandelbulb', 2), warmBatches = batches(h, warm.jobId);
+  assert.ok(warmBatches.some(b => b.pass === 'trace' && b.region.height > 256), 'learning survives phase and job boundaries without a compute row cap');
+  assert.ok(warmBatches.filter(b => b.pass === 'normals').every(b => b.bounds.pixels <= 32768), 'trace evidence never sizes the normal workload');
+  for (const pass of ['trace', 'normals', 'shade', 'accumulate', 'display']) {
+    const covered = new Uint8Array(pixelsIn(warm));
+    for (const b of warmBatches.filter(b => b.pass === pass)) for (let y = b.region.y; y < b.region.y + b.region.height; y++) for (let x = b.region.x; x < b.region.x + b.region.width; x++) covered[y * warm.quality.internalSize.width + x]++;
+    assert.ok(covered.every(n => n === 1), `${pass} covers each pixel once`);
+  }
+  const cold = await renderFast('menger', 3);
+  assert.ok(batches(h, cold.jobId).filter(b => b.pass === 'trace').every(b => b.bounds.pixels <= 32768), 'a different family starts from its own calibration');
+  h.renderer.destroy();
+});
+
+test('pending navigation requests allocate targets only after one of two active drafts retires', async () => {
+  const h = await rig(); let live = generation(); const opts = { currentGeneration: () => live, currentNavigation: () => 1 };
+  const first = h.renderer.render(request(scene(), live), opts);
+  await h.until(() => h.tickets.some(t => t.pending && t.desc.identity.jobId === first.jobId));
+  const allocated = h.targets.length, skipped = [];
+  for (let i = 2; i <= 12; i++) { live = generation(i, 1); skipped.push(h.renderer.render(request(scene(), live), opts)); await flush(); }
+  assert.equal(h.targets.length, allocated + 1, 'the second live draft owns its targets; pending drafts allocate none');
+  for (const job of skipped.slice(1, -1)) assert.equal((await job.done).outcome, 'superseded');
+  await h.finish(first); await h.finish(skipped[0]); assert.equal((await h.finish(skipped.at(-1))).outcome, 'completed');
+  assert.equal(h.targets.length, allocated + 2); h.renderer.destroy();
+});
+
+test('B15-REC-G qualified L6a drafts have a fixed compute reduce copy then present plan with two leases', async () => {
+  const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: 'L6a' });
+  try {
+    const r = request(scene(), generation(), 'draft', { width: 1280, height: 720 });
+    assert.equal((await h.finish(h.renderer.render(r))).outcome, 'completed');
+    const submissions = h.submissions.filter(s => s.desc.identity.jobId === r.jobId);
+    assert.equal(submissions.length, 2, 'compute/reduce/copy and presentation each consume one lease');
+    assert.equal(submissions[0].desc.draft.mode, 'compute');
+    assert.equal(submissions[1].method, 'present');
+    assert.deepEqual(submissions[0].desc.region, { x: 0, y: 0, width: 640, height: 360 });
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R16-F1 cancelling in a settled publication callback preserves partial-quality status', async () => {
+  const h = await rig();
+  try {
+    const r = request(directScene(8), generation(), 'settled');
+    h.renderer.onPublish(() => { if (h.publications.length === 3) h.renderer.cancel(r.jobId); });
+    const result = await h.finish(h.renderer.render(r));
+    assert.equal(result.outcome, 'cancelled');
+    assert.equal(h.publications.length, 3);
+    assert.ok(h.publications.every(p => p.pending === false));
+    assert.ok(!h.statuses.some(s => s.pending === true), 'no pending mark for a partial-quality image');
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R16-F6 product defaults to one GPU-gated submission and CPU-confirmed publication', async () => {
+  const h = await rig({ pipelineSet: productPipelineSet(), holdReadbacks: true });
+  try {
+    const r = request();
+    const job = h.renderer.render(r);
+    await h.until(() => h.submissions.some(s => s.desc.identity.jobId === r.jobId));
+    const submissions = h.submissions.filter(s => s.desc.identity.jobId === r.jobId);
+    assert.equal(submissions[0].desc.draft.mode, 'gated');
+    await h.complete();
+    assert.equal(h.publications.length, 0, 'GPU completion alone cannot publish accepted counts');
+    h.releaseReadbacks();
+    assert.equal((await h.finish(job)).outcome, 'completed');
+    assert.equal(h.submissions.filter(s => s.desc.identity.jobId === r.jobId).length, 1);
+    assert.equal(h.publications.length, 1);
+    assert.ok(h.publications.every(p => p.diagnosticsState !== 'pending'), 'asynchronous publication stays off');
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-REC-G presentation variants use two or one tickets and confirm only after diagnostic resolution', async () => {
+  for (const variant of ['a', 'b', 'c', 'd']) {
+    const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: `L6${variant}`, holdReadbacks: true });
+    try {
+      const r = request(), job = h.renderer.render(r);
+      await h.until(() => h.submissions.some(s => s.desc.identity.jobId === r.jobId));
+      await h.complete(); await flush();
+      assert.equal(h.publicationUpdates.length, 0, 'mapping is not yet confirmation');
+      assert.equal(h.scheduler.snapshot().outstanding, 1, 'the summary lease stays outstanding through copy-out');
+      if (variant === 'a') assert.equal(h.submissions.some(s => s.method === 'present' && s.desc.identity.jobId === r.jobId), false);
+      if (variant === 'd') assert.equal(h.publications[0].diagnosticsState, 'pending');
+      h.releaseReadbacks(); const result = await h.finish(job);
+      assert.equal(result.outcome, 'completed'); assert.equal(result.report.completed?.samples, 1, 'confirmation precedes successful report');
+      assert.equal(h.submissions.filter(s => s.desc.identity.jobId === r.jobId).length, variant === 'a' ? 2 : 1);
+      if (variant !== 'a') assert.equal(h.publicationUpdates[0].diagnosticsState, 'confirmed');
+    } finally { h.renderer.destroy(); h.fake.destroy(); }
+  }
+});
+
+test('B15-REC-G invalid or stale summaries cause zero CPU-gated presentation submissions', async () => {
+  for (const corrupt of ['flags', 'identity', 'coverage']) {
+    const h = await rig({ pipelineSet: productPipelineSet() });
+    try {
+      h.hooks.after = (method, batch, ticket) => batch.pass === 'reduce' ? { ...ticket, result: ticket.result.then(result => {
+        if (corrupt === 'identity') return { ...result, identity: { ...result.identity, requestId: 'stale' } };
+        const data = result.data.slice(); new DataView(data.buffer).setUint32(corrupt === 'flags' ? 8 : 12, 0xffffffff, true);
+        return { ...result, data };
+      }) } : undefined;
+      const r = request(); const result = await h.finish(h.renderer.render(r));
+      assert.equal(result.outcome, 'failed');
+      assert.equal(h.submissions.filter(s => s.method === 'present' && s.desc.identity.jobId === r.jobId).length, 0);
+    } finally { h.renderer.destroy(); h.fake.destroy(); }
+  }
+});
+
+test('B15-R10-F1 constant 4 ms fences and a short tail do not collapse persisted tiles', async () => {
+  const h = await rig({ structural: true });
+  try {
+    for (let revision = 1; revision <= 6; revision++) {
+      const r = request(scene(), generation(revision), 'draft', { width: 1280, height: 720 });
+      h.renderer.render(r); await flush();
+      const plan = h.plans.find(p => p.request.jobId === r.jobId);
+      const first = plan.next();
+      assert.ok(first.batch.region.height >= 51, `request ${revision} must not inherit tail-biased 12-row tiles`);
+      advance(plan, first, 4);
+      while (!plan.exhausted()) advance(plan, plan.next(), 4);
+    }
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+async function learnedDraftRows(timings) {
+  const h = await rig({ structural: true });
+  try {
+    const start = async revision => {
+      const r = request(scene(), generation(revision), 'draft', { width: 1280, height: 720 });
+      h.renderer.render(r); await flush();
+      return h.plans.find(p => p.request.jobId === r.jobId);
+    };
+    const plan = await start(1);
+    for (const [index, timing] of timings.entries()) {
+      const op = plan.next();
+      assert.deepEqual(op.batch.region, { x: 0, y: index * 51, width: 640, height: 51 });
+      advance(plan, op, timing);
+    }
+    return (await start(2)).next().batch.region.height;
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+}
+
+test('B15-R11-F2 tile learning waits for four comparable observations and uses their minimum', async () => {
+  for (const timings of [[2, 12, 12, 12], [24, 3, 3, 3], [24, 24, 24, 24]]) {
+    for (let count = 1; count < 4; count++) {
+      assert.equal(await learnedDraftRows(timings.slice(0, count)), 51, `${timings}: no resize after ${count} observations`);
+    }
+    const expected = Math.floor(Math.max(8192, Math.floor(640 * 51 * 8 / Math.min(...timings))) / 640);
+    assert.equal(await learnedDraftRows(timings), expected, `${timings}: the fourth observation uses the minimum`);
+  }
+});
+
+test('B15-R11-F2 tile learning keeps sizes stable for jitter inside the hysteresis band', async () => {
+  for (const timings of [[6, 10, 6, 10], [10, 14, 10, 14], [16, 16, 16, 16]]) {
+    assert.equal(await learnedDraftRows(timings), 51, `${timings}: four in-band observations retain the size`);
+  }
+  assert.equal(await learnedDraftRows([4, 4, 4, 4]), 102, 'the lower threshold is inclusive');
+  assert.equal(await learnedDraftRows([17, 17, 17, 17]), 24, 'above the upper threshold permits shrinking');
+});
+
+test('B15-R10-F2 drafts group ordered passes per region and drain two leases before cancellation', async () => {
+  const h = await rig();
+  try {
+    const r = request(scene(), generation(), 'draft', { width: 1280, height: 720 });
+    const job = h.renderer.render(r);
+    await h.until(() => h.tickets.filter(t => t.pending).length === 2);
+    const work = h.tickets.filter(t => t.pending);
+    assert.ok(work.every(t => Array.isArray(t.desc.passes)), 'each lease carries an entire draft group');
+    for (const t of work) assert.deepEqual(t.desc.passes.map(p => p.pass), ['trace', 'normals', 'shade', 'accumulate', 'display']);
+    const before = h.submissions.length;
+    const cancellation = h.renderer.cancel(job.jobId); let drained = false;
+    cancellation.done.then(() => { drained = true; }); await flush(); assert.equal(drained, false);
+    await h.complete(); assert.equal(drained, false);
+    await h.complete(); assert.equal((await job.done).outcome, 'cancelled');
+    assert.equal(h.submissions.length, before); assert.equal(h.scheduler.snapshot().outstanding, 0);
+    assert.equal(h.publications.length, 0);
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R10-F4 4K texture readbacks use 256 rows independently of compute tile learning', async () => {
+  const { h, plan } = await structuralPlan({ width: 3840, height: 2160 });
+  try {
+    const reads = [];
+    while (!plan.exhausted()) {
+      const op = plan.next(); assert.ok(op);
+      if (op.kind === 'readback') reads.push(op);
+      advance(plan, op, 4);
+    }
+    assert.equal(reads.length, 27, 'nine copies per field, three fields per direct sample');
+    for (const field of ['status', 'normal', 'lightingStatus']) {
+      const regions = reads.filter(op => op.descriptor.fields[0] === field).map(op => op.descriptor.region);
+      assert.deepEqual(regions.map(r => r.height), [...Array(8).fill(256), 112]);
+      assert.ok(regions.every(r => r.width === 3840));
+    }
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R10-F2 all draft regions complete before diagnostics and compatible reuse omits only geometry', async () => {
+  const h = await rig();
+  try {
+    const first = request(scene(), generation(), 'draft', { width: 1280, height: 720 });
+    const result = await h.finish(h.renderer.render(first), 'newest');
+    assert.equal(result.outcome, 'completed');
+    const operations = h.submissions.filter(s => s.desc.identity.jobId === first.jobId);
+    const groups = operations.filter(s => s.desc.passes);
+    assert.equal(groups.length, 8); assert.equal(operations.length, 10);
+    assert.equal(result.report.operations.byPass['draft-group'].submitted, 8);
+    assert.deepEqual(operations.slice(-2).map(s => s.method), ['readback', 'present']);
+    const cover = new Uint8Array(pixelsIn(first));
+    for (const { desc } of groups) {
+      const { x, y, width, height } = desc.region;
+      for (let row = y; row < y + height; row++) for (let col = x; col < x + width; col++) cover[row * first.quality.internalSize.width + col]++;
+    }
+    assert.ok(cover.every(n => n === 1));
+    const second = request(first.sceneSnapshot, { ...first.generation, viewRevision: 2, appearanceRevision: 2 }, 'draft', { width: 1280, height: 720 });
+    assert.equal((await h.finish(h.renderer.render(second))).outcome, 'completed');
+    const reused = h.submissions.filter(s => s.desc.identity.jobId === second.jobId && s.desc.passes);
+    assert.ok(reused.length); assert.ok(reused.every(s => s.desc.passes.map(p => p.pass).join(',') === 'shade,accumulate,display'));
+    assert.equal(h.publications.at(-1).geometryRequestId, first.requestId);
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R10-F1 clipped tiles and isolated queue delays cannot bias comparable tile calibration', async () => {
+  const h = await rig({ structural: true });
+  try {
+    for (let revision = 1; revision <= 3; revision++) {
+      const r = request(scene(), generation(revision), 'draft', { width: 1280, height: 1440 });
+      h.renderer.render(r); await flush(); const plan = h.plans.find(p => p.request.jobId === r.jobId);
+      let n = 0;
+      while (!plan.exhausted()) {
+        const op = plan.next();
+        if (op.kind === 'batch') assert.ok(op.batch.region.height >= 51 || op.batch.region.y + op.batch.region.height === 720);
+        // Queue fences include unrelated preceding work: one delay at the eighth completion must not override ordinary
+        // 8 ms observations or subdivide the remaining pending regions.
+        advance(plan, op, n++ % 8 === 7 ? 40 : 8);
+      }
+    }
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-REC-G late draft confirmation is historical and cannot republish or replace newer counts', async () => {
+  const h=await rig({pipelineSet:productPipelineSet(),draftExecution:'L6d',holdReadbacks:true});
+  try {
+    let live=generation(1,1);const options={currentGeneration:()=>live,currentNavigation:()=>1};
+    const first=request(scene(),live),a=h.renderer.render(first,options);
+    await h.until(()=>h.publicationRecords.length===1);
+    live=generation(2,1);const second=request(scene(),live),b=h.renderer.render(second,options);
+    await h.until(()=>h.publicationRecords.length===2);
+    assert.equal(h.scheduler.snapshot().outstanding,2);
+    await h.complete('newest');await h.complete('oldest');h.releaseReadbacks();
+    const rb=await h.finish(b),ra=await h.finish(a);
+    assert.equal(rb.outcome,'completed');assert.equal(ra.outcome,'completed');
+    assert.deepEqual(h.publications.map(p=>p.requestId),[first.requestId,second.requestId],'confirmations do not emit new presentation events');
+    const old=h.publicationUpdates.find(u=>u.identity.requestId===first.requestId);
+    assert.equal(old.diagnosticsState,'confirmed');assert.equal(old.historical,true);
+    assert.equal(h.publicationUpdates.find(u=>u.identity.requestId===second.requestId).historical,false);
+  }finally{h.renderer.destroy();h.fake.destroy();}
+});
+
+test('B15-REC-G loss during summary mapping interrupts pending records and late mapping cannot confirm them', async () => {
+  const h=await rig({pipelineSet:productPipelineSet(),draftExecution:'L6d',holdReadbacks:true});
+  try{
+    const r=request(),job=h.renderer.render(r);await h.until(()=>h.publicationRecords.length===1);await h.complete();
+    h.fake.lose();await flush();h.releaseReadbacks();const result=await h.finish(job);
+    assert.equal(result.outcome,'interrupted');
+    assert.deepEqual(h.publicationUpdates.map(u=>u.diagnosticsState),['interrupted']);
+    assert.equal(result.report.draftRecord.diagnosticsState,'interrupted');
+    assert.equal(h.scheduler.snapshot().outstanding,0);
+  }finally{h.renderer.destroy();h.fake.destroy();}
+});
+
+test('B15-REC-G failure after replacement remains historical and submits no restoration over the newer frame', async () => {
+  const h=await rig({pipelineSet:productPipelineSet(),draftExecution:'L6c'});
+  try{
+    // Retain a validated image, then two eligible navigation drafts.
+    await h.finish(h.renderer.render(request()));let live=generation(2,1);
+    const options={currentGeneration:()=>live,currentNavigation:()=>1};const old=request(scene(),live);
+    h.hooks.after=(method,batch,ticket)=>batch.pass==='reduce'&&batch.identity.requestId===old.requestId?{...ticket,result:ticket.result.then(result=>{const data=result.data.slice();new DataView(data.buffer).setUint32(8,1,true);return {...result,data};})}:undefined;
+    const a=h.renderer.render(old,options);await h.until(()=>h.publicationRecords.length===2);
+    live=generation(3,1);const b=h.renderer.render(request(scene(),live),options);await h.until(()=>h.publicationRecords.length===3);
+    await h.finish(b,'newest');assert.equal((await h.finish(a)).outcome,'failed');
+    assert.equal(h.publicationUpdates.find(u=>u.identity.requestId===old.requestId).historical,true);
+    assert.equal(h.submissions.filter(s=>s.desc.identity.jobId.includes('/restore')).length,0);
+  }finally{h.renderer.destroy();h.fake.destroy();}
+});
+
+test('B15-REC-G provisional cancellation restores retained validation with an ordinary lease', async () => {
+  const h=await rig({pipelineSet:productPipelineSet(),draftExecution:'L6c'});
+  try{
+    await h.finish(h.renderer.render(request()));
+    const r=request(scene(),generation(2)),job=h.renderer.render(r);await h.until(()=>h.publicationRecords.length===2);
+    h.renderer.cancel(r.jobId);await h.finish(job);
+    await h.until(()=>h.submissions.some(s=>s.desc.identity.jobId.includes('/restore')));
+    await h.complete();
+    const restore=h.submissions.find(s=>s.desc.identity.jobId.includes('/restore'));
+    assert.equal(restore.method,'present');assert.equal(restore.admission.consume(),false,'restoration lease was already consumed');
+    assert.equal(h.publicationUpdates.at(-1).diagnosticsState,'failed');
+    assert.ok(h.scheduler.snapshot().outstanding<=2);
+  }finally{h.renderer.destroy();h.fake.destroy();}
+});
+
+test('B15-REC-G only measured active GPU work removes a workload from whole-frame qualification',async()=>{
+  for(const timestampMs of [undefined,12]){
+    const h=await rig({pipelineSet:productPipelineSet()});
+    try{const first=request(scene(),generation(1));const job=h.renderer.render(first);
+      await h.until(()=>h.tickets.some(t=>t.pending&&t.desc.identity.jobId===first.jobId));
+      const compute=h.tickets.find(t=>t.pending&&t.desc.identity.jobId===first.jobId);
+      h.fake.complete(compute.ticket,{elapsedMs:100,...(timestampMs===undefined?{}:{timestampMs})});await h.finish(job);
+      const second=request(scene(),generation(2));await h.finish(h.renderer.render(second));
+      const next=h.submissions.find(s=>s.desc.identity.jobId===second.jobId);
+      assert.equal(Boolean(next.desc.draft),timestampMs===undefined,'raw fence delay does not subdivide; active work beyond 8 ms does');
+    }finally{h.renderer.destroy();h.fake.destroy();}
+  }
+});
+
+test('r4-F2 historical L6d confirmation never calls publish or changes retained publication', async () => {
+  const attempts = [];
+  const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: 'L6d',
+    testProbe: { publish: record => attempts.push(record.request.requestId) } });
+  try {
+    let live = generation(1, 1), releaseOld;
+    const held = new Promise(resolve => { releaseOld = resolve; });
+    const options = { currentGeneration: () => live, currentNavigation: () => 1 };
+    const first = request(scene(), live);
+    h.hooks.after = (method, batch, ticket) => batch.pass === 'reduce' && batch.identity.requestId === first.requestId
+      ? { ...ticket, result: ticket.result.then(async result => { await held; return result; }) } : undefined;
+    const a = h.renderer.render(first, options);
+    await h.until(() => h.publicationRecords.length === 1); await h.complete();
+    live = generation(2, 1);
+    const second = request(scene(), live), b = h.renderer.render(second, options);
+    assert.equal((await h.finish(b)).outcome, 'completed');
+    const retained = h.renderer.published, events = [...h.publications], calls = [...attempts];
+    assert.equal(retained.request.requestId, second.requestId);
+    releaseOld(); assert.equal((await h.finish(a)).outcome, 'completed');
+    const update = h.publicationUpdates.find(u => u.identity.requestId === first.requestId);
+    assert.equal(update.diagnosticsState, 'confirmed'); assert.equal(update.historical, true);
+    assert.deepEqual(attempts, calls, 'no historical call to publish, even if publishable would refuse it');
+    assert.equal(h.renderer.published, retained, 'retained publication is unchanged');
+    assert.deepEqual(h.publications, events, 'no new publish event');
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+for (const rung of ['L6b', 'L6c']) test(`B15-P19-1 ${rung} historical validation emits metadata without changing retained image or status`, async () => {
+  const attempts = [];
+  const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: rung,
+    testProbe: { publish: record => attempts.push(record.request.requestId) } });
+  let releaseOld;
+  try {
+    let live = generation(1, 1);
+    const held = new Promise(resolve => { releaseOld = resolve; });
+    const options = { currentGeneration: () => live, currentNavigation: () => 1 };
+    const first = request(scene(), live);
+    h.hooks.after = (method, batch, ticket) => batch.pass === 'reduce' && batch.identity.requestId === first.requestId
+      ? { ...ticket, result: ticket.result.then(async result => { await held; return result; }) } : undefined;
+    const a = h.renderer.render(first, options);
+    await h.until(() => h.publicationRecords.length === 1); await h.complete();
+    const oldTargets = h.targets.at(-1);
+    live = generation(2, 1);
+    const second = request(scene(), live), b = h.renderer.render(second, options);
+    assert.equal((await h.finish(b)).outcome, 'completed');
+    const retained = h.renderer.published, calls = [...attempts], statuses = [...h.statuses], submissions = h.submissions.length;
+    releaseOld(); assert.equal((await h.finish(a)).outcome, 'completed');
+    assert.equal(h.publications.length, 2, 'both validated presentations have publication evidence');
+    assert.equal(h.publications.at(-1).historical, true);
+    assert.equal(h.publications.at(-1).requestId, first.requestId);
+    assert.deepEqual(attempts, calls, 'historical validation never calls the current-image publish path');
+    assert.equal(h.renderer.published, retained, 'picking/export retained image and geometry stay current');
+    assert.deepEqual(h.statuses, statuses, 'historical validation changes no current indicators');
+    assert.equal(h.submissions.length, submissions, 'no re-presentation or restoration');
+    assert.equal(h.scheduler.snapshot().outstanding, 0);
+    // Only the newer published request may own retained display/geometry handles.
+    assert.equal(h.renderer.published.request.requestId, second.requestId);
+    for (const handle of Object.values(oldTargets.handles)) assert.equal(inventoryEntry(h, handle)?.state === 'live', false, 'historical metadata retains no old targets');
+  } finally { releaseOld?.(); h.renderer.destroy(); h.fake.destroy(); }
+});
+
+for (const rung of ['L6b', 'L6c']) test(`B15-P19-1 ${rung} invalidation fences still suppress historical publications`, async () => {
+  for (const action of ['cancel', 'loss', 'stream', 'content']) {
+    const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: rung, holdReadbacks: true });
+    try {
+      let live = generation(1, 1), stream = 1;
+      const options = { currentGeneration: () => live, currentNavigation: () => stream };
+      const first = request(scene(), live), a = h.renderer.render(first, options);
+      await h.until(() => h.publicationRecords.length === 1);
+      live = generation(2, 1);
+      const b = h.renderer.render(request(scene(), live), options);
+      await h.until(() => h.publicationRecords.length === 2);
+      await h.complete('oldest'); await h.complete('newest');
+      if (action === 'cancel') h.renderer.cancel(a.jobId);
+      else if (action === 'loss') h.fake.lose();
+      else if (action === 'stream') stream++;
+      else live = { ...live, appearanceRevision: 2 };
+      h.releaseReadbacks(); await h.finish(a); await h.finish(b);
+      assert.equal(h.publications.some(p => p.requestId === first.requestId), false, action);
+      assert.equal(h.scheduler.snapshot().outstanding, 0);
+    } finally { h.releaseReadbacks(); h.renderer.destroy(); h.fake.destroy(); }
+  }
+});
+
+for (const variant of ['b', 'd']) test(`r4-F2 L6${variant} validatePublication exceptions fail the frame before confirmation`, async () => {
+  let validations = 0;
+  const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: `L6${variant}`,
+    testProbe: { validatePublication(record) { if (record.frame) { validations++; throw new Error('injected publication validation failure'); } } } });
+  try {
+    const result = await h.finish(h.renderer.render(request()));
+    assert.equal(result.outcome, 'failed');
+    assert.equal(validations, 1);
+    assert.deepEqual(h.publicationUpdates.map(u => u.diagnosticsState), ['failed']);
+    assert.match(h.publicationUpdates[0].reason, /injected publication validation failure/);
+    assert.equal(h.renderer.published, null);
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+
+test('R16-C3 settled export and legacy draft share the global two-lease Worker budget', async () => {
+  const worker = new MaskWorkerDouble(); worker.held = true;
+  const maskProcessor = createMaskProcessor({ createWorker: () => worker }), h = await rig({ maskProcessor });
+  try {
+    const exporting = createSpaceRequest({ scene: directScene(), purpose: 'export', width: 16, height: 8,
+      profile: 'settled', generation: generation(), viewId: 'space', versions });
+    const first = h.renderer.render(exporting);
+    await h.until(() => worker.messages.some(m => m.type === 'record'));
+    const draft = h.renderer.render(request(directScene(), generation(2), 'draft'));
+    await h.until(() => new Set(worker.messages.filter(m => m.type === 'record').map(m => m.session)).size === 2);
+    const records = worker.messages.filter(m => m.type === 'record');
+    assert.equal(records.length, 2);
+    assert.equal(h.scheduler.snapshot().outstanding, 2);
+    assert.ok(records.some(m => m.field === 'draftDiagnostics'));
+    assert.equal(h.failed.length, 0);
+    for (let i = 0; i < 4; i++) await h.complete();
+    assert.equal(worker.messages.filter(m => m.type === 'record').length, 2, 'no third transfer while both leases await acknowledgement');
+    worker.release();
+    assert.equal((await h.finish(draft)).outcome, 'completed');
+    // The newer viewport request makes the export owner stale when it resumes.
+    assert.equal((await h.finish(first)).outcome, 'cancelled');
+    assert.equal(h.scheduler.snapshot().outstanding, 0);
+    assert.deepEqual(h.failed.map(({ error }) => error.code), ['stale-epoch'], 'only the stale export is rejected before its next submission');
+  } finally { worker.release(); h.renderer.destroy(); maskProcessor.destroy(); }
 });

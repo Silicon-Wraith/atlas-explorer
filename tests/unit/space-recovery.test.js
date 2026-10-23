@@ -1,3 +1,5 @@
+import { installMaskWorkerDouble } from '../support/mask-worker-double.mjs';
+installMaskWorkerDouble();
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createFakeBackend } from '../support/fake-backend.mjs';
@@ -30,7 +32,7 @@ const pipelines = createPipelineSet({ id: 'b13-fixture', descriptors: [
   compute('accumulate_band', [read('sampleColor'), read('previous'), write('next')]),
   compute('display_band', [read('accumulation'), write('display')]),
 ] });
-const flush = async () => { for (let i = 0; i < 24; i++) await Promise.resolve(); };
+const flush = async () => { for (let i = 0; i < 24; i++) await Promise.resolve(); await new Promise(resolve => setImmediate(resolve)); };
 
 async function rig({ cold = false, onNotice, budgets } = {}) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock });

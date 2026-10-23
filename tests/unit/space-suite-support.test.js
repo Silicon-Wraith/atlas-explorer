@@ -260,7 +260,7 @@ test('the space-recovery 4K pass name states 76 bytes per pixel, in the manifest
   const manifest = JSON.parse(readFileSync(new URL('../suites.manifest.json', import.meta.url), 'utf8'));
   const passes = manifest.suites.find(entry => entry.id === 'space-recovery').requiredPasses;
   assert.ok(!passes.some(name => /72 bytes per pixel/.test(name)), 'no stale 72 B/px name');
-  assert.ok(passes.includes('A 4K target set allocates within the cap at 76 bytes per pixel and is reclaimed after the last ticket retires'));
+  assert.ok(passes.includes('A 4K target set allocates within the cap at 76 bytes per pixel and stays tracked while idle pooled after ticket retirement'));
   const source = readFileSync(new URL('../space.mjs', import.meta.url), 'utf8');
   for (const name of passes) assert.ok(source.includes(`'${name}'`), `tests/space.mjs names the pass: ${name}`);
 });

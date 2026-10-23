@@ -181,6 +181,38 @@ function gateDeps({ env = { ATLAS_GPU_HANDOFF: 'test' }, porcelain = '', portInU
   };
 }
 
+test('B15-R23-Q2 quoted cleanup markers in passing TAP do not fail suite classification', () => {
+  const stdout = '# Subtest: CLEANUP-UNCONFIRMED is retained on failure\n'
+    + 'ok 1 - CLEANUP-UNCONFIRMED is retained on failure\n'
+    + '# CLEANUP-UNCONFIRMED P3 clock monitor: {"state":"unconfirmed"}\n'
+    + 'UNIT {"state":"passed","cleanup":"confirmed"}\n';
+  assert.equal(classifySuiteRun({ exitCode: 0, cleanup: 'confirmed', stdout }, { ok: true }).state, 'passed');
+});
+
+test('B15-R23-Q2 passing unit diagnostics do not poison overall gate cleanup', async () => {
+  const { deps, spawned } = gateDeps({ scripts: { unit: { stdout:
+    '# CLEANUP-UNCONFIRMED ladder session: injected failure\nUNIT {"state":"passed","cleanup":"confirmed"}\n' } } });
+  const record = await runGate(deps);
+  assert.equal(record.results.unit.state, 'passed');
+  assert.equal(record.results.cleanup.state, 'passed');
+  assert.equal(record.overall.state, 'passed');
+  assert.ok(spawned.includes('tests/graphics.mjs'), 'the fake gate reaches later suites');
+});
+
+test('B15-R23-Q2 real cleanup markers and structural failures remain fatal', () => {
+  for (const run of [
+    { stdout: 'other output\nCLEANUP-UNCONFIRMED browser: close timed out\n', exitCode: 0 },
+    { stderr: 'CLEANUP-UNCONFIRMED P3 clock monitor: failed\r\n', exitCode: 0 },
+    { stdout: 'CLEANUP-UNCONFIRMED\n', exitCode: 0 },
+    { cleanup: 'unconfirmed', exitCode: 0 },
+    { exitCode: 125 },
+  ]) {
+    const result = classifySuiteRun(run, { ok: true });
+    assert.equal(result.state, 'incomplete');
+    assert.equal(result.cleanup, 'unconfirmed');
+  }
+});
+
 test('a clean candidate with the GPU handed over passes every suite', async () => {
   const { deps, spawned } = gateDeps();
   const record = await runGate(deps);

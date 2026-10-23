@@ -19,6 +19,8 @@
     "tests/unit/navigation.test.js",
     "tests/unit/ledger.test.js",
     "tests/unit/space-contract.test.js",
+    "tests/unit/draft-summary.test.js",
+    "tests/unit/draft-records.test.js",
     "tests/unit/fake-backend.test.js",
     "tests/unit/space-scene.test.js",
     "tests/unit/space-parameters.test.js",
@@ -38,6 +40,7 @@
     "tests/unit/space-numerics.test.js",
     "tests/unit/space-keys.test.js",
     "tests/unit/space-renderer.test.js",
+    "tests/unit/space-renderer-equivalence.test.js",
     "tests/unit/tracing-metadata.test.js",
     "tests/unit/space-tracing.test.js",
     "tests/unit/reference-envelope.test.js",
@@ -54,6 +57,16 @@
     "tests/unit/space-outcome-masks.test.js",
     "tests/unit/visual-acceptance.test.js",
     "tests/unit/primary-recovery.test.js",
-    "tests/unit/visual-capture.test.js"
+    "tests/unit/visual-capture.test.js",
+    "tests/unit/gpu-preview.test.js",
+    "tests/unit/timing.test.js",
+    "tests/unit/acceptance-audit.test.js",
+    "tests/unit/performance-records.test.js",
+    "tests/unit/draft-ladder.test.js",
+    "tests/unit/draft-backend.test.js",
+    "tests/unit/space-diagnostics.test.js",
+    "tests/unit/ladder-evidence.test.js",
+    "tests/unit/gpu-clock-evidence.test.js",
+    "tests/unit/space-mask-worker.test.js"
   ]
 }
