@@ -115,3 +115,15 @@ test('B15 r14 several registered cells can be selected for one browser session',
   assert.deepEqual(ladderSelection(manifest,{ATLAS_LADDER_CELLS:JSON.stringify([cells[0],cells[6]])}),[cells[0],cells[6]]);
   assert.throws(()=>ladderSelection(manifest,{ATLAS_LADDER_CELLS:JSON.stringify([{...cells[0],rung:'L9'}])}),/registered cell/);
 });
+
+test('B15 r14b one failed ladder cell is recorded and isolated; the session continues and reports every failed cell', async () => {
+  const {runLadderSession}=await import('../support/space-performance-ladder.mjs');
+  const cells=[{position:0,rung:'L0'},{position:1,rung:'L1'},{position:2,rung:'L2'}],attempted=[],report=[];
+  await assert.rejects(runLadderSession({cells,report,runCell:async cell=>{attempted.push(cell.rung);if(cell.rung==='L1')throw Error('boom');}}),/1 of 3 ladder cells failed: .*L1/);
+  assert.deepEqual(attempted,['L0','L1','L2']);
+  const summary=report.find(r=>r.name==='ladder session summary');
+  assert.deepEqual(summary.failed.map(f=>f.cell.rung),['L1']);assert.match(summary.failed[0].error,/boom/);
+  assert.equal(summary.attempted,3);assert.equal(summary.passed,2);
+  const clean=[];await runLadderSession({cells,report:clean,runCell:async()=>{}});
+  assert.deepEqual(clean.find(r=>r.name==='ladder session summary').failed,[]);
+});

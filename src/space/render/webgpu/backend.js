@@ -348,11 +348,11 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       // The complete layout is the family-requirements key (all current families include recovery).
       // Partial releases can be reused individually, including the non-geometry spare at 4K.
       const pool = JSON.stringify([layoutId, outputSize, TARGET_LAYOUT]);
-      // A set served wholly from the pool creates nothing, so it has no creation error to await.
+      // Every configuration is error-scoped (§9.1), including a set served wholly from the pool.
+      // Skipping the scope for pooled sets measurably worsened L6a tail latency (B15 r14b O1:
+      // p95 28.9–32.0 ms without the scope against a median of 22.3 ms with it, one session).
       const reused = allocator.canReuse(descs, pool);
-      const { value: created, status } = reused
-        ? { value: allocator.transaction(descs, { pool }), status: Promise.resolve(null) }
-        : createScoped(() => allocator.transaction(descs, { pool }));
+      const { value: created, status } = createScoped(() => allocator.transaction(descs, { pool }));
       // An abandoned fresh set may carry an unobserved creation error: never pool it. A pooled set
       // was validated when first created and returns to the pool.
       const abandon = () => created.forEach(handle => allocator.release(handle, { discard: !reused }));

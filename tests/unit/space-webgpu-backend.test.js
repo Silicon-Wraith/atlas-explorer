@@ -409,3 +409,20 @@ test('B15 r14 a superseded configuration served from the pool returns its textur
     assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, again, 'the next configuration still reuses the set');
   } finally { backend.destroy(); }
 });
+
+test('B15 r14b a configuration served from the pool is still error-scoped (spec §9.1 Configuration)', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const first = await targets(backend);
+    Object.values(first.handles).flat().forEach(h => backend.release(h));
+    const created = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    gpu.control.scopes.held = true;
+    let settled = false;
+    const pending = targets(backend).then(value => { settled = true; return value; });
+    await flush(); await flush();
+    assert.equal(settled, false, 'the pool-served configure awaits its error scope like a fresh one');
+    gpu.control.scopes.release();
+    await pending;
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, created, 'still served from the pool');
+  } finally { gpu.control.scopes.release(); backend.destroy(); }
+});

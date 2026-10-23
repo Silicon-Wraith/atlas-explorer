@@ -149,5 +149,13 @@ export async function runPerformanceLadder(options){
   const sessionId=randomUUID();
   // The headed runner creates this page/browser once. Each cell reloads it, records its own
   // environment probe, and destroys its driver before the next cell begins.
-  for(const cell of cells)await runCell({...options,cell,sessionId});
+  await runLadderSession({cells,report:options.report,runCell:cell=>runCell({...options,cell,sessionId})});
+}
+// A failed cell is recorded (its evidence file is already written) and isolated by the next
+// cell's reload; the remaining cells still run. The session fails at the end, naming every failure.
+export async function runLadderSession({cells,report,runCell}){
+  const failed=[];
+  for(const cell of cells){try{await runCell(cell);}catch(error){failed.push({cell,error:String(error?.stack??error)});}}
+  report.push({name:'ladder session summary',attempted:cells.length,passed:cells.length-failed.length,failed});
+  if(failed.length)throw Error(`${failed.length} of ${cells.length} ladder cells failed: ${failed.map(f=>JSON.stringify(f.cell)).join('; ')}`);
 }
