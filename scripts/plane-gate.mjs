@@ -9,7 +9,7 @@ import { connect } from 'node:net';
 import { readFile, rm, mkdir, writeFile, appendFile, access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { runBounded, cleanUpGroup } from './gate/supervise.mjs';
-import { validateEvidence, classifySuiteRun, overallGate } from './gate/lib.mjs';
+import { validateEvidence, classifySuiteRun, overallGate, hasCleanupFailureMarker } from './gate/lib.mjs';
 
 export const GATE_PORT = 5190;
 export const SERVER_READY_MS = 15_000;
@@ -70,7 +70,7 @@ export async function runGate(deps) {
   let childEnv;
   const supervised = async (args, timeoutMs, extraEnv = {}) => {
     const run = await runBounded({ spawnFn, groupSignal, command: process.execPath, args, options: { cwd: root, env: { ...childEnv, ...extraEnv } }, timeoutMs, cleanupMs: CLEANUP_MS });
-    if (run.cleanup === 'unconfirmed' || run.exitCode === 125 || /CLEANUP-UNCONFIRMED/.test(`${run.stdout}\n${run.stderr}`)) cleanupConfirmed = false;
+    if (run.cleanup === 'unconfirmed' || run.exitCode === 125 || hasCleanupFailureMarker(run)) cleanupConfirmed = false;
     return run;
   };
 

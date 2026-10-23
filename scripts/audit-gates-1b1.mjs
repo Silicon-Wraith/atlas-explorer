@@ -18,7 +18,7 @@ export async function readHistoricalFailureEvidence(policy, read = readFile) {
   const evidence = {};
   for (const known of policy?.knownFailures ?? []) {
     if (!known.exception) continue;
-    for (const ref of [known.record, known.unitLog, known.firstPassingDescendant.record, known.containment.gate]) {
+    for (const ref of [known.record, known.unitLog, known.firstPassingDescendant.record, known.containment.gate].filter(Boolean)) {
       try {
         const bytes = await read(ref.file), text = bytes.toString('utf8');
         evidence[ref.file] = { sha256: hash(bytes), ...(ref === known.unitLog ? { text } : { json: JSON.parse(text) }) };

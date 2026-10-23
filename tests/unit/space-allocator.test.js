@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createTrackedAllocator } from '../../src/space/render/webgpu/allocator.js';
-import { BackendError, TRACKED_ALLOCATION_CAP } from '../../src/space/render/backend.js';
+import { BackendError, TARGET_LAYOUT, TRACKED_ALLOCATION_CAP } from '../../src/space/render/backend.js';
 import { createFakeClock } from '../support/fake-clock.mjs';
 import { assertStatusAfterTicket } from '../support/space-lifecycle-checks.mjs';
 
@@ -45,6 +45,50 @@ const allocator = (options = {}) => {
   return { factory, allocator: createTrackedAllocator({ factory, cap: options.cap ?? TRACKED_ALLOCATION_CAP, clock: options.clock ?? createFakeClock(), epoch: options.epoch ?? 1 }) };
 };
 const code = expected => error => error instanceof BackendError && error.code === expected;
+
+test('B15-R23c the measured 4K replacement is cap-rejected while display tickets retire and fits after drain', () => {
+  const { allocator: tracked, factory } = allocator();
+  const pixels = 3840 * 2160, geometry = ['depth', 'status', 'normal', 'recovery'];
+  const descriptions = Object.entries(TARGET_LAYOUT).flatMap(([name, layout]) => Array.from({ length: layout.count }, (_, i) => ({
+    name: layout.count === 1 ? name : `${name}-${i}`, bytes: pixels * layout.bytesPerTexel,
+    width: 3840, height: 2160, format: layout.format, bytesPerTexel: layout.bytesPerTexel,
+  })));
+  const configure = () => Object.fromEntries(tracked.transaction(descriptions, { pool: '4k' }).map((handle, i) => [descriptions[i].name, handle]));
+  try {
+    // Replay memory-2.json's ownership state with the real allocator and inert
+    // natives. No shader execution, host-sized texture arrays or GPU are needed.
+    const spare = configure();
+    for (const [name, handle] of Object.entries(spare)) if (!geometry.includes(name)) tracked.release(handle);
+    const working = configure();
+    for (let i = 0; i < 2; i++) tracked.allocate({ name: `readback-staging-${i}`, bytes: 7864320, usage: 'staging' });
+    const tickets = [{}, {}];
+    for (const ticket of tickets) {
+      for (const name of ['accumulationFlags', 'accumulation-1', 'retained']) tracked.hold(working[name], ticket, 'ticket');
+      const uniform = tracked.allocate({ name: 'uniforms:display_band', bytes: 32, usage: 'uniform' });
+      tracked.hold(uniform, ticket, 'ticket'); tracked.release(uniform);
+    }
+    // The old publication retains depth/status/display. A job report does not
+    // retire its two still-outstanding display tickets or their uniforms.
+    for (const name of geometry) if (!['depth', 'status'].includes(name)) tracked.release(spare[name]);
+    for (const [name, handle] of Object.entries(working)) if (name !== 'display') tracked.release(handle);
+    assert.equal(tracked.diagnostics().tracked, 546570304);
+    assert.equal(tracked.diagnostics().retiring, 199065664);
+    const replacementSpare = configure();
+    for (const [name, handle] of Object.entries(replacementSpare)) if (!geometry.includes(name)) tracked.release(handle);
+    assert.equal(tracked.diagnostics().tracked, 679280704);
+    const created = factory.created.length;
+    assert.throws(configure, error => code('allocation-failed')(error) &&
+      error.message === 'tracked allocation cap exceeded (679280704 + 431308800 > 1073741824 bytes)');
+    assert.equal(factory.created.length, created, 'the refused replacement creates no native resource');
+    assert.equal(tracked.diagnostics().peak, 944701504, 'the guard preserves the real 1 GiB cap, including the pool');
+    tracked.unhold(tickets[0]);
+    assert.equal(tracked.diagnostics().retiring, 199065632, 'the other display ticket still holds the textures');
+    tracked.unhold(tickets[1]);
+    assert.equal(tracked.diagnostics().retiring, 0);
+    assert.doesNotThrow(configure, 'the same replacement fits after actual terminal ticket evidence');
+    assert.ok(tracked.diagnostics().peak <= TRACKED_ALLOCATION_CAP);
+  } finally { tracked.destroyAll(); }
+});
 
 test('allocation is refused before creation when it would exceed the cap', () => {
   const { factory, allocator: tracked } = allocator({ cap: 100 });

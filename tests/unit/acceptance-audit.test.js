@@ -295,6 +295,100 @@ const lowerBoundCommit='4693328af8a8f77c0d88b971752d426b644330a9';
 const digestPolicy=p=>createHash('sha256').update(JSON.stringify(p)).digest('hex');
 const wipPolicy=()=>JSON.parse(readFileSync(new URL('../../scripts/gate/acceptance-policy-1b1.json',import.meta.url))).wipEvidence??{};
 
+test('B15-R23-Q1 the three subsequent B15 WIP commits have pinned recorder eligibility', async () => {
+  const { parseFastOptions } = await import('../../scripts/record-fast-checks.mjs');
+  for (const commit of ['3fb56c84523d0e3c85ac3bf6933b343889189bb5', '8a812be2669fbf461db5ec32f0e4f718606406b7', 'ac61cdd5ef3973d9d01a45d562d5c43976242a2c']) {
+    assert.doesNotThrow(() => parseFastOptions(['--retrospective-wip', '--expected-commit', commit]));
+    const { x } = approvedWipFixture({ commit });
+    const result = row(auditAcceptance(x), commit);
+    assert.equal(result.state, 'accounted-wip'); assert.equal(result.promotable, false);
+    const entry = x.manifest.commits.find(e => e.commit === commit);
+    x.records[entry.fast].wipEvidencePolicySha256 = '278c851cd93615e6c3763878b9c26f294c3f50bbdaa050bd31131bf2dbfe77ce';
+    x.records[entry.fast].evidenceScope = 'wip-only';
+    assert.equal(row(auditAcceptance(x), commit).state, 'unaccepted', 'old pins cannot enroll new SHAs');
+  }
+});
+
+test('B15-R23-Q3 the failed round-14 WIP cannot be relabelled as passing WIP', () => {
+  const { x, commit } = approvedWipFixture({ commit: '4ffda8835bee7c7a72949dffd7baf0aed352609c' });
+  const result = row(auditAcceptance(x), commit);
+  assert.equal(result.state, 'unaccepted');
+  assert.equal(result.promotable, false);
+  assert.equal(result.knownFailure.unit.cancelled, 1);
+});
+
+function round23ExceptionFixture() {
+  const f = approvedWipFixture({ commit: '4ffda8835bee7c7a72949dffd7baf0aed352609c' });
+  const { x, commit, entry, record } = f, known = x.wipEvidencePolicy.knownFailures.find(k => k.commit === commit);
+  assert.ok(known, 'independently pinned Q3 policy exists');
+  const child = known.firstPassingDescendant.commit;
+  x.commits.splice(x.commits.indexOf(commit) + 1, 0, child);
+  x.facts[child] = { tree: sha(91), parents: [commit], paths: ['tests/unit/repair.test.js'], committedAt: 102 };
+  x.facts[candidate].parents = [child, cutover];
+  const repaired = { ...structuredClone(record), commit: child, tree: x.facts[child].tree };
+  x.records['repair-fast'] = repaired;
+  x.manifest.commits.splice(2, 0, { commit: child, disposition: 'wip', boundary: candidate, fast: 'repair-fast' });
+  record.unit = { state: 'failed', reason: 'failures: 1, cancelled: 1, exit: 1' };
+  Object.assign(entry, { disposition: 'exception', exceptionId: 'B15-R23-Q3', promotable: false });
+  x.manifest.historicalWipExceptionPins = { [commit]: digestPolicy(known) };
+  x.historicalFailureEvidence = {
+    [known.record.file]: { sha256: known.record.sha256, json: structuredClone(record) },
+    [known.unitLog.file]: { sha256: known.unitLog.sha256, text: `${known.tests.map((name, i) => `not ok ${i + 1} - ${name}`).join('\n')}\n# tests 1088\n# pass 1086\n# fail 1\n# cancelled 1\n# skipped 0\n# todo 0\n` },
+    [known.firstPassingDescendant.record.file]: { sha256: known.firstPassingDescendant.record.sha256, json: structuredClone(repaired) },
+  };
+  return { ...f, known, child };
+}
+
+test('B15-R23-Q3 exact failed and cancelled evidence is accepted only with a gated repair boundary', () => {
+  const { x, commit, known } = round23ExceptionFixture();
+  const result = auditAcceptance(x), failed = row(result, commit);
+  assert.equal(result.accepted, true, JSON.stringify(result.rows));
+  assert.equal(failed.state, 'accepted-by-exception'); assert.equal(failed.promotable, false);
+  assert.equal(failed.knownFailure.unit.failed, 1); assert.equal(failed.knownFailure.unit.cancelled, 1);
+  assert.equal(failed.failureEvidence.record.unit.state, 'failed');
+  assert.equal(failed.exceptionPolicySha256, digestPolicy(known));
+  assert.equal(failed.containment.boundary, candidate);
+});
+
+test('B15-R23-Q3 exception rejects missing pins contradictory evidence and unrepaired boundaries', () => {
+  for (const mutate of [
+    f => delete f.x.manifest.historicalWipExceptionPins,
+    f => f.x.manifest.historicalWipExceptionPins[f.commit] = '0'.repeat(64),
+    f => f.x.manifest.wipEvidencePolicySha256 = '0'.repeat(64),
+    f => f.known.rule += ' unapproved change',
+    f => f.entry.exceptionId = 'B15-P17-2',
+    f => f.entry.promotable = true,
+    f => f.entry.disposition = 'wip',
+    f => { f.entry.disposition = 'feature-gated'; f.entry.gate = candidate; },
+    f => delete f.x.historicalFailureEvidence[f.known.unitLog.file],
+    f => f.x.historicalFailureEvidence[f.known.record.file].sha256 = '0'.repeat(64),
+    f => f.x.historicalFailureEvidence[f.known.record.file].json.unit.state = 'passed',
+    f => f.x.historicalFailureEvidence[f.known.unitLog.file].text = f.x.historicalFailureEvidence[f.known.unitLog.file].text.replace('# cancelled 1', '# cancelled 0'),
+    f => f.x.historicalFailureEvidence[f.known.firstPassingDescendant.record.file].json.build.state = 'failed',
+    f => f.x.facts[f.child].parents = [cutover],
+    f => delete f.entry.boundary,
+    f => f.entry.boundary = f.commit,
+    f => f.x.records[candidate].results.unit.state = 'failed',
+    f => f.x.manifest.commits.find(e => e.commit === candidate).reviewedCandidate = f.commit,
+    f => f.x.facts[candidate].parents = [f.commit, cutover],
+    f => f.x.facts[promotion].parents = [cutover, f.commit],
+    f => f.x.manifest.commits.find(e => e.commit === promotion).candidate = f.commit,
+  ]) {
+    const f = round23ExceptionFixture(); mutate(f);
+    assert.equal(row(auditAcceptance(f.x), f.commit).state, 'unaccepted', String(mutate));
+  }
+});
+
+test('B15-R23-Q1 prior passing records remain scoped and Q3 cannot use the passing WIP recorder', async () => {
+  const { parseFastOptions } = await import('../../scripts/record-fast-checks.mjs');
+  const { x, record } = approvedWipFixture({ commit: 'b4ffb02ef0d148f8e1f9b8020a79fc559ffb97f7' });
+  record.evidenceScope = 'wip-only';
+  record.wipEvidencePolicySha256 = '278c851cd93615e6c3763878b9c26f294c3f50bbdaa050bd31131bf2dbfe77ce';
+  assert.equal(auditAcceptance(x).accepted, true);
+  for (const commit of ['4ffda8835bee7c7a72949dffd7baf0aed352609c', 'a593d97dcc2160884adcf78e27a4bd800faf1bea'])
+    assert.throws(() => parseFastOptions(['--retrospective-wip', '--expected-commit', commit]), /approved/);
+});
+
 test('B15-R16-F7 post-cutover B15 WIP and eligible docs have pinned retrospective classes', async () => {
   const { parseFastOptions } = await import('../../scripts/record-fast-checks.mjs');
   for (const commit of [

@@ -175,6 +175,26 @@ test('B15-R16-F8 cancellation and loss during yielded masks cannot present or st
   }
 });
 
+test('B15-R23c readback admissions remain owned until Worker acknowledgement and drain before replacement', async () => {
+  const worker = new MaskWorkerDouble(); worker.held = true;
+  const maskProcessor = createMaskProcessor({ createWorker: () => worker }), h = await rig({ maskProcessor });
+  try {
+    const job = h.renderer.render(request(directScene(), generation(), 'settled', { width: 16, height: 600 }));
+    await h.until(() => worker.messages.filter(m => m.type === 'record').length === 2);
+    const reads = h.submissions.filter(s => s.method === 'readback' && s.desc.identity.jobId === job.jobId);
+    assert.equal(reads.length, 2, 'two unacknowledged readbacks retain both admissions; no early third tile');
+    assert.equal(h.scheduler.snapshot().outstanding, 2);
+    h.renderer.cancel(job.jobId);
+    assert.equal((await h.finish(job)).outcome, 'cancelled');
+    assert.equal(h.scheduler.snapshot().outstanding, 0);
+    assert.equal(h.fake.diagnostics().retiring, 0);
+    worker.release();
+    const replacement = h.renderer.render(request(directScene(), generation(2), 'settled'));
+    assert.equal((await h.finish(replacement)).outcome, 'completed');
+    assert.ok(h.fake.diagnostics().peak <= 2 ** 30);
+  } finally { h.renderer.destroy(); maskProcessor.destroy(); h.fake.destroy(); }
+});
+
 test('B15-R16-F8 renderer awaits Worker validation before settled presentation', async () => {
   const worker = new MaskWorkerDouble(); worker.held = true;
   const maskProcessor = createMaskProcessor({ createWorker: () => worker });

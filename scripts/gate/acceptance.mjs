@@ -8,11 +8,15 @@ const sha = value => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value);
 // 2026-10-22, round 6. Pin the exact 23 full SHAs, refined rule and provenance independently
 // of the live manifest and policies in audited commits. Neither can enroll more.
 const HISTORICAL_DOCS_POLICY_SHA256 = 'f10b7531ec9c4bc3d2ef62ea89c7f97b8dda85c3ec218db2a7d15c4aabb0eaaf';
-// Pin round-9 approvals and the converged round-16/17 amendments independently of audit inputs.
-export const WIP_EVIDENCE_POLICY_SHA256 = '278c851cd93615e6c3763878b9c26f294c3f50bbdaa050bd31131bf2dbfe77ce';
+// Pin round-9 approvals and converged round-16/17/23 amendments independently of audit inputs.
+export const WIP_EVIDENCE_POLICY_SHA256 = '4c21f98da7f850710b488352e6b3fac5a98a23135e0b7281148e91b88525f404';
 // P17-2: exact failed SHA, evidence, repair containment and delegated peer provenance.
 export const HISTORICAL_WIP_EXCEPTION_SHA256 = '230935368c85f47b41c380023e7b6a79edf580fc7139d7c16421082bfe862556';
 const HISTORICAL_WIP_COMMIT = '2f91343fe82e08a915b7de81bfd87c46baa0e35c';
+// R23-Q3 is separately authorized; P17-2 does not confer a general failure waiver.
+export const ROUND23_WIP_EXCEPTION_SHA256 = 'e332ba1cde88f02513687f287fa31d12493521ccb329f70388b3e4c4e2b847bd';
+const ROUND23_WIP_COMMIT = '4ffda8835bee7c7a72949dffd7baf0aed352609c';
+const knownFailureCommit = commit => [HISTORICAL_WIP_COMMIT, ROUND23_WIP_COMMIT].includes(commit);
 export const approvedWipEvidencePolicy = policy => !!policy &&
   createHash('sha256').update(JSON.stringify(policy)).digest('hex') === WIP_EVIDENCE_POLICY_SHA256;
 export const approvedRetrospectiveWip = (commit, policy) => approvedWipEvidencePolicy(policy) && policy.implementationWipCommits.includes(commit);
@@ -98,7 +102,7 @@ export function auditAcceptance({ commits, manifest, facts, records, requiredIds
     manifest.historicalDocsOnlyPolicySha256 === HISTORICAL_DOCS_POLICY_SHA256 &&
     createHash('sha256').update(JSON.stringify(historicalDocsPolicy)).digest('hex') === HISTORICAL_DOCS_POLICY_SHA256;
   const fullKinds = new Set(['feature-gated', 'merge-gated', 'integration-gated']);
-  const full = entry => entry && entry.commit !== HISTORICAL_WIP_COMMIT && fullKinds.has(entry.disposition) && judgeRecord(entry.commit, records[entry.gate], requiredIdsFor(entry.commit)).state === 'passed';
+  const full = entry => entry && !knownFailureCommit(entry.commit) && fullKinds.has(entry.disposition) && judgeRecord(entry.commit, records[entry.gate], requiredIdsFor(entry.commit)).state === 'passed';
   const wipPolicyApproved = manifest.wipEvidencePolicySha256 === WIP_EVIDENCE_POLICY_SHA256 && approvedWipEvidencePolicy(wipEvidencePolicy);
   const fast = (entry, fact) => entry.requiresRetrospectiveFast && records[entry.fast]?.recordedRetrospectively !== true
     ? {state:'invalid',reason:'historical fast evidence must be recordedRetrospectively'}
@@ -109,30 +113,48 @@ export function auditAcceptance({ commits, manifest, facts, records, requiredIds
       ? { evidenceScope: 'wip-only', policySha256: WIP_EVIDENCE_POLICY_SHA256, approval: wipEvidencePolicy.approval, amendments: wipEvidencePolicy.amendments }
       : contemporaneousFastFor(entry.commit) ? { contemporaneous: contemporaneousFastFor(entry.commit) } : {}) });
   function historicalException(known, entry) {
-    if (!wipPolicyApproved || !known || manifest.historicalWipExceptionSha256 !== HISTORICAL_WIP_EXCEPTION_SHA256 ||
-        createHash('sha256').update(JSON.stringify(known)).digest('hex') !== HISTORICAL_WIP_EXCEPTION_SHA256)
+    const round23 = known?.commit === ROUND23_WIP_COMMIT;
+    const exceptionPin = round23 ? ROUND23_WIP_EXCEPTION_SHA256 : HISTORICAL_WIP_EXCEPTION_SHA256;
+    const manifestPin = round23 ? manifest.historicalWipExceptionPins?.[ROUND23_WIP_COMMIT] : manifest.historicalWipExceptionSha256;
+    if (!wipPolicyApproved || !known || manifestPin !== exceptionPin ||
+        createHash('sha256').update(JSON.stringify(known)).digest('hex') !== exceptionPin)
       return { reason: 'missing or unapproved historical WIP exception policy pin' };
     if (entry?.disposition !== 'exception' || entry.exceptionId !== known.exception.id || entry.promotable !== false)
       return { reason: 'known historical failure requires its explicit non-promotable exception disposition' };
-    const refs = [known.record, known.unitLog, known.firstPassingDescendant.record, known.containment.gate];
+    const refs = [known.record, known.unitLog, known.firstPassingDescendant.record, ...(!round23 ? [known.containment.gate] : [])];
     if (refs.some(ref => historicalFailureEvidence[ref.file]?.sha256 !== ref.sha256))
       return { reason: 'missing or mismatched pinned historical failure evidence' };
     const failed = historicalFailureEvidence[known.record.file].json, log = historicalFailureEvidence[known.unitLog.file].text;
     const repaired = historicalFailureEvidence[known.firstPassingDescendant.record.file].json;
-    const gate = historicalFailureEvidence[known.containment.gate.file].json;
+    const gate = round23 ? null : historicalFailureEvidence[known.containment.gate.file].json;
     const summary = parseTapSummary(log ?? ''), start = Date.parse(failed?.startedAt), end = Date.parse(failed?.finishedAt);
     if (failed?.schema !== 'atlas.fast-check' || failed.schemaVersion !== 1 || failed.commit !== known.commit ||
         failed.tree !== facts[known.commit].tree || !same(failed.manifests, manifestsFor(known.commit)) ||
         failed.unit?.state !== 'failed' || failed.build?.state !== 'passed' || failed.cleanup !== 'confirmed' ||
         failed.cleanBefore !== true || failed.cleanAfter !== true || failed.unchanged !== true || failed.recordedRetrospectively !== true ||
         !Number.isFinite(start) || !Number.isFinite(end) || end < start || !Number.isFinite(facts[known.commit].committedAt) || start < facts[known.commit].committedAt * 1000 ||
-        !same(records[entry.fast], failed) || summary?.tests !== known.unit.tests || summary.pass !== known.unit.passed || summary.fail !== known.unit.failed || summary.cancelled !== 0 ||
+        !same(records[entry.fast], failed) || summary?.tests !== known.unit.tests || summary.pass !== known.unit.passed || summary.fail !== known.unit.failed || summary.cancelled !== (known.unit.cancelled ?? 0) || summary.skipped !== 0 || summary.todo !== 0 ||
         known.tests.some(name => !String(log).split('\n').some(line => /^not ok \d+ - /.test(line) && line.slice(line.indexOf(' - ') + 3) === name)))
       return { reason: 'pinned failure record or named failing tests contradict the historical failure' };
     const child = known.firstPassingDescendant.commit, boundary = known.containment.featureBoundary, promoted = known.containment.promotion;
     if (!entries.has(child) || !facts[child]?.parents?.includes(known.commit) ||
         judgeFast(child, repaired, facts[child], manifestsFor(child), contemporaneousFastFor(child), { wipEvidencePolicy }).state !== 'passed')
       return { reason: 'missing immediate repaired child with passing exact-commit fast evidence' };
+    if (round23) {
+      const boundary = entry.boundary, feature = entries.get(boundary);
+      if (!sha(boundary) || !isAncestor(child, boundary) || !full(feature) ||
+          feature.disposition === 'feature-gated' && (feature.reviewedCandidate !== boundary || !sha(feature.integrationBase) || !isAncestor(feature.integrationBase, boundary)))
+        return { reason: 'historical repair requires a qualifying fully gated descendant boundary' };
+      for (const boundaryEntry of entries.values()) {
+        if (fullKinds.has(boundaryEntry.disposition) || ['merge-tree-identical', 'validated-later'].includes(boundaryEntry.disposition)) {
+          if (boundaryEntry.commit === known.commit || boundaryEntry.candidate === known.commit ||
+              isAncestor(known.commit, boundaryEntry.commit) && !isAncestor(child, boundaryEntry.commit))
+            return { reason: 'a gated or promoted boundary uses the failed SHA or omits its repair' };
+        }
+      }
+      return { failureEvidence: { record: failed, unitLog: known.unitLog }, approval: known.exception,
+        exceptionPolicySha256: exceptionPin, containment: { repair: child, boundary, gate: feature.gate } };
+    }
     const feature = entries.get(boundary), promotion = entries.get(promoted), promotedFact = facts[promoted];
     if (!isAncestor(child, boundary) || !isAncestor(boundary, promoted) ||
         facts[boundary]?.tree !== known.containment.tree || promotedFact?.tree !== known.containment.tree ||
@@ -157,10 +179,10 @@ export function auditAcceptance({ commits, manifest, facts, records, requiredIds
     const fail = reason => rows.push({ commit, disposition: entry?.disposition ?? 'missing', state: 'unaccepted', reason });
     if (!fact || !sha(fact.tree)) { fail('missing Git facts'); continue; }
     const knownFailure = approvedWipEvidencePolicy(wipEvidencePolicy) && wipEvidencePolicy.knownFailures?.find(item => item.commit === commit);
-    if (commit === HISTORICAL_WIP_COMMIT) {
+    if (knownFailureCommit(commit)) {
       const checked = historicalException(knownFailure, entry);
       rows.push({ commit, disposition: entry?.disposition ?? 'missing', state: checked.reason ? 'unaccepted' : 'accepted-by-exception', promotable: false,
-        reason: checked.reason ?? 'failed historical WIP accounted by P17-2 exception only; no passing or promotion eligibility', ...checked,
+        reason: checked.reason ?? `failed historical WIP accounted by ${knownFailure.exception.id} exception only; no passing or promotion eligibility`, ...checked,
         knownFailure: knownFailure || undefined, policySha256: WIP_EVIDENCE_POLICY_SHA256, amendments: wipEvidencePolicy?.amendments });
       continue;
     }
