@@ -30,7 +30,7 @@ The goal is not simply to visualize fractals.
 
 The goal is to transform mathematical structures into places that people can inhabit, explore, experience, influence, and share.
 
-ATLAS should make it possible to enter an extraordinary mathematical landscape and feel present within it.
+ATLAS should make it possible to enter an extraordinary mathematical landscape and feel present within it.  ATLAS should make creating a mathematical world as rewarding as exploring one.
 
 A visitor might fly through a vast canyon whose walls reveal ever-finer fractal details, descend toward a river, encounter creatures moving through the environment, land on a rocky ledge, and explore on foot.
 
