@@ -42,6 +42,7 @@ test('B15-REC-G the registered ladder freezes targets budgets workload hash and 
   assert.equal(manifest.comparison.limits.L2.latency,.05);assert.equal(manifest.comparison.limits.L5a.latency,.25);assert.equal(manifest.comparison.limits.L5d.throughput,.10);
   const results=manifest.order.map((rung,position)=>({cell:{rung,position},metrics:{latencyP95Ms:rung==='L5a'?12:10,benchmarkDraftsPerSecond:100,confirmedDraftsPerSecond:100}}));
   const comparisons=compareLadder(results,manifest).comparisons;
+  for (const variant of 'abcd') assert.equal(comparisons.find(c=>c.rung===`L6${variant}`).mechanism, 'lifecycle');
   assert.equal(comparisons.find(c=>c.rung==='L5a').latency,.2);assert.equal(comparisons.find(c=>c.rung==='L5b').latency,0);
   assert.equal(compareLadder(results.slice(1),manifest).state,'incomplete');
 });

@@ -50,3 +50,24 @@ test('B15-REC-G a combined frame rejected before queue entry never creates a pre
     assert.equal(result.outcome,'failed');assert.deepEqual(events,[]);assert.deepEqual(h.updates,[]);
   }finally{h.renderer.destroy();h.real.destroy();}
 });
+
+test('r4-F2 real backend loss emits interrupted before any late renderer summary callback', async () => {
+  const h = await setup('L6d');
+  try {
+    const frames = []; h.renderer.onPublicationRecord(frame => frames.push(frame));
+    h.gpu.control.maps.held = true;
+    const job = h.renderer.render(h.request());
+    for (let i = 0; i < 100 && (!frames.length || !h.real.diagnostics().inventory.some(e => e.mappings)); i++) await flush();
+    assert.equal(frames.length, 1);
+    assert.ok(h.real.diagnostics().inventory.some(e => e.mappings), 'pending mapping at device loss');
+    await h.real.testAdapter.destroyDevice();
+    assert.equal((await job.done).outcome, 'interrupted');
+    assert.deepEqual(h.updates.map(u => [u.frameId, u.diagnosticsState]), [[frames[0].frameId, 'interrupted']]);
+    h.gpu.control.maps.release();
+    await h.renderer.prepare();
+    assert.equal((await h.renderer.render(h.request()).done).outcome, 'completed');
+    assert.deepEqual(h.updates.filter(u => u.frameId === frames[0].frameId).map(u => u.diagnosticsState), ['interrupted']);
+    assert.equal(h.updates.at(-1).diagnosticsState, 'confirmed');
+    assert.ok(h.updates.at(-1).identity.generation.deviceEpoch > frames[0].identity.generation.deviceEpoch);
+  } finally { h.gpu.control.maps.release(); h.renderer.destroy(); h.real.destroy(); }
+});

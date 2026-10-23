@@ -15,7 +15,6 @@
     <div class="vignette" aria-hidden="true"></div>
     <section id="space-workspace" class="space-workspace" aria-label="Space workspace">
       <canvas id="space-canvas" tabindex="0" aria-label="Three-dimensional fractal viewport. Drag to orbit, right-drag or Shift-drag to pan, scroll to dolly, double-click to focus, F to fly."></canvas>
-      <p id="space-diagnostics" class="space-diagnostics" role="status" hidden></p>
       <div class="space-status chrome" aria-live="polite">
         <p id="space-preparation" class="space-preparation" role="status" hidden></p>
         <p id="space-unavailable" class="space-alert" role="alert" hidden></p>
@@ -25,6 +24,7 @@
         <div id="space-cost-row" hidden><span id="space-cost"></span> <button id="space-restore-cost" class="mini-button">Restore full quality</button></div>
       </div>
       <div class="space-indicators chrome">
+        <span id="space-diagnostics" class="space-indicator space-diagnostics" role="status" aria-live="polite" hidden><small>DIAGNOSTICS</small><span id="space-diagnostics-value"></span></span>
         <span class="space-indicator"><small>ESTIMATOR</small><span id="space-estimator"></span></span>
         <span class="space-indicator"><small>CAMERA</small><span id="space-camera-status"></span></span>
         <span class="space-indicator"><small>CONTROLLER</small><span id="space-controller-status"></span></span>

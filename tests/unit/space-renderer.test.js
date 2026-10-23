@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createFakeClock } from '../support/fake-clock.mjs';
 import { createFakeBackend } from '../support/fake-backend.mjs';
+import { rendererWithProbe } from '../support/renderer-probe.mjs';
 import { createScheduler } from '../../src/shared/scheduler.js';
 import { BackendError, createAdmission, createPipelineSet, createPickRequest, sampleJitter } from '../../src/space/render/backend.js';
 import { packStatus, packLightingStatus } from '../../src/space/render/status.js';
@@ -50,7 +51,7 @@ const fixture = createPipelineSet({ id: 'b09-fixture', descriptors: [
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
-async function rig({ pipelineSet = fixture, draftExecution, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, recoveryWords, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
+async function rig({ pipelineSet = fixture, draftExecution, testProbe, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, recoveryWords, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock, limits });
   const hooks = {}, discarded = [], failed = [], auxiliaryJobs = [];
   const tickets = [], submissions = [], publications = [], publicationUpdates = [], publicationRecords = [], presents = [], statuses = [], reports = [], plans = [], targets = [];
@@ -104,7 +105,8 @@ async function rig({ pipelineSet = fixture, draftExecution, limits = {}, probe =
     discarded.push({ admission, reason, accepted }); return accepted;
   };
   let renderer;
-  assert.doesNotThrow(() => { renderer = createSpaceRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet, draftExecution }); }, 'the importable renderer must implement its constructor');
+  const makeRenderer = testProbe ? await rendererWithProbe() : createSpaceRenderer;
+  assert.doesNotThrow(() => { renderer = makeRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet, draftExecution, testProbe }); }, 'the importable renderer must implement its constructor');
   renderer.onPublish(value => publications.push(value)); renderer.onPresent(value => presents.push(value));
   renderer.onPublicationUpdate(value => publicationUpdates.push(value)); renderer.onPublicationRecord(value => publicationRecords.push(value));
   renderer.onStatus(value => statuses.push(value)); renderer.onReport(value => reports.push(value));
@@ -1801,4 +1803,45 @@ test('B15-REC-G only measured active GPU work removes a workload from whole-fram
       assert.equal(Boolean(next.desc.draft),timestampMs===undefined,'raw fence delay does not subdivide; active work beyond 8 ms does');
     }finally{h.renderer.destroy();h.fake.destroy();}
   }
+});
+
+test('r4-F2 historical L6d confirmation never calls publish or changes retained publication', async () => {
+  const attempts = [];
+  const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: 'L6d',
+    testProbe: { publish: record => attempts.push(record.request.requestId) } });
+  try {
+    let live = generation(1, 1), releaseOld;
+    const held = new Promise(resolve => { releaseOld = resolve; });
+    const options = { currentGeneration: () => live, currentNavigation: () => 1 };
+    const first = request(scene(), live);
+    h.hooks.after = (method, batch, ticket) => batch.pass === 'reduce' && batch.identity.requestId === first.requestId
+      ? { ...ticket, result: ticket.result.then(async result => { await held; return result; }) } : undefined;
+    const a = h.renderer.render(first, options);
+    await h.until(() => h.publicationRecords.length === 1); await h.complete();
+    live = generation(2, 1);
+    const second = request(scene(), live), b = h.renderer.render(second, options);
+    assert.equal((await h.finish(b)).outcome, 'completed');
+    const retained = h.renderer.published, events = [...h.publications], calls = [...attempts];
+    assert.equal(retained.request.requestId, second.requestId);
+    releaseOld(); assert.equal((await h.finish(a)).outcome, 'completed');
+    const update = h.publicationUpdates.find(u => u.identity.requestId === first.requestId);
+    assert.equal(update.diagnosticsState, 'confirmed'); assert.equal(update.historical, true);
+    assert.deepEqual(attempts, calls, 'no historical call to publish, even if publishable would refuse it');
+    assert.equal(h.renderer.published, retained, 'retained publication is unchanged');
+    assert.deepEqual(h.publications, events, 'no new publish event');
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+for (const variant of ['b', 'd']) test(`r4-F2 L6${variant} validatePublication exceptions fail the frame before confirmation`, async () => {
+  let validations = 0;
+  const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: `L6${variant}`,
+    testProbe: { validatePublication(record) { if (record.frame) { validations++; throw new Error('injected publication validation failure'); } } } });
+  try {
+    const result = await h.finish(h.renderer.render(request()));
+    assert.equal(result.outcome, 'failed');
+    assert.equal(validations, 1);
+    assert.deepEqual(h.publicationUpdates.map(u => u.diagnosticsState), ['failed']);
+    assert.match(h.publicationUpdates[0].reason, /injected publication validation failure/);
+    assert.equal(h.renderer.published, null);
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
 });
