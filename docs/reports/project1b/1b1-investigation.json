@@ -1,0 +1,1495 @@
+{
+  "schema": "atlas.investigation",
+  "schemaVersion": 1,
+  "completed": true,
+  "environment": {
+    "name": "environment",
+    "group": "shell",
+    "launch": "profile",
+    "startedAt": "2026-10-23T13:38:55.074Z",
+    "browser": "installed Chrome",
+    "browserVersion": "155.0.8059.84",
+    "chromeVersion": "155.0.8059.84 (Official Build) (x86_64)",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "headed": true,
+    "chromiumSandbox": true,
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "deviceScaleFactor": 1
+    },
+    "requestedArgs": [
+      "--disable-dev-shm-usage",
+      "--enable-gpu",
+      "--use-angle=vulkan",
+      "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan",
+      "--enable-webgpu-developer-features"
+    ],
+    "effectiveCommandLine": "/opt/google/chrome/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --disable-dev-shm-usage --enable-gpu --use-angle=vulkan --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan --enable-webgpu-developer-features --user-data-dir=/mnt/ml_storage/scratch/b15-final/tree/artifacts/runtime/playwright_chromiumdev_profile-TfxX65 --remote-debugging-pipe --no-startup-window --ozone-platform=x11 --flag-switches-begin --flag-switches-end --enable-unsafe-swiftshader",
+    "effectiveArguments": {
+      "present": [
+        "--enable-gpu",
+        "--use-angle=vulkan",
+        "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan",
+        "--enable-webgpu-developer-features"
+      ],
+      "missing": [],
+      "noSandbox": false,
+      "headless": false,
+      "gpuWatchdogDisabled": false,
+      "developerFeatures": true
+    },
+    "coldCache": {
+      "directory": "/mnt/ml_storage/scratch/b15-final/cold/space-d23RnQ",
+      "verifiedEmptyBeforeLaunch": true,
+      "browser": "new Playwright temporary profile and fresh browser/GPU process",
+      "driver": "isolated empty NVIDIA cache path; __GL_SHADER_DISK_CACHE=0 disables disk-cache reuse",
+      "gpuResidentCaches": "not measured; no driver reset",
+      "hostCachesDeleted": false
+    },
+    "chromeGpu": {
+      "record": "VENDOR= 0x10de [Google Inc. (NVIDIA)], DEVICE=0x26b1 [ANGLE (NVIDIA, Vulkan 1.4.312 (NVIDIA NVIDIA RTX 6000 Ada Generation (0x000026B1)), NVIDIA-580.173.2.0)], DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=580.173.2.0 *ACTIVE*",
+      "vendorId": 4318,
+      "deviceId": 9905,
+      "driverVendor": "NVIDIA",
+      "driverVersion": "580.173.2.0",
+      "polls": 1
+    },
+    "webgpuStatus": "Hardware accelerated",
+    "display": ":10.0",
+    "url": "http://127.0.0.1:5255",
+    "handoff": null,
+    "serverOwnership": "owned",
+    "source": {
+      "commit": "31233b5438b8471654bc858c6cf7aca430d576fc",
+      "dirty": false,
+      "servedUrl": "http://127.0.0.1:5255",
+      "servedSource": {
+        "files": 105,
+        "matched": 105,
+        "mismatched": [],
+        "missing": [],
+        "matches": true
+      },
+      "treeSha256": "4a3dd82edf641bdc85e068a1c261e2d8e5bd2d5d21637410f0a48b0fcaf5bcb0"
+    }
+  },
+  "steps": [
+    {
+      "name": "Open Plane and switch to Space",
+      "state": "passed",
+      "evidence": {
+        "sceneHash": "fnv1a64:1f3625cdbfbac662",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "8"
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-1-2",
+        "termination": {
+          "hit": 55079,
+          "miss": 866520,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 1,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 1,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 0,
+          "canUndo": false,
+          "canRedo": false,
+          "canBack": false,
+          "canForward": false,
+          "undoDepth": 0,
+          "redoDepth": 0,
+          "camera": {
+            "index": 0,
+            "length": 1
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Explore sphere {}",
+      "state": "passed",
+      "detail": {
+        "estimator": "exact distance"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:c2437494a10f5084",
+        "model": {
+          "id": "sphere",
+          "version": 1
+        },
+        "parameters": {},
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-2-3",
+        "termination": {
+          "hit": 51305,
+          "miss": 870295,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 0,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 2,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 1,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": false,
+          "canForward": false,
+          "undoDepth": 1,
+          "redoDepth": 0,
+          "camera": {
+            "index": 0,
+            "length": 1
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Explore box {}",
+      "state": "passed",
+      "detail": {
+        "estimator": "exact distance"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:04e0d769ea12da34",
+        "model": {
+          "id": "box",
+          "version": 1
+        },
+        "parameters": {},
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-3-4",
+        "termination": {
+          "hit": 26089,
+          "miss": 895511,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 0,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 3,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 2,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": false,
+          "canForward": false,
+          "undoDepth": 2,
+          "redoDepth": 0,
+          "camera": {
+            "index": 0,
+            "length": 1
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Explore menger {\"depth\":1}",
+      "state": "passed",
+      "detail": {
+        "estimator": "exact distance"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:814c54198ffce9d3",
+        "model": {
+          "id": "menger",
+          "version": 1
+        },
+        "parameters": {
+          "depth": 1
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-4-5",
+        "termination": {
+          "hit": 140332,
+          "miss": 781268,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 0,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 4,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 3,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 3,
+          "redoDepth": 0,
+          "camera": {
+            "index": 1,
+            "length": 2
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Explore menger {\"depth\":2}",
+      "state": "passed",
+      "detail": {
+        "estimator": "exact distance"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:6cd652c3616bef02",
+        "model": {
+          "id": "menger",
+          "version": 1
+        },
+        "parameters": {
+          "depth": 2
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-5-6",
+        "termination": {
+          "hit": 140332,
+          "miss": 781268,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 0,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 5,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 4,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 4,
+          "redoDepth": 0,
+          "camera": {
+            "index": 1,
+            "length": 2
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Explore mandelbulb {\"power\":\"8\"}",
+      "state": "passed",
+      "detail": {
+        "estimator": "heuristic, exterior-only"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:1f3625cdbfbac662",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "8"
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-6-7",
+        "termination": {
+          "hit": 55079,
+          "miss": 866520,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 1,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 6,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 5,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 5,
+          "redoDepth": 0,
+          "camera": {
+            "index": 2,
+            "length": 3
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Explore mandelbulb {\"power\":\"4\"}",
+      "state": "passed",
+      "detail": {
+        "estimator": "heuristic, exterior-only"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:3dd3a9c8b53d3bfe",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "4"
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-7-8",
+        "termination": {
+          "hit": 52055,
+          "miss": 869544,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 1,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 7,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 6,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 6,
+          "redoDepth": 0,
+          "camera": {
+            "index": 2,
+            "length": 3
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Explore quaternion-julia {\"C\":[\"-0.2\",\"0.8\",\"0\",\"0\"],\"kappa\":\"0\"}",
+      "state": "passed",
+      "detail": {
+        "estimator": "heuristic, exterior-only"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:081475310dc5a9a8",
+        "model": {
+          "id": "quaternion-julia",
+          "version": 1
+        },
+        "parameters": {
+          "C": [
+            "-0.2",
+            "0.8",
+            "0",
+            "0"
+          ],
+          "kappa": "0"
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-8-9",
+        "termination": {
+          "hit": 38751,
+          "miss": 882849,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 0,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 8,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 7,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 7,
+          "redoDepth": 0,
+          "camera": {
+            "index": 2,
+            "length": 3
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Explore quaternion-julia {\"C\":[\"-0.2\",\"0.8\",\"0.15\",\"-0.1\"],\"kappa\":\"0.5\"}",
+      "state": "passed",
+      "detail": {
+        "estimator": "heuristic, exterior-only"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:9abc537f25605e4b",
+        "model": {
+          "id": "quaternion-julia",
+          "version": 1
+        },
+        "parameters": {
+          "C": [
+            "-0.2",
+            "0.8",
+            "0.15",
+            "-0.1"
+          ],
+          "kappa": "0.5"
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-9-10",
+        "termination": {
+          "hit": 27963,
+          "miss": 893637,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 0,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 9,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 9,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 9,
+          "redoDepth": 0,
+          "camera": {
+            "index": 2,
+            "length": 3
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Orbit, dolly, focus and flight",
+      "state": "passed",
+      "evidence": {
+        "sceneHash": "fnv1a64:f6ee479ce72911f8",
+        "model": {
+          "id": "sphere",
+          "version": 1
+        },
+        "parameters": {},
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-35-36",
+        "termination": {
+          "hit": 74103,
+          "miss": 847497,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 0,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 35,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 32,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 10,
+          "redoDepth": 0,
+          "camera": {
+            "index": 6,
+            "length": 7
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Edit a parameter and undo without moving the camera",
+      "state": "passed",
+      "evidence": {
+        "sceneHash": "fnv1a64:1f3625cdbfbac662",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "8"
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-38-39",
+        "termination": {
+          "hit": 55079,
+          "miss": 866520,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 1,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 38,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 35,
+          "canUndo": true,
+          "canRedo": true,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 11,
+          "redoDepth": 1,
+          "camera": {
+            "index": 7,
+            "length": 8
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Cancel a settled render and render again successfully",
+      "state": "passed",
+      "detail": {
+        "outcome": "cancelled",
+        "submitted": "none"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:1f3625cdbfbac662",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "8"
+        },
+        "reportId": "report-request-70948d2a-3df0-4b2d-b918-3d1fee0b2974-space-40-41",
+        "termination": {
+          "hit": 55079,
+          "miss": 866520,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 1,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 1321.6999998092651
+          },
+          "eligible": true,
+          "submitted": 40,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 37,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 13,
+          "redoDepth": 0,
+          "camera": {
+            "index": 7,
+            "length": 8
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Save scene JSON, reload, open the file and verify its hash",
+      "state": "passed",
+      "detail": {
+        "path": "/mnt/ml_storage/scratch/b15-final/tree/artifacts/investigation/scene.json",
+        "sceneHash": "fnv1a64:1f3625cdbfbac662"
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:1f3625cdbfbac662",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "8"
+        },
+        "reportId": "report-request-ee9e5c1a-5f1a-4073-85bf-11e41559e1e9-space-1-2",
+        "termination": {
+          "hit": 55079,
+          "miss": 866520,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 1,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 942
+          },
+          "eligible": true,
+          "submitted": 1,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 1,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 1,
+            "phase": "ready",
+            "lastLoss": null,
+            "automaticRecoveries": 0
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 0,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": false,
+          "canForward": false,
+          "undoDepth": 1,
+          "redoDepth": 0,
+          "camera": {
+            "index": 0,
+            "length": 1
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Inject device loss and recover",
+      "state": "passed",
+      "evidence": {
+        "sceneHash": "fnv1a64:1f3625cdbfbac662",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "8"
+        },
+        "reportId": "report-request-ee9e5c1a-5f1a-4073-85bf-11e41559e1e9-recovery-1-3",
+        "termination": {
+          "hit": 55079,
+          "miss": 866520,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 1,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 942
+          },
+          "eligible": true,
+          "submitted": 1,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 2,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 2,
+            "phase": "ready",
+            "lastLoss": {
+              "epoch": 1,
+              "reason": "unknown",
+              "message": "injected through the B14 test seam",
+              "at": 2141
+            },
+            "automaticRecoveries": 1
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 0,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": false,
+          "canForward": false,
+          "undoDepth": 1,
+          "redoDepth": 0,
+          "camera": {
+            "index": 0,
+            "length": 1
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Inject allocation failure and choose the lower-cost option",
+      "state": "passed",
+      "detail": {
+        "reason": "injected allocation failure",
+        "released": 0,
+        "retiring": 0,
+        "choices": [
+          "release-and-retry",
+          "lower-resolution",
+          "fewer-samples"
+        ],
+        "request": {
+          "requestId": "request-ee9e5c1a-5f1a-4073-85bf-11e41559e1e9-space-2",
+          "width": 1280,
+          "height": 720,
+          "internalWidth": 1280,
+          "internalHeight": 720,
+          "samples": 8
+        }
+      },
+      "evidence": {
+        "sceneHash": "fnv1a64:4e1f1e90291615f5",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "7"
+        },
+        "reportId": "report-request-ee9e5c1a-5f1a-4073-85bf-11e41559e1e9-space-3-5",
+        "termination": {
+          "hit": 14124,
+          "miss": 216276,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 0,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 942
+          },
+          "eligible": true,
+          "submitted": 3,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 2,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 0.5,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 2,
+            "phase": "ready",
+            "lastLoss": {
+              "epoch": 1,
+              "reason": "unknown",
+              "message": "injected through the B14 test seam",
+              "at": 2141
+            },
+            "automaticRecoveries": 1
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 1,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": false,
+          "canForward": false,
+          "undoDepth": 2,
+          "redoDepth": 0,
+          "camera": {
+            "index": 0,
+            "length": 1
+          },
+          "gesture": null
+        }
+      }
+    },
+    {
+      "name": "Move inside the set and recover with overview",
+      "state": "passed",
+      "evidence": {
+        "sceneHash": "fnv1a64:4e1f1e90291615f5",
+        "model": {
+          "id": "mandelbulb",
+          "version": 1
+        },
+        "parameters": {
+          "power": "7"
+        },
+        "reportId": "report-request-ee9e5c1a-5f1a-4073-85bf-11e41559e1e9-space-5-7",
+        "termination": {
+          "hit": 55422,
+          "miss": 866176,
+          "numericalFailure": 0,
+          "unresolved": {
+            "pointBudget": 2,
+            "estimateUnavailable": 0,
+            "rayStepBudget": 0,
+            "stagnation": {
+              "rayParameter": 0,
+              "fieldCoordinate": 0
+            }
+          }
+        },
+        "state": {
+          "active": true,
+          "phase": "ready",
+          "prepared": true,
+          "prewarm": {
+            "ok": true,
+            "missing": [],
+            "preparedAt": 942
+          },
+          "eligible": true,
+          "submitted": 5,
+          "dirty": false,
+          "pending": false,
+          "flight": false,
+          "gesture": null,
+          "hidden": false,
+          "deviceEpoch": 2,
+          "backendCreated": true,
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "cost": {
+            "scale": 1,
+            "sampleCap": null
+          },
+          "allocationFailure": null,
+          "budget": null,
+          "recovery": {
+            "epoch": 2,
+            "phase": "ready",
+            "lastLoss": {
+              "epoch": 1,
+              "reason": "unknown",
+              "message": "injected through the B14 test seam",
+              "at": 2141
+            },
+            "automaticRecoveries": 1
+          },
+          "controller": {
+            "state": "waiting",
+            "id": null,
+            "index": null
+          },
+          "unavailable": null
+        },
+        "history": {
+          "revision": 3,
+          "canUndo": true,
+          "canRedo": false,
+          "canBack": true,
+          "canForward": false,
+          "undoDepth": 2,
+          "redoDepth": 0,
+          "camera": {
+            "index": 2,
+            "length": 3
+          },
+          "gesture": null
+        }
+      }
+    }
+  ],
+  "cleanup": "see artifacts/space-shell-report.json; document alone does not establish cleanup"
+}
