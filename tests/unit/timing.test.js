@@ -22,7 +22,8 @@ test('a late issuance is recorded as a timing anomaly and an established applica
 });
 
 test('three passing trials cannot rescue an earlier application failure accompanied by late issuance', () => {
-  const passing = { complete: true, coverage: true, targets: [{ passed: true }], timing: { invalidated: false } };
+  const passing = { complete: true, coverage: true, targets: [{ passed: true }], timing: { invalidated: false },
+    clockEvidence:{protocol:'atlas.gpu-clocks-v1',state:'measured',medianMHz:210,band:'lt270',sampleCount:11,uuid:'GPU-test'} };
   const failure = { ...passing, applicationFailure: 'settled target exceeded', timing: { invalidated: true } };
   assert.equal(classifyTrials([failure, passing, passing, passing]).state, 'failed');
   assert.equal(classifyTrials([passing, passing]).state, 'inconclusive');

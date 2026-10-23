@@ -42,7 +42,8 @@ test('B15-REC-G the registered ladder freezes targets budgets workload hash and 
   assert.equal(manifest.unpaced.total,7500);assert.equal(manifest.queue.liveFrames,2);assert.equal(manifest.queue.outstandingSubmissions,2);
   for(const v of 'abcd'){assert.equal(manifest.comparison.previous[`L5${v}`],'L4');assert.equal(manifest.comparison.previous[`L6${v}`],`L5${v}`);}
   assert.equal(manifest.comparison.limits.L2.latency,.05);assert.equal(manifest.comparison.limits.L5a.latency,.25);assert.equal(manifest.comparison.limits.L5d.throughput,.10);
-  const results=manifest.order.map((rung,position)=>({cell:{rung,position},metrics:{latencyP95Ms:rung==='L5a'?12:10,benchmarkDraftsPerSecond:100,confirmedDraftsPerSecond:100}}));
+  const clock={protocol:'atlas.gpu-clocks-v1',state:'measured',medianMHz:210,band:'lt270',bandShare:1,sampleCount:11,uuid:'GPU-test'};
+  const results=manifest.order.flatMap((rung,position)=>['paced','unpaced'].map(mode=>({schema:'atlas.performance-ladder-evidence',schemaVersion:3,sessionId:'session',attemptId:`${position}-${mode}`,classification:{state:'measured'},cleanup:{state:'confirmed'},clockEvidence:{...clock,latency:clock,phases:{orbit:clock}},cell:{rung,position,mode},metrics:{latencyP95Ms:rung==='L5a'?12:10,benchmarkDraftsPerSecond:100,confirmedDraftsPerSecond:100}})));
   const comparisons=compareLadder(results,manifest).comparisons;
   for (const variant of 'abcd') assert.equal(comparisons.find(c=>c.rung===`L6${variant}`).mechanism, 'lifecycle');
   assert.equal(comparisons.find(c=>c.rung==='L5a').latency,.2);assert.equal(comparisons.find(c=>c.rung==='L5b').latency,0);
@@ -69,7 +70,8 @@ test('B15 r14 ladder metrics use orbit window and preserve phase latency', async
   }
   const metrics=ladderMetrics(events,68000,{orbit:{start:1000,end:31000},interaction:{start:31000,end:61000}});
   assert.equal(metrics.benchmarkDraftsPerSecond,2/30);
-  assert.equal(metrics.latencyP95Ms,20);
+  assert.equal(metrics.latencyP95Ms,200);
+  assert.equal(metrics.phases.orbit.latencyP95Ms,20);
   assert.equal(metrics.phases.interaction.latencyP95Ms,200);
 });
 
@@ -119,7 +121,7 @@ test('B15 r14 several registered cells can be selected for one browser session',
 test('B15 r14b one failed ladder cell is recorded and isolated; the session continues and reports every failed cell', async () => {
   const {runLadderSession}=await import('../support/space-performance-ladder.mjs');
   const cells=[{position:0,rung:'L0'},{position:1,rung:'L1'},{position:2,rung:'L2'}],attempted=[],report=[];
-  await assert.rejects(runLadderSession({cells,report,runCell:async cell=>{attempted.push(cell.rung);if(cell.rung==='L1')throw Error('boom');}}),/1 of 3 ladder cells failed: .*L1/);
+  await assert.rejects(runLadderSession({cells,report,runCell:async cell=>{attempted.push(cell.rung);if(cell.rung==='L1')throw Object.assign(Error('boom'),{cleanup:'confirmed'});}}),/1 of 3 ladder cells failed: .*L1/);
   assert.deepEqual(attempted,['L0','L1','L2']);
   const summary=report.find(r=>r.name==='ladder session summary');
   assert.deepEqual(summary.failed.map(f=>f.cell.rung),['L1']);assert.match(summary.failed[0].error,/boom/);

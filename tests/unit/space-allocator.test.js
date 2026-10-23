@@ -152,3 +152,19 @@ test('destroyAll destroys every native resource and zeroes tracking while peak p
   assert.throws(() => tracked.lookup(a, { allowRetiring: true }), code('invalid-descriptor'));
   tracked.unhold({ id: 't' }); // tokens from before the teardown are harmless
 });
+
+test('B15-O2 pool bounds entries and obsolete owners tickets and mappings survive until their final release', () => {
+  const { factory, allocator: tracked } = allocator();
+  const descriptions = Array.from({ length: 48 }, (_, i) => ({ name: `target-${i}`, bytes: 16, width: 2, height: 2, format: 'r32float' }));
+  const handles = tracked.transaction(descriptions, { pool: 'output-a' }); tracked.activatePool('output-a');
+  const ticket = {}, mapping = {};
+  tracked.hold(handles[0], ticket, 'ticket'); tracked.hold(handles[1], mapping, 'mapping'); tracked.retain(handles[2], 'published');
+  handles.forEach(h => tracked.release(h));
+  assert.equal(tracked.diagnostics().inventory.filter(e => e.state === 'pooled').length, 44);
+  tracked.activatePool('output-b'); tracked.activatePool('output-a');
+  assert.equal(tracked.diagnostics().inventory.length, 3, 'only held obsolete resources survive');
+  assert.equal(factory.destroyed.length, 45);
+  tracked.unhold(ticket); tracked.unhold(mapping); tracked.retire('published');
+  assert.equal(tracked.diagnostics().tracked, 0, 'returning to the old key does not revive obsolete entries');
+  assert.equal(factory.destroyed.length, 48);
+});

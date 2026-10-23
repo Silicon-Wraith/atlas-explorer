@@ -382,13 +382,17 @@ test('B15 r14 4K spare geometry and working sets reuse partial pool under the tr
     const work=await targets(backend,3840,2160);
     assert.ok(backend.diagnostics().tracked >= 3840*2160*96);
     assert.ok(backend.diagnostics().peak <= TRACKED_ALLOCATION_CAP);
+    // The successful resize now evicts the old draft cache. Supply a current-key idle
+    // texture and enough explicit pressure to exercise reserve's eviction separately.
+    backend.release(work.handles.accumulation[0]);
+    const padding=backend.allocate({name:'pressure-padding',bytes:16*2**20,usage:'storage'});
     const before=backend.diagnostics().tracked;
     // A normal allocation evicts idle textures first; live and retained targets survive.
     const buffer=backend.allocate({name:'pressure',bytes:256*2**20,usage:'storage'});
     assert.ok(backend.diagnostics().tracked<=TRACKED_ALLOCATION_CAP);
     assert.ok(backend.diagnostics().tracked<before+256*2**20);
     assert.equal(entryOf(backend,work.handles.display).state,'live');
-    backend.release(buffer);
+    backend.release(buffer);backend.release(padding);
   } finally {backend.destroy();}
 });
 
@@ -424,5 +428,72 @@ test('B15 r14b a configuration served from the pool is still error-scoped (spec 
     gpu.control.scopes.release();
     await pending;
     assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, created, 'still served from the pool');
+  } finally { gpu.control.scopes.release(); backend.destroy(); }
+});
+
+test('B15-O2 reclaim bounds idle bytes while 4K partial reuse preserves held geometry under the total cap', async () => {
+  const {gpu, backend} = await ready();
+  const geometry = new Set(['depth', 'status', 'normal', 'recovery']);
+  try {
+    const spare = await targets(backend, 3840, 2160);
+    const held = Object.entries(spare.handles).filter(([name]) => geometry.has(name)).flatMap(([, handles]) => [handles].flat());
+    for (const [name, handles] of Object.entries(spare.handles)) if (!geometry.has(name)) for (const handle of [handles].flat()) {
+      backend.release(handle);
+      const idle = backend.diagnostics().inventory.filter(e => e.state === 'pooled');
+      assert.ok(idle.reduce((sum, e) => sum + e.bytes, 0) <= 256 * 2**20, 'reclaim trims bytes immediately');
+      assert.ok(idle.length <= 44);
+    }
+    const idleCount = backend.diagnostics().inventory.filter(e => e.state === 'pooled').length;
+    assert.ok(idleCount > 0 && idleCount < 7, 'some 4K working textures survive, some are trimmed');
+    const before = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    const work = await targets(backend, 3840, 2160);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length - before, 11 - idleCount);
+    assert.ok(backend.diagnostics().peak <= TRACKED_ALLOCATION_CAP);
+    assert.ok(held.every(h => entryOf(backend, h)?.state === 'live'), 'spare geometry never evicted');
+    Object.values(work.handles).flat().forEach(h => backend.release(h));
+    held.forEach(h => backend.release(h));
+    assert.ok(backend.diagnostics().tracked <= 256 * 2**20, 'fully idle 4K cache stays bounded');
+  } finally { backend.destroy(); }
+});
+
+test('B15-O2 successful 4K to 720p configure evicts incompatible idle keys and late releases cannot refill them', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const large = await targets(backend, 3840, 2160);
+    gpu.control.maps.held = true;
+    const read = readOf(backend, large.handles.status); await read.done; await flush();
+    for (const [name, handles] of Object.entries(large.handles)) if (name !== 'display') for (const handle of [handles].flat()) backend.release(handle);
+    const status = entryOf(backend, large.handles.status);
+    assert.equal(status.state, 'retiring'); assert.equal(entryOf(backend, large.handles.display).state, 'live');
+    const small = await targets(backend, 1280, 720);
+    assert.equal(backend.diagnostics().inventory.filter(e => e.state === 'pooled' && e.width === 3840).length, 0);
+    assert.equal(entryOf(backend, large.handles.status).state, 'retiring', 'mapping survives resize');
+    assert.equal(entryOf(backend, large.handles.display).state, 'live', 'caller-held display survives resize');
+    gpu.control.maps.release(); await read.result;
+    backend.release(large.handles.display);
+    assert.equal(entryOf(backend, large.handles.status), undefined); assert.equal(entryOf(backend, large.handles.display), undefined);
+    Object.values(small.handles).flat().forEach(h => backend.release(h));
+    assert.ok(backend.diagnostics().inventory.filter(e => e.state === 'pooled').every(e => e.width === 1280));
+    const before = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    await targets(backend, 1280, 720);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, before, 'current-size cache still works');
+  } finally { gpu.control.maps.release(); backend.destroy(); }
+});
+
+test('B15-O2 a failed output-size configuration preserves the prior idle key', async () => {
+  const {gpu, backend} = await ready();
+  try {
+    const first = await targets(backend);
+    Object.values(first.handles).flat().forEach(h => backend.release(h));
+    gpu.control.scopes.held = true;
+    gpu.control.errors.push({ op: 'createTexture', filter: 'out-of-memory', message: 'new output rejected' });
+    const failed = targets(backend, 2, 2, { width: 4, height: 4 });
+    const rejected = assert.rejects(failed, /new output rejected/);
+    assert.equal(backend.diagnostics().inventory.filter(e => e.state === 'pooled').length, 11, 'scope still pending');
+    gpu.control.scopes.release(); await rejected;
+    assert.equal(backend.diagnostics().inventory.filter(e => e.state === 'pooled').length, 11, 'failed configure did not activate its key');
+    const before = gpu.control.natives.filter(n => n.kind === 'texture').length;
+    await targets(backend);
+    assert.equal(gpu.control.natives.filter(n => n.kind === 'texture').length, before);
   } finally { gpu.control.scopes.release(); backend.destroy(); }
 });

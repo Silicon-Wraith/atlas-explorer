@@ -5,17 +5,44 @@ import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { confirmedPublications, PERFORMANCE_RECORD_VERSION } from './performance-records.mjs';
 import { scheduleAbsolute } from './timing.mjs';
-import { ev, within, LIMITS } from './bounded.mjs';
+import { ev, within, LIMITS, cleanupState, CLEANUP_UNCONFIRMED_EXIT } from './bounded.mjs';
+import { startGpuClockMonitor, summarizeGpuClocks, epochClockWindows, usableGpuClocks } from './gpu-clock-evidence.mjs';
 
 export const PERFORMANCE_PASSES = Object.freeze([
   'P3 completed draft cadence', 'P3 consecutive draft interval p95', 'P3 interaction p95',
   'P3 stress replacement', 'P3 application main-thread tasks', 'P3 first settled image',
   'P3 coverage and visible output',
 ]);
+// Monitor the timed workload and its drains, then stop before checkpoint replay. Sampling
+// failure is missing evidence; it cannot excuse an established application failure.
+export async function capturePerformanceAttempt(attempt, run, collect, {
+  startMonitor = startGpuClockMonitor, persist, exit = code => process.exit(code),
+} = {}) {
+  const monitor = startMonitor();
+  let trial;
+  try { await run(); } catch (error) { attempt.error = String(error.stack ?? error); }
+  try { trial = await collect(); } catch (error) { attempt.evidenceError = String(error.stack ?? error); }
+  if (trial) {
+    attempt.trial = trial;
+    const terminal = trial.reports?.find(r => ['failed', 'budget-exceeded', 'interrupted'].includes(r.outcome));
+    attempt.applicationFailure = trial.applicationFailure ?? (terminal ? `application ${terminal.outcome}: ${terminal.reason}` : null);
+  }
+  const capture = await monitor.stop();
+  attempt.clocks = capture.raw; attempt.clockErrors = capture.errors; attempt.clockCleanup = capture.cleanup;
+  attempt.clockEvidence = summarizeGpuClocks(capture, epochClockWindows(trial?.timeOriginMs, trial?.phases));
+  if (capture.cleanup.state !== 'confirmed') {
+    cleanupState.unconfirmed = true;
+    attempt.cleanupFailure = `CLEANUP-UNCONFIRMED P3 clock monitor: ${JSON.stringify(capture.cleanup)}`;
+    await persist(); console.error(attempt.cleanupFailure); exit(CLEANUP_UNCONFIRMED_EXIT); throw Error(attempt.cleanupFailure);
+  }
+  await persist();
+  return trial;
+}
 export function classifyAttempt(attempt) {
   if (attempt.applicationFailure || attempt.targets?.some(target => target.passed === false)) return { state: 'failed', reason: attempt.applicationFailure ?? 'an established application target failed' };
   if (attempt.harnessFailure?.demonstrated && attempt.harnessFailure.evidence) return { state: 'excluded', reason: attempt.harnessFailure.evidence };
   if (attempt.timing?.invalidated) return { state: 'inconclusive', reason: 'unexplained issuance anomaly over 4 ms' };
+  if (!usableGpuClocks(attempt.clockEvidence) || attempt.clockCleanup?.state === 'unconfirmed') return { state: 'inconclusive', reason: 'missing or unusable GPU clock sampling evidence' };
   if (!attempt.complete || !attempt.coverage || !attempt.targets?.length || attempt.targets.some(target => target.passed !== true)) return { state: 'inconclusive', reason: 'incomplete workload, coverage or target evidence' };
   return { state: 'passed', reason: 'complete valid trial; every frozen target passed' };
 }
@@ -45,7 +72,7 @@ function installObservation() {
 }
 
 function startAttempt() {
-  const s = atlas.space, trial = { issued:[], requests:[], publications:[], publicationUpdates:[], presentations:[], reports:[], phases:{}, timings:[], phase:'restore', input:null };
+  const s = atlas.space, trial = { timeOriginMs:performance.timeOrigin, issued:[], requests:[], publications:[], publicationUpdates:[], presentations:[], reports:[], phases:{}, timings:[], phase:'restore', input:null };
   globalThis.__p3 = trial;
   trial.stop = [s.onRequest(event => trial.requests.push({ identity:event.identity,purpose:event.purpose,createdAt:event.createdAt,
     quality:event.request.quality,sceneHash:event.request.sceneHash,camera:event.request.sceneSnapshot.camera,phase:trial.phase,input:trial.input })),
@@ -138,7 +165,7 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
   assert.equal(environment.chromeGpu?.vendorId,0x10de,'physical NVIDIA adapter required');assert.match(environment.webgpuStatus,/Hardware accelerated/i);
   const outputDir=process.env.ATLAS_B15_REPORT_DIR??'docs/reports/project1b';
   const outputPath=`${outputDir}/1b1-performance-${sceneId}.json`,attempts=[];
-  const result={schema:'atlas.performance-evidence',schemaVersion:2,recordProtocol:PERFORMANCE_RECORD_VERSION,sceneId,environment,workloadSha256:sha256(workloadBytes),predictionSha256:sha256(predictionBytes),attempts};
+  const result={schema:'atlas.performance-evidence',schemaVersion:3,recordProtocol:PERFORMANCE_RECORD_VERSION,sceneId,environment,workloadSha256:sha256(workloadBytes),predictionSha256:sha256(predictionBytes),attempts};
   const persist=async()=>{for(const attempt of attempts)attempt.classification=classifyAttempt(attempt);result.classification=classifyTrials(attempts);await mkdir(outputDir,{recursive:true});await writeFile(outputPath,JSON.stringify(result,null,2)+'\n');};
   await page.addInitScript(installObservation);
   await page.goto(url,{timeout:LIMITS.launch});await page.waitForFunction(()=>Boolean(globalThis.atlas?.space));
@@ -151,7 +178,7 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
     for(let index=0;index<workload.trials.maxAttempts;index++) {
       await restore(selected.scene);await ev(page,startAttempt,undefined,'begin trial');
       const attempt={index:index+1,complete:false,coverage:false};attempts.push(attempt);await persist();
-      try {
+      const trial=await capturePerformanceAttempt(attempt, async()=>{
         await ev(page,timedCamera,{phase:'orbit',poses:workload.workloads.orbit.cameraPoses[sceneId]},'P3 orbit',LIMITS.deep);
         await ev(page,()=>{__p3.phases['settled-after-orbit']={start:performance.now()};},undefined,'settled phase start');
         await idle(); // Includes full quality before interaction; request clock is never restarted.
@@ -167,11 +194,8 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
         await ev(page,timedStress,{alternation:workload.workloads.stress.alternations[sceneId],...workload.workloads.stress.editRule,durationMs:workload.workloads.stress.durationMs},'P3 stress',LIMITS.deep);
         await idle();
         attempt.complete=true;
-      } catch(error) {attempt.error=String(error.stack??error);}
-      // Persist all issued inputs, reports and timing diagnostics even on failure.
-      let trial;
-      try {trial=await ev(page,async()=>{await new Promise(r=>setTimeout(r,0));const t=__p3;t.stop.forEach(fn=>fn());const {stop,...data}=t;return {...data,longTasks:__p3LongTasks,observerError:globalThis.__p3ObserverError??null,memory:atlas.space.backendDiagnostics};},undefined,'collect trial evidence');}
-      catch(error){attempt.evidenceError=String(error.stack??error);await persist();break;}
+      }, ()=>ev(page,async()=>{await new Promise(r=>setTimeout(r,0));const t=__p3;t.stop.forEach(fn=>fn());const {stop,...data}=t;return {...data,longTasks:__p3LongTasks,observerError:globalThis.__p3ObserverError??null,memory:atlas.space.backendDiagnostics};},undefined,'collect trial evidence'), {persist});
+      if(!trial)break;
       Object.assign(attempt,{trial,applicationFailure:trial.applicationFailure??null,timing:{invalidated:trial.timings.some(t=>t.invalidated),rearms:trial.timings.reduce((sum,t)=>sum+t.rearms,0)}});
       if(attempt.complete)Object.assign(attempt,measureAttempt(trial,workload));
       else {

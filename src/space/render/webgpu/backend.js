@@ -349,8 +349,8 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       // Partial releases can be reused individually, including the non-geometry spare at 4K.
       const pool = JSON.stringify([layoutId, outputSize, TARGET_LAYOUT]);
       // Every configuration is error-scoped (§9.1), including a set served wholly from the pool.
-      // Skipping the scope for pooled sets measurably worsened L6a tail latency (B15 r14b O1:
-      // p95 28.9–32.0 ms without the scope against a median of 22.3 ms with it, one session).
+      // The earlier scope/skip latency comparison was confounded by GPU clocks (B15 O1b).
+      // The scope requirement stands independently of those diagnostic measurements.
       const reused = allocator.canReuse(descs, pool);
       const { value: created, status } = createScoped(() => allocator.transaction(descs, { pool }));
       // An abandoned fresh set may carry an unobserved creation error: never pool it. A pooled set
@@ -370,6 +370,7 @@ export function createWebGPUBackend({ canvas, clock, acquire = acquireDevice, en
       });
       for (const name of Object.keys(handles)) if (Array.isArray(handles[name])) { Object.freeze(handles[name]); Object.freeze(descriptions[name]); }
       current.presenter.resize(outputSize);
+      allocator.activatePool(pool);
       return Object.freeze({ epoch, layoutId, internalSize, outputSize, handles: Object.freeze(handles), descriptions: Object.freeze(descriptions) });
     }),
     submitBatch: (input, options) => timed('submit', () => {

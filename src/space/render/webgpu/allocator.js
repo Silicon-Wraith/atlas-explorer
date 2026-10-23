@@ -13,6 +13,8 @@ const DESCRIPTION_KEYS = ['name', 'bytes', 'usage', 'width', 'height', 'format',
 // Inventory reports actual dimensions; bytesPerTexel and initial data stay out of it.
 const INVENTORY_KEYS = ['width', 'height', 'usage', 'format', 'bytesPerRow'];
 const HOLD_KINDS = { ticket: 'tickets', mapping: 'mappings' };
+const IDLE_POOL_BYTES = 256 * 2**20;
+const IDLE_POOL_ENTRIES = 44;
 
 function describe(desc) {
   if (!isPlainObject(desc)) invalid('allocation description must be a plain object');
@@ -63,8 +65,12 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
     if (!entry.retiring || entry.tickets.size || entry.mappings.size || entry.owners.size || !resources.has(entry.handle)) return;
     if (entry.poolKey && !entry.failure) {
       pooled.add(entry);
-      // Four complete v2 sets worth of idle textures. Live/retiring owners are never evicted.
-      while (pooled.size > 44) evict(pooled.values().next().value);
+      // Bound residency on release, even when there is no subsequent allocation pressure.
+      let idleBytes = [...pooled].reduce((sum, idle) => sum + idle.description.bytes, 0);
+      while (pooled.size > IDLE_POOL_ENTRIES || idleBytes > IDLE_POOL_BYTES) {
+        const oldest = pooled.values().next().value;
+        idleBytes -= oldest.description.bytes; evict(oldest);
+      }
     } else evict(entry);
   }
   function lookup(handle, { allowRetiring = false } = {}) {
@@ -107,6 +113,14 @@ export function createTrackedAllocator({ factory, cap = TRACKED_ALLOCATION_CAP, 
         if (old) { resources.delete(old.handle); tracked -= old.description.bytes; }
         return record(item.description, natives[index], poolKey(item.description, pool));
       }));
+    },
+    // Called only after successful configuration. Invalidate obsolete live entries as well:
+    // they stay held, but their eventual release must not repopulate the old output-size key.
+    activatePool(pool) {
+      for (const entry of resources.values()) if (entry.poolKey && JSON.parse(entry.poolKey)[0] !== pool) {
+        entry.poolKey = null;
+        if (pooled.has(entry)) evict(entry);
+      }
     },
     canReuse(descs, pool) {
       return descs.every(desc => [...pooled].some(entry => entry.poolKey === poolKey(describe(desc).description, pool)));
