@@ -2,7 +2,7 @@
 
 ## Project Status & Purpose
 
-ATLAS is a working 2D deep-zoom Mandelbrot explorer (see `README.md` for tooling and commands). It is evolving into a 3D fractal and mathematical workbench under `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`. Some sections below predate the implementation; `README.md` and `package.json` describe the current tooling.
+ATLAS is a web app for exploring inhabitable worlds derived from fractal mathematics (North Star: "make mathematics somewhere you can go"). It is governed by `docs/superpowers/specs/2026-10-23-atlas-north-star-charter.md`, adopted 2026-10-23, which mostly replaces the 2026-10-18 workbench charter. Today it contains a 2D deep-zoom Mandelbrot explorer (Plane) and a WebGPU 3D fractal viewer (Space); see `README.md` for tooling and commands. Targets: desktop or laptop with a discrete GPU, not mobile. Licence: MIT.
 
 ## Project Structure & Module Organization
 
@@ -49,62 +49,32 @@ Promote to `main` only through a reviewed PR. The 1b.1 audit uses pinned `main..
 
 ## Claude–Codex Collaboration Protocol
 
-ATLAS is designed and planned by **Claude and Codex as equal peers**. There is no driver and no
-reviewer. Both generate ideas, argue, and converge. **Delegated product direction (user,
-2026-10-22).** Claude and Codex own product direction: feature scope, priorities, order, design,
-specs, plans and implementation. They converge, record each amendment, and act. The user advises and
-is kept informed; converged specs and plans no longer wait for user approval. The user is asked only
-for what only the user can do (permissions, hardware or browser actions, accounts, merging PRs) or
-about the user's own intent. Historical user approvals stay on record. Design and architecture
-questions go to the peer, not to the user.
+**Governing charter:** `docs/superpowers/specs/2026-10-23-atlas-north-star-charter.md` (adopted 2026-10-23), which mostly replaces the 2026-10-18 workbench charter. The advisor holds the product vision. Claude and Codex are engineering peers who own technical decisions, reason together, find workable solutions, recognise dead ends and take responsibility for results.
 
-**The two copies.** This section is identical in `AGENTS.md`, which Codex reads, and `CLAUDE.md`,
-which Claude reads. Change both together.
+**The two copies.** This section is identical in `AGENTS.md`, which Codex reads, and `CLAUDE.md`, which Claude reads. Change both together.
+
+### How we work
+1. **Start from one observable experience** and the riskiest assumption behind it.
+2. **Owner and challenger.** Each initiative has one owner, who designs, builds and measures, and one challenger, who looks for the flaw or the simpler path and independently checks the decisive evidence. Roles are assigned per initiative.
+3. **Criteria before building.** A substantial initiative opens with a short card: the experience it enables, the limitation it addresses, the smallest test, the success criteria, a time limit and a stop rule.
+4. **Decide by reversibility.** The owner decides reversible choices. For consequential choices, both peers write independent positions first, without anchoring on each other. A disagreement gets the smallest discriminating test, not a longer argument; evidence wins in either direction. Record consequential decisions in a short note: evidence, choice, limits, and what would trigger reconsideration.
+5. **Dead ends are findings.** At a stop rule the owner records what was tried, what failed and what comes next. Either peer may abandon an approach; the other may challenge.
+6. **Verify before relying.** A peer's factual or numerical claim is checked against source or a preserved run before anything depends on it.
+7. **Proportional process.** Scratch experiments need no product acceptance gate, but they keep bounded execution, exclusive GPU use, preserved evidence and confirmed cleanup. Product verification follows behavioural impact. Amend the recorded acceptance policy before replacing its requirements.
+8. **Advisor contact.** The advisor gets milestone summaries: what ATLAS can do now, the evidence, what we learned, what's next and why, and any decision needed. We escalate material product-intent changes, expensive commitments, consequential licensing, acceptance of important unresolved risks and necessary external permissions, with a recommendation. Disagreements between the peers are not escalated; they get an experiment. The advisor merges PRs to `main`.
 
 ### Channel
-- Claude talks to Codex through the codex-bridge plugin
-  (`/mnt/ml_storage/dev/projects/codex-bridge/bin/codex_bridge.py`). A topic starts with
-  `consult`. Every later turn uses `resume --run-id <latest run id>`, so the whole topic lives in
-  one shared Codex session with its memory intact.
-- Codex runs read-only during design work. While a bridge run is active, nobody edits files in
-  the checkout: the bridge's tripwire treats any change as a guard violation.
-- Bridge artefacts live under `CODEX_BRIDGE_HOME=/mnt/ml_storage/scratch/codex-bridge`, never on
-  the root drive.
-
-### Rounds
-1. **Independent positions.** Each peer answers the same brief without seeing the other's answer,
-   to avoid anchoring. Claude writes its position to a file before reading Codex's.
-2. **Debate.** Each peer reads the other's position and replies to every point: agree, counter,
-   or refine. A concession is stated plainly. Every reply ends with an **"Agreed so far"** list
-   and a **"Still disputed"** list.
-3. **Converge.** Rounds continue until "Still disputed" is empty or trivial.
-4. **Draft and review.** One peer drafts the document. The other reviews it **as a co-author**,
-   giving concrete replacement text and a verdict: **READY**, or **NOT READY** with the blockers
-   listed. Iterate until the verdict is READY.
-5. **Verify before applying.** A numerical or factual claim from the peer is reproduced
-   independently, by running code or reading the source, before the document relies on it.
-   Evidence wins over authority in both directions.
-6. **Hand to the user.** The user receives the converged document, a short account of what changed
-   and why, and only the questions that genuinely need the user.
+- Claude talks to Codex through the codex-bridge plugin (`/mnt/ml_storage/dev/projects/codex-bridge/bin/codex_bridge.py`). Design discussions start with `consult` (read-only). Implementation uses `run --mode new-worktree`, or `run --mode in-place` from an eligible linked worktree. Continue each session with `resume --run-id <latest run id>`. Resume retains the parent's permissions; moving from a read-only discussion to implementation requires a new writable run with the agreed context supplied.
+- During a read-only review, nobody edits the reviewed checkout. During implementation, only the assigned bridge worker edits its designated target. Keep the primary checkout, protected refs, and target HEAD/branch unchanged while the run is active; permitted content edits within the write target are not tripwire violations.
+- Bridge artefacts live under `CODEX_BRIDGE_HOME=/mnt/ml_storage/scratch/codex-bridge`, never on the root drive.
 
 ### Running log
-- Every message in both directions is appended **verbatim**, with sender and timestamp, to
-  `/mnt/ml_storage/scratch/atlas-codesign/conversation-log.md` (helper: `log-append.sh` in the
-  same directory). The user can read it at any time
-  (`tail -f /mnt/ml_storage/scratch/atlas-codesign/conversation-log.md`).
-- The log lives outside the repo because of the tripwire. It is archived to
-  `docs/codesign/conversation-log.md` at every milestone: a spec or plan ready for the user.
+- Every message in both directions is appended **verbatim**, with sender and timestamp, to `/mnt/ml_storage/scratch/atlas-codesign/project1-log.md`. When using `log-append.sh` in that directory, explicitly set `LOG=/mnt/ml_storage/scratch/atlas-codesign/project1-log.md`; the helper otherwise defaults to `conversation-log.md`. This log is the advisor's window into our reasoning.
+- The log is archived into `docs/codesign/` at milestones.
 
 ### Where things go
 | Artefact | Location |
 |---|---|
-| Specs | `docs/superpowers/specs/` |
+| Charter and specs | `docs/superpowers/specs/` |
 | Plans | `docs/superpowers/plans/` |
-| Reports | `docs/reports/` |
-
-The governing document is `docs/superpowers/specs/2026-10-18-atlas-workbench-charter.md`.
-
-### Scope
-- **Applies to:** specs, plans, reviews, and the interpretation of experimental results.
-- **Implementation:** may be delegated to either peer, as the approved plan's execution method
-  says. Every change is reviewed by the other peer before it is called done.
+| Reports and findings | `docs/reports/` |

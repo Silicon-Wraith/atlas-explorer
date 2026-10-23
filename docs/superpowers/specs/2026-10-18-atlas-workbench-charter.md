@@ -1,3 +1,5 @@
+> **Mostly superseded (2026-10-23)** by `2026-10-23-atlas-north-star-charter.md`. Its Adoption decisions define the authoritative carried-forward invariants and the treatment of existing project specs. The body below is historical, including its former governance and approval wording. The zero-runtime-dependency default and distance-estimate-only representation no longer govern new work.
+
 # ATLAS Workbench — Architectural Charter
 
 **Status:** approved by the user 2026-10-18; amended 2026-10-20 (A1, A2, §7) and 2026-10-22 (A3, rev 6.0) · **Date:** 2026-10-18
