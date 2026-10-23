@@ -189,3 +189,23 @@ test('R16-C3 two concurrent sessions share two leases without mixing validation 
     assert.equal(h.workers.length, 1);
   } finally { h.processor.destroy(); }
 });
+
+
+test('B15-R24 Worker service selects the unsliced typed-array decoder', async () => {
+  const { createMaskWorkerHandler } = await import('../../src/space/render/mask-worker-service.js');
+  const handle = createMaskWorkerHandler(), id = sampleId(0), size = { width: 3, height: 1 }, region = { x: 0, y: 0, ...size };
+  const fields = [['status', u32([0, 1, 0x12])], ['normal', new Uint8Array(24)], ['lightingStatus', u32([0, 0, 0])]];
+  const before16 = DataView.prototype.getUint16, before32 = DataView.prototype.getUint32;
+  let reads = 0, reply;
+  try {
+    DataView.prototype.getUint16 = function (...args) { reads++; return before16.apply(this, args); };
+    DataView.prototype.getUint32 = function (...args) { reads++; return before32.apply(this, args); };
+    for (const [sequence, [field, bytes]] of fields.entries()) {
+      reply = handle({ type: 'record', session: 1, sequence, id, field, region, bytes,
+        ...(sequence === 0 ? { setup: { size, options: { strict: true } } } : {}) });
+      assert.equal(reply.error, undefined); assert.equal(reply.closed, sequence === 2);
+    }
+  } finally { DataView.prototype.getUint16 = before16; DataView.prototype.getUint32 = before32; }
+  assert.equal(reply.snapshot.union.pixels, 3); assert.equal(reply.counts.rayTermination.unresolved.pointBudget, 1);
+  assert.equal(reads, 0, 'the production service must select the fast decoder, not just expose an unused factory');
+});

@@ -1,7 +1,7 @@
 // B11b: identity-, pixel- and sample-indexed outcome masks (plan rev 5.0 B11b "Files/interfaces/tests").
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createOutcomeMasks, OUTCOME_BITS, maskMetrics, reasonMetrics } from '../../src/space/render/outcome-masks.js';
+import { createOutcomeMasks, createWorkerOutcomeMasks, OUTCOME_BITS, maskMetrics, reasonMetrics } from '../../src/space/render/outcome-masks.js';
 import { packStatus, packLightingStatus } from '../../src/space/render/status.js';
 import { createMaskWork } from '../../src/space/render/mask-work.js';
 
@@ -267,4 +267,129 @@ test('packed GPU equivalence check requires present recovery words and rejects p
   assert.throws(() => checkPackedDiagnostics(input(pack(() => 0))), /recovery/, 'omitted recovery packing');
   assert.throws(() => checkPackedDiagnostics(input(pack(i => recovery[(i + 1) % pixels]))), /recovery/, 'misplaced recovery packing');
   assert.throws(() => checkPackedDiagnostics(input(pack(() => 0), new Uint32Array(pixels))), /fixture recovery word present/, 'an all-zero recovery fixture is not evidence');
+});
+
+
+// These are algorithm/contract checks, not timing tests. The script maskbench.mjs
+// measures wall time separately; aligned Worker inputs must not decode via DataView.
+test('B15-R24 Worker fast path matches the decoder without per-pixel DataView reads', () => {
+  const size = { width: 65, height: 17 }, region = { x: 0, y: 0, ...size }, pixels = size.width * size.height;
+  const states = [HIT, MISS, FAILED, 0x12, 0x22, 0x32, 0x142, 0x242, 0x12, 0x12, 0x12];
+  const words = [0x122, 0, 0x211, 0x1418, 0x311, 0, 0, 0, 0x2418, 0x3418, 0x4418];
+  for (const recovery of [false, true]) for (const packed of [false, true]) {
+    const oracle = createOutcomeMasks(size, { recovery, strict: true, producerToken: 19 });
+    const fast = createWorkerOutcomeMasks(size, { recovery, strict: true, producerToken: 19 });
+    for (const accumulationKey of ['first', 'replacement']) for (let n = 0; n < 3; n++) {
+      const id = identity(n, accumulationKey), state = Array.from({ length: pixels }, (_, i) => (i + n) % states.length);
+      // Alternating normal/status order and sample reasons exercise both joint normal counts and unions.
+      const fields = packed ? [['draftDiagnostics', u32(state.flatMap((v, i) => [states[v], 38 | (i % 3 ? 1 : 0), ...(recovery ? [words[v]] : [])]))]]
+        : [['status', u32(state.map(v => states[v]))], ['normal', normals(state.map((_, i) => i % 3 !== 0))],
+          ['lightingStatus', u32(state.map((_, i) => i % 3 ? AO_FAILED : AO_UNRESOLVED | SHADOW_UNRESOLVED))],
+          ...(recovery ? [['recovery', u32(state.map(v => words[v]))]] : [])];
+      if (n % 2) fields.reverse();
+      for (const [field, bytes] of fields) oracle.ingestSync(id, field, region, bytes);
+      let reads = 0;
+      const get16 = DataView.prototype.getUint16, get32 = DataView.prototype.getUint32;
+      try {
+        DataView.prototype.getUint16 = function (...args) { reads++; return get16.apply(this, args); };
+        DataView.prototype.getUint32 = function (...args) { reads++; return get32.apply(this, args); };
+        for (const [field, bytes] of fields) fast.ingestSync(id, field, region, bytes);
+      } finally { DataView.prototype.getUint16 = get16; DataView.prototype.getUint32 = get32; }
+      assert.deepEqual(fast.counts(), oracle.counts());
+      assert.deepEqual(fast.snapshot(), oracle.snapshot());
+      assert.deepEqual(fast.unionBits(), oracle.unionBits());
+      assert.deepEqual(fast.unionReasons(), oracle.unionReasons());
+      assert.equal(fast.closed(id), true);
+      assert.equal(reads, 0, 'aligned Worker decode must use typed-array views, not per-pixel DataView reads');
+    }
+  }
+});
+
+test('B15-R24 Worker fast path preserves malformed-input and recovery failures', () => {
+  // Compare error type AND message at the same operation, including strict and
+  // non-strict status semantics, draft markers, coverage and every recovery rule.
+  const cases = [
+    m => m.record(identity(0), 'unknown', full(1), u32([0])),
+    m => m.record(identity(0), 'status', full(3), u32([0, 0, 0])),
+    m => m.record(identity(0), 'status', full(2), u32([0])),
+    m => m.record(identity(-1), 'status', full(2), u32([0, 0])),
+    m => m.record(identity(1), 'status', full(2), u32([0, 0])),
+    m => { m.record(identity(0), 'status', full(2), u32([0, 0])); m.record(identity(0), 'status', full(1), u32([0])); },
+    m => { m.record(identity(0), 'status', full(1), u32([0])); m.record(identity(0, 'stale'), 'normal', full(1), normals([true])); },
+    m => m.record(identity(0), 'status', full(2), u32([0, 15])),
+    m => m.record(identity(0), 'status', full(2), u32([0, 0x72])),
+    m => { m.record(identity(0), 'status', full(2), u32([0, 0])); m.end(identity(0)); },
+    m => m.end(identity(0)),
+    m => m.recordDraft(identity(0), full(2), u32([0, 0x41540001])),
+    m => m.recordDraft(identity(0), full(1), u32([0, 0])),
+    m => { m.recordDraft(identity(0), full(1), u32([0, 0x41540001])); m.recordDraft(identity(0), full(1), u32([0, 0x41540001])); },
+    m => m.recordDraft(identity(0), full(1), u32([0x72, 0x41540001])),
+    m => m.record(identity(0), 'recovery', full(2), u32([0, 0])),
+  ];
+  for (const strict of [false, true]) for (const run of cases) {
+    const result = factory => {
+      const m = factory({ width: 2, height: 1 }, { strict });
+      try { run(m); return { counts: m.counts(), snapshot: m.snapshot() }; }
+      catch (error) { return { name: error.name, message: error.message }; }
+    };
+    assert.deepEqual(result(createWorkerOutcomeMasks), result(createOutcomeMasks));
+  }
+  for (const [status, word] of [[HIT, 0x10111], [HIT, 0x511], [MISS, 0x111], [0x32, 0x311],
+    [0x22, 0x1411], [0x12, 0x411], [HIT, 0x1111], [0x12, 0x5411], [HIT, 0x119]]) {
+    const result = factory => {
+      const m = factory({ width: 1, height: 1 }, { recovery: true, strict: true });
+      m.record(identity(0), 'status', full(1), u32([status]));
+      m.record(identity(0), 'normal', full(1), normals([true]));
+      m.record(identity(0), 'lightingStatus', full(1), u32([0]));
+      m.record(identity(0), 'recovery', full(1), u32([word]));
+      try { m.end(identity(0)); assert.fail('invalid recovery was accepted'); }
+      catch (error) { assert.match(error.message, /recovery word/); return [error.name, error.message]; }
+    };
+    assert.deepEqual(result(createWorkerOutcomeMasks), result(createOutcomeMasks));
+  }
+});
+
+test('B15-R24 Worker fast path preserves unaligned tiled inputs reset and snapshot isolation', () => {
+  const oracle = createOutcomeMasks({ width: 3, height: 2 }, { strict: true });
+  const fast = createWorkerOutcomeMasks({ width: 3, height: 2 }, { strict: true });
+  for (let n = 0; n < 3; n++) {
+    const id = identity(n);
+    for (const field of ['normal', 'lightingStatus', 'status']) for (let y = 1; y >= 0; y--) for (let x = 2; x >= 0; x--) {
+      const source = field === 'normal' ? normals([x % 2]) : u32([field === 'status' ? (x + y + n) % 4 === 2 ? 0x12 : (x + y + n) % 4 : AO_UNRESOLVED]);
+      const bytes = new Uint8Array(source.length + 3).subarray(1, source.length + 1); bytes.set(source);
+      const region = { x, y, width: 1, height: 1 };
+      fast.record(id, field, region, bytes); oracle.record(id, field, region, bytes);
+      assert.deepEqual(fast.counts(), oracle.counts());
+      for (let i = 0; i < 6; i++) { assert.equal(fast.hitAt(i), oracle.hitAt(i)); assert.equal(fast.statusSeen(i), oracle.statusSeen(i)); }
+    }
+    assert.deepEqual(fast.end(id), oracle.end(id));
+    assert.deepEqual(fast.snapshot(), oracle.snapshot());
+    const copy = fast.snapshot(); copy.union.hits = -1;
+    assert.deepEqual(fast.snapshot(), oracle.snapshot());
+    for (const masks of [fast, oracle]) {
+      assert.throws(() => masks.record(id, 'status', full(1), u32([0])), /order/);
+      assert.throws(() => masks.record(identity(n + 2), 'status', full(1), u32([0])), /order/);
+    }
+  }
+  fast.reset(); oracle.reset();
+  assert.deepEqual(fast.snapshot(), oracle.snapshot()); assert.deepEqual(fast.counts(), oracle.counts());
+  assert.deepEqual(fast.unionBits(), oracle.unionBits()); assert.deepEqual(fast.unionReasons(), oracle.unionReasons());
+});
+
+
+test('B15-R24 Worker decoder preserves permissive words and unaligned packed drafts', () => {
+  // The status ABI ignores upper bits on hits/misses; non-strict full decode
+  // retains unspecified reasons. Normal alpha treats negative zero as absent.
+  const states = [0xfffffff0, 0xfffffff1, 0x72, 0x42, 0x342, 3],
+    alphas = [0x8000, 0, 0x3c00, 0xfc00, 1, 0x7fff];
+  for (const packed of [false, true]) for (const offset of [0, 1, 2, 4]) {
+    const a = createOutcomeMasks({ width: 6, height: 1 }), b = createWorkerOutcomeMasks({ width: 6, height: 1 });
+    const aligned = bytes => { const backing = new Uint8Array(bytes.length + offset + 4); backing.set(bytes, offset); return backing.subarray(offset, offset + bytes.length); };
+    const fields = packed ? [['draftDiagnostics', u32(states.map(s => (s & 15) === 2 ? 0x12 : s).flatMap((s, i) => [s, 0x41540000 | (i % 2)]))]]
+      : [['normal', new Uint8Array(Uint16Array.from(alphas.flatMap(alpha => [0, 0, 0, alpha])).buffer)],
+        ['status', u32(states)], ['lightingStatus', u32([0, 0xffffffff, 0x73, 0x1023, 0x80000000, 0])]];
+    for (const [field, bytes] of fields) for (const m of [a, b]) m.ingestSync(identity(0), field, full(6), aligned(bytes));
+    assert.deepEqual(b.counts(), a.counts()); assert.deepEqual(b.snapshot(), a.snapshot());
+    assert.deepEqual(b.unionBits(), a.unionBits()); assert.deepEqual(b.unionReasons(), a.unionReasons());
+  }
 });

@@ -112,7 +112,20 @@ const emptyCounts = () => ({ rayTermination: { hit: 0, miss: 0, numericalFailure
   unavailableNormals: 0, lightingFailures: { shadow: 0, ao: 0, both: 0 } });
 const emptyRecovery = () => ({ attempts: 0, outcomes: zeros(RECOVERY_OUTCOME_LABELS), stops: zeros(RECOVERY_STOP_LABELS), midpoints: 0, encounters: 0 });
 
-export function createOutcomeMasks({ width, height }, { recovery = false, producerToken = 0, strict = false, work = createMaskWork(), valid = () => true } = {}) {
+// Dedicated synchronous Worker entry; the diagnostic decoder remains the oracle.
+export function createWorkerOutcomeMasks(size, options) { return createOutcomeMasks(size, { ...options, worker: true }); }
+const LITTLE_ENDIAN = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+// Readbacks are aligned on the production path. Preserve the decoder's acceptance
+// of unaligned views (and little-endian wire format on any host) without copying.
+function wordView(bytes, half = false) {
+  const stride = half ? 2 : 4;
+  if (LITTLE_ENDIAN && bytes.byteOffset % stride === 0) return half
+    ? new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2)
+    : new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+  return null;
+}
+
+export function createOutcomeMasks({ width, height }, { recovery = false, producerToken = 0, strict = false, worker = false, work = createMaskWork(), valid = () => true } = {}) {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) throw new RangeError('outcome masks need a positive integer size');
   if (!Number.isInteger(producerToken) || producerToken < 0 || producerToken > 0x7fffffff) throw new RangeError('invalid draft producer token');
   const expectedMarker = producerToken ? (producerToken * 2) >>> 0 : 0x41540000;
@@ -149,7 +162,7 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
     if (open !== null) throw new RangeError(`stale outcome-mask identity ${accumulationKey}/${sample} while ${key}/${open} is open`);
     if (sample === 0 && accumulationKey === key && closed >= 0) throw new RangeError(`outcome-mask sample order: 0 repeated for ${key}`);
     if (sample === 0) {
-      if (key !== null) yield* resetSteps(); // freshly allocated arrays already contain zeros
+      if (key !== null) { if (worker) resetFast(); else yield* resetSteps(); } // freshly allocated arrays already contain zeros
       key = accumulationKey;
     } else {
       if (accumulationKey !== key) throw new RangeError(`stale outcome-mask identity ${accumulationKey}/${sample}`);
@@ -171,6 +184,14 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
       else if (slot < 5) rays.unresolved.stagnation[slot === 3 ? 'rayParameter' : 'fieldCoordinate']++;
     }
     if (status === 0 && (seen[i] & FIELDS.normal.seen) && !(current[i] & NORMAL_RAW)) counts.unavailableNormals++;
+  }
+  function lightingAt(i, word) {
+    const shadow = !!(word & LIGHTING_FAILURE_FLAGS.shadow), ao = !!(word & LIGHTING_FAILURE_FLAGS.ao);
+    if (shadow) { counts.lightingFailures.shadow++; current[i] |= ((word >>> 2) & 3) === RAY_STATUS.numericalFailure ? B.shadowNumericalFailure : B.shadowUnresolved; }
+    if (ao) { counts.lightingFailures.ao++; current[i] |= ((word >>> 12) & 3) === RAY_STATUS.numericalFailure ? B.aoNumericalFailure : B.aoUnresolved; }
+    if (shadow && ao) counts.lightingFailures.both++;
+    if (shadow && ((word >>> 2) & 3) === RAY_STATUS.unresolved) currentReasons[i] |= 1 << (8 + reasonSlot((word >>> 4) & 15, (word >>> 8) & 15));
+    if (ao && ((word >>> 12) & 3) === RAY_STATUS.unresolved) currentReasons[i] |= 1 << (16 + reasonSlot((word >>> 14) & 15, (word >>> 18) & 15));
   }
   function regionOf(region) {
     const { x, y, width: w, height: h } = region ?? {};
@@ -197,14 +218,7 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
         const word = data.getUint32(4 * k, true);
         if (field === 'recovery') currentRecovery[i] = word;
         else if (field === 'status') statusAt(i, word);
-        else {
-          const shadow = !!(word & LIGHTING_FAILURE_FLAGS.shadow), ao = !!(word & LIGHTING_FAILURE_FLAGS.ao);
-          if (shadow) { counts.lightingFailures.shadow++; current[i] |= ((word >>> 2) & 3) === RAY_STATUS.numericalFailure ? B.shadowNumericalFailure : B.shadowUnresolved; }
-          if (ao) { counts.lightingFailures.ao++; current[i] |= ((word >>> 12) & 3) === RAY_STATUS.numericalFailure ? B.aoNumericalFailure : B.aoUnresolved; }
-          if (shadow && ao) counts.lightingFailures.both++;
-          if (shadow && ((word >>> 2) & 3) === RAY_STATUS.unresolved) currentReasons[i] |= 1 << (8 + reasonSlot((word >>> 4) & 15, (word >>> 8) & 15));
-          if (ao && ((word >>> 12) & 3) === RAY_STATUS.unresolved) currentReasons[i] |= 1 << (16 + reasonSlot((word >>> 14) & 15, (word >>> 18) & 15));
-        }
+        else lightingAt(i, word);
       }
       seen[i] |= flag; if (seen[i] === COMPLETE) completePixels++;
       if (++processed % CHUNK_PIXELS === 0) yield CHUNK_PIXELS;
@@ -229,6 +243,16 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
     }
     if (processed % CHUNK_PIXELS) yield processed % CHUNK_PIXELS;
   }
+  function recoverAt(i, v, recovered) {
+    const w = currentRecovery[i], o = (w >>> 8) & 15, k = (w >>> 12) & 15, expected = OUTCOME_STATUS[o];
+    const reasonBit = expected?.[1] ? 1 << (expected[1] - 1) : 0;
+    if (w > 0xffff || !expected || !(v & expected[0]) || (reasonBit && !(currentReasons[i] & reasonBit)) || (k !== 0) !== (o === 4) || k > 4 || (w & 15) > RECOVERY_WORD.midpointLimit) throw new RangeError(`recovery word ${w} disagrees with the primary status at pixel ${i}`);
+    const old = unionRecovery[i], next = old | 1 | (2 << (o - 1)) | (k ? 32 << (k - 1) : 0);
+    unionRecovery[i] = next;
+    recovered.attempts++; recovered.outcomes[RECOVERY_WORD.outcomes[o]]++; if (k) recovered.stops[RECOVERY_WORD.stops[k]]++;
+    recovered.midpoints += w & 15; recovered.encounters += (w >>> 4) & 15;
+    return next;
+  }
   function* endSteps(id) {
     if (open === null || id?.accumulationKey !== key || id?.sample !== open) throw new RangeError('incomplete outcome-mask sample: no such open sample');
     if (completePixels !== pixels) throw new RangeError(`incomplete outcome-mask sample ${key}/${open}`);
@@ -240,13 +264,8 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
       if (v & B.hit && !(v & NORMAL_RAW)) v |= B.normalUnavailable;
       v &= ~NORMAL_RAW;
       if (recovery && currentRecovery[i]) {
-        const w = currentRecovery[i], o = (w >>> 8) & 15, k = (w >>> 12) & 15, expected = OUTCOME_STATUS[o];
-        const reasonBit = expected?.[1] ? 1 << (expected[1] - 1) : 0;
-        if (w > 0xffff || !expected || !(v & expected[0]) || (reasonBit && !(currentReasons[i] & reasonBit)) || (k !== 0) !== (o === 4) || k > 4 || (w & 15) > RECOVERY_WORD.midpointLimit) throw new RangeError(`recovery word ${w} disagrees with the primary status at pixel ${i}`);
-        const old = unionRecovery[i], next = old | 1 | (2 << (o - 1)) | (k ? 32 << (k - 1) : 0);
-        unionRecoveryHistogram[old]--; unionRecoveryHistogram[next]++; unionRecovery[i] = next;
-        recovered.attempts++; recovered.outcomes[RECOVERY_WORD.outcomes[o]]++; if (k) recovered.stops[RECOVERY_WORD.stops[k]]++;
-        recovered.midpoints += w & 15; recovered.encounters += (w >>> 4) & 15;
+        const old = unionRecovery[i], next = recoverAt(i, v, recovered);
+        unionRecoveryHistogram[old]--; unionRecoveryHistogram[next]++;
       }
       histogram[v]++;
       const old = union[i], next = old | v;
@@ -261,12 +280,15 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
       if ((i + 1) % CHUNK_PIXELS === 0) yield CHUNK_PIXELS;
     }
     if (pixels % CHUNK_PIXELS) yield pixels % CHUNK_PIXELS;
+    // Clear in slices too: a whole 4K fill must not evade the diagnostic task budget.
+    yield* clearSteps();
+    return finish(histogram, reasons, recovered);
+  }
+  function finish(histogram, reasons, recovered) {
     const metrics = { sample: open, ...histogramMetrics(histogram, pixels) };
     samples.push(metrics); sampleReasons.push(histogramReasons(reasons));
     if (recovery) sampleRecovery.push({ sample: open, ...recovered });
     closedCounts = counts;
-    // Clear in slices too: a whole 4K fill must not evade the task budget.
-    yield* clearSteps();
     closed = open; open = null; completePixels = 0;
     let recoveryUnion = null;
     if (recovery) {
@@ -283,6 +305,101 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
       recovery: recovery ? { samples: structuredClone(sampleRecovery), union: recoveryUnion } : null };
     return metrics;
   }
+  // Only the Worker uses these unsliced loops. No readback lease or validation
+  // boundary changes: the final operation includes close before acknowledging.
+  function clearFast(all = false) {
+    current.fill(0); seen.fill(0); currentReasons.fill(0); currentRecovery?.fill(0);
+    if (all) { union.fill(0); unionReasons.fill(0); unionRecovery?.fill(0); }
+  }
+  function resetFast() {
+    clearFast(true); zeroHistograms();
+    key = null; open = null; closed = -1; samples = []; sampleReasons = []; sampleRecovery = []; cached = null;
+    counts = emptyCounts(); closedCounts = null; completePixels = 0;
+  }
+  function recordFast(id, field, region, bytes) {
+    const layout = FIELDS[field];
+    if (!layout) throw new RangeError(`unknown outcome-mask field ${field}`);
+    if (field === 'recovery' && !recovery) throw new RangeError('recovery words are recorded only for a recovering family');
+    const { x, y, w, h } = regionOf(region);
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength !== w * h * layout.bytes) throw new RangeError(`outcome-mask ${field} bytes do not match the region`);
+    const words = wordView(bytes, field === 'normal');
+    if (!words) return drain(recordSteps(id, field, region, bytes));
+    drain(enter(id));
+    // Dispatch once per tile. Keep the common hit/miss and zero-lighting cases
+    // small; the shared decoder handles unresolved/status validation and reasons.
+    if (field === 'status') {
+      const rays = counts.rayTermination;
+      for (let row = 0, k = 0; row < h; row++) for (let i = (y + row) * width + x, end = i + w; i < end; i++, k++) {
+        if (seen[i] & 1) throw new RangeError('outcome-mask status recorded twice for one pixel');
+        const word = words[k], status = word & 15;
+        if (status === 1) { current[i] |= B.miss; rays.miss++; }
+        else if (status === 0) {
+          current[i] |= B.hit; rays.hit++;
+          if ((seen[i] & 2) && !(current[i] & NORMAL_RAW)) counts.unavailableNormals++;
+        } else statusAt(i, word);
+        seen[i] |= 1; if (seen[i] === COMPLETE) completePixels++;
+      }
+    } else if (field === 'normal') {
+      for (let row = 0, k = 0; row < h; row++) for (let i = (y + row) * width + x, end = i + w; i < end; i++, k += 4) {
+        if (seen[i] & 2) throw new RangeError('outcome-mask normal recorded twice for one pixel');
+        if (words[k + 3] & 0x7fff) current[i] |= NORMAL_RAW;
+        else if ((seen[i] & 1) && (current[i] & B.hit)) counts.unavailableNormals++;
+        seen[i] |= 2; if (seen[i] === COMPLETE) completePixels++;
+      }
+    } else if (field === 'lightingStatus') {
+      for (let row = 0, k = 0; row < h; row++) for (let i = (y + row) * width + x, end = i + w; i < end; i++, k++) {
+        if (seen[i] & 4) throw new RangeError('outcome-mask lightingStatus recorded twice for one pixel');
+        const word = words[k];
+        if (word & (LIGHTING_FAILURE_FLAGS.shadow | LIGHTING_FAILURE_FLAGS.ao)) lightingAt(i, word);
+        seen[i] |= 4; if (seen[i] === COMPLETE) completePixels++;
+      }
+    } else {
+      for (let row = 0, k = 0; row < h; row++) for (let i = (y + row) * width + x, end = i + w; i < end; i++, k++) {
+        if (seen[i] & 8) throw new RangeError('outcome-mask recovery recorded twice for one pixel');
+        currentRecovery[i] = words[k];
+        seen[i] |= 8; if (seen[i] === COMPLETE) completePixels++;
+      }
+    }
+  }
+  function draftFast(id, region, bytes) {
+    const { x, y, w, h } = regionOf(region), stride = recovery ? 3 : 2;
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength !== w * h * stride * 4) throw new RangeError('draft diagnostic bytes do not match the region');
+    drain(enter(id));
+    const words = wordView(bytes), data = words ? null : new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    for (let row = 0, k = 0; row < h; row++) for (let i = (y + row) * width + x, end = i + w; i < end; i++, k += stride) {
+      const word = words ? words[k] : data.getUint32(k * 4, true), marker = words ? words[k + 1] : data.getUint32(k * 4 + 4, true);
+      if (((marker & 0xfffffffe) >>> 0) !== expectedMarker) throw new RangeError('missing or invalid draft diagnostic coverage');
+      if (seen[i]) throw new RangeError('draft diagnostics recorded twice for one pixel');
+      if (marker & 1) current[i] = NORMAL_RAW;
+      seen[i] = FIELDS.normal.seen; statusAt(i, word, true);
+      seen[i] = COMPLETE; completePixels++;
+      if (recovery) currentRecovery[i] = words ? words[k + 2] : data.getUint32(k * 4 + 8, true);
+    }
+  }
+  function endFast(id) {
+    if (open === null || id?.accumulationKey !== key || id?.sample !== open) throw new RangeError('incomplete outcome-mask sample: no such open sample');
+    if (completePixels !== pixels) throw new RangeError(`incomplete outcome-mask sample ${key}/${open}`);
+    const histogram = new Uint32Array(512), reasons = REASON_CLASSES.map(() => new Uint32Array(64)), recovered = emptyRecovery();
+    unionHistogram.fill(0); for (const h of unionReasonHistograms) h.fill(0); unionRecoveryHistogram?.fill(0);
+    // Build each histogram once while ORing the union, instead of subtracting and
+    // adding every old/new reason lane at every pixel. Zero reason lanes have no
+    // metrics; skip them entirely, including for frames with no unresolved rays.
+    for (let i = 0; i < pixels; i++) {
+      let v = current[i];
+      if (v & B.hit && !(v & NORMAL_RAW)) v |= B.normalUnavailable;
+      v &= ~NORMAL_RAW;
+      if (recovery) {
+        if (currentRecovery[i]) recoverAt(i, v, recovered);
+        unionRecoveryHistogram[unionRecovery[i]]++;
+      }
+      histogram[v]++; union[i] |= v; unionHistogram[union[i]]++;
+      const r = currentReasons[i], u = unionReasons[i] | r; unionReasons[i] = u;
+      if (r) { reasons[0][r & 63]++; reasons[1][(r >>> 8) & 63]++; reasons[2][(r >>> 16) & 63]++; }
+      if (u) { unionReasonHistograms[0][u & 63]++; unionReasonHistograms[1][(u >>> 8) & 63]++; unionReasonHistograms[2][(u >>> 16) & 63]++; }
+    }
+    clearFast();
+    return finish(histogram, reasons, recovered);
+  }
   // The final readback closes its sample before its scheduler lease completes;
   // therefore presentation admission can only observe fully validated metrics.
   function ingest(steps, id) {
@@ -290,8 +407,8 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
   }
   return Object.freeze({
     width, height,
-    record: (...args) => drain(recordSteps(...args)),
-    recordDraft: (...args) => drain(draftSteps(...args)),
+    record: (...args) => worker ? recordFast(...args) : drain(recordSteps(...args)),
+    recordDraft: (...args) => worker ? draftFast(...args) : drain(draftSteps(...args)),
     recordAsync: (...args) => work.run(recordSteps(...args), valid),
     endAsync: id => work.run(endSteps(id), valid),
     ingest: (...args) => ingest(recordSteps(...args), args[0]),
@@ -299,10 +416,15 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
     // Worker entry: retain the same decode/validation rules without main-thread
     // timers. The worker's message loop serializes complete readback operations.
     ingestSync(id, field, region, bytes) {
-      drain(field === 'draftDiagnostics' ? draftSteps(id, region, bytes) : recordSteps(id, field, region, bytes));
-      if (completePixels === pixels) drain(endSteps(id));
+      if (worker) {
+        if (field === 'draftDiagnostics') draftFast(id, region, bytes); else recordFast(id, field, region, bytes);
+        if (completePixels === pixels) endFast(id);
+      } else {
+        drain(field === 'draftDiagnostics' ? draftSteps(id, region, bytes) : recordSteps(id, field, region, bytes));
+        if (completePixels === pixels) drain(endSteps(id));
+      }
     },
-    end: id => drain(endSteps(id)),
+    end: id => worker ? endFast(id) : drain(endSteps(id)),
     closed: id => open === null && id.accumulationKey === key && id.sample === closed,
     counts: () => structuredClone(open === null ? closedCounts : counts),
     snapshot: () => structuredClone(cached),
@@ -310,6 +432,6 @@ export function createOutcomeMasks({ width, height }, { recovery = false, produc
     statusSeen: index => (seen[index] & FIELDS.status.seen) !== 0,
     unionBits: () => union.slice(),
     unionReasons: () => unionReasons.slice(),
-    reset: () => drain(resetSteps()),
+    reset: () => worker ? resetFast() : drain(resetSteps()),
   });
 }
