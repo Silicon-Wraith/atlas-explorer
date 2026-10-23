@@ -29,6 +29,7 @@
 - An explicit fractal-to-landscape mapping, and physical scale and contact semantics.
 - Grounded locomotion (land, walk) and collision. Water, atmosphere including fog, and inhabitants. Enabled fog is rejected in the inspected Space implementation (`src/space/scene-adapter.js:98`).
 - Journey recording and replay, and shareable Space links.
+- World creation as a first-class experience (charter, advisor addition 2026-10-23: "as rewarding as exploring"). Today a world is defined by editing parameters in a panel; choosing a Plane region, shaping its mapping and authoring a world's look need their own experience.
 - A broader product compatibility target beyond the existing reference workstation (see §6).
 
 ## 4. The experiment: first flight into a Mandelbrot valley, then landing and walking
