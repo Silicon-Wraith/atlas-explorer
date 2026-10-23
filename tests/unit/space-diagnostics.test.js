@@ -48,16 +48,28 @@ test('r4-F5 diagnostic failure and interruption are visible immediately', () => 
   }
 });
 
-test('r4-F5 default L6a suppresses interrupted and every diagnostic-only state', () => {
+test('r4-F5 diagnostic L6a suppresses interrupted and every diagnostic-only state', () => {
   const h = rig(undefined);
-  // Omit the rung entirely to test the product default, not a test-fixture default.
+  // Explicit comparison mode retains its original indicator behavior.
   h.indicator.destroy();
-  const indicator = createSpaceDiagnostics({ element: h.element, value: h.value, setTimer: h.clock.schedule, clearTimer: h.clock.clear });
+  const indicator = createSpaceDiagnostics({ element: h.element, value: h.value, rung: 'L6a', setTimer: h.clock.schedule, clearTimer: h.clock.clear });
   indicator.setActive(true);
   for (const state of ['interrupted', 'failed', 'pending']) {
     indicator.update({ diagnosticsState: state }); h.clock.advance(300);
     assert.equal(h.element.hidden, true);
   }
+  indicator.destroy();
+});
+
+test('B15-R16-F6 default diagnostics expose GPU-gated failure and delayed pending', () => {
+  const h = rig(); h.indicator.destroy();
+  const indicator = createSpaceDiagnostics({ element: h.element, value: h.value, setTimer: h.clock.schedule, clearTimer: h.clock.clear });
+  indicator.setActive(true);
+  indicator.update({ diagnosticsState: 'pending' });
+  h.clock.advance(249); assert.equal(h.element.hidden, true);
+  h.clock.advance(1); assert.equal(h.element.hidden, false);
+  indicator.update({ diagnosticsState: 'failed' });
+  assert.equal(h.value.textContent, 'failed');
   indicator.destroy();
 });
 

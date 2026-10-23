@@ -6,8 +6,45 @@ import { createHash } from 'node:crypto';
 import { cleanupState, installSuiteDeadline } from '../support/bounded.mjs';
 import { compareLadder, ladderMetrics, runLadderSession, stopLadderMonitor, persistLadderEvidence, runLadderCell, ladderCells } from '../support/space-performance-ladder.mjs';
 import { compareLadderDirectory } from '../space-performance-ladder.mjs';
+import { pacedCameraWindow } from '../support/ladder-control.mjs';
+import { summarizeGpuClocks, epochClockWindows } from '../support/gpu-clock-evidence.mjs';
+import { expectBackend, drainExpecting } from '../support/space-lifecycle-checks.mjs';
 
 const manifest = JSON.parse(await readFile('tests/reference/performance-ladder-v1.json'));
+
+test('B15-R16-F4 every paced cell derives a finite interaction clock window from its last request', async () => {
+  const workload = JSON.parse(await readFile(manifest.workload));
+  assert.equal(workload.workloads.interaction.durationMs, undefined);
+  for (const cell of ladderCells(manifest).filter(c => c.mode === 'paced')) {
+    const phase = workload.workloads.interaction, poses = phase.cameraPoses[cell.scene];
+    const window = pacedCameraWindow(1000, phase, poses);
+    assert.equal(window.end, 1000 + poses.at(-1).requestTimeMs, JSON.stringify(cell));
+    assert.ok(Number.isFinite(JSON.parse(JSON.stringify(window)).end));
+    const origin = Date.UTC(2026, 9, 22);
+    const raw = Array.from({ length: 1 + (window.end - window.start) / 100 }, (_, i) =>
+      `${new Date(origin + window.start + i * 100).toISOString().replace('T', ' ').replace('Z', '').replaceAll('-', '/')}, GPU-test, 210, P8, 29.5`).join('\n');
+    const clocks = summarizeGpuClocks({ raw }, epochClockWindows(origin, { interaction: window }));
+    assert.equal(clocks.phases.interaction.state, 'measured', JSON.stringify(cell));
+    assert.equal(clocks.latency.state, 'measured');
+  }
+});
+
+test('B15-R16-F5 isolated blank ladder page drains without relaxing real-page hardware checks', async () => {
+  let url = 'http://localhost/', acceleration = 'hardware', status = 'complete';
+  const page = { url: () => url, evaluate: async fn => {
+    if (fn.name === 'drainWebGL') return { status };
+    if (String(fn).includes('acceleration')) return { acceleration, contextLost: false };
+  } };
+  expectBackend(page, 'webgl');
+  assert.equal((await drainExpecting(page)).status, 'complete');
+  url = 'about:blank'; acceleration = null; status = 'no-webgl';
+  await assert.doesNotReject(drainExpecting(page));
+  url = 'http://localhost/';
+  await assert.rejects(drainExpecting(page), /hardware WebGL/);
+  acceleration = 'software'; status = 'complete';
+  await assert.rejects(drainExpecting(page), /hardware WebGL/);
+});
+
 const clock = {protocol:'atlas.gpu-clocks-v1',state:'measured',medianMHz:210,band:'lt270',bandShare:1,sampleCount:11,uuid:'GPU-test'};
 const evidence = () => manifest.order.flatMap((rung, position) => ['paced', 'unpaced'].map(mode => ({
   schema: 'atlas.performance-ladder-evidence', schemaVersion: 3, sessionId: 'session-a', attemptId: `${position}-${mode}`,
@@ -133,7 +170,7 @@ test('B15-R14-F1 cell persists cleanup evidence before terminal exit and ordinar
       }, runCell: async (selected, attemptId) => {
         calls.push(attemptId);
         return runLadderCell({ page, cell: selected, attemptId, root, report, sessionId: kind, pass: () => {}, url: 'inert',
-          environment: { chromeGpu: { vendorId: 0x10de }, webgpuStatus: 'Hardware accelerated' }, spawnMonitor: () => monitor,
+          environment: { chromeGpu: { vendorId: 0x10de }, webgpuStatus: 'Hardware accelerated' }, spawnMonitor: () => monitor, drainPage: async () => {},
           monitorWait: async () => { waits++; if (kind === 'monitor' || kind === 'escalated' && waits % 2 === 1) throw Error('monitor still alive'); return { signal: 'SIGKILL' }; } });
       } });
       if (['escalated','sampling'].includes(kind)) await pending; else await assert.rejects(pending);

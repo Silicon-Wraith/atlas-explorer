@@ -52,6 +52,31 @@ function fullDecode(packet, { width, height, recovery, producerToken = 0 }) {
   return masks.snapshot();
 }
 
+test('B15-R16-F2 full packet decode rejects the same unknown reason as the summary', () => {
+  for (const recovery of [false, true]) {
+    const options = { width: 1, height: 1, recovery, producerToken: 101 };
+    const packet = packetFixture(options), view = new DataView(packet.buffer);
+    view.setUint32(0, 0x72, true);
+    if (recovery) view.setUint32(8, 0, true); // isolate reason validation from recovery consistency
+    assert.throws(() => validateDraftSummary(reduceDraftPacket(packet, options), { ...options, pixels: 1 }));
+    assert.throws(() => fullDecode(packet, options), /reason/, 'full decode must reject invalid primary reasons too');
+  }
+});
+
+test('B15-R16-F2 all draft unresolved reason nibbles agree between full decode and reduction', () => {
+  for (const recovery of [false, true]) for (let reason = 0; reason < 16; reason++) for (let subreason = 0; subreason < 16; subreason++) {
+    const options = { width: 1, height: 1, recovery, producerToken: 101 };
+    const packet = packetFixture(options), view = new DataView(packet.buffer);
+    view.setUint32(0, 2 | (reason << 4) | (subreason << 8), true);
+    if (recovery) view.setUint32(8, 0, true);
+    const valid = reason >= 1 && reason <= 3 || reason === 4 && (subreason === 1 || subreason === 2);
+    const decode = () => fullDecode(packet, options);
+    const reduce = () => validateDraftSummary(reduceDraftPacket(packet, options), { ...options, pixels: 1 });
+    if (valid) assert.deepEqual(decode().reasons.samples[0].primaryUnresolved, reduce().reasons.primaryUnresolved);
+    else { assert.throws(decode, /reason/); assert.throws(reduce, /invalid/); }
+  }
+});
+
 test('B15-REC-G summary preserves every aggregate of the same fully decoded packet in 64 or 96 bytes', () => {
   for (const producerToken of [0, 101, 0x7fffffff]) for (const recovery of [false, true]) for (const [width, height] of [[1, 1], [13, 9], [64, 17]]) {
     const options = { width, height, recovery, producerToken }, packet = packetFixture(options);

@@ -124,3 +124,24 @@ test('a bridged scene shares one allowance: the inner scene fits but the whole s
   const over = toy({ provenance: { createdBy: 'atlas', bridgedFrom: toy({ camera: { x: 'x'.repeat(limit - base + 1) } }) } });
   assert.throws(() => small.validate(over), error => error.code === 'too-large', 'an inner scene over the limit is rejected');
 });
+
+test('R16-C4 codec-owned immutable scenes avoid repeated validation freezing and serialization', () => {
+  let validations = 0;
+  const ownedCodec = createSceneCodec({ modelCodecs: [{ ...toyCodec, validateModel(input) { validations++; return toyCodec.validateModel(input); } }] });
+  const external = toy(), scene = ownedCodec.validate(external), expected = ownedCodec.fingerprint(scene);
+  let serializations = 0;
+  const stringify = JSON.stringify;
+  JSON.stringify = (...args) => { serializations++; return stringify(...args); };
+  try {
+    assert.deepEqual(ownedCodec.fingerprint(ownedCodec.validate(scene)), expected);
+    assert.equal(validations, 1, 'request creation must reuse an already validated immutable scene');
+    assert.equal(serializations, 0, 'reuse the admitted canonical bytes rather than allocate another serialization');
+  } finally { JSON.stringify = stringify; }
+  external.camera.x = 'changed';
+  assert.equal(ownedCodec.validate(external).camera.x, 'changed', 'caller-owned input is revalidated');
+  assert.equal(ownedCodec.validate(scene).camera.x, '1', 'the owned snapshot remains immutable');
+  assert.throws(() => createSceneCodec({ modelCodecs: [toyCodec], maxSceneBytes: 1 }).validate(scene), error => error.code === 'too-large', 'another codec must apply its own admission policy');
+  const shallow = Object.freeze(toy());
+  ownedCodec.validate(shallow); shallow.camera.x = 'later';
+  assert.equal(ownedCodec.validate(shallow).camera.x, 'later', 'a shallow freeze cannot enroll caller data in the cache');
+});

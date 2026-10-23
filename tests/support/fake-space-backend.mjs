@@ -74,7 +74,7 @@ export function createDrivenFakeBackend({ clock = () => performance.now(), limit
     releaseAcquisition() { const gate = acquisitionGate; acquisitionGate = null; gate?.resolve(); },
     failNextAcquisition(error) { failAcquisition = error; },
     pause() { auto = false; },
-    resume() { auto = true; for (const ticket of held.splice(0)) schedule(() => fake.complete(ticket)); },
+    resume({ newestFirst = false } = {}) { auto = true; const tickets = held.splice(0); if (newestFirst) tickets.reverse(); for (const ticket of tickets) schedule(() => fake.complete(ticket)); },
     heldTickets: () => held.length,
     setPickDepth(depth) { pickDepth = depth; },
     // Presentation control (B14-F2): presents are held until released, or a held one is failed.

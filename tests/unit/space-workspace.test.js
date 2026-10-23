@@ -1,5 +1,5 @@
 // The Space workspace (plan B14): activation, deactivation, scene files and the controller frame
-// order, on a fake DOM and the self-driving fake backend. No browser, GPU or Worker is used.
+// order, on a fake DOM and the self-driving fake backend. No browser, GPU or real Worker is used; mask messages use a protocol double.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installFakeBrowser, fakeShell } from '../support/fake-dom.mjs';
@@ -75,8 +75,8 @@ test('harness previews request drafts and commit closes one camera history entry
   } finally { h.space.destroy(); }
 });
 
-test('a pending draft retains its own camera size and scene after more than 64 newer requests', async () => {
-  const h = rig();
+for (const rung of ['L6a', undefined]) test(`a pending draft retains its own camera size and scene after more than 64 newer requests (${rung ?? 'default L6b'})`, async () => {
+  const h = rig({ env: { draftExecution: rung } });
   try {
     await h.space.activate(1); await h.settle();
     const requests = [], publications = [], camera = h.space.inspection.scene.camera;
@@ -86,17 +86,24 @@ test('a pending draft retains its own camera size and scene after more than 64 n
     h.space.inspection.requestCamera(orbit(camera, 0.01, 0), { phase: 'preview' });
     for (let i = 0; i < 80 && !h.backends[0].control.heldTickets(); i++) { h.runFrame(); await turn(); }
     assert.ok(h.backends[0].control.heldTickets(), 'the oldest draft is already in flight');
-    const first = requests[0];
+    // GPU-gated presentation happens on submission. Keep the newest admitted
+    // frame in view; an older frame's confirmation must remain historical.
+    if (!rung) {
+      h.space.inspection.requestCamera(orbit(camera, 0.0105, 0), { phase: 'preview' });
+      for (let i = 0; i < 80 && h.backends[0].control.heldTickets() < 2; i++) { h.runFrame(); await turn(); }
+      assert.equal(h.backends[0].control.heldTickets(), 2);
+    }
+    const first = requests.at(-1);
     for (let i = 1; i <= 65; i++) {
       h.space.inspection.requestCamera(orbit(camera, 0.01 + i * 0.001, 0), { phase: 'preview' });
       h.runFrame(); await turn();
     }
     assert.ok(requests.length > 64, 'exercise request-history eviction');
     assert.notDeepEqual(first.sceneSnapshot.camera, requests.at(-1).sceneSnapshot.camera);
-    h.backends[0].control.resume();
+    h.backends[0].control.resume({ newestFirst: !rung });
     for (let i = 0; i < 400 && !publications.some(p => p.requestId === first.requestId); i++) { h.runFrame(); await turn(); }
     const pending = publications.find(p => p.requestId === first.requestId);
-    assert.ok(pending, 'the oldest completed draft publishes');
+    assert.ok(pending, 'the latest displayed admitted draft publishes when confirmed');
     assert.equal(pending.pending, true);
     assert.deepEqual(pending.camera, first.sceneSnapshot.camera);
     assert.deepEqual(pending.internalSize, first.quality.internalSize);

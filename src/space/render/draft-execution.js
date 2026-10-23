@@ -1,8 +1,8 @@
-// Injected diagnostic configurations. The application passes no override and uses L6a.
+// Injected diagnostic configurations. The application passes no override and uses L6b.
 // A named rung is the only switch: callers cannot assemble unreviewed combinations.
 export const DRAFT_LADDER_VERSION = 'rec-g-ladder-v1';
 export const DRAFT_RUNGS = Object.freeze(['L0', 'L1', 'L2', 'L3', 'L4', 'L5a', 'L5b', 'L5c', 'L5d', 'L6a', 'L6b', 'L6c', 'L6d']);
-export function draftExecution(rung = 'L6a') {
+export function draftExecution(rung = 'L6b') {
   if (!DRAFT_RUNGS.includes(rung)) throw new RangeError(`unknown diagnostic draft rung ${rung}`);
   const level = Number(rung[1]), variant = rung[2] ?? null;
   return Object.freeze({ rung, level, variant, lifecycle: level === 6, scheduler: level >= 3, leases: level >= 2, tickets: level >= 1,

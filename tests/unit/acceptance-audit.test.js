@@ -294,6 +294,49 @@ const designWip='35c81df7e5f556605b6b8493369cd54aa6108515';
 const lowerBoundCommit='4693328af8a8f77c0d88b971752d426b644330a9';
 const digestPolicy=p=>createHash('sha256').update(JSON.stringify(p)).digest('hex');
 const wipPolicy=()=>JSON.parse(readFileSync(new URL('../../scripts/gate/acceptance-policy-1b1.json',import.meta.url))).wipEvidence??{};
+
+test('B15-R16-F7 post-cutover B15 WIP and eligible docs have pinned retrospective classes', async () => {
+  const { parseFastOptions } = await import('../../scripts/record-fast-checks.mjs');
+  for (const commit of [
+    '440e09a4c9eb161563ae493e4f159706461a9da5', '50b882dde81b6a5d5c0cb1dc7503950ed905a73d',
+    '694e8f97abc86057ea1ba6f24502cbfd552109c9', 'a049262b44b6fa91b3229b98bddf1e9eb039fdef',
+    'f350f13a65b7b2fae463a96aad1c10867337c41a', '8d694468385a77e2a16b716a3ee5b12e415c5677',
+  ]) {
+    assert.doesNotThrow(() => parseFastOptions(['--retrospective-wip', '--expected-commit', commit]));
+    const { x } = approvedWipFixture({ commit });
+    assert.equal(auditAcceptance(x).accepted, true, commit);
+    assert.equal(row(auditAcceptance(x), commit).promotable, false);
+  }
+  for (const commit of [
+    '27dc54536b5769c549de1c0b8deebdbfa76aa02e', '547a648af5b06fd9afaf4c1d8dfbb2c0d994c975',
+    '5227ea36e6728da9c322db8a3a7d728efa38c847', 'beae4086be8f6244a30bd0039e74b5fcfd9971d6',
+  ]) {
+    const { x } = approvedWipFixture({ docs: true, commit });
+    assert.equal(auditAcceptance(x).accepted, true, commit);
+    x.facts[commit].pathsByParent[0].paths.push('AGENTS.md.bak');
+    rejects(x, commit, /outside approved docs directories/);
+  }
+  const excluded = '2f91343fe82e08a915b7de81bfd87c46baa0e35c';
+  assert.throws(() => parseFastOptions(['--retrospective-wip', '--expected-commit', excluded]), /approved/);
+  const protocol = '4bba5c39f0d01ab5d2999390c1d2abfd79b6caf5';
+  assert.equal(wipPolicy().docsOnlyWipCommits.includes(protocol), true);
+  const { x } = approvedWipFixture({ docs: true, commit: protocol });
+  assert.equal(auditAcceptance(x).accepted, true);
+});
+
+test('B15-R16-F7 prior typed WIP records keep only their original eligible SHA scope', () => {
+  const { x, record, commit } = approvedWipFixture();
+  record.evidenceScope = 'wip-only';
+  record.wipEvidencePolicySha256 = '432605cffc42acb7d6e34623f19a4f4540863bc59934b68a018c7664e177b4cd';
+  assert.equal(auditAcceptance(x).accepted, true, 'existing passing typed evidence survives the policy extension');
+  for (const target of ['440e09a4c9eb161563ae493e4f159706461a9da5', '2f91343fe82e08a915b7de81bfd87c46baa0e35c']) {
+    const newer = approvedWipFixture({ commit: target });
+    Object.assign(newer.record, { evidenceScope: record.evidenceScope, wipEvidencePolicySha256: record.wipEvidencePolicySha256 });
+    assert.equal(auditAcceptance(newer.x).accepted, false);
+  }
+  record.unit.state = 'failed';
+  rejects(x, commit, /checks or cleanup did not pass/);
+});
 function approvedWipFixture({docs=false,commit=docs?designWip:implementationWip,merge=false}={}) {
   const x=fixture({withWip:true});
   x.commits[x.commits.indexOf(wip)]=commit;
@@ -397,4 +440,34 @@ test('undated contemporaneous passes record commit time with the explicit lower-
     await assert.rejects(load(`Promotion ${commit}: fast checks 873 + build.`,{...options,commitTimeFor:()=>Date.parse(recordedAt)/1000+1}),/commit time/);
     await assert.rejects(load(`Promotion ${commit}: fast checks 873 + build.`,{...options,commitTimeFor:undefined}),/commit time/);
   });
+});
+
+test('R16-C6 docs-only WIP admits exact protocol paths without admitting lookalikes or code', () => {
+  const commit = '4bba5c39f0d01ab5d2999390c1d2abfd79b6caf5';
+  const { x } = approvedWipFixture({ docs: true, commit });
+  x.facts[commit].pathsByParent[0].paths = ['AGENTS.md', 'CLAUDE.md'];
+  assert.equal(auditAcceptance(x).accepted, true);
+  assert.equal(row(auditAcceptance(x), commit).promotable, false);
+  for (const path of ['AGENTS.md.bak', 'CLAUDE.md/x', 'nested/AGENTS.md', 'README.md', 'scripts/gate/acceptance.mjs']) {
+    x.facts[commit].pathsByParent[0].paths = ['AGENTS.md', path];
+    rejects(x, commit, /outside approved docs/);
+  }
+});
+
+test('R16-C7 known failure retains named tests and repair provenance and cannot be relabelled passed', () => {
+  const commit = '2f91343fe82e08a915b7de81bfd87c46baa0e35c';
+  const { x, entry, record } = approvedWipFixture({ commit });
+  record.unit = { state: 'failed', reason: 'failures: 2, cancelled: 0, exit: 1' };
+  let result = row(auditAcceptance(x), commit);
+  assert.equal(result.state, 'unaccepted');
+  assert.equal(result.promotable, false);
+  assert.equal(result.knownFailure?.tests.length, 2);
+  assert.equal(result.knownFailure?.firstPassingDescendant.commit, 'd7cf20dd35b43e0f01a52ef09293dd1dacc03c0e');
+  // Neither a replacement passing record nor a manifest disposition can erase history.
+  record.unit.state = 'passed';
+  assert.equal(row(auditAcceptance(x), commit).state, 'unaccepted');
+  entry.disposition = 'merge-gated'; entry.gate = 'fabricated-pass';
+  x.records[entry.gate] = { ...x.records[x.manifest.commits.find(e => e.commit === candidate).gate], commit };
+  result = row(auditAcceptance(x), commit);
+  assert.equal(result.state, 'unaccepted'); assert.equal(result.knownFailure.tests.length, 2);
 });

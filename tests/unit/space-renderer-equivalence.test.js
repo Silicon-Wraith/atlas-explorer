@@ -1,3 +1,5 @@
+import { installMaskWorkerDouble } from '../support/mask-worker-double.mjs';
+installMaskWorkerDouble();
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRendererDeviceDouble } from '../support/renderer-device-double.mjs';

@@ -1,3 +1,5 @@
+import { installMaskWorkerDouble } from '../support/mask-worker-double.mjs';
+installMaskWorkerDouble();
 import { appearancePipelineDescriptors } from '../../src/space/render/webgpu/appearance.js';
 import { stageDraftDiagnostics } from '../support/fake-space-backend.mjs';
 // Plan B10: the tracing, normals and pick metadata (passes.js). Node-only (no GPU); the headed
@@ -138,7 +140,7 @@ test('the renderer drives the tracing descriptors through the B09 pass sequence 
   const pipelineSet = createPipelineSet({ id: 'b10-renderer', descriptors: [...selfCheck, ...tracePipelineDescriptors().filter(d => !d.pipelineId.endsWith(':menger')),
     fixture('shade', 'shade_band', [read('status'), read('normal'), write('sampleColor'), write('lightingStatus')]),
     ...appearancePipelineDescriptors().filter(d => d.pipelineId === 'display_draft_band'), fixture('accumulate', 'accumulate_band', [read('sampleColor'), write('next')]), fixture('display', 'display_band', [read('accumulation'), write('display')])] });
-  const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+  const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); await new Promise(resolve => setImmediate(resolve)); };
   for (const model of ['sphere', 'mandelbulb', 'quaternion-julia']) {
     const clock = createFakeClock(), fake = createFakeBackend({ clock });
     const batches = [], tickets = [];

@@ -21,7 +21,8 @@ import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { dirname, resolve } from 'node:path';
 import { spawn, execFileSync } from 'node:child_process';
-import { LIMITS, within, idleWithin, drainGpuWithin, closeWithin, installSuiteDeadline, boundContext, ev, CHROME_TMPDIR, chromeLaunchEnv } from './support/bounded.mjs';
+import { LIMITS, within, idleWithin, closeWithin, installSuiteDeadline, boundContext, ev, CHROME_TMPDIR, chromeLaunchEnv } from './support/bounded.mjs';
+import { expectBackend, drainExpecting, assertStatusAfterTicket } from './support/space-lifecycle-checks.mjs';
 import { cleanupPages } from './support/workflow-cleanup.mjs';
 import { PROJECT0_LAUNCH_ARGS, DEVELOPER_FLAG, collectVisibleText, activeGpuIdentity, graphicsFeatureStatus, checkEffectiveArguments, canWriteSpikeDocument, renderSpikeDocument, SPIKE_DOCUMENT_PATH, longTasksByPhase, verifyServedSource, startupSequence } from './support/space-suite.mjs';
 
@@ -69,24 +70,6 @@ const pass = (name, details = {}) => { report.push({ name, ...details }); consol
 // tests/support/expected-backend.mjs lands with 1a T08's atlas.device and is adopted when 1a merges
 // forward). A Plane page opened on WebGL must drain to `complete` with its hardware renderer intact;
 // a diagnostic chrome:// page has no WebGL and must drain to `no-webgl`.
-const backends = new WeakMap();
-const expectBackend = (page, backend) => { if (!['webgl', 'none'].includes(backend)) throw new RangeError(`unknown backend ${backend}`); backends.set(page, backend); return page; };
-async function drainExpecting(page, ms = LIMITS.deep) {
-  const expected = backends.get(page) ?? 'webgl';
-  const snapshot = () => ev(page, () => {
-    const gl = globalThis.atlas?.renderer?.gl ?? null;
-    return { acceleration: globalThis.atlas?.graphics?.acceleration ?? null, contextLost: gl ? gl.isContextLost() : null };
-  }, undefined, 'backend snapshot');
-  const before = await snapshot();
-  const result = await drainGpuWithin(page, ms);
-  const after = await snapshot();
-  if (expected === 'webgl') {
-    if (before.acceleration !== 'hardware' || after.acceleration !== 'hardware') throw new Error(`drain GPU work: page expected a hardware WebGL backend; the renderer reports ${before.acceleration} then ${after.acceleration}`);
-    if (result.status !== 'complete') throw new Error(`drain GPU work: a webgl page drained to ${result.status}`);
-    if (after.contextLost) throw new Error('drain GPU work: the WebGL context was lost during the drain');
-  } else if (result.status !== 'no-webgl') throw new Error(`drain GPU work: a page without WebGL drained to ${result.status}`);
-  return result;
-}
 // Every page close goes through the drain wrapper; a drain failure is persisted and fails the suite.
 async function closeDrained(page, label) {
   const failed = await cleanupPages({ pages: [page], drain: drainExpecting, report, writeReport, closeAll: () => closeWithin(page, label) });
@@ -509,7 +492,7 @@ export const RECOVERY_PASSES = Object.freeze([
   'Presentation renders the display texture to the preferred canvas format at the output size without a second transfer function',
   'A real device loss through the test adapter settles outstanding tickets interrupted, marks the backend unavailable before clients are notified, and reacquisition yields a fresh attempt and a new epoch',
   'Configuration failure keeps the previous target set usable',
-  'A 4K target set allocates within the cap at 76 bytes per pixel and is reclaimed after the last ticket retires',
+  'A 4K target set allocates within the cap at 76 bytes per pixel and stays tracked while idle pooled after ticket retirement',
 ]);
 
 async function recoverySetupInPage() {
@@ -736,7 +719,9 @@ async function fourKInPage() {
   backend.release(targets.handles.status); // released while the ticket still references it
   const whileHeld = { tracked: backend.diagnostics().tracked, retiring: backend.diagnostics().retiring, status: inventory().find(item => item.name === 'status') };
   const done = await ticket.done;
-  const afterTicket = { tracked: backend.diagnostics().tracked, retiring: backend.diagnostics().retiring, statusPresent: inventory().some(item => item.name === 'status') };
+  const retired = backend.diagnostics(), status = inventory().find(item => item.name === 'status');
+  const afterTicket = { tracked: retired.tracked, retiring: retired.retiring, statusPresent: !!status, status,
+    idleBytes: retired.inventory.filter(item => item.state === 'pooled').reduce((n, item) => n + item.bytes, 0), peak: retired.peak };
   const replacement = await backend.configureTargets({ epoch, layoutId: 'space-targets-v2', internalSize: { width: 64, height: 64 }, outputSize: { width: 64, height: 64 } });
   // Caller-owned: the earlier 4K set survives the replacement and its display can still be presented.
   const keptAfterReplacement = inventory().length;
@@ -862,7 +847,7 @@ async function runRecovery({ page }) {
     assert.equal(fourK.whileHeld.tracked, fourK.trackedAtAllocation + 16, 'released bytes stay tracked while the ticket holds them (plus its counted 16-byte uniform snapshot)');
     assert.equal(fourK.whileHeld.retiring, 3840 * 2160 * 4 + 16, 'the released status target and the uniform snapshot are retiring'); assert.equal(fourK.whileHeld.status.state, 'retiring'); assert.equal(fourK.whileHeld.status.tickets, 1);
     assert.equal(fourK.done.outcome, 'completed');
-    assert.deepEqual(fourK.afterTicket, { tracked: fourK.trackedAtAllocation - 3840 * 2160 * 4, retiring: 0, statusPresent: false }, 'reclaimed once the last ticket retires');
+    assertStatusAfterTicket(fourK);
     assert.equal(fourK.keptAfterReplacement, 10, 'reconfiguration keeps the earlier set caller-owned (status was already released)');
     assert.equal(fourK.previousPresented.outcome, 'completed', 'the previous image can still be presented after reconfiguration');
     assert.equal(fourK.afterReplacement.remaining4K, 0, 'the earlier 4K set is reclaimed after its explicit release');

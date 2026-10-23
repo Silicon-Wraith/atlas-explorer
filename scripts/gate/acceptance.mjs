@@ -7,8 +7,8 @@ const sha = value => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value);
 // 2026-10-22, round 6. Pin the exact 23 full SHAs, refined rule and provenance independently
 // of the live manifest and policies in audited commits. Neither can enroll more.
 const HISTORICAL_DOCS_POLICY_SHA256 = 'f10b7531ec9c4bc3d2ef62ea89c7f97b8dda85c3ec218db2a7d15c4aabb0eaaf';
-// Independently pin the round-9 user approval, including all three exact lists.
-export const WIP_EVIDENCE_POLICY_SHA256 = '432605cffc42acb7d6e34623f19a4f4540863bc59934b68a018c7664e177b4cd';
+// Pin round-9 approvals, round-16 extensions and round-16d protocol/known-failure decisions.
+export const WIP_EVIDENCE_POLICY_SHA256 = '8eccd0d73b414f10b80a7d27680b834b37cad36b5f3db9b84f63bb3082b3369e';
 export const approvedWipEvidencePolicy = policy => !!policy &&
   createHash('sha256').update(JSON.stringify(policy)).digest('hex') === WIP_EVIDENCE_POLICY_SHA256;
 export const approvedRetrospectiveWip = (commit, policy) => approvedWipEvidencePolicy(policy) && policy.implementationWipCommits.includes(commit);
@@ -28,7 +28,9 @@ export function judgeFast(commit, record, facts, manifests, contemporaneous, { w
   if (!manifests || !same(record.manifests, manifests)) return invalid('fast checks did not identify the commit manifests');
   if (record.unit?.state !== 'passed' || record.build?.state !== 'passed' || record.cleanup !== 'confirmed') return invalid('fast checks or cleanup did not pass');
   const wipOnly = approvedRetrospectiveWip(commit, wipEvidencePolicy);
-  if (record.evidenceScope !== undefined && (record.evidenceScope !== 'wip-only' || !wipOnly || record.wipEvidencePolicySha256 !== WIP_EVIDENCE_POLICY_SHA256))
+  const recordPinApproved = record.wipEvidencePolicySha256 === WIP_EVIDENCE_POLICY_SHA256 || wipOnly &&
+    wipEvidencePolicy.priorImplementationRecordPolicies?.some(p => p.sha256 === record.wipEvidencePolicySha256 && p.commits.includes(commit));
+  if (record.evidenceScope !== undefined && (record.evidenceScope !== 'wip-only' || !wipOnly || !recordPinApproved))
     return invalid('WIP-only fast evidence requires its approved WIP scope and policy pin');
   if (wipOnly && record.recordedRetrospectively !== true) return invalid('approved WIP re-run must be recordedRetrospectively: true');
   if (record.recordedRetrospectively) {
@@ -53,7 +55,7 @@ function docsFirstParent(fact, policy, disposition) {
   if (!Array.isArray(diff.paths)) return { error: `${disposition} requires first-parent changed paths` };
   // Complete tree diffs include additions, deletions, mode/type and object
   // changes. Only docs paths may differ, including code resolved in a merge.
-  if (diff.paths.some(path => typeof path !== 'string' || !policy.allowedPathPrefixes.some(prefix => path.startsWith(prefix))))
+  if (diff.paths.some(path => typeof path !== 'string' || !(policy.allowedPaths?.includes(path) || policy.allowedPathPrefixes.some(prefix => path.startsWith(prefix)))))
     return { error: `${disposition} changed a path outside approved docs directories` };
   return { diff };
 }
@@ -100,12 +102,19 @@ export function auditAcceptance({ commits, manifest, facts, records, requiredIds
       { wipEvidencePolicy: entry.disposition === 'wip' && wipPolicyApproved ? wipEvidencePolicy : null });
   const fastProvenance = entry => ({ record: entry.fast, recordedRetrospectively: records[entry.fast]?.recordedRetrospectively === true,
     ...(entry.disposition === 'wip' && wipPolicyApproved && approvedRetrospectiveWip(entry.commit, wipEvidencePolicy)
-      ? { evidenceScope: 'wip-only', policySha256: WIP_EVIDENCE_POLICY_SHA256, approval: wipEvidencePolicy.approval }
+      ? { evidenceScope: 'wip-only', policySha256: WIP_EVIDENCE_POLICY_SHA256, approval: wipEvidencePolicy.approval, amendments: wipEvidencePolicy.amendments }
       : contemporaneousFastFor(entry.commit) ? { contemporaneous: contemporaneousFastFor(entry.commit) } : {}) });
   for (const commit of commits) {
     const entry = entries.get(commit), fact = facts[commit], historical = retrospective.get(commit);
     const fail = reason => rows.push({ commit, disposition: entry?.disposition ?? 'missing', state: 'unaccepted', reason });
     if (!fact || !sha(fact.tree)) { fail('missing Git facts'); continue; }
+    const knownFailure = wipPolicyApproved && wipEvidencePolicy.knownFailures?.find(item => item.commit === commit);
+    if (knownFailure) {
+      rows.push({ commit, disposition: entry?.disposition ?? 'missing', state: 'unaccepted', promotable: false,
+        reason: 'known historical WIP failure; a passing descendant does not replace exact-commit failure evidence',
+        knownFailure, policySha256: WIP_EVIDENCE_POLICY_SHA256, amendments: wipEvidencePolicy.amendments });
+      continue;
+    }
     if (entry?.disposition === 'historical-docs-only') {
       if (!historicalDocsPolicyApproved) { fail('unapproved historical-docs-only policy or manifest pin'); continue; }
       if (!historicalDocsPolicy.commits.includes(commit)) { fail('SHA is not approved for historical-docs-only'); continue; }
@@ -152,7 +161,7 @@ export function auditAcceptance({ commits, manifest, facts, records, requiredIds
         const checked = docsFirstParent(fact, wipEvidencePolicy, entry.disposition);
         if (checked.error) { fail(checked.error); continue; }
         rows.push({ commit, disposition: entry.disposition, state: 'accounted-wip', promotable: false, boundary: entry.boundary,
-          approval: wipEvidencePolicy.approval, policySha256: WIP_EVIDENCE_POLICY_SHA256, pathsByParent: [checked.diff] });
+          approval: wipEvidencePolicy.approval, amendments: wipEvidencePolicy.amendments, policySha256: WIP_EVIDENCE_POLICY_SHA256, pathsByParent: [checked.diff] });
       } else {
         if (!historical) { const checked = fast(entry, fact); if (checked.state !== 'passed') { fail(checked.reason); continue; } }
         rows.push({ commit, disposition: 'wip', state: 'accounted-wip', promotable: false, boundary: entry.boundary,

@@ -10,6 +10,10 @@ import { packStatus, packLightingStatus } from '../../src/space/render/status.js
 import { createSpaceScene, sceneCodec } from '../../src/space/scene-adapter.js';
 import { createSpaceRequest } from '../../src/space/render-adapter.js';
 import { createSpaceRenderer, navigationDraftEligible } from '../../src/space/render/renderer.js';
+import { createMaskProcessor } from '../../src/space/render/mask-processor.js';
+import { MaskWorkerDouble, installMaskWorkerDouble } from '../support/mask-worker-double.mjs';
+installMaskWorkerDouble();
+import { createMaskWork } from '../../src/space/render/mask-work.js';
 import { stageDraftDiagnostics } from '../support/fake-space-backend.mjs';
 import { productPipelineSet, appearancePipelineDescriptors } from '../../src/space/render/webgpu/appearance.js';
 import { FIELD_IDS, POINT_INPUT_BYTES, POINT_RESULT_BYTES, RESULT_SENTINEL, decodePointResults,
@@ -48,10 +52,10 @@ const fixture = createPipelineSet({ id: 'b09-fixture', descriptors: [
   ...fieldPipelineDescriptors(),
   { pipelineId: 'present', kind: 'render', sourceIds: ['fixture-only'], vertexEntryPoint: 'present_vertex', fragmentEntryPoint: 'present_fragment', constants: {}, bindings: [read('display')], uniformLayout: { byteLength: 0, fields: [] } },
 ] });
-const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); await new Promise(resolve => setImmediate(resolve)); };
 const words = values => new Uint8Array(Uint32Array.from(values).buffer);
 
-async function rig({ pipelineSet = fixture, draftExecution, testProbe, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, recoveryWords, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
+async function rig({ pipelineSet = fixture, draftExecution, maskProcessor, maskWork = createMaskWork({ yieldTask: () => new Promise(resolve => setImmediate(resolve)) }), testProbe, limits = {}, probe = 0x41544c53, statusWords, lightingWords, normals, recoveryWords, depths, classificationWords, holdConfiguration = false, holdReadbacks = false, rejectConfiguration = false, stalePickReadback = false, structural = false } = {}) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock, limits });
   const hooks = {}, discarded = [], failed = [], auxiliaryJobs = [];
   const tickets = [], submissions = [], publications = [], publicationUpdates = [], publicationRecords = [], presents = [], statuses = [], reports = [], plans = [], targets = [];
@@ -106,18 +110,18 @@ async function rig({ pipelineSet = fixture, draftExecution, testProbe, limits = 
   };
   let renderer;
   const makeRenderer = testProbe ? await rendererWithProbe() : createSpaceRenderer;
-  assert.doesNotThrow(() => { renderer = makeRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet, draftExecution, testProbe }); }, 'the importable renderer must implement its constructor');
+  assert.doesNotThrow(() => { renderer = makeRenderer({ backend, scheduler, clock, viewId: 'space', versions, pipelineSet, draftExecution, maskProcessor, maskWork, testProbe }); }, 'the importable renderer must implement its constructor');
   renderer.onPublish(value => publications.push(value)); renderer.onPresent(value => presents.push(value));
   renderer.onPublicationUpdate(value => publicationUpdates.push(value)); renderer.onPublicationRecord(value => publicationRecords.push(value));
   renderer.onStatus(value => statuses.push(value)); renderer.onReport(value => reports.push(value));
-  const complete = async (order = 'oldest', elapsedMs = 8) => {
-    await flush(); const pending = tickets.filter(item => item.pending);
+  const complete = async (order = 'oldest', elapsedMs = 8, stop = () => false) => {
+    await flush(); if (stop()) return false; const pending = tickets.filter(item => item.pending);
     const item = order === 'newest' ? pending.at(-1) : pending[0];
     if (!item) return false;
     clock.advance(0.1); fake.complete(item.ticket, { elapsedMs }); await flush(); return item;
   };
   const until = async (predicate, order = 'oldest', limit = 20000) => {
-    for (let i = 0; i < limit; i++) { await flush(); if (predicate()) return; await complete(order); }
+    for (let i = 0; i < limit; i++) { await flush(); if (predicate()) return; await complete(order, 8, predicate); }
     assert.fail('bounded fake-backend driver did not reach its condition');
   };
   const finish = async (job, order = 'oldest') => {
@@ -135,6 +139,83 @@ const auxiliaryResult = async (h, promise) => { let result; promise.then(value =
 const inventoryEntry = (h, handle) => h.fake.diagnostics().inventory.find(entry => entry.id === handle.id && entry.epoch === handle.epoch);
 const pixelsIn = r => r.quality.internalSize.width * r.quality.internalSize.height;
 
+test('B15-R16-F8 settled presentation waits for yielded mask validation', async () => {
+  let release, yielded = false;
+  const held = new Promise(resolve => { release = resolve; });
+  const maskWork = createMaskWork({ yieldTask: async () => { yielded = true; await held; } });
+  const h = await rig({ maskWork });
+  try {
+    const job = h.renderer.render(request(directScene(), generation(), 'settled'));
+    await h.until(() => yielded || h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId));
+    assert.equal(yielded, true, 'settled masks must yield to a browser task before publication');
+    assert.equal(h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId), false);
+    release();
+    assert.equal((await h.finish(job)).outcome, 'completed');
+    assert.equal(h.publications.length, 1);
+    assert.equal(h.failed.length, 0);
+  } finally { release(); h.renderer.destroy(); }
+});
+
+test('B15-R16-F8 cancellation and loss during yielded masks cannot present or strand a lease', async () => {
+  for (const action of ['cancel', 'loss']) {
+    let release, yielded = false;
+    const held = new Promise(resolve => { release = resolve; });
+    const h = await rig({ maskWork: createMaskWork({ yieldTask: async () => { yielded = true; await held; } }) });
+    try {
+      const job = h.renderer.render(request(directScene(), generation(), 'settled'));
+      await h.until(() => yielded);
+      assert.ok(h.scheduler.snapshot().outstanding > 0, 'CPU validation retains the readback lease');
+      if (action === 'cancel') h.renderer.cancel(job.jobId); else h.fake.lose({ reason: 'loss during yielded masks' });
+      release();
+      assert.equal((await h.finish(job)).outcome, action === 'cancel' ? 'cancelled' : 'interrupted');
+      assert.equal(h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId), false);
+      assert.equal(h.scheduler.snapshot().outstanding, 0);
+      if (action === 'cancel') assert.equal((await h.finish(h.renderer.render(request(directScene(), generation(2), 'settled')))).outcome, 'completed');
+    } finally { release(); h.renderer.destroy(); }
+  }
+});
+
+test('B15-R16-F8 renderer awaits Worker validation before settled presentation', async () => {
+  const worker = new MaskWorkerDouble(); worker.held = true;
+  const maskProcessor = createMaskProcessor({ createWorker: () => worker });
+  const h = await rig({ maskProcessor });
+  try {
+    const job = h.renderer.render(request(directScene(), generation(), 'settled'));
+    await h.until(() => worker.messages.length || h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId));
+    assert.ok(worker.messages.length, 'the product path must transfer masks to its Worker');
+    assert.equal(h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId), false);
+    assert.ok(h.scheduler.snapshot().outstanding > 0, 'validation still owns the readback lease');
+    worker.release();
+    assert.equal((await h.finish(job)).outcome, 'completed');
+    assert.equal(h.publications.length, 1);
+    assert.equal(h.reports[0].outcomeMasks.union.hits, 128);
+  } finally { worker.release(); h.renderer.destroy(); maskProcessor.destroy(); }
+});
+
+test('B15-R16-F8 Worker cancellation loss destruction and validation failure cannot present or strand leases', async () => {
+  for (const action of ['cancel', 'loss', 'destroy', 'crash', 'invalid-final']) {
+    const worker = new MaskWorkerDouble(); worker.held = true;
+    if (action === 'invalid-final') {
+      const handle = worker.handle; worker.handle = message => { const reply = handle(message); return reply?.closed ? { ...reply, error: 'invalid final sample' } : reply; };
+    }
+    const maskProcessor = createMaskProcessor({ createWorker: () => worker }), h = await rig({ maskProcessor });
+    try {
+      const job = h.renderer.render(request(directScene(), generation(), 'settled'));
+      await h.until(() => worker.messages.some(m => m.type === 'record'));
+      if (action === 'cancel') h.renderer.cancel(job.jobId);
+      else if (action === 'loss') h.fake.lose({ reason: 'loss during Worker validation' });
+      else if (action === 'destroy') h.renderer.destroy();
+      else if (action === 'crash') worker.onerror({ message: 'Worker failed' });
+      worker.release();
+      const result = await h.finish(job);
+      assert.equal(result.outcome, action === 'cancel' ? 'cancelled' : ['loss', 'destroy'].includes(action) ? 'interrupted' : 'failed', action);
+      await h.until(() => h.scheduler.snapshot().outstanding === 0);
+      assert.equal(h.submissions.some(t => t.method === 'present' && t.desc.identity.jobId === job.jobId), false, action);
+      assert.equal(h.publications.length, 0);
+    } finally { worker.release(); h.renderer.destroy(); maskProcessor.destroy(); }
+  }
+});
+
 test('a completed navigation draft publishes pending while a newer camera request waits', async () => {
   const h = await rig();
   let live = generation(), stream = 1;
@@ -146,6 +227,7 @@ test('a completed navigation draft publishes pending while a newer camera reques
   await h.until(() => h.publications.some(p => p.requestId === a.requestId));
   const old = h.publications.find(p => p.requestId === a.requestId);
   assert.equal(old.pending, true);
+  assert.equal(h.statuses.at(-1)?.pending, true, 'status preserves the navigation-pending publication');
   assert.equal(old.kind, 'draft');
   assert.equal(old.identity.requestId, a.requestId);
   await h.finish(jb);
@@ -1552,7 +1634,7 @@ test('pending navigation requests allocate targets only after one of two active 
 });
 
 test('B15-REC-G qualified L6a drafts have a fixed compute reduce copy then present plan with two leases', async () => {
-  const h = await rig({ pipelineSet: productPipelineSet() });
+  const h = await rig({ pipelineSet: productPipelineSet(), draftExecution: 'L6a' });
   try {
     const r = request(scene(), generation(), 'draft', { width: 1280, height: 720 });
     assert.equal((await h.finish(h.renderer.render(r))).outcome, 'completed');
@@ -1561,6 +1643,37 @@ test('B15-REC-G qualified L6a drafts have a fixed compute reduce copy then prese
     assert.equal(submissions[0].desc.draft.mode, 'compute');
     assert.equal(submissions[1].method, 'present');
     assert.deepEqual(submissions[0].desc.region, { x: 0, y: 0, width: 640, height: 360 });
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R16-F1 cancelling in a settled publication callback preserves partial-quality status', async () => {
+  const h = await rig();
+  try {
+    const r = request(directScene(8), generation(), 'settled');
+    h.renderer.onPublish(() => { if (h.publications.length === 3) h.renderer.cancel(r.jobId); });
+    const result = await h.finish(h.renderer.render(r));
+    assert.equal(result.outcome, 'cancelled');
+    assert.equal(h.publications.length, 3);
+    assert.ok(h.publications.every(p => p.pending === false));
+    assert.ok(!h.statuses.some(s => s.pending === true), 'no pending mark for a partial-quality image');
+  } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+test('B15-R16-F6 product defaults to one GPU-gated submission and CPU-confirmed publication', async () => {
+  const h = await rig({ pipelineSet: productPipelineSet(), holdReadbacks: true });
+  try {
+    const r = request();
+    const job = h.renderer.render(r);
+    await h.until(() => h.submissions.some(s => s.desc.identity.jobId === r.jobId));
+    const submissions = h.submissions.filter(s => s.desc.identity.jobId === r.jobId);
+    assert.equal(submissions[0].desc.draft.mode, 'gated');
+    await h.complete();
+    assert.equal(h.publications.length, 0, 'GPU completion alone cannot publish accepted counts');
+    h.releaseReadbacks();
+    assert.equal((await h.finish(job)).outcome, 'completed');
+    assert.equal(h.submissions.filter(s => s.desc.identity.jobId === r.jobId).length, 1);
+    assert.equal(h.publications.length, 1);
+    assert.ok(h.publications.every(p => p.diagnosticsState !== 'pending'), 'asynchronous publication stays off');
   } finally { h.renderer.destroy(); h.fake.destroy(); }
 });
 
@@ -1844,4 +1957,31 @@ for (const variant of ['b', 'd']) test(`r4-F2 L6${variant} validatePublication e
     assert.match(h.publicationUpdates[0].reason, /injected publication validation failure/);
     assert.equal(h.renderer.published, null);
   } finally { h.renderer.destroy(); h.fake.destroy(); }
+});
+
+
+test('R16-C3 settled export and legacy draft share the global two-lease Worker budget', async () => {
+  const worker = new MaskWorkerDouble(); worker.held = true;
+  const maskProcessor = createMaskProcessor({ createWorker: () => worker }), h = await rig({ maskProcessor });
+  try {
+    const exporting = createSpaceRequest({ scene: directScene(), purpose: 'export', width: 16, height: 8,
+      profile: 'settled', generation: generation(), viewId: 'space', versions });
+    const first = h.renderer.render(exporting);
+    await h.until(() => worker.messages.some(m => m.type === 'record'));
+    const draft = h.renderer.render(request(directScene(), generation(2), 'draft'));
+    await h.until(() => new Set(worker.messages.filter(m => m.type === 'record').map(m => m.session)).size === 2);
+    const records = worker.messages.filter(m => m.type === 'record');
+    assert.equal(records.length, 2);
+    assert.equal(h.scheduler.snapshot().outstanding, 2);
+    assert.ok(records.some(m => m.field === 'draftDiagnostics'));
+    assert.equal(h.failed.length, 0);
+    for (let i = 0; i < 4; i++) await h.complete();
+    assert.equal(worker.messages.filter(m => m.type === 'record').length, 2, 'no third transfer while both leases await acknowledgement');
+    worker.release();
+    assert.equal((await h.finish(draft)).outcome, 'completed');
+    // The newer viewport request makes the export owner stale when it resumes.
+    assert.equal((await h.finish(first)).outcome, 'cancelled');
+    assert.equal(h.scheduler.snapshot().outstanding, 0);
+    assert.deepEqual(h.failed.map(({ error }) => error.code), ['stale-epoch'], 'only the stale export is rejected before its next submission');
+  } finally { worker.release(); h.renderer.destroy(); maskProcessor.destroy(); }
 });

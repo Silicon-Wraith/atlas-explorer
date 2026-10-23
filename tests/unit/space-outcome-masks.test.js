@@ -3,6 +3,33 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createOutcomeMasks, OUTCOME_BITS, maskMetrics, reasonMetrics } from '../../src/space/render/outcome-masks.js';
 import { packStatus, packLightingStatus } from '../../src/space/render/status.js';
+import { createMaskWork } from '../../src/space/render/mask-work.js';
+
+test('B15-R16-F8 settled sample mask work stays within a two millisecond task budget', async () => {
+  // Deterministic cost model: one millisecond per 1024 decoded/finalized pixels.
+  // This catches both an unsliced scan hidden in one iterator step and microtask
+  // chains that reset their deadline without actually yielding a browser task.
+  let time = 0, taskStart = 0, largest = 0, yields = 0, chunks = 0;
+  const queue = createMaskWork({ clock: () => time, yieldTask: async () => {
+    largest = Math.max(largest, time - taskStart); taskStart = time; yields++;
+  } });
+  const work = { run(steps, valid) { return queue.run((function* () {
+    while (true) { const step = steps.next(); if (step.done) return step.value; time += step.value / 1024; chunks++; yield; }
+  })(), valid); } };
+  const size = { width: 1280, height: 720 }, pixels = size.width * size.height, region = { x: 0, y: 0, ...size };
+  const masks = createOutcomeMasks(size, { work });
+  for (let n = 0; n < 2; n++) {
+    const id = { accumulationKey: 'settled', sample: n };
+    await masks.recordAsync(id, 'status', region, new Uint8Array(pixels * 4));
+    await masks.recordAsync(id, 'normal', region, new Uint8Array(pixels * 8));
+    await masks.recordAsync(id, 'lightingStatus', region, new Uint8Array(pixels * 4));
+    await masks.endAsync(id);
+    largest = Math.max(largest, time - taskStart);
+    assert.ok(largest <= 2, `sample ${n}: largest main-thread mask task ${largest} ms exceeds 2 ms`);
+    assert.equal(masks.snapshot().union.hits, pixels);
+  }
+  assert.ok(yields > 1); assert.ok(chunks >= pixels * 8 / 512, 'no monolithic pixel scan can hide in a step');
+});
 
 const B = OUTCOME_BITS;
 const HIT = packStatus({ status: 0, reason: 0, subreason: 0, steps: 3 }), MISS = packStatus({ status: 1, reason: 0, subreason: 0, steps: 3 });
@@ -26,6 +53,59 @@ test('outcome masks count unavailable normals over hits only and lighting failur
   const masks = createOutcomeMasks({ width: 6, height: 1 });
   const s = sample(masks, identity(0), { status: [HIT, MISS, HIT, UNRESOLVED, FAILED, HIT], normal: [false, false, true, false, false, true], lighting: [0, 0, AO_UNRESOLVED, 0, 0, AO_FAILED] });
   assert.deepEqual(s, { sample: 0, pixels: 6, hits: 3, nonMiss: 5, primaryUnresolved: 1, numericalFailures: 2, unavailableNormals: 1, lightingUnresolved: 1, shadowUnresolved: 0, aoUnresolved: 1, lightingNumericalFailures: 1 });
+  assert.deepEqual(masks.counts(), { rayTermination: { hit: 3, miss: 1, numericalFailure: 1,
+    unresolved: { pointBudget: 0, estimateUnavailable: 0, rayStepBudget: 1, stagnation: { rayParameter: 0, fieldCoordinate: 0 } } },
+    unavailableNormals: 1, lightingFailures: { shadow: 0, ao: 2, both: 0 } });
+});
+
+test('B15-R16-F8 mask work yields actual task turns and invalidation stops its iterator', async () => {
+  const events = [];
+  setTimeout(() => events.push('input'), 0);
+  await createMaskWork().run((function* () {
+    assert.deepEqual(events, ['input']);
+    setTimeout(() => events.push('next input'), 0);
+    yield;
+  })());
+  assert.deepEqual(events, ['input', 'next input']);
+  let valid = true, steps = 0, closed = false;
+  const queue = createMaskWork({ clock: () => steps, budgetMs: 1, yieldTask: async () => { if (steps) valid = false; } });
+  await assert.rejects(queue.run((function* () { try { while (true) { steps++; yield; } } finally { closed = true; } })(), () => valid), /invalidated/);
+  assert.equal(steps, 1); assert.equal(closed, true);
+  assert.equal(await queue.run((function* () { return 'next job'; })()), 'next job', 'a rejected job cannot poison the serial queue');
+});
+
+test('B15-R16-F8 yielded counts and incremental snapshots agree across tiled samples and reordered fields', async () => {
+  const width = 65, height = 17, pixels = width * height, masks = createOutcomeMasks({ width, height }, { strict: true });
+  const statuses = [HIT, MISS, UNRESOLVED, FAILED], union = new Uint16Array(pixels), unionReasons = new Uint32Array(pixels);
+  let previous;
+  for (let sample = 0; sample < 3; sample++) {
+    const id = identity(sample), expected = { hit: 0, miss: 0, unresolved: 0, numericalFailure: 0, unavailableNormals: 0, both: 0 };
+    for (const field of ['normal', 'lightingStatus', 'status']) for (let y = height - 1; y >= 0; y--) {
+      const values = Array.from({ length: width }, (_, x) => {
+        const i = y * width + x, status = (i + sample) % 4, available = (i + sample) % 3 === 0;
+        if (field === 'normal') return available;
+        if (field === 'lightingStatus') return status === 0 ? AO_UNRESOLVED | SHADOW_UNRESOLVED : 0;
+        expected[['hit', 'miss', 'unresolved', 'numericalFailure'][status]]++;
+        if (status === 0 && !available) expected.unavailableNormals++;
+        if (status === 0) expected.both++;
+        union[i] |= [B.hit, B.miss, B.primaryUnresolved, B.primaryNumericalFailure][status] |
+          (status === 0 ? B.shadowUnresolved | B.aoUnresolved | (available ? 0 : B.normalUnavailable) : 0);
+        unionReasons[i] |= status === 2 ? 4 : status === 0 ? (4 << 8) | (1 << 16) : 0;
+        return statuses[status];
+      });
+      await masks.ingest(id, field, { x: 0, y, width, height: 1 }, field === 'normal' ? normals(values) : u32(values));
+    }
+    assert.equal(masks.closed(id), true);
+    const snapshot = masks.snapshot(), counts = masks.counts();
+    assert.deepEqual(snapshot.union, maskMetrics(union, sample + 1));
+    assert.deepEqual(snapshot.reasons.union, reasonMetrics(unionReasons));
+    assert.deepEqual([counts.rayTermination.hit, counts.rayTermination.miss, counts.rayTermination.unresolved.rayStepBudget,
+      counts.rayTermination.numericalFailure, counts.unavailableNormals, counts.lightingFailures.both], Object.values(expected));
+    if (previous) assert.equal(previous.samples.length, sample, 'a published snapshot stays detached from later samples');
+    snapshot.union.hits = -1;
+    assert.notEqual(masks.snapshot().union.hits, -1, 'snapshots cannot mutate the accumulated metrics');
+    previous = snapshot;
+  }
 });
 
 test('outcome-mask unions are pixelwise over the same samples, mixing hits and misses and isolated failures', () => {

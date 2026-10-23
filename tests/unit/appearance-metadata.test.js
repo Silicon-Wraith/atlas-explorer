@@ -1,3 +1,5 @@
+import { installMaskWorkerDouble } from '../support/mask-worker-double.mjs';
+installMaskWorkerDouble();
 // Plan B11 (spec §8.1 steps 4–6, §8.2, §7.6, §9.1 "Pipelines"/"Pipeline descriptors"): the appearance
 // metadata (appearance.js), its descriptors through the B09 renderer, the legend and display rules as a
 // CPU reference, and the Menger box buffer. Node-only (no GPU); the headed `rendering` group executes them.
@@ -207,7 +209,7 @@ test('sample flags and display legends follow the documented precedence and are 
 });
 
 // ---- the B09 renderer drives the appearance descriptors (fake backend) ----
-const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); await new Promise(resolve => setImmediate(resolve)); };
 async function driveRenderer({ model, appearance = {}, profile = 'settled', samples = 2, size = { width: 16, height: 8 } }) {
   const clock = createFakeClock(), fake = createFakeBackend({ clock });
   const batches = [], tickets = [], allocations = [], released = new Set();

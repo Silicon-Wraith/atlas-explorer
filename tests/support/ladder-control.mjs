@@ -57,3 +57,7 @@ export async function environmentProbe() {
     return {...out,visibilityState:document.visibilityState,hidden:document.hidden,hasFocus:document.hasFocus()};
   } finally {device.destroy();}
 }
+
+export function pacedCameraWindow(start, workload, poses) {
+  return { start, end: start + (workload.durationMs ?? poses.at(-1)?.requestTimeMs) };
+}

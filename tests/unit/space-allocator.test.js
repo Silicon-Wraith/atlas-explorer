@@ -3,6 +3,29 @@ import assert from 'node:assert/strict';
 import { createTrackedAllocator } from '../../src/space/render/webgpu/allocator.js';
 import { BackendError, TRACKED_ALLOCATION_CAP } from '../../src/space/render/backend.js';
 import { createFakeClock } from '../support/fake-clock.mjs';
+import { assertStatusAfterTicket } from '../support/space-lifecycle-checks.mjs';
+
+test('B15-R16-F3 recovery harness accepts ticket retirement into the tracked idle pool', () => {
+  const { allocator: tracked } = allocator();
+  const bytes = 3840 * 2160 * 4;
+  const [status] = tracked.transaction([{ name: 'status', bytes, width: 3840, height: 2160, format: 'r32uint', bytesPerTexel: 4 }], { pool: '4k' });
+  tracked.activatePool('4k');
+  const ticket = {};
+  tracked.hold(status, ticket, 'ticket'); tracked.release(status);
+  assert.equal(tracked.diagnostics().retiring, bytes);
+  tracked.unhold(ticket);
+  const d = tracked.diagnostics();
+  assertStatusAfterTicket({ trackedAtAllocation: bytes, afterTicket: { tracked: d.tracked, retiring: d.retiring, statusPresent: true, status: d.inventory[0], idleBytes: d.tracked, peak: d.peak } });
+  assert.equal(d.inventory[0].state, 'pooled');
+  assert.equal(d.peak, bytes);
+  // Concurrent live + idle residency, including the pool, must never cross 1 GiB.
+  tracked.allocate({ name: 'live', bytes: 2 ** 30 - bytes, usage: 'storage' });
+  assert.equal(tracked.diagnostics().tracked, 2 ** 30);
+  tracked.allocate({ name: 'pressure', bytes: 4, usage: 'storage' });
+  assert.equal(tracked.diagnostics().peak, 2 ** 30);
+  assert.equal(tracked.diagnostics().inventory.some(e => e.state === 'pooled'), false);
+  tracked.destroyAll(); assert.equal(tracked.diagnostics().tracked, 0);
+});
 
 // A resource factory that records every creation and destruction; `native` objects are inert.
 function fakeFactory({ failOn = null } = {}) {
@@ -167,4 +190,78 @@ test('B15-O2 pool bounds entries and obsolete owners tickets and mappings surviv
   tracked.unhold(ticket); tracked.unhold(mapping); tracked.retire('published');
   assert.equal(tracked.diagnostics().tracked, 0, 'returning to the old key does not revive obsolete entries');
   assert.equal(factory.destroyed.length, 48);
+});
+
+// Operation counts guard per-frame allocation work without a machine-dependent time limit.
+function fullIdlePool() {
+  const fixture = allocator();
+  const descriptions = Array.from({ length: 44 }, (_, index) => ({ name: `target-${index}`, bytes: 4, usage: 'texture' }));
+  fixture.allocator.transaction(descriptions, { pool: 'orbit' }).forEach(handle => fixture.allocator.release(handle));
+  return { ...fixture, descriptions };
+}
+
+test('R16-C1 pool lookup serializes each requested description once', () => {
+  const { allocator: tracked, descriptions } = fullIdlePool();
+  const stringify = JSON.stringify;
+  let calls = 0;
+  JSON.stringify = (...args) => { calls++; return stringify(...args); };
+  try {
+    assert.equal(tracked.canReuse([descriptions.at(-1)], 'orbit'), true);
+    assert.ok(calls <= 1, `one lookup serialized ${calls} keys`);
+    calls = 0;
+    tracked.transaction([descriptions.at(-1)], { pool: 'orbit' });
+    assert.ok(calls <= 1, `one checkout serialized ${calls} keys`);
+  } finally { JSON.stringify = stringify; }
+});
+
+test('R16-C4 a warm pool query does not materialize or scan the idle pool', () => {
+  const { allocator: tracked, descriptions } = fullIdlePool();
+  const iterate = Set.prototype[Symbol.iterator];
+  let visited = 0;
+  Set.prototype[Symbol.iterator] = function* () { for (const value of iterate.call(this)) { visited++; yield value; } };
+  try {
+    assert.equal(tracked.canReuse([descriptions.at(-1)], 'orbit'), true);
+    assert.ok(visited <= 1, `one lookup traversed ${visited} pooled entries`);
+  } finally { Set.prototype[Symbol.iterator] = iterate; }
+});
+
+test('R16-C5 duplicate descriptions require distinct pooled native resources', () => {
+  const { allocator: tracked, factory } = allocator({ cap: 8 });
+  const desc = { name: 'identical', bytes: 4, usage: 'texture' };
+  const [idle] = tracked.transaction([desc], { pool: 'pair' });
+  tracked.release(idle);
+  assert.equal(tracked.canReuse([desc, desc], 'pair'), false, 'one idle resource cannot cover two outputs');
+  const handles = tracked.transaction([desc, desc], { pool: 'pair' });
+  assert.notEqual(tracked.lookup(handles[0]).native, tracked.lookup(handles[1]).native);
+  assert.equal(factory.created.length, 2);
+  assert.equal(tracked.diagnostics().tracked, 8);
+  assert.equal(tracked.diagnostics().peak, 8);
+  handles.forEach(handle => tracked.release(handle));
+  assert.equal(tracked.canReuse([desc, desc], 'pair'), true);
+  const reused = tracked.transaction([desc, desc], { pool: 'pair' });
+  assert.notEqual(tracked.lookup(reused[0]).native, tracked.lookup(reused[1]).native);
+  assert.equal(factory.created.length, 2);
+  tracked.destroyAll();
+  assert.equal(factory.destroyed.length, 2);
+  assert.equal(new Set(factory.destroyed).size, 2);
+});
+
+
+test('R16-C5 rollback restores distinct indexed candidates and idle accounting', () => {
+  const factory = fakeFactory({ failOn: 'refused' }), { allocator: tracked } = allocator({ factory, cap: 16 });
+  const desc = { name: 'same', bytes: 4 };
+  tracked.transaction([desc, desc], { pool: 'pair' }).forEach(h => tracked.release(h));
+  for (const failure of ['cap', 'factory']) {
+    assert.throws(() => tracked.transaction([desc, desc, { name: 'refused', bytes: failure === 'cap' ? 12 : 4 }], { pool: 'pair' }), code('allocation-failed'));
+    assert.equal(tracked.canReuse([desc, desc], 'pair'), true);
+    assert.equal(tracked.diagnostics().tracked, 8);
+  }
+  tracked.activatePool('new');
+  assert.equal(tracked.canReuse([desc], 'pair'), false);
+  assert.equal(tracked.diagnostics().tracked, 0);
+  const [next] = tracked.transaction([desc], { pool: 'new' });
+  tracked.release(next); tracked.retire('unrelated'); tracked.release(next, { discard: true });
+  assert.equal(tracked.canReuse([desc], 'new'), false);
+  assert.equal(tracked.diagnostics().tracked, 0);
+  assert.equal(factory.destroyed.length, 3);
 });

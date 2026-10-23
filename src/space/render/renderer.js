@@ -12,8 +12,9 @@ import { admitPointModel, decodePointResults, encodePoints, mengerBoxData, point
   pointsPipelineId, pointUniforms, sentinelResults, POINT_BATCH_PASS, POINT_RESULT_BYTES } from './webgpu/kernels.js';
 import { encodeOrdinaryOrigin } from '../camera.js';
 import { appearanceKey, accumulationKey, sampleKey } from './keys.js';
-import { unpackStatus, unpackLightingStatus, POINT_STATUS, STATUS_LABELS } from './status.js';
+import { unpackStatus, POINT_STATUS, STATUS_LABELS } from './status.js';
 import { createOutcomeMasks } from './outcome-masks.js';
+import { createMaskProcessor } from './mask-processor.js';
 import { RECOVERING_FAMILIES } from './webgpu/passes.js';
 import { draftExecution as selectDraftExecution, qualifiedDraft } from './draft-execution.js';
 import { draftSummaryBytes, validateDraftSummary, DRAFT_SUMMARY_VERSION } from './draft-summary.js';
@@ -96,45 +97,14 @@ function emptyCounts() {
   return { rayTermination: { hit: 0, miss: 0, unresolved: { pointBudget: 0, estimateUnavailable: 0, rayStepBudget: 0, stagnation: { rayParameter: 0, fieldCoordinate: 0 } }, numericalFailure: 0 },
     unavailableNormals: 0, lightingFailures: { shadow: 0, ao: 0, both: 0 } };
 }
-// B11b measurement fix: an unavailable normal is counted only where the same sample's status is a hit (the
-// joint hit/normal mask from `masks`, whose status phase completes before the normal phase of that sample).
-function countReadback(counts, field, bytes, region, masks) {
-  if (field === 'recovery') return; // B11c: recovery words are diagnostics, kept by the outcome masks only
-  const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (field === 'normal') {
-    for (let row = 0, k = 0; row < region.height; row++) for (let col = 0; col < region.width; col++, k++) {
-      const index = (region.y + row) * masks.width + region.x + col;
-      if (!masks.statusSeen(index)) throw new BackendError('invalid-descriptor', 'a normal readback precedes its status readback');
-      if (masks.hitAt(index) && (data.getUint16(8 * k + 6, true) & 0x7fff) === 0) counts.unavailableNormals++;
-    }
-  } else for (let i = 0; i < bytes.byteLength; i += 4) {
-    const word = data.getUint32(i, true);
-    if (field === 'lightingStatus') {
-      const { shadow, ao } = unpackLightingStatus(word);
-      if (shadow) counts.lightingFailures.shadow++; if (ao) counts.lightingFailures.ao++; if (shadow && ao) counts.lightingFailures.both++;
-    } else {
-      countStatus(counts, word);
-    }
-  }
-}
-
-function countStatus(counts, word) {
-  const { status, reason, subreason } = unpackStatus(word), rays = counts.rayTermination;
-  if (status === 0) rays.hit++;
-  else if (status === 1) rays.miss++;
-  else if (status === 3) rays.numericalFailure++;
-  else if (status === 2 && reason >= 1 && reason <= 3) rays.unresolved[['', 'pointBudget', 'estimateUnavailable', 'rayStepBudget'][reason]]++;
-  else if (status === 2 && reason === 4 && [1, 2].includes(subreason)) rays.unresolved.stagnation[subreason === 1 ? 'rayParameter' : 'fieldCoordinate']++;
-  else throw new BackendError('invalid-descriptor', 'invalid ray status readback');
-}
-
 // An injected scheduler is dedicated to Space rendering: every submitting view
 // must have a registered Space renderer. Admission cannot be peeked at or returned,
 // so a foreign dispatcher must use a different scheduler. Injected infrastructure
 // remains caller-owned; destroying this renderer releases only its own resources.
 // groupDrafts=false is an injected diagnostic/test comparison path; product callers
 // use grouping. It changes submission boundaries, never draft quality or diagnostics.
-export function createSpaceRenderer({ backend, scheduler, clock, viewId, versions, pipelineSet, groupDrafts = true, draftExecution }) {
+export function createSpaceRenderer({ backend, scheduler, clock, viewId, versions, pipelineSet, groupDrafts = true, draftExecution, maskWork, maskProcessor }) {
+  const masksService = maskProcessor ?? createMaskProcessor();
   const draftConfig = selectDraftExecution(draftExecution);
   if (!draftConfig.lifecycle) throw new RangeError('L0–L5 use the diagnostic ladder driver; the product renderer supports L6 variants only');
   assertBackend(backend);
@@ -218,6 +188,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
       record.done.resolve(result); return;
     }
     if (record.frame && result.outcome !== 'completed') rejectFrame(record, result.reason ?? result.outcome);
+    record.masks?.close?.('render job finished');
     record.builder.mark('completed');
     const fields = spaceWorkspaceFields({ request: record.request, counts: record.publishedCounts,
       samplesCompleted: record.samplesCompleted, milestones: record.milestones,
@@ -273,13 +244,15 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   }
   function validatePublication(record, meta) {
     if (record.validatedOrdinal === meta.ordinal) return;
-    // End() checks complete coverage and recovery/primary consistency. This must
-    // run before backend.present() can submit anything, including on settled work.
+    // The Worker validates and closes the sample before its last readback lease
+    // completes. Presentation consumes only that acknowledged snapshot. The
+    // explicitly injected maskWork diagnostic seam yields CPU slices instead.
     if (record.recg) {
       if (!record.summary) throw new BackendError('invalid-descriptor', 'draft summary not validated');
       record.validatedMasks = UNAVAILABLE;
     } else {
-      record.masks.end(maskIdentity(record, meta)); record.validatedMasks = record.masks.snapshot();
+      if (!record.masks.closed(maskIdentity(record, meta))) throw new BackendError('invalid-descriptor', 'outcome masks not validated');
+      record.counts = record.masks.counts(); record.validatedMasks = record.masks.snapshot();
     }
     record.validatedOrdinal = meta.ordinal;
   }
@@ -309,8 +282,12 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const handles = [display, geometry.status, geometry.depth], old = published; hold(handles);
     published = { request: record.request, record, display, geometry, handles }; if (old) release(old.handles);
     acceptPublication(record, meta);
-    if (emitPublication) emit('Publish', publicationData(record, meta));
-    emit('Status', { pending: !fresh(record), diagnosticsState: 'confirmed' }); return true;
+    const snapshot = published, active = current, event = publicationData(record, meta);
+    if (emitPublication) emit('Publish', event);
+    // A synchronous subscriber may stop refinement after this complete image. Its
+    // accepted status is unchanged; a subscriber's replacement request owns its own status.
+    if (published === snapshot && current === active) emit('Status', { pending: event.pending, diagnosticsState: 'confirmed' });
+    return true;
   }
   function beginFrame(record, meta, ticket) {
     const event = frameRecords.begin({ ...publicationData(record, meta), presentationSubmittedAt: ticket.presentationSubmittedAt ?? now(), eligible: true });
@@ -392,7 +369,13 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     const request = record.request, target = request.quality.sampling.targetSamples;
     // B11c: a recovering family (spec §11.4 rev 5.1, quaternion Julia) also reads back each sample's recovery words.
     const recovers = RECOVERING_FAMILIES.includes(record.model?.id);
-    record.masks = createOutcomeMasks(request.quality.internalSize, { recovery: recovers });
+    const maskOptions = { recovery: recovers, strict: true,
+      valid: () => !destroyed && !record.result && !record.cancelled && request.generation.deviceEpoch === backend.currentEpoch() };
+    // maskWork is the explicit CPU diagnostic/test seam. Product callers use the
+    // Worker service; unavailable/crashed Workers fail closed, never scan on main.
+    record.masks = maskWork && !maskProcessor
+      ? createOutcomeMasks(request.quality.internalSize, { ...maskOptions, work: maskWork })
+      : masksService.open(request.quality.internalSize, maskOptions);
     const full = request.quality.lighting.stage === 'full';
     const sampleCount = full ? target + 1 : target;
     let ordinal = 0, phaseIndex = 0, x = 0, y = 0, rowHeight = 0, sequence = 0;
@@ -656,18 +639,12 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
               record.counts = record.summary.counts;
             } else if (field === 'draftDiagnostics') {
               const region = { x: 0, y: 0, ...record.request.quality.internalSize };
-              record.masks.recordDraft(maskIdentity(record, meta), region, result.data);
-              const data = new DataView(result.data.buffer, result.data.byteOffset, result.data.byteLength);
-              for (let k = 0; k < result.data.byteLength; k += record.diagnosticStride * 4) {
-                const word = data.getUint32(k, true); countStatus(record.counts, word);
-                if ((word & 15) === 0 && !(data.getUint32(k + 4, true) & 1)) record.counts.unavailableNormals++;
-              }
+              await record.masks.ingestDraft(maskIdentity(record, meta), region, result.data);
             } else {
               const expected = operation.descriptor.region.width * operation.descriptor.region.height * TARGET_LAYOUT[field].bytesPerTexel;
               if (result.data.byteLength !== expected) throw new BackendError('invalid-descriptor', 'incomplete status readback');
               const region = operation.descriptor.region;
-              record.masks.record(maskIdentity(record, meta), field, region, result.data);
-              countReadback(record.counts, field, result.data, region, record.masks);
+              await record.masks.ingest(maskIdentity(record, meta), field, region, result.data);
             }
           }
         }
@@ -699,6 +676,8 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     })();
   }
   const unsubscribeLoss = backend.onLoss(event => {
+    if (!maskProcessor) masksService.reset('device lost');
+    else for (const record of jobs.values()) record.masks?.close?.('device lost');
     frameRecords.interrupt(event.epoch);
     for (const record of jobs.values()) if (record.frame && record.diagnosticsState === 'pending' && record.request.generation.deviceEpoch === event.epoch) record.diagnosticsState = 'interrupted';
     prepared = null; preparation = null; published = null; geometryCache = null; owners.clear(); tileLearning.clear(); excessiveDraftWork.clear();
@@ -880,6 +859,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
   function cancel(jobId) {
     const record = jobs.get(jobId); if (!record || record.internal) return scheduler.cancel(jobId);
     record.cancelled = true;
+    record.masks?.close?.('render job cancelled');
     record.configuration.abort();
     if (draftConfig.mode === 'provisional' && record.frame) rejectFrame(record, 'cancelled');
     if (record.scheduled) return scheduler.cancel(jobId);
@@ -1015,6 +995,7 @@ export function createSpaceRenderer({ backend, scheduler, clock, viewId, version
     onPublicationUpdate: subscribe('PublicationUpdate'), onPublicationRecord: subscribe('PublicationRecord'), onProvisional: subscribe('Provisional'), onRestoration: subscribe('Restoration'),
     destroy() {
       if (destroyed) return; destroyed = true;
+      if (!maskProcessor) masksService.destroy();
       frameRecords.interrupt(backend.currentEpoch(), 'destroyed');
       unsubscribeLoss();
       for (const record of jobs.values()) { scheduler.cancel(record.request.jobId); finish(record, { outcome: 'interrupted', reason: 'destroyed' }); }

@@ -3,6 +3,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { environmentValid } from './ladder-control.mjs';
+import { drainExpecting } from './space-lifecycle-checks.mjs';
 import { ev, within, LIMITS, idleWithin, cleanupState, CLEANUP_UNCONFIRMED_EXIT } from './bounded.mjs';
 import { startGpuClockMonitor, summarizeGpuClocks, epochClockWindows, compareGpuClocks } from './gpu-clock-evidence.mjs';
 export { stopGpuClockMonitor as stopLadderMonitor } from './gpu-clock-evidence.mjs';
@@ -103,7 +104,7 @@ async function runInPage({manifest,workload,cell}){
   const {createDraftLadderDriver}=await import('/tests/support/draft-ladder-driver.mjs');
   const {timestampAcquisition}=await import('/tests/support/ladder-timestamps.mjs');
   const {scheduleAbsolute}=await import('/tests/support/timing.mjs');
-  const {runUnpaced}=await import('/tests/support/ladder-control.mjs');
+  const {runUnpaced,pacedCameraWindow}=await import('/tests/support/ladder-control.mjs');
   const selected=workload.scenes.find(s=>s.id===cell.scene),orbit=workload.workloads.orbit.cameraPoses[cell.scene];
   const canvas=document.createElement('canvas');canvas.style.cssText='position:fixed;inset:0;width:1280px;height:720px;z-index:10000';document.body.append(canvas);
   const marker=document.createElement('div');marker.textContent='Validating — provisional';marker.style.cssText='position:fixed;top:0;left:0;z-index:10001;background:#000;color:#ffe000;font:bold 20px sans-serif;padding:8px';marker.hidden=true;document.body.append(marker);
@@ -130,7 +131,7 @@ async function runInPage({manifest,workload,cell}){
       await drain();windows.orbit.end=performance.now();
     }else{
       async function cameras(name,poses){
-        phase=name;const base=performance.now();windows[name]={start:base,end:base+workload.workloads[name].durationMs};
+        phase=name;const base=performance.now();windows[name]=pacedCameraWindow(base,workload.workloads[name],poses);
         timings.push({phase:name,...await scheduleAbsolute({clock:()=>performance.now(),setTimer:setTimeout},poses.map(p=>base+p.requestTimeMs),(time,i)=>issue(sceneAt(poses[i].camera),i,time.issuedAt,i===poses.length-1))});
         phase=`settled-after-${name}`;await drain();
         if(committed.at(-1)?.outcome!=='completed')throw Error(`${name} final settled render did not complete`);
@@ -154,7 +155,7 @@ async function runInPage({manifest,workload,cell}){
   }
 }
 export async function runLadderCell({page,url,environment,report,pass,cell,sessionId,attemptId,
-  root=process.env.ATLAS_B15_REPORT_DIR??'/mnt/ml_storage/scratch/b15-r12-ladder',spawnMonitor,monitorWait=within}){
+  root=process.env.ATLAS_B15_REPORT_DIR??'/mnt/ml_storage/scratch/b15-r12-ladder',spawnMonitor,monitorWait=within,drainPage=drainExpecting}){
   const manifestBytes=await readFile(LADDER_MANIFEST),manifest=JSON.parse(manifestBytes);
   assert.ok(ladderCells(manifest).some(c=>JSON.stringify(c)===JSON.stringify(cell)),'registered cell');
   const workloadBytes=await readFile(manifest.workload);assert.equal(createHash('sha256').update(workloadBytes).digest('hex'),manifest.workloadSha256);
@@ -186,6 +187,7 @@ export async function runLadderCell({page,url,environment,report,pass,cell,sessi
     let pageCleanup={state:'unconfirmed',reason:'skipped after unconfirmed resource cleanup'};
     if(!cleanupState.unconfirmed)try{
       // Isolate the application document too, including failures before the driver starts.
+      await drainPage(page);
       await within(page.goto('about:blank'),LIMITS.cleanup,'ladder page isolation');
       pageCleanup={state:'confirmed'};
     }catch(error){cleanupState.unconfirmed=true;pageCleanup={state:'unconfirmed',error:String(error)};}

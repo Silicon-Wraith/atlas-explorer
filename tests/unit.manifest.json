@@ -66,6 +66,7 @@
     "tests/unit/draft-backend.test.js",
     "tests/unit/space-diagnostics.test.js",
     "tests/unit/ladder-evidence.test.js",
-    "tests/unit/gpu-clock-evidence.test.js"
+    "tests/unit/gpu-clock-evidence.test.js",
+    "tests/unit/space-mask-worker.test.js"
   ]
 }
