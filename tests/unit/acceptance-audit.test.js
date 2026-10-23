@@ -385,7 +385,7 @@ test('B15-R23-Q1 prior passing records remain scoped and Q3 cannot use the passi
   record.evidenceScope = 'wip-only';
   record.wipEvidencePolicySha256 = '278c851cd93615e6c3763878b9c26f294c3f50bbdaa050bd31131bf2dbfe77ce';
   assert.equal(auditAcceptance(x).accepted, true);
-  for (const commit of ['4ffda8835bee7c7a72949dffd7baf0aed352609c', 'a593d97dcc2160884adcf78e27a4bd800faf1bea'])
+  for (const commit of ['4ffda8835bee7c7a72949dffd7baf0aed352609c', sha(99)])
     assert.throws(() => parseFastOptions(['--retrospective-wip', '--expected-commit', commit]), /approved/);
 });
 
@@ -650,4 +650,61 @@ test('B15-P17-2 evidence reader hashes actual bytes and preserves missing and co
   assert.match(evidence[known.unitLog.file].text, /original failure/);
   assert.match(evidence[known.firstPassingDescendant.record.file].error, /missing/);
   assert.ok(evidence[known.containment.gate.file].error);
+});
+
+const round25WipCommits = [
+  'a593d97dcc2160884adcf78e27a4bd800faf1bea',
+  'cdd2a2514af18e7618b36c631b115144d3570cdf',
+  'b7b3664d6f437b4eadc4818157d1cc79e144a6b2',
+];
+const round23PolicyPin = '4c21f98da7f850710b488352e6b3fac5a98a23135e0b7281148e91b88525f404';
+
+test('B15-R25 the three final B15 WIP commits have pinned non-promotable eligibility', async () => {
+  const { parseFastOptions } = await import('../../scripts/record-fast-checks.mjs');
+  const { WIP_EVIDENCE_POLICY_SHA256 } = await import('../../scripts/gate/acceptance.mjs');
+  for (const commit of round25WipCommits) {
+    assert.doesNotThrow(() => parseFastOptions(['--retrospective-wip', '--expected-commit', commit]), commit);
+    const { x, record } = approvedWipFixture({ commit });
+    record.evidenceScope = 'wip-only'; record.wipEvidencePolicySha256 = WIP_EVIDENCE_POLICY_SHA256;
+    assert.equal(auditAcceptance(x).accepted, true);
+    assert.equal(row(auditAcceptance(x), commit).state, 'accounted-wip');
+    assert.equal(row(auditAcceptance(x), commit).promotable, false);
+    assert.equal(judgeFast(commit, record, x.facts[commit], hashes, null).state, 'invalid', 'WIP-only evidence never substitutes for promotion evidence');
+    record.wipEvidencePolicySha256 = round23PolicyPin;
+    rejects(x, commit, /WIP.*policy pin/, 'the old policy cannot enroll these SHAs');
+    assert.throws(() => parseFastOptions(['--retrospective-wip', '--expected-commit', commit.slice(0, 7)]), /approved/);
+  }
+  const policy = wipPolicy(), amendment = policy.amendments.find(a => a.id === 'B15-R25');
+  assert.deepEqual(amendment.addedImplementationWipCommits, round25WipCommits);
+  assert.deepEqual(amendment.decidedBy, ['Claude', 'Codex']);
+  assert.match(amendment.authority, /delegation.*user informed/i);
+  assert.match(amendment.source, /progress\.md/);
+  assert.equal(digestPolicy(policy), WIP_EVIDENCE_POLICY_SHA256);
+  const seed = JSON.parse(readFileSync(new URL('../../docs/reports/project1b/acceptance-manifest-v1.json', import.meta.url)));
+  assert.equal(seed.wipEvidencePolicySha256, WIP_EVIDENCE_POLICY_SHA256);
+});
+
+test('B15-R25 prior policy records retain exactly their old SHA scope and failures stay excluded', async () => {
+  const policy = wipPolicy(), prior = policy.priorImplementationRecordPolicies.find(p => p.sha256 === round23PolicyPin);
+  assert.ok(prior, 'preserve the existing round-23 record pin when extending the policy');
+  assert.equal(prior.commits.length, 43);
+  assert.deepEqual(prior.commits, policy.implementationWipCommits.filter(c => !round25WipCommits.includes(c)));
+  for (const commit of prior.commits) {
+    const { x, record } = approvedWipFixture({ commit });
+    record.evidenceScope = 'wip-only'; record.wipEvidencePolicySha256 = round23PolicyPin;
+    assert.equal(auditAcceptance(x).accepted, true, commit);
+    record.unit.state = 'failed'; rejects(x, commit, /checks or cleanup did not pass/);
+  }
+  const { parseFastOptions } = await import('../../scripts/record-fast-checks.mjs');
+  for (const commit of ['2f91343fe82e08a915b7de81bfd87c46baa0e35c', '4ffda8835bee7c7a72949dffd7baf0aed352609c', sha(99)])
+    assert.throws(() => parseFastOptions(['--retrospective-wip', '--expected-commit', commit]), /approved/);
+  for (const commit of round25WipCommits) for (const mutate of [
+    f => { f.record.build.state = 'failed'; },
+    f => { f.record.cleanBefore = false; },
+    f => { f.record.startedAt = 'invalid'; },
+    f => { delete f.x.records[candidate]; },
+  ]) {
+    const f = approvedWipFixture({ commit }); mutate(f);
+    assert.equal(auditAcceptance(f.x).accepted, false, 'enrollment preserves exact-commit checks and the full boundary gate');
+  }
 });

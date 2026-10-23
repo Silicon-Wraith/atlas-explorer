@@ -97,7 +97,10 @@
       "8d694468385a77e2a16b716a3ee5b12e415c5677",
       "3fb56c84523d0e3c85ac3bf6933b343889189bb5",
       "8a812be2669fbf461db5ec32f0e4f718606406b7",
-      "ac61cdd5ef3973d9d01a45d562d5c43976242a2c"
+      "ac61cdd5ef3973d9d01a45d562d5c43976242a2c",
+      "a593d97dcc2160884adcf78e27a4bd800faf1bea",
+      "cdd2a2514af18e7618b36c631b115144d3570cdf",
+      "b7b3664d6f437b4eadc4818157d1cc79e144a6b2"
     ],
     "implementationRule": "WIP only, never promotable. Require recordedRetrospectively: true, actual re-run timestamps, the exact clean unchanged commit and its own unit/build checks and manifest hashes. A failing re-run fails. No contemporaneous pass is required for the pinned implementation-WIP SHAs.",
     "docsOnlyWipCommits": [
@@ -274,6 +277,24 @@
           "4ffda8835bee7c7a72949dffd7baf0aed352609c"
         ],
         "rule": "Permit only 4ffda8835bee7c7a72949dffd7baf0aed352609c to use disposition exception, audit state accepted-by-exception and promotable:false under B15-R23-Q3. Preserve the exact failed record and unit log, original timestamps, 1088 tests with 1086 passed, one failed and one cancelled, and both named unsuccessful results. This is historical accounting only; it is neither passing fast evidence nor a passed gate or promotion permission. Remove this SHA from passing retrospective-WIP eligibility. Require independently pinned failure/log and passing unit/build evidence for immediate repaired child b4ffb02ef0d148f8e1f9b8020a79fc559ffb97f7, plus a fully gated descendant boundary supplied by the live manifest. Verify exact-commit Git facts, repair ancestry and containment at every gated or promoted boundary in the audited range. No gated or promoted tip or promotion candidate may be the failed SHA, and no acceptance boundary may contain it without the repair. A passing descendant alone is insufficient: missing, mismatched or contradictory evidence, or the absence of a qualifying boundary gate, leaves the exception unaccepted. This single-SHA exception is independently pinned; it neither changes P17-2 nor authorizes any other failure."
+      },
+      {
+        "id": "B15-R25",
+        "decidedBy": [
+          "Claude",
+          "Codex"
+        ],
+        "date": "2026-10-23",
+        "authority": "Peer decision under the user delegation of 2026-10-22; user informed.",
+        "source": "Claude round-25 implementation brief; codex-B15-report-r25.md; progress.md B15 round 25",
+        "cutover": "76de54b1df64b67a8764b05918671c218df93da0",
+        "implementationHead": "b7b3664d6f437b4eadc4818157d1cc79e144a6b2",
+        "addedImplementationWipCommits": [
+          "a593d97dcc2160884adcf78e27a4bd800faf1bea",
+          "cdd2a2514af18e7618b36c631b115144d3570cdf",
+          "b7b3664d6f437b4eadc4818157d1cc79e144a6b2"
+        ],
+        "rule": "Enroll only a593d97dcc2160884adcf78e27a4bd800faf1bea, cdd2a2514af18e7618b36c631b115144d3570cdf and b7b3664d6f437b4eadc4818157d1cc79e144a6b2 in retrospective implementation-WIP. Require typed passing unit/build evidence on each exact clean unchanged commit, its own manifests, actual retrospective timestamps and confirmed cleanup. Keep promotable:false and require a fully gated descendant boundary. Preserve earlier passing records only for the exact SHA scope of their approved pins; no failed-commit waiver or new docs-only enrollment. The next round-25 commit is the candidate tip and requires its own full gate; it is not self-enrolled by this amendment. Retain the agreed Q4 process: the staged promotion merge into feat/project1b1 receives its own full gate, is classified merge-gated, and is the final audit boundary for the five B15 docs-only-WIP rows."
       }
     ],
     "priorImplementationRecordPolicies": [
@@ -447,6 +468,55 @@
           "8d694468385a77e2a16b716a3ee5b12e415c5677"
         ],
         "rule": "Preserve already authorized passing WIP-only records for these exact SHAs. Excludes known failed 4ffda88 and 2f91343 and the three newly enrolled round-23 SHAs."
+      },
+      {
+        "sha256": "4c21f98da7f850710b488352e6b3fac5a98a23135e0b7281148e91b88525f404",
+        "commits": [
+          "d5fe295c9a6bb85dd46e969b34836e4715d2706b",
+          "423775fca2d0b7f13bcc32b033fd52490ce06ccb",
+          "7a0f8caafade040b2b637181c9ba77e511445428",
+          "89fa983e27cedbda82c410b294dda17be737d335",
+          "84e06a6ae1fc55ecd3ed5a2dd287d80be0e0c41c",
+          "474c847ba455d125e3043ddf242817bc1be8a54f",
+          "e555d89c5d1c5e58e0ef6bf8b0dbb29c7951b984",
+          "c71f7e81161edf28c39f1663d77abd280e8ad25e",
+          "d7cf20dd35b43e0f01a52ef09293dd1dacc03c0e",
+          "41f26e22fe431572fa665ae732b4159b21ead956",
+          "c044425ad659a2869e01390932eaf15d6317e58e",
+          "d1da1d66283901049e92380b2cea925b86ae3768",
+          "3ef8776d64a57c73d66efbdf3079444dcb76d7f7",
+          "ed1186ed39ddd0cb58a4646ffa45d833b5e1afef",
+          "fdea06ebc7ed6a622ba3ce8a4f6ab494949dcec1",
+          "0fb9fb1aabb84a3fa611482b35c54fe6cae616d7",
+          "d39543f2275f73e882a6091da0b35b7e5b54650b",
+          "7c1f38bd680132284e0409a427fcb071aed37531",
+          "8ffff47b5585398d4e833ee163a71a32eab1cf36",
+          "1f7acd208093f2190d352f8dc449e00b11e63453",
+          "515d2a9a12ba4aba250f89801f2c7559e508593b",
+          "9a58d67a766c7f8dbd0244be53aed9380f9e3944",
+          "ff4d1cb543a7811104d46242505bbbf8a2bd271f",
+          "77867c194429d03eee32bc478ce39cdbdc6d4bae",
+          "ca5343d364ad254cc63f303715784bac06a8f221",
+          "02eb149a1498f4814deb23ce1604d56ee6efa14a",
+          "440e09a4c9eb161563ae493e4f159706461a9da5",
+          "50b882dde81b6a5d5c0cb1dc7503950ed905a73d",
+          "694e8f97abc86057ea1ba6f24502cbfd552109c9",
+          "a049262b44b6fa91b3229b98bddf1e9eb039fdef",
+          "7d89b390a0b29903ae965b8856a58613be2c6067",
+          "eec8048a31857ab9dca4934d7e95aad58eb69bf5",
+          "8e32acdeb8719ad69e9d2b987588537f829e34a2",
+          "52b8e6e248e429bc1ef9f3aa6629c723900391c0",
+          "00ebebe175b038c47d0e8cfae7f0d649b42baacb",
+          "f350f13a65b7b2fae463a96aad1c10867337c41a",
+          "2b90fb8b28aca4175dc0533d4bc77f7c13a4c709",
+          "b4ffb02ef0d148f8e1f9b8020a79fc559ffb97f7",
+          "51bed6eafd81a4149d836cf86bf4d0783437a164",
+          "8d694468385a77e2a16b716a3ee5b12e415c5677",
+          "3fb56c84523d0e3c85ac3bf6933b343889189bb5",
+          "8a812be2669fbf461db5ec32f0e4f718606406b7",
+          "ac61cdd5ef3973d9d01a45d562d5c43976242a2c"
+        ],
+        "rule": "Preserve already authorized passing WIP-only records for these exact 43 SHAs. Excludes the three newly enrolled round-25 SHAs and known failed 2f91343 and 4ffda88; this compatibility pin cannot enroll later commits."
       }
     ],
     "allowedPaths": [

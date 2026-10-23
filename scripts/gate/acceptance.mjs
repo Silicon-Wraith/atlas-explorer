@@ -8,8 +8,8 @@ const sha = value => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value);
 // 2026-10-22, round 6. Pin the exact 23 full SHAs, refined rule and provenance independently
 // of the live manifest and policies in audited commits. Neither can enroll more.
 const HISTORICAL_DOCS_POLICY_SHA256 = 'f10b7531ec9c4bc3d2ef62ea89c7f97b8dda85c3ec218db2a7d15c4aabb0eaaf';
-// Pin round-9 approvals and converged round-16/17/23 amendments independently of audit inputs.
-export const WIP_EVIDENCE_POLICY_SHA256 = '4c21f98da7f850710b488352e6b3fac5a98a23135e0b7281148e91b88525f404';
+// Pin round-9 approvals and converged round-16/17/23/25 amendments independently of audit inputs.
+export const WIP_EVIDENCE_POLICY_SHA256 = '392479c11614dc4ebb6677891820ca6edaeead42ff03914be39bed02736a0cca';
 // P17-2: exact failed SHA, evidence, repair containment and delegated peer provenance.
 export const HISTORICAL_WIP_EXCEPTION_SHA256 = '230935368c85f47b41c380023e7b6a79edf580fc7139d7c16421082bfe862556';
 const HISTORICAL_WIP_COMMIT = '2f91343fe82e08a915b7de81bfd87c46baa0e35c';
