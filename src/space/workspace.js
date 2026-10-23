@@ -31,6 +31,7 @@ import { KERNEL_VERSION } from './render/webgpu/kernels.js';
 import { TRACING_VERSION } from './render/webgpu/passes.js';
 import { webgpuUnavailable } from './render/webgpu/availability.js';
 import { deepFreeze } from '../shared/scene.js';
+import { createSpaceDiagnostics } from './diagnostics-indicator.js';
 
 export const SPACE_VIEW_ID = 'space-main';
 export const SPACE_PIXEL_BUDGET = 2_300_000; // the viewport's internal pixels at settled quality (about 88 B/px)
@@ -65,6 +66,8 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   const getGamepads = Object.hasOwn(env, 'getGamepads') ? env.getGamepads : globalThis.navigator?.getGamepads?.bind(globalThis.navigator);
   const makeFlight = env.createFlight ?? defaultCreateFlight, makeGamepad = env.createGamepadInput ?? defaultCreateGamepadInput;
   const canvas = $('#space-canvas'), root = $('#space-workspace'), panel = $('#space-panel');
+  const diagnostics = createSpaceDiagnostics({ element: $('#space-diagnostics'), value: $('#space-diagnostics-value'),
+    rung: env.draftExecution, setTimer: env.setTimer, clearTimer: env.clearTimer });
 
   // ---- scene, histories, gestures and input -----------------------------------------------------
   const history = createHistory({ initialScene: freshSpaceScene('mandelbulb'), codec: sceneCodec, cameraEqual: equalCameras });
@@ -86,7 +89,6 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
   let viewRevision = 0, geometryRevision = 0, appearanceRevision = 0;
   let dirty = true, wantProfile = 'settled', lastProfile = null, lastRequest = null, lastSize = null, currentJob = null, submitted = 0;
   let lastPublication = null, lastReport = null, pendingStatus = false, allocationFailure = null, budgetNotice = null;
-  let diagnosticStatus = null;
   let cost = { scale: 1, sampleCap: null };
   let cpuCamera = null, effectiveCamera = null;
   // B14-r2 F2: an activation commits only on a presentation of the current generation made while that
@@ -220,7 +222,12 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     });
     renderer.onPresent(event => { onPresentation(event); for (const listener of presentListeners) { try { listener(event); } catch { /* isolate observers */ } } });
     renderer.onReport(report => { lastReport = report; for (const listener of reportListeners) { try { listener(report); } catch { /* isolate observers */ } } });
-    renderer.onStatus(status => { if (typeof status.pending === 'boolean') pendingStatus = status.pending; if (status.diagnosticsState) diagnosticStatus = status; if (status.phase === 'interrupted') diagnosticStatus = { diagnosticsState: 'interrupted' }; updateIndicators(); });
+    renderer.onStatus(status => {
+      if (typeof status.pending === 'boolean') pendingStatus = status.pending;
+      if (status.diagnosticsState) diagnostics.update(status);
+      if (status.phase === 'interrupted') diagnostics.update({ diagnosticsState: 'interrupted' });
+      updateIndicators();
+    });
     recovery = createRecovery({ backend, renderer, scheduler, clock: now, onNotice: notice => onNotice(notice) });
   }
   function onPresentation(event) {
@@ -524,9 +531,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     box.append(note, button); box.hidden = false;
   }
   function updateIndicators() {
-    const state = diagnosticStatus?.diagnosticsState;
-    text('#space-diagnostics', state === 'pending' ? (diagnosticStatus.provisional ? 'Validating — provisional' : 'Diagnostics pending') : state === 'failed' ? 'Draft validation failed' : state === 'interrupted' ? 'Draft interrupted' : '');
-    setHidden('#space-diagnostics', !active || !state || state === 'confirmed');
+    diagnostics.setActive(active);
     const pending = Boolean(currentJob) || dirty || pendingStatus;
     text('#space-pending', active && pending ? 'refining…' : '');
     setHidden('#space-pending', !(active && pending));
@@ -754,6 +759,7 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
       deactivate(); destroyed = true;
       gamepad.destroy();
       recovery?.destroy(); renderer?.destroy(); backend?.destroy();
+      diagnostics.destroy();
       publishListeners.clear(); publicationUpdateListeners.clear(); presentListeners.clear(); requestListeners.clear(); reportListeners.clear();
     },
   });

@@ -1,12 +1,50 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { draftSummaryBytes, reduceDraftPacket, validateDraftSummary } from '../../src/space/render/draft-summary.js';
+import { DRAFT_SUMMARY_MAGIC, draftSummaryBytes, reduceDraftPacket, validateDraftSummary } from '../../src/space/render/draft-summary.js';
 import { createOutcomeMasks } from '../../src/space/render/outcome-masks.js';
 import { packStatus } from '../../src/space/render/status.js';
 import { packRecoveryWord } from '../../src/space/render/webgpu/passes.js';
 
 import { packetFixture } from '../support/draft-summary-fixtures.mjs';
 const recovered = (outcome, stop = 'none') => packRecoveryWord({ attempted: true, outcome, stop, midpoints: 5, encounters: 3 });
+
+test('r4-F1 nonrecovering summaries occupy exactly 64 bytes', () => {
+  assert.equal(draftSummaryBytes(false), 64);
+  assert.equal(draftSummaryBytes(true), 96);
+});
+
+// Build the ABI bytes independently: no packet reducer can set flags that mask a
+// missing validator rule. The control has one pixel in each terminal category.
+function summaryBytes(recovery) {
+  const bytes = new Uint8Array(recovery ? 96 : 64), data = new DataView(bytes.buffer);
+  const values = [DRAFT_SUMMARY_MAGIC, 101, 0, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    ...(recovery ? [1, 1, 1, 1, 1, 0, 0, 0, 4, 4, 4] : [0, 0, 0])];
+  values.forEach((value, i) => data.setUint32(i * 4, value, true));
+  return bytes;
+}
+for (const [rule, recovery, edits, error] of [
+  ['V3 magic', false, [[0, 0]], /version/],
+  ['V3 producer', false, [[1, 102]], /producer/],
+  ['V3 invalid flags', false, [[2, 16]], /invalid-data flags/],
+  ['V4 coverage', false, [[3, 7]], /coverage/],
+  ['V4 terminal sum', false, [[5, 2]], /terminal counts/],
+  ['V5 normals bounded by hits', false, [[12, 2]], /terminal counts/],
+  ...[13, 14, 15].map(slot => [`reserved word ${slot}`, false, [[slot, 1]], /reserved words/]),
+  ['V6 attempts sum', true, [[23, 5]], /recovery aggregates/],
+  ['V7 stops sum', true, [[17, 0]], /recovery aggregates/],
+  ['V8 recovered hits bounded by hits', true, [[4, 0], [5, 2], [12, 0]], /recovery aggregates/],
+  ['V8 recovered failures bounded by failures', true, [[6, 0], [5, 2]], /recovery aggregates/],
+  ['V8 recovered unavailable bounded by unavailable', true, [[8, 0], [5, 2]], /recovery aggregates/],
+  ['V8 recovered stops bounded by point budget', true, [[7, 0], [5, 2]], /recovery aggregates/],
+  ['V9 midpoint bound', true, [[21, 33]], /recovery aggregates/],
+  ['V9 encounter bound', true, [[22, 61]], /recovery aggregates/],
+]) test(`r4-F1 summary bytes reject ${rule}`, () => {
+  const bytes = summaryBytes(recovery), options = { pixels: 8, recovery, producerToken: 101 };
+  assert.doesNotThrow(() => validateDraftSummary(bytes, options), 'valid control');
+  const data = new DataView(bytes.buffer);
+  for (const [slot, value] of edits) data.setUint32(slot * 4, value, true);
+  assert.throws(() => validateDraftSummary(bytes, options), error);
+});
 
 function fullDecode(packet, { width, height, recovery, producerToken = 0 }) {
   const masks = createOutcomeMasks({ width, height }, { recovery, producerToken }), id = { accumulationKey: 'same-packet', sample: 0 };

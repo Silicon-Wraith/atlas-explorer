@@ -72,6 +72,40 @@ async function settled(promise) {
 const jobState = (scheduler, jobId) => scheduler.snapshot().jobs.find(job => job.jobId === jobId);
 const viewState = (scheduler, viewId = 'main') => scheduler.snapshot().views.find(view => view.viewId === viewId);
 
+test('r4-F3 Update with two owners waits for the other owner after the selected lease drains', async () => {
+  const { scheduler } = setup();
+  const selected = enqueue(scheduler, 'selected', { navigationStream: 7, count: 2, serial: true });
+  const [a] = scheduler.admit();
+  const other = enqueue(scheduler, 'other-owner', { navigationStream: 7, count: 2, serial: true });
+  const [b] = scheduler.admit();
+  scheduler.update('main');
+  finish(scheduler, a);
+  assert.equal(scheduler.snapshot().outstanding, 1, 'one lease is free but the other owner still drains');
+  assert.equal(scheduler.admit().length, 0, 'Update cannot admit the selected continuation yet');
+  await pending(selected.job.done); await pending(other.job.done);
+  finish(scheduler, b);
+  assert.equal((await other.job.done).outcome, 'cancelled');
+  const [next] = scheduler.admit(); assert.equal(next.admission.jobId, 'selected');
+  finish(scheduler, next); assert.equal((await selected.job.done).outcome, 'completed');
+});
+
+test('r4-F4 Update preparation waits until both cancelled owners have drained', async () => {
+  const { scheduler } = setup();
+  enqueue(scheduler, 'owner-a', { navigationStream: 7 }); const [a] = scheduler.admit();
+  enqueue(scheduler, 'owner-b', { navigationStream: 7 }); const [b] = scheduler.admit();
+  const selected = preparing(scheduler, 'selected', { navigationStream: 7 });
+  scheduler.update('main');
+  await pending(selected.job.preparation);
+  finish(scheduler, a);
+  await pending(selected.job.preparation);
+  assert.deepEqual(scheduler.admit(), []);
+  finish(scheduler, b);
+  assert.equal(await settled(selected.job.preparation), true);
+  selected.prepare(); scheduler.ready('selected', { epoch: 1 });
+  const [entry] = scheduler.admit(); assert.equal(entry.admission.jobId, 'selected');
+  finish(scheduler, entry); assert.equal((await selected.job.done).outcome, 'completed');
+});
+
 test('B15-REC-G a navigation stream admits two drafts and coalesces only its third pending slot', async () => {
   const { scheduler } = setup();
   const first = enqueue(scheduler, 'first', { count: 2, serial: true, navigationStream: 7 });

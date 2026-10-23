@@ -63,6 +63,7 @@
     "tests/unit/acceptance-audit.test.js",
     "tests/unit/performance-records.test.js",
     "tests/unit/draft-ladder.test.js",
-    "tests/unit/draft-backend.test.js"
+    "tests/unit/draft-backend.test.js",
+    "tests/unit/space-diagnostics.test.js"
   ]
 }

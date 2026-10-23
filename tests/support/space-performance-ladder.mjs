@@ -30,7 +30,7 @@ export function compareLadder(results,manifest){
   for(const [rung,previous] of Object.entries(manifest.comparison.previous)){
     const r=pair(rung),p=pair(previous);if(!r||!p||!Number.isFinite(r.L)||!Number.isFinite(r.T)){comparisons.push({rung,state:'incomplete'});continue;}
     const latency=(r.L-p.L)/L0,throughput=(p.T-r.T)/T0,limits=manifest.comparison.limits[rung];
-    comparisons.push({rung,previous,L:r.L,T:r.T,latency,throughput,cumulativeLatency:(r.L-L0)/L0,cumulativeThroughput:(T0-r.T)/T0,limits,state:latency<=limits.latency&&throughput<=limits.throughput?'within-budget':'peer-disposition-required'});
+    comparisons.push({rung,previous,...(rung.startsWith('L6')?{mechanism:'lifecycle'}:{}),L:r.L,T:r.T,latency,throughput,cumulativeLatency:(r.L-L0)/L0,cumulativeThroughput:(T0-r.T)/T0,limits,state:latency<=limits.latency&&throughput<=limits.throughput?'within-budget':'peer-disposition-required'});
   }
   return {state:comparisons.some(c=>c.state==='incomplete')?'incomplete':'measured',L0,T0,comparisons};
 }
