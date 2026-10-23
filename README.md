@@ -38,7 +38,7 @@ Click the engine status at the bottom of ATLAS, or open **Help → Graphics deta
 
 A fresh page opens Plane. Select **Space** to prepare its WebGPU pipelines and open the bulb overview. Space preserves its scene and camera history when switching workspaces. Use the family and parameter controls, orbit, dolly, double-click focus, overview and flight; save/open a scene JSON file to carry the investigation between sessions. A pending draft keeps its own camera/quality identity and is visibly marked pending until current work publishes. Settled images and picking require current geometry.
 
-If WebGPU or an adapter is unavailable, Plane stays usable and the message explains Chrome graphics acceleration, HTTPS/localhost and the separate-profile `npm run dev:gpu` route. The release's end-to-end route is flagged Chrome plus actionable unavailability in an ordinary browser (user decision, 2026-10-22). This does not claim flag-free support on every driver. Quaternion visual captures designated diagnostic by plan rev 5.2 are not acceptance evidence. B15 performance acceptance and its recorded investigation remain pending until the executor's evidence passes.
+If WebGPU or an adapter is unavailable, Plane stays usable and the message explains Chrome graphics acceleration, HTTPS/localhost and the separate-profile `npm run dev:gpu` route. The release's end-to-end route is flagged Chrome plus actionable unavailability in an ordinary browser (user decision, 2026-10-22). This does not claim flag-free support on every driver. Quaternion visual captures designated diagnostic by plan rev 5.2 are not acceptance evidence. B15's three P3 scenes passed at promotion `31233b5438b8471654bc858c6cf7aca430d576fc`; the [recorded investigation](docs/reports/project1b/1b1-investigation.md) completed all 16 operations. [HANDOFF.md](HANDOFF.md) records the evidence scope and remaining handoff work.
 
 ## Explore Plane
 
@@ -97,6 +97,21 @@ ATLAS_URL=http://127.0.0.1:5195 ATLAS_GPU_HANDOFF="<who, when>" ATLAS_COLD_CACHE
 flock /mnt/ml_storage/scratch/atlas-gpu.lock node tests/space-performance.mjs --scene bulb
 node tests/audit-acceptance.mjs # Offline real-Git audit integration; no browser/GPU
 ```
+
+Space uses **L6b** by default: navigation drafts use GPU gating within their submission. L6a remains a diagnostic comparison; asynchronous L6d is available but off. Settled/refinement masks belong to a Worker, which uses unsliced typed-array decoding and incremental counts; each sample is validated before presentation, and its readback lease remains held until acknowledgement.
+
+P3 acceptance uses `atlas.p3-timing-budget-v1` (evidence schema 5): among the complete 2,315 inputs, at most three may be strictly more than 4 ms late, and none may exceed 8 ms. Every raw scheduled/observed timestamp remains recorded. A fourth anomaly or one above 8 ms makes timing inconclusive; established application failures still take precedence. This allowance can change a threshold verdict. Older record versions or different timing policies cannot be pooled with these trials; the absolute timer and its strict 4 ms anomaly flag are unchanged.
+
+These diagnostic commands complement the full gate:
+
+```sh
+# Headed GPU smoke; output and isolated cold caches go under scratch.
+ATLAS_GPU_HANDOFF="<who, when>" flock /mnt/ml_storage/scratch/atlas-gpu.lock node scripts/perf-smoke.mjs --scene all --port 5247
+# CPU-only 4K mask benchmark; no browser, GPU or timing assertions.
+node scripts/maskbench.mjs
+```
+
+`perf-smoke.mjs` measures completed and published draft cadence, latency, publication confirmation and issuance lateness. It is diagnostic, uses a strict zero-anomalies-above-4-ms check, and cannot satisfy P3 acceptance. Its optional `--stalls` probe perturbs issuance and disables pass classification. `maskbench.mjs` reports cold and warm decode/close timings for the Worker algorithm in one Node thread; its optional arguments are `[source-root] [worker|sliced|legacy]`.
 
 Promotions to `main` use a reviewed PR only. Feature, WIP, promotion and integration evidence follow the versioned 1b.1 acceptance manifest; fast-check records cannot substitute for full gates. The 1b.1 audit range is pinned `main..implementationHead`, excluding histories already shipped on main.
 
