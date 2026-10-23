@@ -221,7 +221,23 @@
         "source": "claude-B15-r16-review.md C7; executor2 exact-commit records pinned in knownFailures; codex-B15-report-r16d.md; progress.md R16-C6/C7",
         "supersedes": "B15-R16-F7 statement that disposition of 2f91343 remains with the user.",
         "rule": "Peer decision: classify 2f91343 as historical WIP with a known failure, name both failed tests and the immediate passing descendant d7cf20d, and record containment before gated candidate a905370 and tree-identical promotion baa5ab5. Retain an unaccepted audit row and non-promotability. No exception hides the failure, no user pardon is requested, and no passing-WIP permission includes this SHA.",
-        "peerPosition": "Claude proposes accounting the historical failing WIP after proving repair containment. Codex agrees on peer ownership and visible provenance, but counters accepting this row: the existing exact-commit failure rule remains in force pending peer convergence."
+        "peerPosition": "Claude proposes accounting the historical failing WIP after proving repair containment. Codex agrees on peer ownership and visible provenance, but counters accepting this row: the existing exact-commit failure rule remains in force pending peer convergence.",
+        "supersededBy": "B15-P17-2"
+      },
+      {
+        "id": "B15-P17-2",
+        "disposition": "exception",
+        "state": "accepted-by-exception",
+        "promotable": false,
+        "decidedBy": [
+          "Claude",
+          "Codex"
+        ],
+        "date": "2026-10-23",
+        "authority": "Peer decision under the user delegation of 2026-10-22; user informed; historical accounting only.",
+        "source": "codex-B15-r17-reply.md P17-2; Claude round-18 agreement and implementation brief; progress.md B15 round 18",
+        "supersedes": "R16-C7 no-exception counterposition only; failed evidence remains visible.",
+        "rule": "**P17-2 — historical WIP exception, Claude/Codex, 2026-10-23, under the user’s delegation of product direction:** Permit commit `2f91343fe82e08a915b7de81bfd87c46baa0e35c` to be recorded with disposition `exception`, audit state `accepted-by-exception`, and `promotable:false`. Preserve its failed unit outcome, both named failing tests, original run timestamps, exact-commit evidence and evidence hashes. This exception accepts its historical accounting only; it does not establish passing fast checks, a passed gate or promotion eligibility.\n\nApplication requires verification of the pinned failing record and unit log; the passing unit/build record for immediate repaired child `d7cf20dd35b43e0f01a52ef09293dd1dacc03c0e`; the qualifying full gate for descendant candidate `a90537061ae2585f70bc4a6ac8934c44348a47e3`; and the identical-tree promotion `baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4`. Verify the repair ancestry and containment at the relevant gated and promoted boundaries. Missing, mismatched or contradictory evidence leaves the row unaccepted.\n\nThe exception is independently pinned, explicitly scoped and limited to this full SHA. It cannot justify another exception, satisfy a feature or integration gate, or enroll the commit in passing retrospective-WIP permissions. Other failures remain subject to the existing rules."
       }
     ],
     "priorImplementationRecordPolicies": [
@@ -303,6 +319,52 @@
           "8d694468385a77e2a16b716a3ee5b12e415c5677"
         ],
         "rule": "Round-16 WIP-only records remain eligible for their original 41 approved implementation SHAs only. All exact-commit checks and failure rejection still apply."
+      },
+      {
+        "sha256": "8eccd0d73b414f10b80a7d27680b834b37cad36b5f3db9b84f63bb3082b3369e",
+        "commits": [
+          "d5fe295c9a6bb85dd46e969b34836e4715d2706b",
+          "423775fca2d0b7f13bcc32b033fd52490ce06ccb",
+          "7a0f8caafade040b2b637181c9ba77e511445428",
+          "89fa983e27cedbda82c410b294dda17be737d335",
+          "84e06a6ae1fc55ecd3ed5a2dd287d80be0e0c41c",
+          "474c847ba455d125e3043ddf242817bc1be8a54f",
+          "e555d89c5d1c5e58e0ef6bf8b0dbb29c7951b984",
+          "c71f7e81161edf28c39f1663d77abd280e8ad25e",
+          "d7cf20dd35b43e0f01a52ef09293dd1dacc03c0e",
+          "41f26e22fe431572fa665ae732b4159b21ead956",
+          "c044425ad659a2869e01390932eaf15d6317e58e",
+          "d1da1d66283901049e92380b2cea925b86ae3768",
+          "3ef8776d64a57c73d66efbdf3079444dcb76d7f7",
+          "ed1186ed39ddd0cb58a4646ffa45d833b5e1afef",
+          "fdea06ebc7ed6a622ba3ce8a4f6ab494949dcec1",
+          "0fb9fb1aabb84a3fa611482b35c54fe6cae616d7",
+          "d39543f2275f73e882a6091da0b35b7e5b54650b",
+          "7c1f38bd680132284e0409a427fcb071aed37531",
+          "8ffff47b5585398d4e833ee163a71a32eab1cf36",
+          "1f7acd208093f2190d352f8dc449e00b11e63453",
+          "515d2a9a12ba4aba250f89801f2c7559e508593b",
+          "9a58d67a766c7f8dbd0244be53aed9380f9e3944",
+          "ff4d1cb543a7811104d46242505bbbf8a2bd271f",
+          "77867c194429d03eee32bc478ce39cdbdc6d4bae",
+          "ca5343d364ad254cc63f303715784bac06a8f221",
+          "02eb149a1498f4814deb23ce1604d56ee6efa14a",
+          "440e09a4c9eb161563ae493e4f159706461a9da5",
+          "50b882dde81b6a5d5c0cb1dc7503950ed905a73d",
+          "694e8f97abc86057ea1ba6f24502cbfd552109c9",
+          "a049262b44b6fa91b3229b98bddf1e9eb039fdef",
+          "7d89b390a0b29903ae965b8856a58613be2c6067",
+          "eec8048a31857ab9dca4934d7e95aad58eb69bf5",
+          "8e32acdeb8719ad69e9d2b987588537f829e34a2",
+          "52b8e6e248e429bc1ef9f3aa6629c723900391c0",
+          "00ebebe175b038c47d0e8cfae7f0d649b42baacb",
+          "f350f13a65b7b2fae463a96aad1c10867337c41a",
+          "2b90fb8b28aca4175dc0533d4bc77f7c13a4c709",
+          "4ffda8835bee7c7a72949dffd7baf0aed352609c",
+          "b4ffb02ef0d148f8e1f9b8020a79fc559ffb97f7",
+          "51bed6eafd81a4149d836cf86bf4d0783437a164",
+          "8d694468385a77e2a16b716a3ee5b12e415c5677"
+        ]
       }
     ],
     "allowedPaths": [
@@ -354,7 +416,20 @@
             "sha256": "61e5844fd8d9e27e613e2f3258cb407729b08731434b3fc75b7934233bbc77dd"
           }
         },
-        "rule": "Keep this exact commit unaccepted and non-promotable with its failure visible. A repaired descendant or replacement evidence cannot turn the historical failure into a pass; no exception or retrospective-WIP enrollment is granted."
+        "rule": "**P17-2 — historical WIP exception, Claude/Codex, 2026-10-23, under the user’s delegation of product direction:** Permit commit `2f91343fe82e08a915b7de81bfd87c46baa0e35c` to be recorded with disposition `exception`, audit state `accepted-by-exception`, and `promotable:false`. Preserve its failed unit outcome, both named failing tests, original run timestamps, exact-commit evidence and evidence hashes. This exception accepts its historical accounting only; it does not establish passing fast checks, a passed gate or promotion eligibility.\n\nApplication requires verification of the pinned failing record and unit log; the passing unit/build record for immediate repaired child `d7cf20dd35b43e0f01a52ef09293dd1dacc03c0e`; the qualifying full gate for descendant candidate `a90537061ae2585f70bc4a6ac8934c44348a47e3`; and the identical-tree promotion `baa5ab524fcfa7abd2e3c895a91b4f703bc8f1f4`. Verify the repair ancestry and containment at the relevant gated and promoted boundaries. Missing, mismatched or contradictory evidence leaves the row unaccepted.\n\nThe exception is independently pinned, explicitly scoped and limited to this full SHA. It cannot justify another exception, satisfy a feature or integration gate, or enroll the commit in passing retrospective-WIP permissions. Other failures remain subject to the existing rules.",
+        "exception": {
+          "id": "B15-P17-2",
+          "disposition": "exception",
+          "state": "accepted-by-exception",
+          "promotable": false,
+          "decidedBy": [
+            "Claude",
+            "Codex"
+          ],
+          "date": "2026-10-23",
+          "authority": "Peer decision under the user delegation of 2026-10-22; user informed; historical accounting only.",
+          "source": "codex-B15-r17-reply.md P17-2; Claude round-18 agreement and implementation brief; progress.md B15 round 18"
+        }
       }
     ]
   }

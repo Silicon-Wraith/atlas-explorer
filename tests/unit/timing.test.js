@@ -1,7 +1,40 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { runInNewContext } from 'node:vm';
 import { scheduleAbsolute } from '../support/timing.mjs';
-import { classifyAttempt, classifyTrials } from '../space-performance.mjs';
+import { classifyAttempt, classifyTrials, createPerformanceAttempt, startAttempt } from '../space-performance.mjs';
+
+test('B15-P17-1 every P3 attempt records frozen scheduling and enabled instrumentation before work', () => {
+  const attempt = createPerformanceAttempt(1);
+  assert.deepEqual(attempt.measurement, {
+    schedulingMode: 'absolute-ceil-timeout-v1', leadTimeMs: 0,
+    instrumentation: { longTaskObserver: true, gpuClockMonitor: true, messageChannelStallProbe: false, busySpin: false },
+  });
+  assert.equal(attempt.complete, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(attempt)).measurement, attempt.measurement, 'partial attempts retain the measurement contract');
+  const context = { performance: { timeOrigin: 123 }, measurement: attempt.measurement,
+    atlas: { space: Object.fromEntries(['onRequest', 'onPublish', 'onPublicationUpdate', 'onPresent', 'onReport'].map(name => [name, () => () => {}])) } };
+  runInNewContext(`(${startAttempt.toString()})(measurement)`, context);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.__p3.measurement)), attempt.measurement, 'the actual serialized page collector retains the same configuration');
+});
+
+test('B15-P17-1 diagnostic scheduling and probes cannot pass or pool with acceptance trials', () => {
+  const passing = { ...createPerformanceAttempt(1), complete: true, coverage: true, targets: [{ passed: true }],
+    clockEvidence: { protocol: 'atlas.gpu-clocks-v1', state: 'measured', medianMHz: 210, band: 'lt270', sampleCount: 11, uuid: 'GPU-test' } };
+  for (const change of [
+    a => a.measurement.schedulingMode = 'early-wake-spin',
+    a => a.measurement.leadTimeMs = 2,
+    a => a.measurement.instrumentation.messageChannelStallProbe = true,
+    a => a.measurement.instrumentation.busySpin = true,
+    a => delete a.measurement,
+  ]) {
+    const diagnostic = structuredClone(passing); change(diagnostic);
+    assert.equal(classifyAttempt(diagnostic).state, 'inconclusive');
+    assert.equal(classifyTrials([passing, passing, passing, diagnostic]).state, 'inconclusive');
+    diagnostic.applicationFailure = 'invalid diagnostic confirmation';
+    assert.equal(classifyAttempt(diagnostic).state, 'failed', 'application failure precedence is unchanged');
+  }
+});
 
 test('waits are rounded up and scheduled against absolute targets', async () => {
   let now = 0; const waits = [], called = [];
@@ -22,7 +55,7 @@ test('a late issuance is recorded as a timing anomaly and an established applica
 });
 
 test('three passing trials cannot rescue an earlier application failure accompanied by late issuance', () => {
-  const passing = { complete: true, coverage: true, targets: [{ passed: true }], timing: { invalidated: false },
+  const passing = { ...createPerformanceAttempt(1), complete: true, coverage: true, targets: [{ passed: true }], timing: { invalidated: false },
     clockEvidence:{protocol:'atlas.gpu-clocks-v1',state:'measured',medianMHz:210,band:'lt270',sampleCount:11,uuid:'GPU-test'} };
   const failure = { ...passing, applicationFailure: 'settled target exceeded', timing: { invalidated: true } };
   assert.equal(classifyTrials([failure, passing, passing, passing]).state, 'failed');

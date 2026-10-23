@@ -471,3 +471,89 @@ test('R16-C7 known failure retains named tests and repair provenance and cannot 
   result = row(auditAcceptance(x), commit);
   assert.equal(result.state, 'unaccepted'); assert.equal(result.knownFailure.tests.length, 2);
 });
+
+function historicalExceptionFixture() {
+  const f = approvedWipFixture({ commit: '2f91343fe82e08a915b7de81bfd87c46baa0e35c' });
+  const { x, commit, entry, record } = f, known = x.wipEvidencePolicy.knownFailures[0];
+  const child = known.firstPassingDescendant.commit, boundary = known.containment.featureBoundary, promoted = known.containment.promotion;
+  const rename = value => JSON.parse(JSON.stringify(value).replaceAll(candidate, boundary).replaceAll(promotion, promoted));
+  x.facts = rename(x.facts); x.records = rename(x.records); x.commits = rename(x.commits); x.manifest = rename(x.manifest);
+  x.isAncestor = (a, b, seen = new Set()) => a === b || !seen.has(b) && (seen.add(b), (x.facts[b]?.parents ?? []).some(p => x.isAncestor(a, p, seen)));
+  x.commits.splice(x.commits.indexOf(commit) + 1, 0, child);
+  x.facts[child] = { tree: sha(91), parents: [commit], paths: ['tests/unit/repair.test.js'], committedAt: 102 };
+  x.facts[boundary].parents = [child, cutover];
+  x.facts[boundary].tree = x.facts[promoted].tree = known.containment.tree;
+  const promote = x.manifest.commits.find(e => e.commit === promoted);
+  promote.tree = promote.candidateTree = known.containment.tree;
+  x.records[promote.fast].tree = known.containment.tree;
+  const repaired = { ...structuredClone(record), commit: child, tree: x.facts[child].tree };
+  x.records['repair-fast'] = repaired;
+  x.manifest.commits.splice(2, 0, { commit: child, disposition: 'wip', boundary, fast: 'repair-fast' });
+  const failed = x.records[entry.fast]; failed.unit = { state: 'failed', reason: 'failures: 2, cancelled: 0, exit: 1' };
+  const exception = x.manifest.commits.find(e => e.commit === commit);
+  Object.assign(exception, { disposition: 'exception', exceptionId: 'B15-P17-2', promotable: false });
+  x.manifest.historicalWipExceptionSha256 = digestPolicy(known);
+  x.historicalFailureEvidence = {
+    [known.record.file]: { sha256: known.record.sha256, json: structuredClone(failed) },
+    [known.unitLog.file]: { sha256: known.unitLog.sha256, text: `${known.tests.map((name, i) => `not ok ${i + 1} - ${name}`).join('\n')}\n# tests 758\n# pass 756\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n` },
+    [known.firstPassingDescendant.record.file]: { sha256: known.firstPassingDescendant.record.sha256, json: structuredClone(repaired) },
+    [known.containment.gate.file]: { sha256: known.containment.gate.sha256, json: structuredClone(x.records[boundary]) },
+  };
+  return { x, commit, known, exception, child, boundary, promoted };
+}
+
+test('B15-P17-2 pinned historical failure is accepted only by exception and never promotable', () => {
+  const { x, commit } = historicalExceptionFixture(), result = auditAcceptance(x), failed = row(result, commit);
+  assert.equal(failed.state, 'accepted-by-exception');
+  assert.equal(result.accepted, true);
+  assert.equal(failed.disposition, 'exception'); assert.equal(failed.promotable, false);
+  assert.equal(failed.knownFailure.unit.state, 'failed'); assert.equal(failed.knownFailure.tests.length, 2);
+  assert.equal(failed.failureEvidence.record.unit.state, 'failed');
+  assert.equal(failed.failureEvidence.record.startedAt, x.records[x.manifest.commits.find(e => e.commit === commit).fast].startedAt);
+});
+
+test('B15-P17-2 exception fails closed on missing pins evidence repair or containment', () => {
+  const mutations = [
+    f => delete f.x.manifest.historicalWipExceptionSha256,
+    f => f.x.manifest.historicalWipExceptionSha256 = '0'.repeat(64),
+    f => f.x.manifest.wipEvidencePolicySha256 = '0'.repeat(64),
+    f => f.known.rule += ' self-enrollment',
+    f => f.exception.exceptionId = 'another-exception',
+    f => f.exception.promotable = true,
+    f => f.exception.disposition = 'wip',
+    f => { f.exception.disposition = 'feature-gated'; f.exception.gate = f.boundary; },
+    f => delete f.x.historicalFailureEvidence[f.known.unitLog.file],
+    f => f.x.historicalFailureEvidence[f.known.record.file].sha256 = '0'.repeat(64),
+    f => f.x.historicalFailureEvidence[f.known.record.file].json.unit.state = 'passed',
+    f => f.x.historicalFailureEvidence[f.known.record.file].json.tree = sha(99),
+    f => f.x.historicalFailureEvidence[f.known.record.file].json.finishedAt = 'invalid',
+    f => f.x.historicalFailureEvidence[f.known.unitLog.file].text = '# tests 758\n# pass 758\n# fail 0\n',
+    f => f.x.historicalFailureEvidence[f.known.firstPassingDescendant.record.file].json.build.state = 'failed',
+    f => f.x.historicalFailureEvidence[f.known.containment.gate.file].json.results.unit.state = 'failed',
+    f => f.x.facts[f.child].parents = [cutover],
+    f => f.x.facts[f.boundary].parents = [f.commit, cutover],
+    f => f.x.facts[f.promoted].tree = sha(99),
+    f => f.x.manifest.commits.find(e => e.commit === f.promoted).candidate = f.commit,
+    f => f.x.records[f.x.manifest.commits.find(e => e.commit === f.promoted).fast].unit.state = 'failed',
+  ];
+  for (const mutate of mutations) {
+    const f = historicalExceptionFixture(); mutate(f);
+    assert.equal(row(auditAcceptance(f.x), f.commit).state, 'unaccepted', String(mutate));
+  }
+});
+
+test('B15-P17-2 evidence reader hashes actual bytes and preserves missing and corrupt inputs', async () => {
+  const { readHistoricalFailureEvidence } = await import('../../scripts/audit-gates-1b1.mjs');
+  const policy = wipPolicy(), known = policy.knownFailures[0], json = Buffer.from('{"unit":{"state":"failed"}}\n');
+  const evidence = await readHistoricalFailureEvidence(policy, async file => {
+    if (file === known.firstPassingDescendant.record.file) throw Error('missing');
+    if (file === known.containment.gate.file) return Buffer.from('invalid JSON');
+    return file === known.unitLog.file ? Buffer.from('not ok 1 - original failure\n') : json;
+  });
+  assert.equal(evidence[known.record.file].sha256, createHash('sha256').update(json).digest('hex'));
+  assert.notEqual(evidence[known.record.file].sha256, known.record.sha256, 'the reader cannot attest the policy hash without checking bytes');
+  assert.equal(evidence[known.record.file].json.unit.state, 'failed');
+  assert.match(evidence[known.unitLog.file].text, /original failure/);
+  assert.match(evidence[known.firstPassingDescendant.record.file].error, /missing/);
+  assert.ok(evidence[known.containment.gate.file].error);
+});

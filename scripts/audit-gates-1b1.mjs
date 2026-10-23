@@ -12,6 +12,21 @@ import { auditAcceptance, joinStrata } from './gate/acceptance.mjs';
 export const OUTPUT_PATH = 'docs/reports/project1b/gate-ledger-1b1.json';
 const POLICY_PATH = 'scripts/gate/acceptance-policy-1b1.json';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+// Pinned exception inputs are read in place, never copied into an evidence root
+// or routed through the legacy full-gate exception validator.
+export async function readHistoricalFailureEvidence(policy, read = readFile) {
+  const evidence = {};
+  for (const known of policy?.knownFailures ?? []) {
+    if (!known.exception) continue;
+    for (const ref of [known.record, known.unitLog, known.firstPassingDescendant.record, known.containment.gate]) {
+      try {
+        const bytes = await read(ref.file), text = bytes.toString('utf8');
+        evidence[ref.file] = { sha256: hash(bytes), ...(ref === known.unitLog ? { text } : { json: JSON.parse(text) }) };
+      } catch (error) { evidence[ref.file] = { error: String(error) }; }
+    }
+  }
+  return evidence;
+}
 export function parseArgs(argv) {
   const [base, head, ...args] = argv;
   if (!base || !head) throw new Error('usage: node scripts/audit-gates-1b1.mjs <base> <head> [--manifest file] [--evidence-root directory] [--output file]');
@@ -38,6 +53,7 @@ export async function runAudit(options, { root = resolve(fileURLToPath(new URL('
   // This approval travels with the auditor, never with a commit seeking exemption.
   const policyBytes = await readFile(new URL('./gate/acceptance-policy-1b1.json', import.meta.url));
   const { historicalDocsOnly: historicalDocsPolicy, wipEvidence: wipEvidencePolicy } = JSON.parse(policyBytes);
+  const historicalFailureEvidence = await readHistoricalFailureEvidence(wipEvidencePolicy);
   const roots = options.roots.length ? options.roots.map(path => resolve(root, path)) : [root];
   const errors = [], entries = [], records = {}, facts = {}, evidenceHashes = {};
   const readEvidence = async path => {
@@ -109,7 +125,7 @@ export async function runAudit(options, { root = resolve(fileURLToPath(new URL('
   const evidenceJoin = joinStrata(mandatory, stratumRows);
   const contemporaneous = await readContemporaneousFast(manifest.contemporaneousFastInputs, { root, wipEvidencePolicy,
     resolveCommit: value => git('rev-parse', `${value}^{commit}`), commitTimeFor: commit => Number(git('show', '-s', '--format=%ct', commit)) });
-  const audit = auditAcceptance({ commits, manifest, facts, records, requiredIdsFor, isAncestor, manifestsFor, historicalDocsPolicy, wipEvidencePolicy, legacyRows: legacy.rows,
+  const audit = auditAcceptance({ commits, manifest, facts, records, requiredIdsFor, isAncestor, manifestsFor, historicalDocsPolicy, wipEvidencePolicy, historicalFailureEvidence, legacyRows: legacy.rows,
     corruptLedgerLines: legacy.corruptLedgerLines, evidenceJoin, contemporaneousFastFor: commit => contemporaneous.get(commit),
     approvedPolicyFor: commit => { try { return JSON.parse(git('show', `${facts[commit].parents[0]}:${POLICY_PATH}`)); } catch { return null; } },
     // Summary exemption is deliberately unavailable until the caller supplies a

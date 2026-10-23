@@ -10,18 +10,19 @@ import { encodeSceneFile, sceneCodec } from '../../src/space/scene-adapter.js';
 import { orbit, overview } from '../../src/space/camera.js';
 import { getModel } from '../../src/space/models/registry.js';
 import { effectiveParameters } from '../../src/space/numerics/parameters.js';
+import { confirmedPublications } from '../support/performance-records.mjs';
 
 const browser = installFakeBrowser();
 const { createSpaceWorkspace } = await import('../../src/space/workspace.js');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const turn = () => new Promise(resolve => setImmediate(resolve));
 
-function rig({ hold = false, env = {}, getGamepads = () => [] } = {}) {
+function rig({ hold = false, env = {}, getGamepads = () => [], wrapBackend = backend => backend } = {}) {
   const document = browser.document, toasts = [], backends = [], frames = new Map();
   let frameId = 0, factoryCalls = 0;
   const backendFactory = ({ clock }) => {
     factoryCalls++;
-    const backend = createDrivenFakeBackend({ clock, schedule: fn => setImmediate(fn) });
+    const backend = wrapBackend(createDrivenFakeBackend({ clock, schedule: fn => setImmediate(fn) }));
     if (hold) backend.control.holdAcquisition();
     backends.push(backend); return backend;
   };
@@ -39,6 +40,80 @@ function rig({ hold = false, env = {}, getGamepads = () => [] } = {}) {
   const pointer = (type, values = {}) => canvas().dispatchEvent({ type, button: 0, pointerId: 1, clientX: 400, clientY: 300, target: canvas(), ...values });
   return { space, toasts, backends, frames, runFrame, settle, canvas, pointer, document, get factoryCalls() { return factoryCalls; } };
 }
+
+for (const rung of [undefined, 'L6c', 'L6a', 'L6d']) test(`B15-P17-3 workspace publications satisfy P3 (${rung ?? 'default L6b'})`, async () => {
+  const h = rig({ env: { draftExecution: rung } });
+  try {
+    await h.space.activate(1); await h.settle();
+    const publications = [], updates = [], reports = [];
+    h.space.inspection.onPublish(p => publications.push(p));
+    h.space.inspection.onPublicationUpdate(u => updates.push(u));
+    h.space.inspection.onReport(r => reports.push(r));
+    h.space.inspection.requestCamera(orbit(h.space.inspection.scene.camera, 0.1, 0), { phase: 'preview' });
+    for (let i = 0; i < 200 && !reports.some(r => r.outcome === 'completed'); i++) { h.runFrame(); await turn(); }
+    assert.equal(publications.length, 1, 'exercise a draft through the production workspace');
+    assert.equal(publications[0].kind, 'draft');
+    assert.ok(reports.some(r => r.outcome === 'completed'));
+    const checked = confirmedPublications(publications, updates);
+    assert.deepEqual(checked.failures, [], 'valid workspace events must satisfy the P3 confirmation contract');
+    assert.deepEqual(checked.pending, []);
+    assert.equal(checked.publications.length, 1);
+    assert.equal(updates.length, rung === 'L6d' ? 1 : 0);
+    assert.equal(publications[0].diagnosticsState, rung === 'L6d' ? 'pending' : undefined);
+  } finally { h.space.destroy(); }
+});
+
+test('B15-P17-3 L6d workspace retains historical confirmations and strict pairing', async () => {
+  const h = rig({ env: { draftExecution: 'L6d' } });
+  try {
+    await h.space.activate(1); await h.settle();
+    const publications = [], updates = [], camera = h.space.inspection.scene.camera;
+    h.space.inspection.onPublish(p => publications.push(p));
+    h.space.inspection.onPublicationUpdate(u => updates.push(u));
+    h.backends[0].control.pause();
+    for (const yaw of [0.1, 0.2]) {
+      h.space.inspection.requestCamera(orbit(camera, yaw, 0), { phase: 'preview' });
+      const count = yaw === 0.1 ? 1 : 2;
+      for (let i = 0; i < 80 && publications.length < count; i++) { h.runFrame(); await turn(); }
+      assert.equal(publications.length, count);
+    }
+    h.backends[0].control.resume({ newestFirst: true });
+    for (let i = 0; i < 200 && updates.length < 2; i++) { h.runFrame(); await turn(); }
+    assert.equal(updates.length, 2);
+    assert.ok(updates.some(u => u.historical));
+    const checked = confirmedPublications(publications, updates);
+    assert.deepEqual(checked.failures, []); assert.deepEqual(checked.pending, []);
+    assert.equal(checked.publications.length, 2);
+    assert.equal(confirmedPublications(publications.slice(1), updates).failures.length, 1, 'an unknown update is still rejected');
+    assert.equal(confirmedPublications(publications, [...updates, updates[0]]).failures.length, 1, 'duplicate updates are still rejected');
+  } finally { h.backends[0]?.control.resume(); h.space.destroy(); }
+});
+
+for (const rung of ['L6b', 'L6c', 'L6d']) test(`B15-P17-3 failed draft remains visible in reports (${rung})`, async () => {
+  const h = rig({ env: { draftExecution: rung }, wrapBackend: backend => ({ ...backend,
+    submitBatch(batch, options) {
+      const ticket = backend.submitBatch(batch, options);
+      if (batch.draft?.summary) backend.fail(ticket, new Error('injected draft completion failure'));
+      return ticket;
+    },
+  }) });
+  try {
+    await h.space.activate(1); await h.settle();
+    const publications = [], updates = [], reports = [];
+    h.space.inspection.onPublish(p => publications.push(p));
+    h.space.inspection.onPublicationUpdate(u => updates.push(u));
+    h.space.inspection.onReport(r => reports.push(r));
+    h.space.inspection.requestCamera(orbit(h.space.inspection.scene.camera, 0.1, 0), { phase: 'preview' });
+    for (let i = 0; i < 200 && !reports.some(r => r.outcome === 'failed'); i++) { h.runFrame(); await turn(); }
+    assert.ok(reports.some(r => r.outcome === 'failed'), 'P3 retains the application failure');
+    assert.equal(publications.length, rung === 'L6d' ? 1 : 0);
+    assert.equal(updates.length, rung === 'L6d' ? 1 : 0);
+    if (rung === 'L6d') {
+      assert.equal(updates[0].diagnosticsState, 'failed');
+      assert.equal(confirmedPublications(publications, updates).failures[0].reason, 'failed');
+    }
+  } finally { h.space.destroy(); }
+});
 
 test('harness previews request drafts and commit closes one camera history entry with request creation evidence', async () => {
   const h = rig();

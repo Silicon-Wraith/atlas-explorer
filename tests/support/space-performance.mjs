@@ -13,6 +13,15 @@ export const PERFORMANCE_PASSES = Object.freeze([
   'P3 stress replacement', 'P3 application main-thread tasks', 'P3 first settled image',
   'P3 coverage and visible output',
 ]);
+const ACCEPTANCE_MEASUREMENT = Object.freeze({
+  schedulingMode: 'absolute-ceil-timeout-v1', leadTimeMs: 0,
+  instrumentation: Object.freeze({ longTaskObserver: true, gpuClockMonitor: true, messageChannelStallProbe: false, busySpin: false }),
+});
+export function createPerformanceAttempt(index) {
+  return { index, complete: false, coverage: false, measurement: structuredClone(ACCEPTANCE_MEASUREMENT) };
+}
+const acceptanceMeasurement = m => m?.schedulingMode === ACCEPTANCE_MEASUREMENT.schedulingMode && m.leadTimeMs === 0 &&
+  Object.entries(ACCEPTANCE_MEASUREMENT.instrumentation).every(([key, value]) => m.instrumentation?.[key] === value);
 // Monitor the timed workload and its drains, then stop before checkpoint replay. Sampling
 // failure is missing evidence; it cannot excuse an established application failure.
 export async function capturePerformanceAttempt(attempt, run, collect, {
@@ -41,6 +50,7 @@ export async function capturePerformanceAttempt(attempt, run, collect, {
 export function classifyAttempt(attempt) {
   if (attempt.applicationFailure || attempt.targets?.some(target => target.passed === false)) return { state: 'failed', reason: attempt.applicationFailure ?? 'an established application target failed' };
   if (attempt.harnessFailure?.demonstrated && attempt.harnessFailure.evidence) return { state: 'excluded', reason: attempt.harnessFailure.evidence };
+  if (!acceptanceMeasurement(attempt.measurement)) return { state: 'inconclusive', reason: 'missing or non-acceptance scheduling or instrumentation' };
   if (attempt.timing?.invalidated) return { state: 'inconclusive', reason: 'unexplained issuance anomaly over 4 ms' };
   if (!usableGpuClocks(attempt.clockEvidence) || attempt.clockCleanup?.state === 'unconfirmed') return { state: 'inconclusive', reason: 'missing or unusable GPU clock sampling evidence' };
   if (!attempt.complete || !attempt.coverage || !attempt.targets?.length || attempt.targets.some(target => target.passed !== true)) return { state: 'inconclusive', reason: 'incomplete workload, coverage or target evidence' };
@@ -49,6 +59,7 @@ export function classifyAttempt(attempt) {
 export function classifyTrials(attempts, required = 3, maximum = 5) {
   const classified = attempts.map(classifyAttempt), passing = classified.filter(a => a.state === 'passed').length;
   if (classified.some(a => a.state === 'failed')) return { state: 'failed', passing, reason: 'an application failure in any attempt prevents acceptance' };
+  if (attempts.some(a => !acceptanceMeasurement(a.measurement))) return { state: 'inconclusive', passing, reason: 'diagnostic or unrecorded instrumentation cannot be pooled with acceptance trials' };
   if (attempts.length > maximum || passing < required) return { state: 'inconclusive', passing, reason: 'insufficient valid passing trials within the attempt limit' };
   return { state: 'passed', passing, reason: 'at least three valid trials and no established application failure' };
 }
@@ -71,8 +82,8 @@ function installObservation() {
   } catch (error) { globalThis.__p3ObserverError = String(error); }
 }
 
-function startAttempt() {
-  const s = atlas.space, trial = { timeOriginMs:performance.timeOrigin, issued:[], requests:[], publications:[], publicationUpdates:[], presentations:[], reports:[], phases:{}, timings:[], phase:'restore', input:null };
+export function startAttempt(measurement) {
+  const s = atlas.space, trial = { measurement, timeOriginMs:performance.timeOrigin, issued:[], requests:[], publications:[], publicationUpdates:[], presentations:[], reports:[], phases:{}, timings:[], phase:'restore', input:null };
   globalThis.__p3 = trial;
   trial.stop = [s.onRequest(event => trial.requests.push({ identity:event.identity,purpose:event.purpose,createdAt:event.createdAt,
     quality:event.request.quality,sceneHash:event.request.sceneHash,camera:event.request.sceneSnapshot.camera,phase:trial.phase,input:trial.input })),
@@ -165,7 +176,7 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
   assert.equal(environment.chromeGpu?.vendorId,0x10de,'physical NVIDIA adapter required');assert.match(environment.webgpuStatus,/Hardware accelerated/i);
   const outputDir=process.env.ATLAS_B15_REPORT_DIR??'docs/reports/project1b';
   const outputPath=`${outputDir}/1b1-performance-${sceneId}.json`,attempts=[];
-  const result={schema:'atlas.performance-evidence',schemaVersion:3,recordProtocol:PERFORMANCE_RECORD_VERSION,sceneId,environment,workloadSha256:sha256(workloadBytes),predictionSha256:sha256(predictionBytes),attempts};
+  const result={schema:'atlas.performance-evidence',schemaVersion:4,recordProtocol:PERFORMANCE_RECORD_VERSION,sceneId,environment,workloadSha256:sha256(workloadBytes),predictionSha256:sha256(predictionBytes),attempts};
   const persist=async()=>{for(const attempt of attempts)attempt.classification=classifyAttempt(attempt);result.classification=classifyTrials(attempts);await mkdir(outputDir,{recursive:true});await writeFile(outputPath,JSON.stringify(result,null,2)+'\n');};
   await page.addInitScript(installObservation);
   await page.goto(url,{timeout:LIMITS.launch});await page.waitForFunction(()=>Boolean(globalThis.atlas?.space));
@@ -176,8 +187,8 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
     await ev(page,async()=>{const result=await atlas.workspaces.switchTo('space');if(result.activeId!=='space')throw Error(JSON.stringify(result));},undefined,'activate Space',LIMITS.deep);
     await idle(); result.prewarm=await ev(page,()=>atlas.space.state.prewarm,undefined,'prewarm');
     for(let index=0;index<workload.trials.maxAttempts;index++) {
-      await restore(selected.scene);await ev(page,startAttempt,undefined,'begin trial');
-      const attempt={index:index+1,complete:false,coverage:false};attempts.push(attempt);await persist();
+      const attempt=createPerformanceAttempt(index+1);attempts.push(attempt);await persist();
+      await restore(selected.scene);await ev(page,startAttempt,attempt.measurement,'begin trial');
       const trial=await capturePerformanceAttempt(attempt, async()=>{
         await ev(page,timedCamera,{phase:'orbit',poses:workload.workloads.orbit.cameraPoses[sceneId]},'P3 orbit',LIMITS.deep);
         await ev(page,()=>{__p3.phases['settled-after-orbit']={start:performance.now()};},undefined,'settled phase start');

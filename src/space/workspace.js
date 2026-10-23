@@ -32,6 +32,7 @@ import { TRACING_VERSION } from './render/webgpu/passes.js';
 import { webgpuUnavailable } from './render/webgpu/availability.js';
 import { deepFreeze } from '../shared/scene.js';
 import { createSpaceDiagnostics } from './diagnostics-indicator.js';
+import { draftExecution } from './render/draft-execution.js';
 
 export const SPACE_VIEW_ID = 'space-main';
 export const SPACE_PIXEL_BUDGET = 2_300_000; // the viewport's internal pixels at settled quality (about 88 B/px)
@@ -214,10 +215,16 @@ export function createSpaceWorkspace({ shell, backendFactory = createWebGPUBacke
     backend = Object.freeze({ ...raw, async acquire(...args) { const receipt = await raw.acquire(...args); acquisition = receipt; return receipt; } });
     scheduler = createScheduler({ clock: now, makeAdmission: createAdmission, setTimer: env.setTimer ?? ((fn, ms) => setTimeout(fn, ms)), clearTimer: env.clearTimer ?? (id => clearTimeout(id)) });
     renderer = createSpaceRenderer({ backend, scheduler, clock: now, viewId: SPACE_VIEW_ID, versions: VERSIONS, pipelineSet: productPipelineSet(), draftExecution: env.draftExecution });
+    const publicDraftUpdates = draftExecution(env.draftExecution).mode === 'async';
     renderer.onPublish(publication => onPublish(publication));
     renderer.onPublicationUpdate(update => {
-      if (lastPublication?.frameId === update.frameId) lastPublication = Object.freeze({ ...lastPublication, ...update });
-      for (const listener of publicationUpdateListeners) { try { listener(update); } catch { /* isolate observers */ } }
+      // Gated/provisional originals stay on the renderer diagnostic channel.
+      // Forward every async update, including historical ones, so consumers
+      // still detect unknown, duplicate and conflicting pairs.
+      if (publicDraftUpdates) {
+        if (lastPublication?.frameId === update.frameId) lastPublication = Object.freeze({ ...lastPublication, ...update });
+        for (const listener of publicationUpdateListeners) { try { listener(update); } catch { /* isolate observers */ } }
+      }
       updateIndicators();
     });
     renderer.onPresent(event => { onPresentation(event); for (const listener of presentListeners) { try { listener(event); } catch { /* isolate observers */ } } });
