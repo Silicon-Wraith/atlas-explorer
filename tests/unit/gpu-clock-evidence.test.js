@@ -4,7 +4,8 @@ import { EventEmitter } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import { clockBand, summarizeGpuClocks, compareGpuClocks, startGpuClockMonitor } from '../support/gpu-clock-evidence.mjs';
 import { compareLadder } from '../support/space-performance-ladder.mjs';
-import { classifyAttempt, classifyTrials, capturePerformanceAttempt, createPerformanceAttempt } from '../support/space-performance.mjs';
+import { classifyAttempt, classifyTrials, capturePerformanceAttempt } from '../support/space-performance.mjs';
+import { passingPerformanceAttempt } from '../support/performance-trial-fixture.mjs';
 import { cleanupState } from '../support/bounded.mjs';
 
 const start = Date.UTC(2026, 9, 22, 12);
@@ -78,7 +79,8 @@ test('B15-O1b ladder budgets gate both metric populations and their L0 brackets 
 });
 
 test('B15-O1b P3 accepts every measured band but missing telemetry cannot pass or erase application failure', () => {
-  const base = { ...createPerformanceAttempt(1), complete: true, coverage: true, targets: [{ passed: true }] };
+  const base = passingPerformanceAttempt();
+  delete base.clockEvidence;
   assert.equal(classifyAttempt(base).state, 'inconclusive');
   const attempts = [210, 780, 2505].map(clock => ({ ...base, clockEvidence: registeredSummary(clock) }));
   assert.equal(classifyTrials(attempts).state, 'passed', 'acceptance is absolute, not a cross-trial speed comparison');

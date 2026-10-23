@@ -2,12 +2,172 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
 import { scheduleAbsolute } from '../support/timing.mjs';
-import { classifyAttempt, classifyTrials, createPerformanceAttempt, startAttempt } from '../space-performance.mjs';
+import { classifyAttempt, classifyTrials, createPerformanceAttempt, startAttempt, capturePerformanceAttempt, timedCamera, timedStress } from '../space-performance.mjs';
+import { assessPerformanceTiming } from '../support/performance-timing.mjs';
+import { passingPerformanceAttempt, frozenPerformanceWorkload } from '../support/performance-trial-fixture.mjs';
+
+test('B15-P21-1 three anomalies above 4 ms through exactly 8 ms are tolerated across the whole attempt', () => {
+  const attempt = passingPerformanceAttempt({ 'orbit:0': 4.1, 'interaction:1': 4.1, 'stress:0': 8 });
+  assert.equal(attempt.trial.issued.length, 2315);
+  assert.equal(attempt.timing.invalidated, true, 'the strict timer still reports an anomaly');
+  assert.equal(classifyAttempt(attempt).state, 'passed');
+});
+
+test('B15-P21-1 a fourth anomaly across phases is inconclusive even with a clean cached summary', () => {
+  const attempt = passingPerformanceAttempt({ 'orbit:0': 4.1, 'orbit:1': 4.1, 'interaction:1': 4.1, 'stress:0': 4.1 });
+  attempt.timing.invalidated = false;
+  assert.equal(classifyAttempt(attempt).state, 'inconclusive', 'derive the shared allowance from raw inputs');
+});
+
+test('B15-P21-1 one issuance above 8 ms is inconclusive without rounding or an epsilon', () => {
+  const attempt = passingPerformanceAttempt({ 'orbit:0': 8.0001 });
+  attempt.timing.invalidated = false;
+  assert.equal(classifyAttempt(attempt).state, 'inconclusive');
+});
+
+test('B15-P21-1 exactly 4 ms is not an anomaly and exactly 8 ms is tolerated', () => {
+  const attempt = passingPerformanceAttempt({ 'orbit:0': 4, 'orbit:1': 4, 'orbit:2': 4, 'orbit:3': 4, 'interaction:1': 4.0001, 'interaction:2': 4.1, 'stress:0': 8 });
+  assert.equal(classifyAttempt(attempt).state, 'passed');
+  assert.equal(assessPerformanceTiming(attempt.trial).lateOver4Count, 3);
+});
+
+test('B15-P21-1 missing duplicate malformed early and retargeted input observations cannot pass', () => {
+  for (const mutate of [
+    t => t.issued.pop(),
+    t => t.issued[1] = { ...t.issued[0] },
+    t => t.issued[0].issuedAt = NaN,
+    t => { t.issued[0].issuedAt--; t.issued[0].lateByMs = 0; },
+    t => { t.issued[0].target++; t.issued[0].issuedAt++; },
+    t => t.issued[0].lateByMs = 1,
+    t => delete t.issued,
+    t => delete t.phases.orbit,
+  ]) {
+    const attempt = passingPerformanceAttempt(); mutate(attempt.trial);
+    assert.equal(classifyAttempt(attempt).state, 'inconclusive', String(mutate));
+  }
+});
+
+test('B15-P21-1 old record versions and timing policies cannot pass or pool with fresh trials', () => {
+  const passing = passingPerformanceAttempt();
+  for (const mutate of [
+    a => a.schemaVersion = 4,
+    a => delete a.schemaVersion,
+    a => delete a.measurement.timingPolicy,
+    a => a.measurement.timingPolicy = 'strict-over-4-ms',
+    a => delete a.trial.measurement.timingPolicy,
+  ]) {
+    const legacy = structuredClone(passing); mutate(legacy);
+    assert.equal(classifyAttempt(legacy).state, 'inconclusive');
+    assert.equal(classifyTrials([passing, passing, passing, legacy]).state, 'inconclusive');
+    legacy.applicationFailure = 'cadence below target';
+    assert.equal(classifyTrials([passing, passing, passing, legacy]).state, 'failed');
+  }
+});
+
+test('B15-P21-1 version and policy are recorded before work starts', () => {
+  const attempt = createPerformanceAttempt(1);
+  assert.equal(attempt.schemaVersion, 5);
+  assert.equal(attempt.measurement.timingPolicy, 'atlas.p3-timing-budget-v1');
+});
+
+test('B15-P21-1 capture persists all raw timestamps and both strict and policy timing verdicts', async () => {
+  const attempt = passingPerformanceAttempt({ 'orbit:0': 4.1, 'interaction:1': 4.1, 'stress:0': 8 });
+  const trial = structuredClone(attempt.trial);
+  let saved;
+  await capturePerformanceAttempt(attempt, async () => {}, async () => trial, {
+    startMonitor: () => ({ stop: async () => ({ raw: '', errors: [], cleanup: { state: 'confirmed' } }) }),
+    persist: async () => { saved = JSON.parse(JSON.stringify(attempt)); },
+  });
+  assert.deepEqual(saved.trial.issued, trial.issued, 'no timestamp correction or sample removal');
+  assert.equal(saved.timing.expectedInputCount, 2315);
+  assert.equal(saved.timing.observedInputCount, 2315);
+  assert.equal(saved.timing.lateOver4Count, 3);
+  assert.equal(saved.timing.maxLateByMs, 8);
+  assert.equal(saved.timing.strictInvalidated, true);
+  assert.equal(saved.timing.policyInvalidated, false);
+});
+
+test('B15-P21-1 application and demonstrated harness failures retain precedence over timing', () => {
+  const attempt = passingPerformanceAttempt({ 'orbit:0': 9 });
+  attempt.harnessFailure = { demonstrated: true, evidence: 'injected harness timer fault' };
+  assert.equal(classifyAttempt(attempt).state, 'excluded');
+  attempt.applicationFailure = 'application terminal failure';
+  assert.equal(classifyAttempt(attempt).state, 'failed');
+  delete attempt.applicationFailure;
+  attempt.targets = [{ passed: false }];
+  assert.equal(classifyAttempt(attempt).state, 'failed');
+  assert.equal(classifyTrials([attempt, passingPerformanceAttempt(), passingPerformanceAttempt(), passingPerformanceAttempt()]).state, 'failed');
+});
+
+test('B15-P21-1 policy schedule matches every materialized frozen scene', () => {
+  for (const scene of frozenPerformanceWorkload.scenes) {
+    const attempt = passingPerformanceAttempt({}, scene.id);
+    assert.equal(classifyAttempt(attempt).state, 'passed', scene.id);
+    assert.deepEqual(assessPerformanceTiming(attempt.trial), {
+      timingPolicy: 'atlas.p3-timing-budget-v1', expectedInputCount: 2315, observedInputCount: 2315,
+      lateOver4Count: 0, maxLateByMs: 0, strictInvalidated: false, policyInvalidated: false, evidenceError: null, rearms: 0,
+    });
+  }
+});
+
+test('B15-P21-1 the serialized page collectors preserve all 2315 raw input observations', async () => {
+  let now = 1000;
+  const raw = [], measurement = createPerformanceAttempt(1).measurement;
+  const context = { measurement, performance: { timeOrigin: 100000, now: () => now }, setTimeout,
+    atlas: { space: { ...Object.fromEntries(['onRequest', 'onPublish', 'onPublicationUpdate', 'onPresent', 'onReport'].map(name => [name, () => () => {}])),
+      requestCamera() {}, editParameter() { return { ok: true }; } } },
+    __p3Schedule: async (_clock, targets, callback) => {
+      const timing = { rearms: 0, lateByMs: [], invalidated: false };
+      for (const [index, target] of targets.entries()) {
+        const late = targets.length > 1 && index === 0 ? (context.__p3.phase === 'stress' ? 8 : 4.1) : 0;
+        now = target + late;
+        const time = { target, issuedAt: now, lateByMs: now - target };
+        if (targets.length > 1) raw.push({ phase: context.__p3.phase, index: context.__p3.phase === 'interaction' ? index + 1 : index, ...time });
+        timing.lateByMs.push(time.lateByMs); timing.invalidated ||= time.lateByMs > 4;
+        callback(time, index);
+      }
+      return timing;
+    },
+  };
+  runInNewContext(`(${startAttempt.toString()})(measurement)`, context);
+  for (const phase of ['orbit', 'interaction']) {
+    context.input = { phase, poses: frozenPerformanceWorkload.workloads[phase].cameraPoses.bulb };
+    await runInNewContext(`(${timedCamera.toString()})(input)`, context);
+    now += 1000;
+  }
+  const stress = frozenPerformanceWorkload.workloads.stress;
+  context.input = { ...stress.editRule, durationMs: stress.durationMs, alternation: stress.alternations.bulb };
+  await runInNewContext(`(${timedStress.toString()})(input)`, context);
+  const trial = JSON.parse(JSON.stringify(context.__p3));
+  assert.deepEqual(trial.issued, raw);
+  assert.equal(trial.issued.length, 2315);
+  assert.ok(trial.timings.every(t => t.invalidated), 'each phase retains the strict helper verdict');
+  assert.equal(assessPerformanceTiming(trial).policyInvalidated, false);
+  assert.equal(assessPerformanceTiming(trial).lateOver4Count, 3);
+});
+
+test('B15-P21-1 partial collection preserves raw anomalies but remains non-accepting', async () => {
+  const attempt = passingPerformanceAttempt({ 'orbit:0': 9 });
+  attempt.trial.issued = attempt.trial.issued.slice(0, 10);
+  let persisted;
+  await capturePerformanceAttempt(attempt, async () => { throw Error('incomplete workload'); }, async () => attempt.trial, {
+    startMonitor: () => ({ stop: async () => ({ raw: '', errors: [], cleanup: { state: 'confirmed' } }) }),
+    persist: async () => { persisted = structuredClone(attempt); },
+  });
+  assert.equal(persisted.trial.issued.length, 10);
+  assert.equal(persisted.timing.observedInputCount, 10);
+  assert.equal(persisted.timing.lateOver4Count, 1);
+  assert.equal(persisted.timing.maxLateByMs, 9);
+  assert.equal(persisted.timing.strictInvalidated, true);
+  assert.equal(persisted.timing.policyInvalidated, true);
+  assert.equal(classifyAttempt(persisted).state, 'inconclusive');
+});
 
 test('B15-P17-1 every P3 attempt records frozen scheduling and enabled instrumentation before work', () => {
   const attempt = createPerformanceAttempt(1);
   assert.deepEqual(attempt.measurement, {
     schedulingMode: 'absolute-ceil-timeout-v1', leadTimeMs: 0,
+    timingPolicy: 'atlas.p3-timing-budget-v1',
     instrumentation: { longTaskObserver: true, gpuClockMonitor: true, messageChannelStallProbe: false, busySpin: false },
   });
   assert.equal(attempt.complete, false);
@@ -19,8 +179,7 @@ test('B15-P17-1 every P3 attempt records frozen scheduling and enabled instrumen
 });
 
 test('B15-P17-1 diagnostic scheduling and probes cannot pass or pool with acceptance trials', () => {
-  const passing = { ...createPerformanceAttempt(1), complete: true, coverage: true, targets: [{ passed: true }],
-    clockEvidence: { protocol: 'atlas.gpu-clocks-v1', state: 'measured', medianMHz: 210, band: 'lt270', sampleCount: 11, uuid: 'GPU-test' } };
+  const passing = passingPerformanceAttempt();
   for (const change of [
     a => a.measurement.schedulingMode = 'early-wake-spin',
     a => a.measurement.leadTimeMs = 2,
@@ -55,8 +214,7 @@ test('a late issuance is recorded as a timing anomaly and an established applica
 });
 
 test('three passing trials cannot rescue an earlier application failure accompanied by late issuance', () => {
-  const passing = { ...createPerformanceAttempt(1), complete: true, coverage: true, targets: [{ passed: true }], timing: { invalidated: false },
-    clockEvidence:{protocol:'atlas.gpu-clocks-v1',state:'measured',medianMHz:210,band:'lt270',sampleCount:11,uuid:'GPU-test'} };
+  const passing = passingPerformanceAttempt();
   const failure = { ...passing, applicationFailure: 'settled target exceeded', timing: { invalidated: true } };
   assert.equal(classifyTrials([failure, passing, passing, passing]).state, 'failed');
   assert.equal(classifyTrials([passing, passing]).state, 'inconclusive');

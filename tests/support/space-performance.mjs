@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { confirmedPublications, PERFORMANCE_RECORD_VERSION } from './performance-records.mjs';
 import { scheduleAbsolute } from './timing.mjs';
+import { assessPerformanceTiming, PERFORMANCE_EVIDENCE_SCHEMA_VERSION, P3_TIMING_POLICY } from './performance-timing.mjs';
 import { ev, within, LIMITS, cleanupState, CLEANUP_UNCONFIRMED_EXIT } from './bounded.mjs';
 import { startGpuClockMonitor, summarizeGpuClocks, epochClockWindows, usableGpuClocks } from './gpu-clock-evidence.mjs';
 
@@ -15,13 +16,18 @@ export const PERFORMANCE_PASSES = Object.freeze([
 ]);
 const ACCEPTANCE_MEASUREMENT = Object.freeze({
   schedulingMode: 'absolute-ceil-timeout-v1', leadTimeMs: 0,
+  timingPolicy: P3_TIMING_POLICY,
   instrumentation: Object.freeze({ longTaskObserver: true, gpuClockMonitor: true, messageChannelStallProbe: false, busySpin: false }),
 });
 export function createPerformanceAttempt(index) {
-  return { index, complete: false, coverage: false, measurement: structuredClone(ACCEPTANCE_MEASUREMENT) };
+  return { index, schemaVersion: PERFORMANCE_EVIDENCE_SCHEMA_VERSION, complete: false, coverage: false,
+    measurement: structuredClone(ACCEPTANCE_MEASUREMENT), timing: assessPerformanceTiming(null) };
 }
 const acceptanceMeasurement = m => m?.schedulingMode === ACCEPTANCE_MEASUREMENT.schedulingMode && m.leadTimeMs === 0 &&
+  m.timingPolicy === P3_TIMING_POLICY &&
   Object.entries(ACCEPTANCE_MEASUREMENT.instrumentation).every(([key, value]) => m.instrumentation?.[key] === value);
+const acceptanceRecord = attempt => attempt.schemaVersion === PERFORMANCE_EVIDENCE_SCHEMA_VERSION &&
+  acceptanceMeasurement(attempt.measurement) && (!attempt.trial || acceptanceMeasurement(attempt.trial.measurement));
 // Monitor the timed workload and its drains, then stop before checkpoint replay. Sampling
 // failure is missing evidence; it cannot excuse an established application failure.
 export async function capturePerformanceAttempt(attempt, run, collect, {
@@ -33,6 +39,7 @@ export async function capturePerformanceAttempt(attempt, run, collect, {
   try { trial = await collect(); } catch (error) { attempt.evidenceError = String(error.stack ?? error); }
   if (trial) {
     attempt.trial = trial;
+    attempt.timing = assessPerformanceTiming(trial);
     const terminal = trial.reports?.find(r => ['failed', 'budget-exceeded', 'interrupted'].includes(r.outcome));
     attempt.applicationFailure = trial.applicationFailure ?? (terminal ? `application ${terminal.outcome}: ${terminal.reason}` : null);
   }
@@ -50,8 +57,9 @@ export async function capturePerformanceAttempt(attempt, run, collect, {
 export function classifyAttempt(attempt) {
   if (attempt.applicationFailure || attempt.targets?.some(target => target.passed === false)) return { state: 'failed', reason: attempt.applicationFailure ?? 'an established application target failed' };
   if (attempt.harnessFailure?.demonstrated && attempt.harnessFailure.evidence) return { state: 'excluded', reason: attempt.harnessFailure.evidence };
-  if (!acceptanceMeasurement(attempt.measurement)) return { state: 'inconclusive', reason: 'missing or non-acceptance scheduling or instrumentation' };
-  if (attempt.timing?.invalidated) return { state: 'inconclusive', reason: 'unexplained issuance anomaly over 4 ms' };
+  if (!acceptanceRecord(attempt)) return { state: 'inconclusive', reason: 'missing or incompatible record version, timing policy, scheduling or instrumentation' };
+  const timing = assessPerformanceTiming(attempt.trial);
+  if (timing.policyInvalidated) return { state: 'inconclusive', reason: timing.evidenceError ?? 'P3 timing allowance exceeded (at most three above 4 ms; none above 8 ms)' };
   if (!usableGpuClocks(attempt.clockEvidence) || attempt.clockCleanup?.state === 'unconfirmed') return { state: 'inconclusive', reason: 'missing or unusable GPU clock sampling evidence' };
   if (!attempt.complete || !attempt.coverage || !attempt.targets?.length || attempt.targets.some(target => target.passed !== true)) return { state: 'inconclusive', reason: 'incomplete workload, coverage or target evidence' };
   return { state: 'passed', reason: 'complete valid trial; every frozen target passed' };
@@ -59,7 +67,7 @@ export function classifyAttempt(attempt) {
 export function classifyTrials(attempts, required = 3, maximum = 5) {
   const classified = attempts.map(classifyAttempt), passing = classified.filter(a => a.state === 'passed').length;
   if (classified.some(a => a.state === 'failed')) return { state: 'failed', passing, reason: 'an application failure in any attempt prevents acceptance' };
-  if (attempts.some(a => !acceptanceMeasurement(a.measurement))) return { state: 'inconclusive', passing, reason: 'diagnostic or unrecorded instrumentation cannot be pooled with acceptance trials' };
+  if (attempts.some(a => !acceptanceRecord(a))) return { state: 'inconclusive', passing, reason: 'incompatible record versions, timing policies or instrumentation cannot be pooled with acceptance trials' };
   if (attempts.length > maximum || passing < required) return { state: 'inconclusive', passing, reason: 'insufficient valid passing trials within the attempt limit' };
   return { state: 'passed', passing, reason: 'at least three valid trials and no established application failure' };
 }
@@ -91,7 +99,7 @@ export function startAttempt(measurement) {
   s.onReport(report => { const {outcomeMasks, ...small}=report; trial.reports.push({...small, observedAt:performance.now()}); })];
 }
 
-async function timedCamera({ phase, poses }) {
+export async function timedCamera({ phase, poses }) {
   const trial=__p3, start=performance.now(); trial.phase=phase;trial.phases[phase]={start};
   const timing=await __p3Schedule({clock:()=>performance.now(),setTimer:setTimeout}, poses.map(p=>start+p.requestTimeMs), (time,index)=>{
     const pose=poses[index]; trial.input=pose.requestIndex;trial.issued.push({phase,index:pose.requestIndex,...time});
@@ -99,7 +107,7 @@ async function timedCamera({ phase, poses }) {
   });
   trial.timings.push(timing);trial.phases[phase].end=performance.now();trial.phase=`after-${phase}`;
 }
-async function timedStress({alternation,count,spacingMs,durationMs}) {
+export async function timedStress({alternation,count,spacingMs,durationMs}) {
   const trial=__p3,start=performance.now();trial.phase='stress';trial.phases.stress={start};
   const timing=await __p3Schedule({clock:()=>performance.now(),setTimer:setTimeout},Array.from({length:count},(_,i)=>start+spacingMs*i),(time,index)=>{
     trial.input=index;trial.issued.push({phase:'stress',index,...time});
@@ -176,7 +184,7 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
   assert.equal(environment.chromeGpu?.vendorId,0x10de,'physical NVIDIA adapter required');assert.match(environment.webgpuStatus,/Hardware accelerated/i);
   const outputDir=process.env.ATLAS_B15_REPORT_DIR??'docs/reports/project1b';
   const outputPath=`${outputDir}/1b1-performance-${sceneId}.json`,attempts=[];
-  const result={schema:'atlas.performance-evidence',schemaVersion:4,recordProtocol:PERFORMANCE_RECORD_VERSION,sceneId,environment,workloadSha256:sha256(workloadBytes),predictionSha256:sha256(predictionBytes),attempts};
+  const result={schema:'atlas.performance-evidence',schemaVersion:PERFORMANCE_EVIDENCE_SCHEMA_VERSION,recordProtocol:PERFORMANCE_RECORD_VERSION,sceneId,environment,workloadSha256:sha256(workloadBytes),predictionSha256:sha256(predictionBytes),attempts};
   const persist=async()=>{for(const attempt of attempts)attempt.classification=classifyAttempt(attempt);result.classification=classifyTrials(attempts);await mkdir(outputDir,{recursive:true});await writeFile(outputPath,JSON.stringify(result,null,2)+'\n');};
   await page.addInitScript(installObservation);
   await page.goto(url,{timeout:LIMITS.launch});await page.waitForFunction(()=>Boolean(globalThis.atlas?.space));
@@ -207,7 +215,6 @@ export async function runPerformance({page,environment,sceneId,url,pass,report})
         attempt.complete=true;
       }, ()=>ev(page,async()=>{await new Promise(r=>setTimeout(r,0));const t=__p3;t.stop.forEach(fn=>fn());const {stop,...data}=t;return {...data,longTasks:__p3LongTasks,observerError:globalThis.__p3ObserverError??null,memory:atlas.space.backendDiagnostics};},undefined,'collect trial evidence'), {persist});
       if(!trial)break;
-      Object.assign(attempt,{trial,applicationFailure:trial.applicationFailure??null,timing:{invalidated:trial.timings.some(t=>t.invalidated),rearms:trial.timings.reduce((sum,t)=>sum+t.rearms,0)}});
       if(attempt.complete)Object.assign(attempt,measureAttempt(trial,workload));
       else {
         // A known application terminal failure is not excused as a harness issue.
