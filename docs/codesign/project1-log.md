@@ -50005,3 +50005,451 @@ Replace the **Recommendation** bullets with:
 
 Claude: **field card closed** at about 60 working minutes. Codex review run 20261024T173410Z-f003 found three material fixes; I applied them verbatim, and the report SHA-256 now begins 3fef17fa. No further routine review, per item 7. The report is docs/reports/north-star/2026-10-24-field-atlas.md, uncommitted pending the advisor.
 
+
+---
+
+## Claude — gain card r1 review request
+*2026-10-24 10:45:22 PDT*
+
+Claude → Codex: **new card, the successor recommended in the field atlas.** This is its one review (read-only, item 7). The advisor merged PR #10 and said "start the next card".
+
+**Card:** /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1x/.superpowers/sdd/1b1x-explore-and-compose/card-gain.md (SHA-256 begins 2be1d8b5).
+
+**Proposed:**
+- **Transfers:** a two-point dose within the tanh-of-log family: ℓ = 6.8 and 27.2, giving max dT/dD of 4.22 and 1.83. These sit alongside T1 (ℓ = 1.7) and T0.
+- **Spatial slope** is measured directly, not inferred from the transfer derivative.
+- **3D pose rule:** |eye − target| = 2e and |pitch| ≤ 45°; an inaccessible view is recorded as a finding.
+- **Palette:** colour is keyed to the T0-equivalent height, computed in the shader. A T0 pixel-identity check runs before capture.
+- **Holdout:** six certified constructions, the box shifted 0.0002 outward, and a ≤ 3-minute corridor-only preflight before any 20-minute full build. Unresolved samples are never assumed interior.
+- **Limits:** a 3 h cap and a 45-minute checkpoint.
+
+Please answer READY, or list the material fixes as exact replacement text.
+
+
+---
+
+## Codex — gain card r1 review
+*2026-10-24 10:49:30 PDT*
+
+**Four material fixes.** Verified SHA-256 `2be1d8b5…`. The gain values are correct; label them **max |dT/dD|**, since the derivatives are negative.
+
+1. **Replace the 3D proximity bullet with:**
+
+> **3D proximity:** use the frozen target and T0 downhill direction d. On each transfer’s reference surface, find all solutions in horizontal offset [0.25e, 2e] for which the eye, vertically e above the surface, is 2e from the target. Do not assume distance is monotone or that one endpoint bracket finds every solution.
+>
+> For each solution, construct B by shifting the foot 1e perpendicular to d and restoring clearance e above that surface. Require A and B to have |pitch| ≤ 45°, target distance ≤ 3e, and unobstructed target sightlines outside the endpoint tolerance. Freeze numerical tolerances before checking. Choose the largest horizontal offset satisfying the complete pair.
+>
+> If no pair qualifies, record “inaccessible under this pose rule.” It remains a condition result and cannot be omitted from the required success set. Freeze all resulting poses before viewing.
+>
+> Targets and pose policy are shared across transfers; camera positions vary with the surface. Visual comparisons therefore measure performance under this inspection policy, not geometry at identical camera poses.
+
+Add to the **Measures** introduction:
+
+> CPU relief and slope statistics use the target-centred horizontal disc of radius 3e. Weight slope percentiles and threshold fractions by projected x-z triangle area, including clipped boundary triangles. Keep this domain distinct from the 3D viewing-distance requirement.
+
+2. **Replace the palette bullet with:**
+
+> **Palette control:** carry the frozen T0 height as a separate interpolated vertex attribute on the shared lattice and triangulation, and use that attribute for the base palette in every transfer. Geometry, normals, lighting and normal-dependent shading retain their declared rules.
+>
+> Before capture, verify T0 pixel identity against its existing path, and verify that the palette-driving value agrees across transfers at corresponding horizontal locations. Include all terrain geometry used in the views.
+
+The proposed inverse does not commute with interpolation. For example, halfway between vertices with D = 0 and 20, the shared interpolated T0 height is **113.032**, whereas inversion of interpolated T1 height produces **117.159**. A T0-only identity test would miss this remaining confound.
+
+3. **Replace Success and outcome with:**
+
+> **Required development conditions:** seahorse’s original target at m4/m1 and elephant’s proximity target at m4/m1. Elephant’s original targets remain diagnostic placement controls. These roles are fixed before evaluation.
+>
+> A transfer meets the development criterion only if all four required conditions have accessible A/B pairs and both peers record a formation within 3e, no wall dominance, and at least weak convincingness. Inaccessible conditions do not disappear from the denominator.
+>
+> T0 and T1 are controls; T2 and T3 are the lower-gain candidates. A claimed lower-gain advantage requires a candidate to meet the complete criterion and improve a required condition where T1 does not. Distinguish an accessibility improvement under the pose rule from a perceptual improvement where both transfers have accessible views. If T1 already meets the criterion, lower gain has not been shown necessary.
+>
+> If both candidates qualify, prefer T3, the lower-gain candidate. If neither qualifies, recommend neither. Report any qualifying T0 result separately.
+>
+> Deliver the relief, spatial-slope, accessibility and judgement results against transfer gain, including failures and disagreements.
+
+Also replace **“T0 … has little relief”** with:
+
+> T0 produced some limited formations, with peer disagreement; both peers rated the elephant views weakly convincing.
+
+4. **Replace the holdout order/replacement and scope bullets with:**
+
+> **Freeze before screening:** record the ordered six attempted constructions, seed-to-parameter algorithm, shifted boxes, sampling domains, landmark/corridor rules, certification limits and build deadlines. Failed boundary certificates count among the six attempts.
+>
+> **Replacement:** advance only for the declared boundary, landmark, classification or build-budget failures. Select the first construction passing the full reference check, independently of transfer performance. Once selected, transfer readiness, inaccessible poses and unfavourable judgements are results on that holdout, not reasons to replace it.
+>
+> **Evaluation:** after freezing the development choice, evaluate the selected candidate, T1 and T0 at the same frozen holdout targets and observer levels using the declared pose policy. Reproduction of a lower-gain advantage requires the paired advantage over T1; candidate success alone establishes feasibility at that fixture. Do not switch candidates after evaluation.
+>
+> If screening ends at the overall cap before all attempts finish, report incomplete screening rather than list exhaustion. Preserve development findings regardless.
+
+A small review probe on the saved reference meshes suggests **T3’s m1 A pose pitches about 48° at elephant proximity and 47° at seahorse original**; T1/T2 are steeper there. Thus the declared doses may yield no qualifying log-transfer arm under this policy. That is a useful possible finding, provided inaccessible conditions remain explicit.
+
+---
+
+## Claude — gain: card r2 and clock start
+*2026-10-24 10:50:05 PDT*
+
+Claude: **gain card revision 2 (SHA-256 e9718f92a1f0e962). Clock started 2026-10-24T17:50:05Z.**
+- Codex fixes 1, 3 and 4 are applied verbatim.
+- Fix 2 (palette) is replaced by a uniform base colour for all transfers, as a reversible owner choice. I am flagging it for Codex to challenge at the 45-minute checkpoint. The reason is that it removes the height-keyed palette entirely without changing how the viewer builds its terrain mesh.
+- Cap: 3 h.
+
+
+---
+
+## Claude — gain: holdout exhausted
+*2026-10-24 10:54:04 PDT*
+
+Claude: **gain card: holdout list exhausted.** The findings stay development-only.
+- **Six attempts:**
+  - k0–k3 and k5: the c_out escape was not certified.
+  - k4: certified bracket, but it exceeded the 180-second preflight budget during level-0 classification.
+- **My design error:** the field card had already measured level-0 classification near the main cardioid at about 246 s, and I set the preflight budget below that. I am recording it, not repairing it after the fact.
+
+
+---
+
+## Claude — gain: checkpoint
+*2026-10-24 10:56:08 PDT*
+
+Claude → Codex: **gain card checkpoint** (about 20 working minutes in). Please challenge it; this is read-only. Files are under /mnt/ml_storage/scratch/valley-spike/gain/.
+
+**1. Holdout: exhausted.**
+- k0–k3 and k5: c_out escape was not certified.
+- k4: certified bracket, but it exceeded the 180-second preflight budget in level-0 classification.
+- This is my design error: the field card measured about 246 s for that step, and I set the budget below it. Development-only. See screen/k4/feasibility.json and holdout-freeze.json (1e0a961d…).
+
+**2. CPU measures and the frozen pose rule** (measures/measures.json, measures/views.json; gain-measures.py):
+- **Readiness:** passes for all 24 condition × transfer cells; the maximum RMS/relief is 0.039.
+- **Accessibility:** under the pose rule (|eye − T| = 2e, |pitch| ≤ 45°, distance ≤ 3e, clear sightline), **every required m1 condition is inaccessible for T1, T2 and T3.** Only one root was found in each case. The required m4 conditions are accessible for T0 and T3 only; T1 and T2 are inaccessible there.
+- **Slope** (area-weighted fraction > 45°):
+
+  | Required cell | T0 | T1 | T2 | T3 |
+  |---|---|---|---|---|
+  | m1 | ≤ 0.005 | 0.94–0.97 | 0.89–0.94 | 0.79–0.92 |
+  | m4 | 0 | 0.57–0.74 | 0.53–0.82 | 0.39–0.78 |
+
+- **Relief (e):**
+
+  | Transfer | m4 | m1 |
+  |---|---|---|
+  | T0 | 0.21–0.28 | 0.21–0.24 |
+  | T3 | 0.45–0.50 | 0.51–0.54 |
+  | T2 | 0.74–0.75 | 0.94–1.00 |
+  | T1 | 1.08–1.13 | 1.61–1.98 |
+
+- **⇒ Verdict under the card:** no candidate meets the development criterion; required m1 conditions are inaccessible for all three log-family arms. Recommend neither.
+
+**3. Why (a proposed reading, for you to challenge):**
+- |∇D| in the inspection discs has a median of 0.93–1.08, except seahorse m4 at 0.505 (measures/gradD.json). So the spatial slope is approximately |T′(D)|. T0's measured slope p50 of 0.69–0.75 matches its gain of 0.7.
+- So, for monotone transfers of this DE, a walkable slope (≤ 45°) needs |T′| ≲ 1. At that gain, the h variation within 3e is bounded by the variation in D (T is 1-Lipschitz), and the field's 2D form within the disc is D's own level-set geometry.
+- **Hypothesis, not established:** walkable monotone DE heightfields cannot give much more near-field relief than T0 already does, about 0.2–0.3 e here. Larger relief needs either non-walkable slopes or structure that is not a monotone function of D.
+
+**4. Decision for the remaining time:**
+- **(a) Close CPU-only.** The development verdict is already fixed by accessibility. Skipping the stills is an omission that narrows the claim: there is no perceptual judgement of the accessible m4 views.
+- **(b) Spend about 30 minutes on stills of the accessible conditions** (T0 and T3 at m4 required; the elephant original diagnostics), with the uniform palette. This would be descriptive only. Please also challenge my uniform-palette choice if (b).
+
+I lean (a), and would carry the slope/relief trade-off as the headline for the advisor's direction decision.
+
+
+---
+
+## Codex — gain: checkpoint reply
+*2026-10-24 11:01:24 PDT*
+
+**Close CPU-only; recommend neither T2 nor T3 under the frozen development criterion.** Accessible m4 stills would add descriptive evidence, but cannot change that verdict.
+
+I independently enumerated the triangle crossings along all 24 camera rays and solved the distance equation on each segment. This reproduced exactly one root per cell. T3’s required m1 A views need pitches of **47.05° and 47.98°**; T1 and T2 fail by larger margins. A alone therefore excludes each pair. The implementation’s sign-change scan is not generally exhaustive, but this independent check supports these results.
+
+Material corrections:
+
+1. **Narrow the mathematical inference.** Replace the proposed general limitation with:
+
+   > For a differentiable field, |∇h| = |T′(D)|·|∇D|. The measured gradient distributions help explain the observed slopes, but their medians do not provide pointwise bounds. A spatial slope ≤ 1 requires |T′(D)|·|∇D| ≤ 1 locally. A 1-Lipschitz transfer bounds height differences by differences in D; this does not establish a ceiling on our plane-detrended RMS relief. Strictly monotone transfers preserve level sets, while changing their vertical spacing and potentially their detrended relief. Whether another monotone transfer can provide substantially more nearby relief at acceptable slopes remains unresolved.
+
+   The distinction matters: even an affine D can acquire nonzero plane-detrended relief through a nonlinear, monotone, 1-Lipschitz transfer. T0’s observed 0.2–0.3 e is therefore not a derived ceiling. Also, ≤45° surface slope is a geometric proxy; camera accessibility and practical walkability are separate questions.
+
+2. **Correct the numerical shorthand.** T0’s required-cell slope medians are approximately **0.364, 0.651, 0.724 and 0.748**, rather than uniformly 0.69–0.75. Seahorse m4 has approximately **0.141%** of projected area above 45°, rather than exactly zero. Describe the area fractions as estimates from the implemented quadrature.
+
+   Lower maximum transfer gain also does not monotonically reduce every measured slope statistic: elephant proximity m4’s fraction above 45° is approximately **73.8%, 82.0%, 77.5%** for T1, T2, T3.
+
+3. **Keep the holdout failure procedural.** The six declared attempts are exhausted under their certification and time limits. k4’s deadline failure neither establishes reference irresolvability nor guarantees that a longer budget would succeed. Preserve the design-error note; do not reopen screening for this card.
+
+4. **Uniform colour is a reasonable reversible control**, with the acknowledged loss of height cues. However, rendering T0 twice only checks repeatability; it does not establish the intended palette independence. If rendering is deferred, record that control as untested. A future check should hold geometry, camera, normals and lighting fixed while varying the transfer label and require identical output.
+
+For the advisor, I would use this headline:
+
+> In the two development fixtures, neither tested lower-gain transfer met all required inspection poses. T3 increased required m1 relief from 0.21–0.24 e to 0.51–0.54 e, but 79–92% of the inspection discs remained steeper than 45°, and the required views exceeded the pitch limit. This identifies a limitation of these transfers under the frozen inspection policy; it does not establish a general relief ceiling for monotone DE fields.
+
+Close with no new perceptual judgement, no qualifying T0 claim, and no holdout generalisation. Record the early CPU stop as useful process economy.
+
+---
+
+## Claude — gain: report review
+*2026-10-24 11:02:06 PDT*
+
+Claude → Codex: **gain card report for its one review** (read-only). The report is at /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-transfer-gain.md; its SHA-256 begins 938d5b9399a4b656.
+
+It adopts your checkpoint headline, your narrowed mathematical statement, and corrections 2–4, with your numbers.
+
+Please answer READY or list material fixes as exact replacement text.
+
+
+---
+
+## Codex — gain: report review
+*2026-10-24 11:03:01 PDT*
+
+One material fix: the advisor section reintroduces the broader conclusion that the preceding sections correctly withdraw.
+
+Replace the body of **“For the advisor’s direction decision”** with:
+
+> Across the two cards, the development fixtures contain near-boundary structure that both peers recognised as cliff formations under T1 at m4. In this card, T1, T2 and T3 failed the required m1 inspection poses. T2 and T3 reduced relief relative to T1 without meeting the complete development criterion.
+>
+> This establishes a limitation of the tested transfers at the frozen targets under the inspection policy. It does not establish that one cannot stand near these formations, that practical navigation fails, or that simple monotone DE transfers generally are a weak lever.
+>
+> Further monotone transfer designs, other inspection policies, non-monotone structures, different fields, and an experience centred on m4 cliff formations remain open directions. This card does not choose among them.
+
+Also correct the readiness inequality—the recorded maximum is 0.0391968. Replace that bullet with:
+
+> **Readiness:** all 24 condition × transfer cells pass the declared RMS/relief ≤ 0.10 criterion. The maximum measured ratio is approximately 0.0392, comparing level-5 direct evaluation with the level-4 interpolant.
+
+The recommendation to close CPU-only and recommend neither candidate stands.
+
+---
+
+## Claude — gain: closed
+*2026-10-24 11:03:16 PDT*
+
+Claude: **gain card closed** (CPU-only, about 25 working minutes). I applied the Codex report fixes (run 20261024T180206Z-02e9) verbatim. The report is docs/reports/north-star/2026-10-24-transfer-gain.md, uncommitted pending the advisor.
+
+
+---
+
+## Advisor — direction: richer spatial interpretations
+*2026-10-24 11:30:05 PDT*
+
+[Advisor message, 2026-10-24, verbatim]
+I think you have introduced an unnecessarily restrictive definition of exploration.  Consider the requirement that an observer must be within two eye heights of a formation while looking upward no more than 45 degrees. That's a reasonable test for a specific kind of close inspection. But ATLAS isn't supposed to be limited to walking around gentle terrain and inspecting nearby objects. We originally wanted to fly through immense canyons, with walls rising dramatically around you.  A seven-eye-height cliff could be an excellent feature in that environment!  And T3 fails one of the camera criteria at 47–48 degrees. That's only a few degrees outside the prescribed viewing condition. It doesn't establish an unusable environment, although the extensive steep terrain remains a legitimate concern for walking.
+
+I wouldn't retroactively change the experiment's criteria. They were established in advance, and the reported outcome should stand.
+But I'd challenge whether those criteria should continue determining the project's architectural direction.
+We need to distinguish three properties:
+- Visually compelling: Does the terrain produce interesting, recognizable spatial formations?
+- Navigable: Can an observer move through the environment using an appropriate locomotion mode?
+- Physically accessible: Can a particular observer or entity stand on, climb, enter, or otherwise physically interact with a feature?
+A cliff can satisfy the first two while failing the third for a walking human-sized observer.
+That's not inherently a failure of world generation.
+
+  Investigate richer spatial interpretations of the mathematical field
+Choose option 3: Shaped structure, while preserving the successful ×4 cliff formations as a reference experience.
+I am not going to prescribe how Claude and Codex must implement shaped structure. I am challenging you to investigate what additional spatial information can be extracted from the mathematical field beyond a single scalar elevation transfer. Here's why.
+A conventional heightfield represents one elevation for every horizontal coordinate. It can produce mountains, valleys, and steep walls, but not genuine overhangs, stacked surfaces, or enclosed caves. No amount of adjusting a monotone elevation transfer eliminates that fundamental representational limitation. And our broader ATLAS vision includes microscopic fissures, underground chambers, extraordinary three-dimensional formations, and eventually interacting with structures throughout a mathematical universe. A heightfield will remain useful. I wouldn't abandon it. But it shouldn't automatically become the universal spatial representation for ATLAS. You need to explore what information the mathematics provides and how different interpretations might create inhabitable structures. That could involve local derivatives, curvature, multiscale features, implicit surfaces, or combinations of mathematical fields. Those are avenues to investigate, not solutions I'm prescribing.  So in closing,
+
+I agree with closing the transfer-gain experiment. Preserve its findings and limitations.
+
+I think we've learned enough about this particular family of height transfers to reconsider our direction.
+
+The North Star does not require every terrain formation to be approachable on foot, nor does it require an observer to inspect every interesting formation from within two eye heights at a pitch of 45 degrees or less.
+
+Immense cliffs, steep canyons, overhangs, fissures, and structures that can only be reached by flying or changing observational scale are legitimate parts of the experience.
+
+I'd like you to distinguish visual legibility, navigation, and physical accessibility as separate concerns.
+
+My preference is to investigate richer spatial interpretations of the mathematical field rather than continue tuning the gain of the same elevation transfer.
+
+I am not prescribing an architecture or mathematical solution. I want both of you to independently examine the available approaches, challenge the assumptions underlying our current heightfield representation, and recommend the smallest useful experiment.
+
+Preserve the successful ×4 cliff formations as a reference for the experience we're trying to create. And address the recurring holdout-feasibility problem before committing to another substantial experimental run.
+
+Most importantly, return to the North Star: we're trying to create mathematically derived places worth exploring, not optimize every landscape for conventional terrestrial walking.
+
+Please propose the next direction together, including alternatives, tradeoffs, and your recommendation.
+
+
+---
+
+## Claude — direction: position commit
+*2026-10-24 11:30:44 PDT*
+
+Claude: **direction: my independent position is committed.** SHA-256 9dbeda1b5cf7adb9ac8599338361558c4f866319a48a0140a9049eb949e320bd, at direction/position-claude.md. It is withheld until Codex commits its own.
+
+
+---
+
+## Claude — direction: independent position request
+*2026-10-24 11:30:55 PDT*
+
+Claude → Codex: **next direction: independent position requested** (read-only). This is the advisor's request.
+
+**Read:**
+- the advisor's message, logged verbatim as "Advisor — direction: richer spatial interpretations" in /mnt/ml_storage/scratch/atlas-codesign/project1-log.md (also at /mnt/ml_storage/scratch/valley-spike/direction/advisor-direction.md);
+- the charter (especially sections 5.2 and 11);
+- the reports in docs/reports/north-star/ (field atlas on main; the transfer-gain report at /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-transfer-gain.md, uncommitted).
+
+**Do NOT open** /mnt/ml_storage/scratch/valley-spike/direction/position-claude.md: my position is committed there by hash.
+
+**The advisor asks both of us, independently, to:**
+- examine the available approaches;
+- challenge the assumptions underlying the current heightfield representation;
+- distinguish visual legibility, navigation and physical accessibility;
+- recommend the smallest useful experiment;
+- preserve the T1 m4 cliff formations as the reference experience;
+- address the recurring holdout-feasibility problem before any substantial run;
+- propose alternatives, tradeoffs and a recommendation.
+
+The advisor prescribes no architecture. Please write your position as a short, concrete document.
+
+
+---
+
+## Codex — direction: independent position (SHA-256 b5e87f4ee18acabd9b7983fdc0fc831a7459bcc2362ef15951c7f5a3050d6d54)
+*2026-10-24 11:32:08 PDT*
+
+**Codex’s independent position — 2026-10-24**
+
+Recommend a bounded experiment in **field-derived passages through the T1 landscape**, keeping the successful m4 cliffs as the reference experience. Do not select a universal representation yet. The decisive question is whether an additional spatial interpretation creates somewhere worth entering while retaining recognizable mathematical structure.
+
+I read the advisor’s direction, charter, and all six North Star reports, including the uncommitted transfer-gain report. I did not open Claude’s position.
+
+**What the evidence changes**
+
+The transfer experiment’s outcome stands. It rejects the tested candidates under its frozen inspection policy; it does not reject their value as environments. T3’s 47–48° required views and T1’s steep walls cannot establish failed flight navigation. Conversely, recognizable cliffs in stills do not establish successful travel.
+
+We should record three separate outcomes:
+
+- **Visual legibility:** can visitors recognize formations, depth, scale, and changing spatial relationships during movement?
+- **Navigation:** can a declared observer body travel through connected free space using the chosen locomotion mode?
+- **Physical accessibility:** can that body land, stand, climb, or otherwise interact with particular surfaces?
+
+For the next experiment, flight is the required mode. Landing is optional evidence. Neither a walking-slope limit nor the former close-inspection pose should determine overall success.
+
+**Assumptions to challenge**
+
+The heightfield was a useful first representation. Its limitation is structural: one elevation per horizontal coordinate cannot express stacked surfaces or enclosed passages. More sampling and different shading cannot remove that limitation.
+
+But changing representation alone does not discover richer mathematics. Derivatives and multiscale residuals expose relationships in a field; they do not reveal uniquely prescribed caves hidden inside it. Any conversion into thickness, voids, or branches is an authored world-generation rule. We should explain that rule and test whether its resulting geography retains meaningful dependence on the source.
+
+Nor should every observer scale require equally compelling local relief. Changing observer scale can make a cliff into a landscape. That is legitimate exploration, provided geometry does not silently change with the observer.
+
+**Alternatives and tradeoffs**
+
+| Approach | Opportunity | Main limitation |
+|---|---|---|
+| Keep T1; improve flight and observation scale | Fastest test of the existing canyon experience | Does not investigate richer topology |
+| Add derivative or multiscale features to elevation | Cheap extension using existing samples | Remains a heightfield; derivatives require their own stability checks |
+| Derive bounded voids or layered solids from the planar field | Preserves the canyon context while enabling passages and overhangs | Requires an explicit shaping rule and new geometry checks |
+| Explore a genuinely three-dimensional fractal field | Offers spatial structure without lifting a planar field | Changes generator and representation together; existing estimator semantics do not establish collision or occupancy |
+
+I recommend the third approach. The first is its reference condition; the fourth becomes the next alternative if the planar interpretation produces only contrived decoration.
+
+**Smallest useful experiment**
+
+Experience: fly beside a recognizable T1 m4 formation, enter a field-derived opening, pass beneath solid terrain, and emerge with the original cliffs still providing orientation.
+
+Use one bounded patch and one frozen shaping rule. A concrete candidate is to extract a connected band from a coarse-to-fine residual of the existing mathematical field and give that band a finite vertical extent inside the T1 solid. Subtract it to form a passage where it intersects the cliff face. Freeze smoothing scale, band thresholds, vertical placement, and thickness in world coordinates. Do not hand-draw a successful tunnel or change parameters for the holdout.
+
+This is a proposed interpretation, not a claim that the residual already contains suitable passages. Check that cheaply before building the viewer.
+
+Represent the resulting bounded solid with a fixed triangle mesh for this experiment, and use that same mesh for rendering and swept-body clearance. This deliberately postpones adaptive detail, general implicit rendering, and physics-engine selection.
+
+Preserve the original T1 geometry, cameras, captures, and generation parameters. Use matched appearance for the comparison; first verify that changing a condition label alone cannot change its pixels. Retain the historical captures separately because their height-dependent palette is a known confound.
+
+Success requires:
+
+- A genuine overhead surface and connected entrance-to-exit passage, verified geometrically.
+- A bounded flight-and-return task without penetration, relocation, or unresolved geometry treated as empty.
+- Both peers independently recognizing the original cliff character and identifying spatial relationships made newly explorable by the passage.
+- Recorded live performance under a prospectively frozen budget.
+
+A topology demonstration without a compelling journey is partial evidence, not success.
+
+**Resolve holdout feasibility first**
+
+Prepare a mechanically qualified fixture pool before committing to the substantial run. Separate boundary inclusion, landmark availability, reference classification, and sampling stability; none substitutes for another.
+
+Use source-data checks without viewing candidate-shaped results. Measure actual stage times and budget from those measurements—the recorded roughly 246-second classification step cannot fit a 180-second allowance. Freeze selection order and repair rules, preserve failures, then reserve an unused qualifying fixture before tuning the shaping rule.
+
+Qualification may establish that evaluation is possible. It must not require that the proposed passage already succeeds: absence of an opening on the holdout is an experimental result.
+
+If qualification fails, stop preparation and report that limitation. A development-only demonstration remains possible, but cannot support generalization.
+
+**Bounds and decision**
+
+Allow two working hours for feasibility preparation, then one working day for one shaping rule, two development fixtures, and one reserved fixture. Stop if the field band needs manual routing, relevant geometry remains unresolved, or implementation expands into a renderer rewrite. A failed construction rejects this rule, not richer spatial interpretation generally.
+
+This follows charter §§5.2 and 11: test one additional way to inhabit the mathematics before committing to architecture. Keep the T1 cliffs regardless of the outcome.
+
+This position involved document review only; no experiments ran. The useful process cost was separating previously conflated claims. Further protocol work should wait for agreement on the observable experience.
+
+*Returned here because the session is read-only; no file or running-log entry was written.*
+
+---
+
+## Claude — direction: joint proposal draft
+*2026-10-24 11:33:06 PDT*
+
+Claude → Codex: **joint proposal draft for the advisor** (read-only). Positions are exchanged: mine is at /mnt/ml_storage/scratch/valley-spike/direction/position-claude.md (9dbeda1b…), and yours is committed (b5e87f4e…).
+
+**Draft:** /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-next-direction-proposal.md (SHA-256 begins b94a8705eae46f9f).
+
+**How it merges the two positions:**
+- **Your position:** the three outcomes, flight as the required mode, "authored rule" honesty, the residual-band passage, the fixed-mesh flight test, the qualified fixture pool and the stops.
+- **Mine:** a short interpretation screen (P, your passage; E, an extruded level-set solid; S, the 3D parameter slice) before committing the day to one rule.
+
+**Our difference:** you proposed going straight to the single-rule flight test; I proposed screening first. The draft's staging (pool, then a 3-hour screen, then a 1-day flight test) is my proposed compromise, and it is labelled "agreed" only if you agree.
+
+**Please answer one of:**
+- AGREE, with any exact replacement text;
+- DISAGREE, naming the smallest discriminating consideration. In that case I will present both options to the advisor.
+
+
+---
+
+## Codex — direction: joint proposal review
+*2026-10-24 11:34:41 PDT*
+
+**AGREE with the staging, with the replacements below.** A three-hour screen is worthwhile if it can stop an unsuitable construction before the flight test. It must not become three representation projects or force a winner.
+
+1. Replace **“Earlier outcomes stand”** with:
+
+> **Earlier outcomes stand:** the transfer-gain outcome stands under its frozen inspection policy. That policy measures a specific camera inspection pose; it establishes neither practical walking accessibility nor flight navigability. Its limits should not determine the architecture.
+
+2. Replace **“What qualification means”** with:
+
+> **What qualification means:** evaluation is possible within declared numerical domains and measured budgets. Planar fixture qualification does not establish readiness for the 3D parameter slice. Before the substantial flight run, the selected rule’s required evaluation domain must also pass numerical preflight on the reserved fixture, without selecting for attractive geometry or passage existence. Any departure from whole-box resolution must prospectively define the evaluated domain and treatment of unknown regions; unknown space cannot count as clear. Qualification never requires the candidate to succeed.
+
+3. Replace **Step 1 in full** with:
+
+> **Step 1: interpretation screen** (≤ 3 working hours, including implementation and checks; CPU checkpoint at 60 minutes; development fixtures only).
+>
+> Compare each candidate with the preserved T1 m4 reference at its reference locations and scale. Freeze one rule per candidate before viewing; use matched appearance and first verify that changing only a condition label cannot change pixels.
+>
+> - **P, residual-band passage:** give a connected coarse-to-fine field-residual band finite vertical extent inside the T1 solid, then subtract it where it meets the cliff face.
+> - **E, extruded level-set solid:** solid where D(x, z) < w(y), using one frozen height profile intended to produce an overhang and recess. Horizontal sections follow level sets of the implemented field; their vertical arrangement is authored.
+> - **S, the 3D parameter slice:** evaluate a bounded slice under an explicit occupancy and unresolved-state contract. A safety factor alone does not establish a conservative distance bound. Do not require a new sphere-tracing implementation to screen this candidate.
+>
+> Check for a genuine overhead surface and a connected passage accommodating the declared observer body at m4. State the body dimensions and clearance margin explicitly. Verify geometry against the representation actually used; sampled field checks must not be reported as continuous guarantees. Record how the mathematical field and the shaping constants each determine the result.
+>
+> Obtain one small matched still set for each numerically ready candidate, judged independently. Stills establish neither successful travel nor live performance.
+>
+> Before viewing, freeze the selection rule: eligibility requires numerical readiness, the geometric checks, and a credible route to the specified T1-referenced flight experience. Among eligible candidates, prefer the clearest experiential promise; break an unresolved tie by lower implementation cost. Carry one unchanged rule into Step 2. Missing geometry is a negative construction result; insufficient numerical evidence or exhausted implementation time is an unresolved candidate.
+>
+> If no candidate qualifies, stop. The screen need not produce a winner. Do not extend its cap or build a general renderer to complete the comparison.
+
+4. Replace the paragraph beginning **“If the planar-derived candidates…”** with:
+
+> If no candidate qualifies, record whether geometry, experiential promise, numerical readiness, or implementation cost prevented progression. A separate 3D-field card remains an alternative, supported by the screen’s findings rather than presumed superior.
+
+5. Replace **“Decision requested”** text with:
+
+> We recommend the bounded sequence above: fixture preparation, interpretation screen, then a flight test only if a candidate qualifies. This selects an experiment, not ATLAS’s universal representation. The successful T1 m4 cliffs remain the reference experience regardless of outcome.
+
+These changes preserve the compromise while keeping numerical feasibility, candidate failure, and experimental success distinct. No files changed.
+
+---
+
+## Claude — direction: proposal final
+*2026-10-24 11:35:03 PDT*
+
+Claude: **joint direction proposal finalised.** Codex replacements 1–5 (run 20261024T183306Z-ef31) are applied verbatim; SHA-256 8d541a853d091b10. It is delivered to the advisor for a decision.
+
