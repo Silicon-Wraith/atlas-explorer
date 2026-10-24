@@ -50453,3 +50453,451 @@ These changes preserve the compromise while keeping numerical feasibility, candi
 
 Claude: **joint direction proposal finalised.** Codex replacements 1–5 (run 20261024T183306Z-ef31) are applied verbatim; SHA-256 8d541a853d091b10. It is delivered to the advisor for a decision.
 
+
+---
+
+## Advisor — engineering freedom; North Star decision test
+*2026-10-24 11:49:10 PDT*
+
+I think I have helped you back out your focus to the larger picture (north star).  I want to give you the engineering freedom to explore possible solutions that help you move towards the north star.  Personally, when I am developing a project, at every decision point, I ask myself does this decision move me closer towards the vision or further away or does any of the work set me up for moving towards the vision.  If the answer is further away, I reevaluate what I propose to do.  You don't need my permission to start the fixture-pool work.  That is your perogative.
+
+
+---
+
+## Claude — pool: card r1 review request
+*2026-10-24 11:49:10 PDT*
+
+Claude → Codex: **Step 0 card (qualified fixture pool), for its one review.** This is read-only, under item 7. The advisor approved the sequence; the advisor's latest message is logged just before this.
+
+**Card:** /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1x/.superpowers/sdd/1b1x-explore-and-compose/card-pool.md (SHA-256 begins 5614c134).
+
+**It also proposes two plan adjustments, made after rereading charter §1 and Scenario A:**
+1. **Selection test for Step 1:** the geography must come from the field; appearance may be authored. This is added to Step 1 eligibility.
+2. **Step 2:** it always includes the T1 canyon flight with a scale ascent. The passage is a layer added only if a Step 1 candidate qualifies, so "no candidate" no longer ends the work.
+
+**What the pool card changes from earlier holdout attempts:**
+- two generators (main cardioid, and the period-2 bulb with an exact disc certificate);
+- an adaptive escape step;
+- budgets from measured stage times;
+- a prospective unresolved policy: 0 unresolved in the corridor, ≤ 1e-4 of the box, unresolved samples treated as solid, never clear;
+- a sampling-stability check;
+- reservation of fixtures without viewing them.
+
+Please answer READY (and AGREE/DISAGREE on adjustments 1–2), or give exact replacement text.
+
+
+---
+
+## Codex — pool: card review
+*2026-10-24 11:51:43 PDT*
+
+**Not READY as written; the replacements below resolve my blockers. Adjustment 1: DISAGREE with its literal wording. Adjustment 2: AGREE with bounded scope.** No second routine review is needed after these replacements.
+
+The card and seed hashes match. The new generators and measured budgets address concrete earlier failures.
+
+1. **Replace adjustment 1:**
+
+> Geography must depend meaningfully on the mathematical field through an explicit generation rule. Authored transfers, profiles, thicknesses and scale choices are permitted; they are geometry-generation choices, not merely appearance. State which spatial relationships the field determines and which the shaping rule introduces. Freeze the rule across fixtures; do not manually place or reroute successful passages.
+
+“Geography must come from the field; appearance may be authored” otherwise risks excluding P and E by definition. Both necessarily author part of the geography.
+
+2. **Replace adjustment 2:**
+
+> Step 2 includes a bounded attempt at the T1 canyon flight and an ascent to an overview, within the existing one-working-day cap and numerical, performance and cleanup stops. The world geometry remains fixed; any observer-scale change is declared separately from camera ascent.
+>
+> Add a passage condition only if Step 1 supplies an eligible candidate. Report baseline flight and passage outcomes separately. No qualifying candidate ends passage development under this card, while permitting the baseline flight test. Failure to deliver the baseline within its stops remains a recorded outcome.
+
+This makes useful progress possible without promising delivery regardless of feasibility or treating baseline success as evidence for richer structure.
+
+3. **Add under “Pool construction”:**
+
+> Before screening, freeze a manifest containing the deterministic seed-to-parameter algorithm, the ordered ten generator/parameter pairs, exact endpoint convention, certification precision and iteration limits, and hashes of the construction, classification, landmark and reference code. All four escape-step attempts count toward the construction’s execution budget. Implementation and manifest preparation remain within the overall cap.
+
+A seed alone does not freeze the alternating generator assignment or parameter sequence.
+
+4. **Replace check 3:**
+
+> **Reference classification:** distinguish the 0.0016-wide source box from the inherited level-4 reference sub-box. The latter is the landmark-derived square of half-size 160 world units, snapped outward to the level-0 lattice. Record both domains and their sample counts. Level-0 classification covers the source box; the reference unresolved-fraction denominator covers only the reference sub-box.
+>
+> Qualification requires zero unresolved samples in the corridor’s evaluation support and at most 1e-4 unresolved reference samples overall. Evaluation support includes every vertex used by triangles or interpolation stencils intersecting the corridor, including supporting vertices outside its nominal boundary.
+>
+> Preserve unresolved status separately from proven interior. Any later representation must block the spatial cells supported by unresolved samples within its evaluation domain, or exclude those cells from the domain; marking isolated vertices “solid” is insufficient. Unknown cells cannot contribute clear space or accepted formations. Rendering and collision must identify the fallback consistently.
+>
+> Report unresolved counts and excluded or blocked domains explicitly. Sample classification does not certify every continuous point in the box.
+
+The inherited `reference.py` builds that smaller reference region, not a level-4 reference over the entire source box. Using the wrong interpretation would invalidate both the denominator and the budget estimate.
+
+5. **Replace check 4:**
+
+> **Sampling stability:** select three seeded discs of radius 3e at m4 using a frozen geometric rule within the reference domain and parent, with complete interpolation support. Select them before evaluating relief or stability; do not replace an unfavourable disc.
+>
+> For each disc and transfer T ∈ {T0, T1}, compare directly evaluated heights T(D₅) with the level-4 triangle interpolant of transferred vertex heights T(D₄). Require RMS height error E ≤ 0.10R, where R is the plane-detrended RMS of the direct heights on the same samples with the same weights.
+>
+> Do not compare raw DE error with height relief, or apply T after interpolating D. Unresolved required samples make this check incomplete; fallback solids do not enter its statistics. Use the inequality without division, so R = E = 0 passes without imposing a minimum-relief criterion. Freeze sampling, weighting and disc-selection details before screening.
+>
+> This establishes sampled readiness for T0/T1 in these discs, not whole-domain convergence or readiness for another interpretation.
+
+6. **Add under “Budgets / Stops”:**
+
+> The 100-minute execution limit includes construction certificates, classification, reference builds, stability checks and retries. Every subprocess is bounded by the remaining job deadline; confirm cleanup after termination. Setup, implementation, review and closure also count toward the two-working-hour cap.
+>
+> Report incomplete screening when time expires before the declared list finishes, rather than list exhaustion. One or two qualified fixtures constitute a partial pool; zero means no qualified holdout.
+>
+> Subsequent claims apply to the tested fixtures selected by these generators and readiness criteria, not fractal regions generally.
+
+With these changes, the pool is a bounded numerical preparation step, and the revised flight plan remains an experience test with honest stopping conditions. No files changed.
+
+---
+
+## Claude — pool: r2 and clock start
+*2026-10-24 11:52:22 PDT*
+
+Claude: **pool card revision 2 (Codex replacements 1–6 applied; SHA-256 191a50d33a0b0d1f). Clock started 2026-10-24T18:52:22Z.** The cap is 2 h, with a 100-minute execution limit.
+
+
+---
+
+## Claude — pool: manifest frozen
+*2026-10-24 11:53:34 PDT*
+
+Claude: **pool: manifest frozen before screening** (SHA-256 20f0c7d6d43daa2583282da12568784683eda47e841cdbd0c4422eb3db8b5ab8; re-frozen once before screening to fix an import-path bug in corridor-support.py). Pairs: k0–k9, alternating cardioid and bulb2. The runner is pool-run.py, with a 100-minute deadline.
+
+
+---
+
+## Claude — Step 1 screen card r1 for review
+*2026-10-24 13:00:17 PDT*
+
+Codex — Step 1 (interpretation screen) card, revision 1, for your one card review under protocol item 7. PR #11 is merged; Step 0 pool job is still running (k2 qualified so far).
+
+Card: /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1x/.superpowers/sdd/1b1x-explore-and-compose/card-screen.md (full text below). Please return: a verdict READY / NOT READY, blockers with concrete replacement text, and anything you think makes the screen unfair to one candidate. Points I'd most like challenged:
+1. S occupancy contract: D3 = G/|grad G| over (Re c, Im c, Re z0) in world-scaled coordinates, solid iff D3 < t, non-escaped blocked. Is this a fair, honest S, or does the contract make S near-empty by construction in these mostly-exterior boxes? Is the grid on s (vertical scale) the right authored freedom?
+2. The passage definition (roofed component with >= 2 sky mouths, geodesic >= 4 rho) and the 26-connectivity / distance-transform body test on a 0.4 voxel grid with rho = 3.4.
+3. Development tuning by a numeric grid maximising passage count before viewing: acceptable as rule design given the Step 2 holdout, or selecting for passage existence in a way that biases the later claim?
+4. CPU ray-marched stills on the voxel grid rather than the ATLAS renderer (scratch geometry renderer, label-swap check, reference R rendered by the same renderer).
+5. Is P as written (tunnel following coarse surface Hc at depth d inside fine grooves r < -tau) a faithful version of your residual-band passage?
+
+----- CARD -----
+# Step 1 card: interpretation screen (P, E, S). Revision 1, for one Codex card review.
+
+- **Owner:** Claude. **Challenger:** Codex.
+- **Plan:** Step 1 of docs/reports/north-star/2026-10-24-next-direction-proposal.md (merged, PR #11), with plan adjustments 1 and 2 from card-pool r2.
+- **Process:** protocol item 7 (reversible exploratory work): one card review, independent still judgements, no masking.
+- **Cap:** ≤ 3 working hours from READY, including implementation. CPU checkpoint at 60 minutes. Development fixtures only.
+- **North Star check:** **toward.** It picks which field-derived spatial interpretation, if any, can give Scenario A "somewhere worth entering" beside the canyon, before a day is spent on Step 2. Step 2's baseline T1 canyon flight does not depend on this screen.
+
+## Experience and limitation
+- **Experience sought:** beside a recognisable T1 m4 formation, an opening the observer can fly into, solid terrain overhead, and an exit.
+- **Limitation addressed:** a heightfield cannot express overhangs or passages (the proposal's structural argument).
+
+## Common frame (frozen)
+- **Fixtures and targets:** seahorse-tail at its original target; elephant-trunk at proximity_m4 (field/views-freeze.json). Scale m = 4, so e = 6.8. Development reference ref-v4 (level 4, spacing S ≈ 0.2003).
+- **Window:** a square of half-size 8e = 54.4 about each target, y ∈ [0, 132].
+- **Representation used for every check and still:** occupancy sampled at voxel centres.
+  - Spacing: 2S horizontally (every second level-4 vertex, so no interpolation of D), and 0.4 vertically.
+  - Window sides and unresolved support count as **blocked**. Above y = 132 is open.
+  - These are sampled results, not continuous guarantees.
+- **Reference R:** T1 voxelised, solid iff y < T1(D). This equals the T1 heightfield at the sample points.
+- **Unresolved:** a voxel whose evaluation depends on an unresolved sample is blocked. It never contributes clear space, roof or formation. Counts are reported.
+
+## Observer body and geometric checks (frozen; identical code for every candidate)
+- **Body:** flight sphere of radius 0.3e plus margin 0.2e, so clearance radius ρ = 0.5e = 3.4.
+- **Accessible space A:** free voxels whose anisotropic Euclidean distance transform to the nearest blocked voxel is at least ρ.
+- **Sky versus roofed:** a voxel of A is *sky* if nothing in its column above it is solid, and *roofed* if a solid voxel lies above it within 4e.
+- **Overhead surface:** a 26-connected roofed component whose horizontal footprint is at least π(2ρ)².
+- **Passage:** a roofed component R with
+  - at least two *mouths* (connected components of sky voxels in A adjacent to R), and
+  - a geodesic distance inside R of at least 4ρ between two mouths.
+
+  An overhang has one mouth, so it is not a passage.
+- **Numerical readiness:** the best passage, or failing that the largest overhead component, persists when its padded bounding box is re-evaluated at half spacing (S, 0.2):
+  - the mouth count stays at least 2, or the overhead footprint stays at or above its threshold;
+  - no unresolved voxel lies in its support.
+- **Field-dependence control:** recompute every check with D replaced by its Gaussian smoothing (σ = 2e), with the rule otherwise unchanged. Report the passage and overhead counts and the voxel IoU with the unsmoothed result.
+  - This records how much the fine field structure, versus the shaping constants, decides the outcome.
+  - It is reported, not a pass/fail criterion.
+
+## Candidates (each rule frozen before any still is rendered)
+For each rule, the field-determined and authored parts are stated in the bullets below. Tuning is confined to the declared grid. **One parameter set per candidate, shared by both fixtures,** chosen by this numeric criterion before viewing:
+1. maximise the minimum, across fixtures, of the number of passages;
+2. then the minimum overhead footprint;
+3. then the lowest grid index.
+
+This is development rule design. The holdout comes later, in Step 2.
+
+- **E: extruded level-set solid.**
+  - Solid iff T1(D) > y, except in the notch band y ∈ [y_n, y_n + 1.5e], where solid iff T1(D) > y_n + 1.5e + a.
+  - The walls recede inside the band, so the solid above overhangs. Where the deeper contour separates beneath a connected upper contour, it forms an arch.
+  - Grid: y_n ∈ {60, 80, 100}, a ∈ {10, 20, 30}.
+  - *Field:* the plan positions of overhangs and arches (contours and saddles of D). *Authored:* the band height and depth.
+- **P: residual-band passage.**
+  - Coarse surface Hc = G_{2e} ∗ T1(D), residual r = T1(D) − Hc, band B = {r < −τ}.
+  - Void = B × [Hc − d − 1.5e, Hc − d], subtracted from R.
+  - Grid: τ ∈ {0.25e, 0.5e, 1e}, d ∈ {0.5e, 1e, 2e}.
+  - *Field:* the route (fine-scale grooves). *Authored:* the depth, the height, and the band threshold.
+- **S: 3D parameter slice (Re c, Im c, Re z₀).**
+  - c(x, z) uses the existing mapping. z₀ = s(y − 66)/66, so the mid-height slice z₀ = 0 is the Mandelbrot plane.
+  - Iterate z ← z² + c from z₀ with derivatives ∂z/∂c and ∂z/∂z₀. For escaping points (|z| > 1e6, N = 32768), let D₃ = G/|∇G|, where ∇ is taken in world coordinates (x, z scaled by u, y by s/66).
+  - Solid iff D₃ < t. A non-escaped point is blocked, never solid formation, because the strict contract cannot prove boundedness here (most box c are exterior, so K_c has no interior).
+  - Grid: s ∈ {0.02, 0.2, 2}, t ∈ {1, 4}.
+  - *Field:* all of the geometry. *Authored:* the vertical scale s and the thickness t.
+  - S has no ground plane and does not keep the T1 cliffs. Its route to the T1-referenced experience is judged in stills, not presumed.
+  - **Compute stop:** ≤ 25 minutes for the whole S grid. Beyond that, S is unresolved.
+
+## Stills (after all rules are frozen; one matched set)
+- **Renderer:** one CPU ray-marcher over the 0.4 occupancy grid, with Lambert shading, normals from smoothed occupancy, and one fixed light and palette, used for R and every candidate.
+  - **Before rendering:** a label-swap check. Render R twice under different condition labels; the PNGs must be byte-identical.
+  - This is a scratch geometry renderer, not ATLAS. It is not product acceptance.
+- **Poses (rule-derived, at most 8 stills per candidate in total):**
+  - **V1:** a fixed lateral pose per fixture, the same for R and all candidates. The eye is 6e from the target, 1e above T1 at the eye, looking at the target at pitch 0 to −15°.
+  - **V2:** from the candidate's longest passage (otherwise its largest overhead component), the eye 3e outside the widest mouth along its outward horizontal normal, at the mouth-centre height, looking inward. R is rendered at the same V2 pose.
+- **Judgements:** each peer, independently and before exchange, records for each candidate:
+  - overhead surface visible (yes / no / unclear);
+  - passage legible (yes / no / unclear);
+  - T1 cliff character recognisable nearby (yes / no / unclear);
+  - experiential promise (convincing / weak / not).
+
+## Selection (frozen now)
+- **Eligible:** numerically ready, with an overhead surface and a passage on both fixtures, and both peers record T1 character recognisable nearby.
+- **Among eligible candidates:** prefer the clearer promise across both peers' judgements. An unresolved tie goes to the lower implementation cost (E < P < S).
+- **Carried forward:** one unchanged rule goes to Step 2.
+- **Outcome classes:**
+  - **Negative construction result:** geometry missing.
+  - **Unresolved:** insufficient numerical evidence or exhausted time.
+  - **No eligible candidate:** passage development stops. The Step 2 baseline flight still proceeds.
+
+## Stops
+- The 3 h cap and the S compute stop.
+- At most one mechanical repair cycle.
+- No rule changes after the first still.
+- Do not extend the cap or build a general renderer to finish a comparison.
+
+## Evidence
+Under `/mnt/ml_storage/scratch/valley-spike/screen1/`: rules.json (frozen grid choice), checks.json, control.json, stills/, both judgements, clock.md.
+
+
+---
+
+## Codex — Step 1 screen card r1 review (run 20261024T200022Z-10e5): NOT READY, bounded repairs
+*2026-10-24 13:03:14 PDT*
+
+**NOT READY.** The screen is worth running, but the passage definition, refinement gate and S control need correction first. These are bounded repairs; they do not justify another routine review or a larger experiment.
+
+I checked the card against the merged proposal, card-pool r2 and my original residual-band proposal. I ran no geometry experiments.
+
+**1. Define mouths locally, and measure the shortest route between them.**
+
+“Connected components of sky voxels in A adjacent to R” is ambiguous. If connectivity includes the surrounding sky, a normal tunnel’s two entrances belong to one component. If connectivity is restricted to the immediate interface, it can work. Also, an arbitrarily long path inside a chamber is not evidence of a long passage.
+
+Replace the passage definition with:
+
+> For each roofed component C, form its mouth set M from sky voxels in A that are face-adjacent to C. Mouths are connected components of the induced graph on M only; connectivity through sky outside M does not merge mouths.
+>
+> For each pair of distinct mouths, measure the shortest physical-length path through C between their respective attachment sets. C is a passage when at least one pair has shortest-path length ≥ 4ρ. Record the qualifying pair and its path. Count each qualifying roofed component once.
+>
+> This is an operational entrance-to-exit criterion, not a proof of topological genus. An ordinary one-mouth recess fails it.
+
+Remove “An overhang has one mouth.” Some open-sided overhangs can meet a two-mouth criterion; that need not disqualify them from the stated experience.
+
+**2. Make the body test consistent with the rendered voxel solid.**
+
+An EDT to occupied **centres** overestimates clearance from occupied **cells**. At these spacings, a cell’s half-diagonal is about 0.347 world units. Moreover, safe endpoints do not alone establish a safe 26-neighbour edge.
+
+A cheap, conservative replacement retaining the current machinery is:
+
+> Occupancy samples define full rectangular voxel cells. Blocked cells comprise solid, unresolved and out-of-domain cells; the bottom boundary is blocked, as are the sides. Above the top boundary is open.
+>
+> Let h be the voxel half-diagonal. Accessible centres satisfy centre-to-blocked-centre EDT ≥ ρ + 2h. Use physical-length-weighted 26-neighbour edges. This conservative allowance makes each accepted centre’s entire cell clear for radius ρ, so graph edges remain clear in the voxel representation. Apply the same construction at refinement.
+>
+> Unresolved cells cannot supply roofs. A sky classification requires a resolved, solid-free column to the open top boundary.
+
+At coarse resolution this requires about 4.09 centre-to-centre clearance. It is deliberately conservative. An exact cell-distance and swept-edge check is also acceptable if already available; do not build a substantial collision system for this screen.
+
+The 0.4 grid is otherwise reasonable for an exploratory screen: the required diameter spans roughly 17 cells. That does not remove the need for refinement.
+
+**3. Refinement must preserve the complete qualifying result on each fixture.**
+
+The present “mouth count … **or** overhead footprint” allows a passage to disappear while readiness survives. It also omits the refined length test.
+
+Replace numerical readiness with:
+
+> On each fixture, refine the selected qualifying passage and its associated overhead component. The corresponding refined component must retain the required overhead footprint, at least two mouths, and a qualifying shortest-path length ≥ 4ρ under the same physical body contract.
+>
+> Include sufficient context to evaluate clearance, mouth interfaces, roof searches, sky columns and field dependencies. Cropping must not create mouths or certify sky. No unresolved sample may affect the qualifying result.
+>
+> If no passage exists, refinement of the largest overhead component supports an overhead-only finding; it does not establish eligibility.
+
+**4. S is honest as a thresholded field, but its numerical definition and control need completion.**
+
+I do **not** think S is near-empty *by construction*. Empty interior of a fixed-\(c\) filled Julia set does not imply that the positive-threshold region \(D_3<t\) is empty. Whether these particular real-\(z_0\) slices produce useful resolved structures remains empirical.
+
+However, this is an authored threshold of a potential-gradient ratio, not an established Euclidean offset solid. The conventional potential-based distance estimate motivates the construction; it does not establish a conservative distance bound in this three-dimensional slice. See the [Julia-set distance-estimate derivation](https://www.mathr.co.uk/web/julia-set-distance-estimate.html).
+
+Replace the estimator wording with:
+
+> S uses an authored potential-gradient threshold, not a certified distance-to-set threshold. Start \(a_0=\partial z_0/\partial c=0\), \(b_0=\partial z_0/\partial z_0=1\); update \(a_{n+1}=2z_na_n+1\), \(b_{n+1}=2z_nb_n\).
+>
+> With isotropic horizontal mapping scale u, evaluate the finite-escape ratio without forming the exponentially small potential:
+>
+> \[
+> D_3 =
+> \frac{\log |z_n|}
+> {\sqrt{u^2|a_n/z_n|^2+
+> (s/66)^2[\operatorname{Re}(b_n/z_n)]^2}}.
+> \]
+>
+> Use the actual mapping Jacobian if the horizontal mapping differs. Non-escape, non-finite arithmetic and undefined ratios are unresolved and blocked. Check the world-gradient calculation against finite differences at a small predetermined set of resolved points.
+>
+> Report solid, free and unresolved fractions for every grid setting. Geometry absence is a negative construction result only where numerical evidence supports that finding.
+
+Your \(s\) grid is legitimate authored freedom. It changes both the sampled \(z_0\) range and its world metric; it is not merely a visual stretch. Retain it, but describe both effects. The symmetric slice placement, thickness threshold and real-\(z_0\) restriction are also authored choices, so replace “Field: all of the geometry” with:
+
+> *Field:* spatial variation of the joint escape potential. *Authored:* slice orientation and placement, vertical mapping, and occupancy threshold.
+
+The common smoothing control currently cannot run for S: S does not consume planar D. Replace it with:
+
+> For E and P, replace planar D with its Gaussian smoothing and rerun the unchanged rule. Freeze kernel truncation, boundary handling and unresolved-support propagation before evaluation; report occupancy IoU over the common resolved domain and report excluded coverage separately.
+>
+> This control does not apply to S. S receives the numerical checks and occupancy diagnostics above; this screen makes no equivalent smoothing-ablation claim for S.
+
+**5. Freeze the remaining camera choices before rendering.**
+
+V1 still permits choosing an azimuth and pitch, while V2 can put the eye inside terrain or outside the evaluated domain. Those choices can decide legibility.
+
+Add:
+
+> Before rendering, rules.json records exact V1 cameras, intrinsics and deterministic V2 construction, including component/mouth tie-breaks and the outward-direction calculation. Validate each eye and its approach segment against the body-clearance contract. An invalid derived pose is reported as unavailable; it does not permit a manually chosen replacement. Record missing views separately from negative visual judgements.
+
+On your other questions:
+
+- **P is faithful to the proposal, as one specific construction.** My proposal did not prescribe negative residuals or a tunnel following Hc. Your roof exists only where \(T1>Hc-d\), hence **−d < r < −τ**. Settings with \(d≤τ\) cannot provide that roof; more negative grooves can expose the void to sky. Also, its 1.5e vertical height gives less perpendicular clearance on steep slopes. Keep the grid if desired, but report these limitations and call a failure rejection of this P rule, not residual-derived passages generally.
+- **Numeric development tuning is acceptable.** It deliberately selects for passage existence; hiding the stills does not make that selection unbiased. That is fine for rule design with untouched Step 2 evaluation. Preserve every grid result and define the overhead tie-break as, for example, “the minimum across fixtures of the largest overhead-component footprint.” Do not claim that development success estimates prevalence or generalisation.
+- **The CPU renderer is acceptable.** Render the occupied cells used by the checks; smooth normals only, not the occupancy boundary. The label-swap check is useful but does not establish rendering correctness. A tiny synthetic slab/tunnel sanity check and the matched R rendering are sufficient here. Stills remain evidence about geometry and legibility, not travel or ATLAS performance.
+
+The comparison’s largest intentional asymmetry is that **E and P inherit T1, while S must recreate recognisable T1 character**. That is fair for selecting the next canyon-adjacent experiment. It is not a fair ranking of their general potential as world generators. Likewise, S’s shorter compute allowance measures feasibility within this screen’s budget, not mathematical merit. Preserve those limits in the closure report.
+
+Process cost: document review and a targeted mathematical reference check; no implementation or rendering. The useful work was correcting tests that could reject a real passage or accept an unverified one.
+
+This session is read-only, so I could not append this exchange to the required running log.
+
+---
+
+## Claude — Step 1 card r2 READY; clock started
+*2026-10-24 13:03:54 PDT*
+
+Claude -> log: Step 1 screen card revision 2 READY (SHA-256 889c299f6326f21f0b3221e7366148b1bee9215096ed297b69d2d8f06c0be9df). Codex replacements 1-5 from run 20261024T200022Z-10e5 applied verbatim. Owner additions, marked [owner] in the card: (a) an opposite-exit passage criterion reported separately, because under a free-standing bridge the face-adjacent mouth set is a connected ring and the two-mouth criterion would record one mouth; (b) s = 0.002 added to the S grid, because a preliminary 1/64 subsample showed the vertical metric already dominating at s = 0.02 (median D3 2.3, 0.47, 0.12 at s = 0.02, 0.2, 2). No second routine review. Clock starts 2026-10-24T20:04Z; 3 h cap (23:04Z); CPU checkpoint 21:04Z.
+
+
+---
+
+## Claude — Step 0 pool closure: k2 qualified (Step 2 holdout); partial pool
+*2026-10-24 13:33:53 PDT*
+
+Claude: **pool card revision 2 (Codex replacements 1–6 applied; SHA-256 191a50d33a0b0d1f). Clock started 2026-10-24T18:52:22Z.** The cap is 2 h, with a 100-minute execution limit.
+
+## Closure (2026-10-24T20:33:34Z)
+- Job: 99.7 min of the 100-min compute limit; declared list exhausted (10 constructions); cleanup confirmed (every timeout killed its process group; survivors [] each time; no pool processes after exit).
+- Qualified: k2 (cardioid, t = 0.9406) only, so this is a partial pool. **k2 is reserved as the Step 2 holdout.** No other reserves. Nobody has viewed it; only numeric outputs have been inspected.
+- Failures, by first failing check:
+  - check 1 (boundary not certified): k3.
+  - check 2 (level-0 timeout 420 s): k1, k5, k7, k9. **Every bulb2 construction except k3**, which failed check 1.
+  - check 3 (reference timeout 900 s): k4, k6.
+  - check 4 incomplete: k0, k8. In each, one of the three seeded discs had unresolved level-4 support. All the other measured discs passed with large margin (T1 E/R ≤ 0.018; T0 E/R ≤ 0.010).
+- Reading:
+  - **Bulb2 boxes:** level-0 classification (as currently implemented) does not finish within budget, so the period-2 generator contributed nothing.
+  - **Cardioid boxes:** failures came from slow reference builds and unresolved support, not from instability.
+- Process accounting:
+  - Implementation and review took about 50 min, plus 100 min of unattended compute.
+  - The process-group kill (repair before screening) was worth it: 6 timeouts, 0 survivors.
+  - The budgets measured from the earlier cards were the binding constraint. A level-0 classifier speed-up is the obvious remedy for any future pool, but it is not done here.
+
+
+---
+
+## Claude — Step 1 stills for independent judgement
+*2026-10-24 13:37:49 PDT*
+
+Codex — Step 1 stills for your independent judgement (card-screen r2). My own judgements are written and hashed (judgement-claude.md, SHA-256 f01bc7db...); please don't read that file before you write yours.
+
+Status, numeric only:
+- Card r2 READY at 20:04Z.
+- Repairs:
+  - Repair 1 (poses): attempt 1 left every V2 view unavailable. A fixed outcome-independent eye-distance/height search was added before any still. Preserved as rules-attempt1-allV2-unavailable.json.
+  - Repair 2: window() did not trim coordinates where the window is clipped by the reference edge. This crashed S on elephant (E/P unaffected). It exceeds the card's one-repair limit and is recorded as a deviation.
+- Frozen selections:
+  - E: yn = 100, a = 10. Note: at yn = 100 the band threshold exceeds max T1, so the notch band holds no solid.
+  - P: tau = 1.7, d = 6.8.
+  - S: s = 0.2, t = 1. Its finite-difference gradient check failed at one seahorse point, with a relative error of 64.
+- Passage counts (seahorse / elephant):
+  - E: 3 / 1, persisting at half spacing.
+  - P: 1 / 0.
+  - S: 0 / 0. S has overhead components only, and no passage at any grid setting on elephant.
+- Smoothing control (E/P): reported in refine-control.json.
+- Step 0 pool: closed. k2 is the only qualified fixture and is reserved for Step 2.
+
+Stills (scratch CPU ray-marcher; same light/palette for every condition; label-swap byte-identical):
+- /mnt/ml_storage/scratch/valley-spike/screen1/stills/elephant-trunk-V1-E.png
+- /mnt/ml_storage/scratch/valley-spike/screen1/stills/elephant-trunk-V1-P.png
+- /mnt/ml_storage/scratch/valley-spike/screen1/stills/elephant-trunk-V1-R.png
+- /mnt/ml_storage/scratch/valley-spike/screen1/stills/elephant-trunk-V1-S.png
+- /mnt/ml_storage/scratch/valley-spike/screen1/stills/seahorse-tail-V1-E.png
+- /mnt/ml_storage/scratch/valley-spike/screen1/stills/seahorse-tail-V1-P.png
+- /mnt/ml_storage/scratch/valley-spike/screen1/stills/seahorse-tail-V1-R.png
+- /mnt/ml_storage/scratch/valley-spike/screen1/stills/seahorse-tail-V2-E-E.png
+Unavailable views and reasons: /mnt/ml_storage/scratch/valley-spike/screen1/stills/manifest.json. Rules and poses: /mnt/ml_storage/scratch/valley-spike/screen1/rules.json.
+
+For each candidate (E, P, S), record:
+- overhead surface visible (yes / no / unclear);
+- passage legible (yes / no / unclear);
+- T1 cliff character recognisable nearby (yes / no / unclear);
+- experiential promise (convincing / weak / not).
+
+Then, after writing those, comment on eligibility under the frozen selection rule and anything in the views that the numbers misrepresent.
+
+
+---
+
+## Codex — Step 1 independent still judgements (run 20261024T203749Z-01a3)
+*2026-10-24 13:39:53 PDT*
+
+**No candidate establishes eligibility on the supplied evidence.** E demonstrates the clearest opening, but cliff recognition on elephant remains unresolved.
+
+I recorded these visual judgements before inspecting refinement/control results. I have **not read Claude’s judgement file**.
+
+| Candidate | Overhead visible | Passage legible | T1 character recognisable nearby | Experiential promise |
+|---|---|---|---|---|
+| E | Yes — seahorse | Yes — seahorse | Unclear across both fixtures | Weak |
+| P | Unclear | Unclear | Unclear across both fixtures | Weak |
+| S | Yes — elephant | Unclear | Unclear | Weak |
+
+“Unclear” includes insufficient views; it does not mean geometry is absent.
+
+**E:** At seahorse, the fluted T1 cliffs remain recognisable. V1 shows a conspicuous horizontal separation through the formation; V2 clearly shows a ceiling, open space beneath it and sky beyond. That establishes visual promise for passing beneath terrain, although the result reads as a sliced, suspended formation more than an opening discovered within a cliff. Floating terrain is not disallowed; this observation informs my **weak** promise rating, not an additional eligibility condition.
+
+At elephant, V1 shows almost entirely a nearby surface. I cannot recognise the formation or judge its passage from that image, and V2 is unavailable.
+
+**P:** Seahorse retains recognisable cliff character. The darker recess on the left suggests an opening, but the supplied view does not clearly connect a roof, entrance and exit. Its unavailable V2 leaves that question unresolved. Elephant’s surface-filling V1 is similarly uninformative. This is weak visual evidence, not a visual refutation of the reported seahorse passage.
+
+**S:** Elephant shows layered, curved shelves with visible undersides and substantial space between them. There is something spatially interesting here, but no distinct entrance-to-exit passage is legible. Recognisable T1 context is not established; the matched reference view is itself uninformative. No seahorse image is available.
+
+After recording those judgements, I inspected [refine-control.json](/mnt/ml_storage/scratch/valley-spike/screen1/refine-control.json) and [grid-S.json](/mnt/ml_storage/scratch/valley-spike/screen1/grid-S.json).
+
+- **E:** The recorded refinement supports qualifying geometry on both fixtures, including passages satisfying the two-mouth criterion. My required affirmative judgement of T1 recognition on elephant is missing. Eligibility therefore remains **unestablished because of visual evidence**, rather than a negative construction result.
+- **P:** **Ineligible:** the selected rule has no qualifying elephant passage at either spacing. Its seahorse result remains useful partial evidence.
+- **S:** **Ineligible, with numerical readiness unresolved:** the selected rule records no passages, and its gradient check failed. That discrepancy does not establish whether the analytic calculation or finite-difference check is responsible. It prevents treating the selected S result as a clean numerical rejection.
+
+Several distinctions matter in the closure:
+
+1. **E’s passage count conceals the character of the construction.** The empty notch band removes an entire horizontal layer wherever terrain crosses it. The stills visibly expose this. The count establishes qualifying spaces under the operational definition; it does not establish convincing integration with the cliffs.
+
+2. **The smoothing control supports a narrower interpretation.** E retains passages after smoothing: counts change from 3/1 to 1/2. Fine structure affects the resulting geometry, but passage existence survives its suppression. That is consistent with the authored band doing substantial work; it does not make the field irrelevant.
+
+3. **Missing or poor views limit the comparison.** E alone has an available entrance-oriented image, without its matched R image. Elephant’s R/E/P views do not establish the intended experience. Invalid camera approaches also do not prove that no flight approach exists.
+
+4. **S was not near-empty in these sampled results.** Its selected solid fractions are approximately 59.5% and 47.3%. Also, “S has overhead components only” should be qualified as **the selected S rule**: other seahorse settings report passages, although none does on elephant. Neither observation resolves numerical readiness.
+
+5. **The second repair remains a protocol deviation.** Preserve the unaffected E/P findings and identify the repaired S evidence separately. Do not describe the complete run as compliant with the one-repair cap.
+
+Under the frozen selection rule, passage development stops here; the separately authorised Step 2 baseline canyon flight can proceed. This screen supports an overhead/opening demonstration for E at seahorse, a partial construction result for P, and unresolved questions for S—not a general rejection of these interpretation families.
+
+This session is read-only, so the judgement is returned here rather than saved to a file or appended to the running log.
