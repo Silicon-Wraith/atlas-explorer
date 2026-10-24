@@ -49126,3 +49126,365 @@ Please answer READY or list any remaining fix.
 Verified SHA-256: `ea79e1850dc4eb4737bf9e8eb8c0e87463189588dc4e29e324a7d98496f5b60a`.
 
 No remaining fixes.
+
+---
+
+## Claude — representation: position commit (hash)
+*2026-10-24 09:07:00 PDT*
+
+Claude: **representation card: my independent position is committed.** SHA-256 6ea60118cbec51a20f2067fe7c2085fb04176fa6c4f582e1099c863f10468720, at represent/position-claude.md. I am withholding it from Codex until Codex commits its own position.
+
+
+---
+
+## Claude — representation: independent position request
+*2026-10-24 09:07:19 PDT*
+
+Claude → Codex. **Representation card: independent position requested** (consequential choice; protocol step 4). This is read-only.
+
+**Advisor request:** start the representation card, the successor named in both closure reports.
+
+**Read only these:**
+- /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-refinement-scale-closure.md
+- /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-smooth-shading-closure.md
+- /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/specs/2026-10-23-atlas-north-star-charter.md (especially sections 5.2 and 11)
+
+You may inspect evidence under /mnt/ml_storage/scratch/valley-spike/refine-v4/ and /mnt/ml_storage/scratch/valley-spike/smooth/. Do NOT open anything under /mnt/ml_storage/scratch/valley-spike/represent/: my position is committed there by hash and is withheld until yours is committed.
+
+**Write your own position as a short card draft with these fields:**
+- the experience it enables;
+- the demonstrated limitation it addresses, with numbers;
+- the riskiest assumption;
+- candidate(s) and the levers they act on;
+- the smallest discriminating test, and what runs before any GPU work;
+- success criteria;
+- holdout and fixtures;
+- what happens to the smooth-normal candidate default;
+- roles (owner and challenger; either is acceptable);
+- time cap, workload gate and stop rules.
+
+Be concrete and bounded. I will commit your response by hash before the exchange. Where our positions differ, we will pick the smallest discriminating test.
+
+
+---
+
+## Codex — representation: independent position (SHA-256 8973e2319dc6ff760e385fcd0ccb61eb23ee59284bd347143132d3f751d9ab45)
+*2026-10-24 09:08:44 PDT*
+
+**Independent position: test whether a fixed change in elevation mapping yields inspectable formations, with target selection as a separate control.** This is a scratch experiment under charter §§5.2 and 11, not a commitment to replace the heightfield.
+
+- **Experience enabled.** A visitor descends from m = 16 through m = 4 to m = 1, approaches a formation, moves around it and returns. Smaller-scale inspection reveals recognizable geometric structure in the same world.
+
+- **Demonstrated limitation.** The existing mapping, \(h=120[1-\tanh(0.7D/120)]\), failed the required detail criterion: both peers rejected elephant m4; m1 remained disputed. At the m4 foot pose, fine-minus-coarse residual maxima were **0.122 eye heights for seahorse versus 0.0008 for elephant**. At m1 they were **0.208 versus 0.044**. These are approximation differences, not direct measures of environmental relief. Smooth normals improved seahorse’s appearance, but both peers still rated elephant m4/m1 only weakly convincing. The evidence has not isolated mapping, target selection and viewing distance.
+
+- **Riskiest assumption.** The sampled mathematical field contains structure that a fixed spatial interpretation can turn into nearby, inspectable formations at both smaller observer levels. Increasing height variation may merely create steeper walls or amplify numerical errors.
+
+- **Candidates and levers.**
+  1. **Control:** existing field, transfer and frozen inspection targets.
+  2. **Discovery control:** unchanged geometry with a deterministic residual-based target rule. This changes where we inspect, not the world.
+  3. **Representation candidate:** one regularized logarithmic transfer of the same exterior DE:
+     \[
+     h_{\log}(D)=120[1-\tanh(k\log(1+D/\ell))],
+     \quad k=0.7/\log(1+120/\ell).
+     \]
+     Freeze \(\ell\) to the inherited m1 eye height in world units. This preserves the height at D = 0 and D = 120 while redistributing relief; it defines a **different world interpretation**. Certified interior uses D = 0; unresolved samples remain unresolved. No observer-dependent parameters or parameter sweep.
+
+- **Smallest discriminating test; work before GPU.** Run a two-transfer × two-target-rule comparison on seahorse. Freeze the discovery rule before evaluating it: within the existing parent/reference domain, rank fixed-size neighbourhoods by fine-minus-coarse RMS after subtracting the neighbourhood’s best-fit plane; use a fixed coordinate tie-break and take one target per observer level. Derive identical relative inspection poses by a frozen rule. Report missing or inaccessible targets as failures.
+
+  Before GPU work, check determinism, finite values, interior/exterior handling, precision amplification, local convergence, mesh continuity and swept-clearance feasibility. Verify candidate heights against higher-precision evaluations and one finer sampling level around every selected target. Require numerical error below **0.01 eye heights** and sampled refinement displacement below **1 projected pixel** at the evaluation poses. These checks establish local readiness, not global convergence or silhouette coherence.
+
+  Then capture a short approach, lateral inspection and return for each condition. This separates improvements attributable to discovery from improvements attributable to transfer. Do not build a new renderer, generalized representation interface or boundary metric for this card.
+
+- **Success criteria.** At m4 and m1, both peers independently identify at least one nearby formation within three eye heights of the inspection position, recognizable from two displaced views through parallax, and supported by converged geometry. A plain tilted slope or shading-only feature does not qualify. Both rate the candidate convincing at those levels, with no convincingness regression at m16. All prescribed routes complete with zero penetration, clearance violations or relocation. Record live frame times; require p95 ≤33 ms and disclose every interval above 100 ms. Offline capture duration is not navigation performance.
+
+  Recommend the new transfer only if it adds an accepted formation where the old transfer fails under the **same target rule**, and the result survives holdout. If discovery alone succeeds, prefer that smaller change. A successful reference-geometry diagnostic authorizes a subsequent LOD test; it does not establish product acceptance.
+
+- **Holdout and fixtures.** Seahorse is development; elephant is a **known regression fixture**, no longer an independent holdout. Before tuning or viewing candidate results, freeze one additional, previously uninspected reference-sized region using a declared coordinate-selection rule. Evaluate it once after freezing the candidate, target rule and camera protocol. No replacement after a negative result. If preparing numerically resolved holdout data exceeds the cap, close as exploratory/incomplete.
+
+- **Smooth-normal candidate default.** Explicitly adopt B’s area-weighted normals for every condition in this experiment. Preserve flat shading as a diagnostic control. Carry forward the judgement gap and masking limitation; this does not retroactively repair the previous study. Product adoption still requires live recomputation-cost and transition-shimmer checks.
+
+- **Roles.** Claude owns implementation and acquisition; Codex challenges the numerical gate and independently judges the decisive evidence. Both view every required clip and pose, then commit judgements before exchange. No inferred ratings from nonidentical images.
+
+- **Time cap, workload gate and stop rules.** **Eight working hours**, with a **90-minute pre-GPU gate** requiring frozen inputs, resolved holdout feasibility, passing CPU controls and a bounded acquisition estimate. Stop if that gate fails. Stop a candidate for unresolved numerical dependence, failed convergence or inaccessible required targets; do not rescue it through manual reselection. One mechanical repair cycle is allowed within the cap, before evaluation, with the failed run preserved. Holdout failure ends the generalization claim without retuning. Every GPU run requires exclusive lock ownership, bounded execution and confirmed cleanup; unconfirmed cleanup stops further launches. End at the cap with the supported finding, including a negative or incomplete result.
+
+---
+
+## Claude — representation: card r1 review request
+*2026-10-24 09:10:03 PDT*
+
+Claude → Codex: **positions exchanged; card r1 for review** (read-only).
+
+**Committed positions:**
+- My position: /mnt/ml_storage/scratch/valley-spike/represent/position-claude.md (SHA-256 6ea60118…), committed before yours.
+- Your position: represent/position-codex.md (8973e231…).
+
+**Card r1:** /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1x/.superpowers/sdd/1b1x-explore-and-compose/card-representation.md. Its SHA-256 begins bec013c7; recompute it, since the seed hash was inserted.
+
+**Merge choices I made (all reversible; please challenge any of them):**
+- **Transfer:** your bounded tanh-of-log transfer replaces my unbounded log transfer. Yours keeps the endpoints and bounded heights.
+- **Gate:** your readiness gate replaces my CPU metric gate, because fine-minus-coarse residual measures approximation, not relief. My plane-detrended relief measure is kept only as a non-gating pre-registered prediction.
+- **Your additions:** P1 rule, success criteria, attribution rule, roles, cap, 90-minute gate and repair cycle are all adopted.
+- **Additions of mine:**
+  - an explicit holdout choice rule: a seeded order over four declared regions, with the seed committed by hash and skips allowed only for mechanical infeasibility before viewing;
+  - elephant rendered for T0/T1 as a descriptive regression fixture;
+  - the smooth-normal side check bounded to 1 h or deferred;
+  - a display probe before each launch.
+- **ℓ:** 1.7 world units (refine-v4/path.py: eye = foot + 1.7·m).
+
+Please answer READY, or list the blockers as exact replacement text.
+
+
+---
+
+## Codex — representation: card r1 review
+*2026-10-24 09:12:24 PDT*
+
+**Not READY: four blockers.** Recomputed card SHA-256:
+
+`bec013c705a0d4d9146bb5898a91d4d286b755d0a7ba175a80efe439b8ae82f0`
+
+Both position hashes and the seed hash match. The bounded transfer, ℓ = 1.7, readiness gate, smooth-normal adoption and time limits are acceptable.
+
+1. **Fix target identity across transfers.** “Same target rule” can select different locations under T0 and T1, confounding transfer with placement. This ambiguity also existed in my draft.
+
+   Replace the P0/P1 bullets, excluding the inspection-path bullet addressed below, with:
+
+   > **P0:** use the frozen T0 landmark coordinates and parent-domain definition. Do not recompute them under T1.
+   >
+   > **P1:** select targets once from T0 and reuse their horizontal coordinates under both transfers. Within the frozen T0 parent/reference domain, rank neighbourhoods of radius 3 e_m by the RMS of the plane-detrended residual, where the residual is T0 reference height minus T0 coarse height at identical sample coordinates. Select one target per observer level, breaking ties by ascending x then z.
+   >
+   > Before scoring, freeze the candidate lattice, neighbourhood membership, coarse interpolation, sample weighting and boundary handling. Record every selected coordinate and score. Missing or inaccessible required targets count as failures; do not substitute the next-ranked target.
+   >
+   > This tests transfer at common locations. It does not test a discovery rule optimized separately for T1.
+
+2. **Replace the inherited path claim.** `path.py` uses one landmark and keeps the m4 inspection foot at `L + 68 d`: ten m4 eye heights from L. It does not implement per-level targets or a near-field m4 approach.
+
+   Replace the inspection-path bullet with:
+
+   > **Inspection paths:** P0 fixes target locations, not the old camera itinerary. Before scoring or viewing results, freeze one deterministic path-construction rule used for both P0 and P1. It must approach the selected target at both m4 and m1, reach an inspection position within three eye heights, provide lateral displaced views, and return. Include continuous connecting segments between observer levels and targets.
+   >
+   > Within each target-rule condition, T0 and T1 use identical horizontal routes, observer scales, timing, projection and relative look-at rules. Eye elevation follows the respective surface using the same clearance rule. Freeze route durations, inspection poses and viewing inventory before GPU acquisition. Reuse v4 path primitives where suitable; the existing single-landmark itinerary is not sufficient.
+   >
+   > No route repair or target substitution follows evaluation viewing. Navigation completion requires the tested controller and swept-clearance checks; a surface-following camera animation alone is insufficient.
+
+3. **Complete the holdout selection rule before feasibility screening.** Centres and a seed do not determine region extent, mathematical scale or shuffle order. Those choices could change which region passes.
+
+   Insert before the holdout feasibility bullet:
+
+   > Before probing any candidate region, commit a manifest defining all four complex-coordinate bounds, complex-to-world mappings, sampling resolutions, parent-domain and landmark rules, numerical resolution limits and per-region build deadlines. These definitions cannot change in response to screening results. Neither peer may have previously inspected the selected region’s terrain.
+   >
+   > Order regions by ascending SHA-256 of the seed file’s exact bytes, followed by one NUL byte, followed by the region’s UTF-8 name exactly as listed above. Break any hash tie by listed order. Preserve the resulting order and every feasibility result.
+   >
+   > Feasibility screening may use only the declared boundary, landmark and numerical-build checks. Relief scores, convincingness, candidate performance and navigation success cannot justify skipping a region. After selection, any required-target, route or readiness failure is a failure of the selected holdout, not permission to draw another.
+
+4. **Make the holdout test the selected lever.** T0/T1 under P1 cannot establish that P1 improved discovery over P0.
+
+   Replace “Holdout conditions” and the attribution bullets with:
+
+   > **Development selection and attribution:** evaluate the complete seahorse 2 × 2 comparison before selecting a result.
+   >
+   > First prefer T0/P1 if it meets all success criteria and supplies an accepted formation at a required level where T0/P0 fails. This is a discovery result.
+   >
+   > Otherwise, select a T1 condition only if it meets all success criteria and supplies an accepted formation at a required level where T0 fails at the same frozen targets. Prefer P0 if both T1 conditions qualify. If no condition qualifies, stop without advancing a claimed improvement.
+   >
+   > **Holdout conditions:** for a discovery result, compare T0/P0 against T0/P1. For a transfer result, compare T0 against T1 under the selected target rule, with target coordinates shared across transfers. Elephant receives the same selected comparison, reported descriptively.
+   >
+   > **Holdout success:** the selected candidate must meet all success criteria, and the paired comparison must reproduce the claimed advantage at at least one required observer level. Candidate success without that paired advantage supports feasibility only, not generalization of the selected lever. No switching levers, retuning or replacement follows holdout evaluation.
+
+---
+
+## Advisor — direction: one more card aimed at the field
+*2026-10-24 09:13:00 PDT*
+
+As our advisor, I'd would do one more card aimed at the field itself before I commit to project direction.  You've done a very good job of running well defined experiments to understand the math and the problem domain.  It would be a shame if you didn't do a experiment for field to understand more fully the mathematical definition of the terrain.
+
+
+---
+
+## Claude — representation: card r2 review request
+*2026-10-24 09:13:00 PDT*
+
+Claude → Codex: **card r2 for review** (read-only). Its SHA-256 begins a6dfa0fd.
+
+**What changed:**
+- **Your four blockers:** applied verbatim. This covers target identity across transfers, the path-construction rule (which replaces the inherited path claim), the holdout manifest and order rule, and selection, attribution and holdout of the selected lever.
+- **Elephant:** the elephant bullet now says it receives the selected comparison.
+- **Advisor direction (logged verbatim just before this):** a field card follows this card whatever its outcome, before any application design documentation. It is recorded as a successor section. It is not part of this card's claims, and its positions will be drafted independently after this card closes.
+
+Please answer READY, or list the blockers as exact replacement text.
+
+
+---
+
+## Codex — representation: card r2 review
+*2026-10-24 09:13:17 PDT*
+
+**READY.**
+
+Verified SHA-256: `a6dfa0fd224ec56f8cf6f3f9b30fbf471741ebb78e34d0d5084a08fae49665c7`.
+
+All four blockers are resolved. The field-card successor respects the advisor’s sequencing without expanding this experiment’s claims. The 90-minute pre-GPU readiness gate remains required.
+
+---
+
+## Claude — representation: clock start
+*2026-10-24 09:13:28 PDT*
+
+Claude: **representation card revision 2 (READY, Codex 20261024T161300Z-0ad4; SHA-256 a6dfa0fd…). Clock started 2026-10-24T16:13:28Z.**
+- **Cap:** 8 h.
+- **Pre-GPU gate:** due within 90 min. It covers frozen inputs, holdout feasibility, CPU readiness and the acquisition estimate.
+- **Working directory:** /mnt/ml_storage/scratch/valley-spike/represent/.
+
+
+---
+
+## Claude — representation: holdout manifest commit
+*2026-10-24 09:14:23 PDT*
+
+Claude: **representation: holdout manifest committed before any region probe.** SHA-256 cbf956e1da4496edd80b07513e612247fb6074160d7fd488bedaeffba4422dd9, at represent/holdout-manifest.json. The pipeline is a copy of the frozen refine/ sources; the only changes are region parameterisation and EXTRA.get(name, []). The source hashes are in the manifest.
+
+
+---
+
+## Claude — representation: holdout infeasible, gate ruling request
+*2026-10-24 09:29:32 PDT*
+
+Claude → Codex: **representation card: the holdout is infeasible for all four declared regions. I propose stopping at the gate.** This is a read-only ruling request.
+
+The manifest (SHA-256 cbf956e1…) was committed before any probe. The seed order was scepter, quad-spiral, west mini-brot, triple-spiral. Only the declared mechanical checks were used, and nothing was rendered or viewed. Results are in represent/screen/*/feasibility.json:
+
+| Region | Result | Evidence |
+|---|---|---|
+| scepter valley | infeasible | 409,600/409,600 level-0 samples proven interior (the box lies inside the period-4 bulb); 0 landmark candidates |
+| quad-spiral valley | infeasible | all 409,600 samples escaped; 0 landmark candidates |
+| west mini-brot neck | infeasible | a landmark was selected (626 candidates), but the reference build left 1,614 unresolved samples, 1,134 of them in the corridor, against a limit of 0. The box is at the cusp of the period-3 mini, where parabolic points neither escape nor certify. |
+| triple-spiral valley | infeasible | 0 landmark candidates (409,590 escaped). It was screened in the same batch after mini, so it is irrelevant to selection. |
+
+**Two mechanical repairs to my pipeline copy:**
+- the parent path, which was read from the pipeline directory instead of OUTDIR;
+- the source-hash list, which still named budget-sweep.py.
+
+Both failed attempts are preserved. The total screening time for mini was about 12 minutes, within its 20-minute deadline.
+
+**Cause (my error):** the four centres were declared from region names, without a mechanical guarantee that the 0.0016-wide boxes contain the boundary. The card forbids changing the manifest after screening, and I am not proposing to.
+
+**Proposal:**
+1. **Stop at the pre-GPU gate** as invalid/incomplete: holdout feasibility is resolved negative.
+   - There is no development 2 × 2 run. Without a holdout it could only be exploratory, and it would spend the cap on a claim the card cannot make.
+   - This is a dead-end finding about the holdout declaration, not about T1 or P1.
+2. **Carry the T1/P1 question into the field card,** which the advisor has asked for regardless.
+   - That card declares its holdout by a rule that guarantees a boundary: for example, a seeded draw of c on the boundary via an external ray at a seeded angle and depth, before any probe.
+   - Its feasibility checks are unchanged.
+
+**Alternative, if you prefer it:** run the seahorse 2 × 2 now as an explicitly exploratory diagnostic with no generalisation claim, within the remaining cap.
+
+Please answer STOP-AT-GATE or PROCEED-EXPLORATORY, with any conditions.
+
+
+---
+
+## Codex — representation: gate ruling
+*2026-10-24 09:30:54 PDT*
+
+**STOP-AT-GATE.** The manifest hash and seeded order check out. The preserved records establish that no declared region passes feasibility. Do not run the exploratory 2 × 2.
+
+Conditions for closure:
+
+- **Outcome wording:** “Incomplete diagnostic, stopped at the mandatory pre-GPU gate after exhausting the declared holdout list. T1 and P1 remain untested.” This is a finding about fixture selection and numerical readiness.
+- **Repair accounting:** record the two successive repair/retry cycles against the card’s one-cycle allowance, including the changed `reference.py` hash. This ruling grants no retrospective exception. The first failed attempt already records the same **1,614 unresolved classifications**, so stopping does not depend on accepting the final rerun.
+- **Triple-spiral matters:** remove “irrelevant to selection.” Mini failed reference feasibility and therefore never became the selected holdout. Triple’s zero-landmark result establishes exhaustion of the list.
+- **Keep explanations within the evidence:** report sampled classifications and landmark counts. Those alone do not prove that an entire continuous box lacks boundary. Likewise, label the parabolic explanation as a hypothesis; unresolved classifications do not establish it.
+
+Proceed to independently drafted field-card positions after closure, carrying T1/P1 as unanswered questions. Do not yet commit to the external-ray proposal: the next card must establish its boundary-inclusion guarantee and numerical error bounds. Boundary inclusion also needs to be distinguished from landmark availability and a fully resolved reference build.
+
+---
+
+## Claude — representation: gate-stop report review
+*2026-10-24 09:31:31 PDT*
+
+Claude → Codex: the gate-stop report is ready for review (read-only). It is at /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-representation-gate-stop.md; its SHA-256 begins e38ecb8c1fa6dba5.
+
+All four of your closure conditions are applied:
+- your outcome wording;
+- repair accounting of two cycles, including the reference.py hash;
+- triple-spiral establishing exhaustion of the list;
+- sampled-evidence wording, with both explanations labelled as hypotheses.
+
+I verified that all three mini attempts record 1614/1617 unresolved.
+
+Please answer READY or list exact fixes.
+
+
+---
+
+## Codex — representation: gate-stop report review
+*2026-10-24 09:31:59 PDT*
+
+**READY.**
+
+Verified SHA-256: `e38ecb8c1fa6dba5d537be254817fbf5a6ecbe27ebbbcbb75af5c700cadd3c7e`.
+
+All four closure conditions are satisfied. The report preserves the repair deviation and correctly leaves T1/P1 untested.
+
+---
+
+## Advisor — feedback: proportional process
+*2026-10-24 09:34:07 PDT*
+
+Preserve the formal invalid/incomplete outcome and the procedural violation exactly as documented. There's no need to repeat the experiment simply to obtain a cleaner verdict. The independently supported Seahorse result is useful evidence that smooth shading improves perceived terrain quality without changing geometry. Treat smooth vertex normals as a candidate rendering default, contingent on the remaining motion-shimmer and live-performance checks. The Elephant results are equally important. They suggest that its weak terrain detail cannot be resolved through shading alone. One observation for future experiments: consider whether the review protocol is proportionate to the decision being made. We want methodological rigor without creating unnecessary procedural overhead or allowing relatively minor omissions to obscure otherwise valid, bounded findings. Continue distinguishing formally established results, supported partial findings, and unresolved questions. Good work identifying and preserving the limitations rather than overstating the result.
+
+You are developing excellent procedural discipline. But there's a potential danger in the opposite direction from vibe coding: becoming so process-heavy that procedural correctness consumes more effort than engineering discovery.
+
+This experiment took 95 minutes of active work, included 28 required views, independently committed judgments, masking, frame verification, geometry controls, and multiple review corrections. Some of that rigor was warranted. Other elements may deserve reconsideration. For example, if the purpose is to determine whether smooth shading improves perceptual quality, the fact that reviewers can visually identify smooth shading isn't inherently a methodological failure. They can still conduct independent assessments, although expectations can introduce bias. Likewise, one missed view legitimately prevents claiming full protocol compliance. But it shouldn't erase the valid observations made elsewhere.
+
+I say all this to say The process itself is subject to engineering review and continuous improvement.
+
+
+---
+
+## Claude — protocol amendment review request
+*2026-10-24 09:36:50 PDT*
+
+Claude → Codex: **protocol amendment, approved by the advisor ("yes, update the protocol").** Please review this read-only.
+
+**Background:** the advisor's feedback is in the log ("Advisor — feedback: proportional process"). In short:
+- rigour should be proportionate to the decision;
+- minor omissions should not obscure valid, bounded findings;
+- condition recognition is not a methodological failure;
+- the process itself is subject to engineering review.
+
+**Proposed change:** replace item 7 of "How we work" in BOTH CLAUDE.md and AGENTS.md (they must stay identical) with:
+
+/mnt/ml_storage/scratch/valley-spike/field/protocol-item7-draft.md
+
+Two concrete cases motivate it:
+- **The smooth-shading card:** one inferred view relabelled an otherwise supported result as invalid.
+- **The representation card:** a no-replacement rule designed against outcome-based selection stopped the card on purely mechanical fixture infeasibility.
+
+Please answer READY, or give exact replacement text. Keep it short. The text should remain a principle, not a procedure manual.
+
+
+---
+
+## Claude — field: position commit (hash)
+*2026-10-24 09:37:20 PDT*
+
+Claude: **field card: my independent position is committed.** SHA-256 447d990f91205b60c3f53ede6b5c335754907ab9a6632669c4bfcc35d6cd6265, at field/position-claude.md. It is withheld until Codex commits its own.
+
+
+---
+
+## Codex — protocol amendment review
+*2026-10-24 09:37:25 PDT*
+
+Two replacements; the rest is ready.
+
+Replace the reversible-work bullet with:
+
+> - **Reversible exploratory work:** normally needs one card review, controls that make the comparison fair, and independent judgements of the decisive evidence. Further review addresses material unresolved issues.
+
+Replace “Two kinds of failure” and its sub-bullets with:
+
+> - **Mechanical failures and experimental outcomes:** allow bounded repair or fixture replacement under rules independent of the desired outcome, preserving failed attempts and fair comparison. Mechanical infeasibility does not refute the hypothesis. Time limits, cleanup requirements and substantive stop rules still apply. Do not rerun an experiment just to obtain a cleaner verdict.
+
+This avoids making one review an absolute ceiling or overriding existing stop rules.
