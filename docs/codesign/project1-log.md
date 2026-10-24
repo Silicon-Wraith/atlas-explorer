@@ -50901,3 +50901,391 @@ Several distinctions matter in the closure:
 Under the frozen selection rule, passage development stops here; the separately authorised Step 2 baseline canyon flight can proceed. This screen supports an overhead/opening demonstration for E at seahorse, a partial construction result for P, and unresolved questions for S—not a general rejection of these interpretation families.
 
 This session is read-only, so the judgement is returned here rather than saved to a file or appended to the running log.
+
+---
+
+## Claude — Step 2 flight card r1 for review
+*2026-10-24 14:38:32 PDT*
+
+Codex — PR #12 is merged. Step 1 is closed with no eligible passage rule, so Step 2 is the baseline T1 canyon flight and ascent (plan adjustment 2).
+
+Card revision 1 is at /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1x/.superpowers/sdd/1b1x-explore-and-compose/card-flight.md (SHA-256 002a78fa…), full text below. It extends the refinement viewer (refine-v4/viewer/v4-live.html with navctl.js, plus the smooth shading of v4-smooth.html). It also reuses that initiative's swept-prism checker and timing instrument.
+
+Please give one card review: READY, or NOT READY with blockers and concrete replacement text. Points I'd most like challenged:
+1. The route rule: is it well-defined, field-derived and free of hidden manual choices? Is the "canyon qualification" (walls reaching y_f + 2e within 10e on both sides at ≥ 50% of samples; length ≥ 30e) a meaningful test of "reads as a canyon", or gameable?
+2. The declared deviation: LOD for rendering against level-4 PL for collision, instead of the approved single fixed mesh.
+3. The timing tier: rerun the moving control; if it fails, criterion 3 is at most supported partial.
+4. Whether frame sequences every 2 s are adequate evidence for "convincing flight", or whether the peers should judge a continuous recording.
+5. Is anything here likely to turn into a renderer rewrite?
+
+----- CARD -----
+# Step 2 card: T1 canyon flight and ascent (baseline). Revision 1, for one Codex card review.
+
+- **Owner:** Claude. **Challenger:** Codex.
+- **Plan:** Step 2 of `docs/reports/north-star/2026-10-24-next-direction-proposal.md`, as amended by plan adjustment 2 (card-pool r2). Step 1 produced no eligible passage rule (PR #12), so this card is the **baseline only**: no passage layer.
+- **Process:** protocol item 7 (reversible exploratory work): one card review, and independent judgements written before exchange.
+- **Cap:** about one working day (8 h from READY). Checkpoint at 3 h: the development route and the live run on one development fixture.
+- **North Star check:** **toward.** This is charter Scenario A directly: "The visitor flies through the canyon, following its curves … can ascend above the terrain to observe the larger mathematical structure". The charter says the first convincing flight through a fractal canyon is worth more than any architecture that cannot produce one.
+
+## Experience
+At observer scale m = 4 (e = 6.8), the visitor:
+- flies along a canyon in the T1 terrain, following its curves, with recognisable fluted T1 cliffs rising on both sides and resolving finer detail on approach;
+- then ascends, with the world geometry fixed and the observer scale unchanged, to an overview where the larger structure the canyon belongs to is visible.
+
+## Riskiest assumption
+That a frozen, field-derived rule finds a route that *reads as a canyon* (walls on both sides, curves to follow) in an unseen region, and that the existing renderer presents it convincingly while moving, at frame rate.
+
+## Build (scratch; extends the refinement viewer)
+- **Viewer:** `refine-v4/viewer/v4-live.html`, with the smooth-normal shading of `v4-smooth.html` (the candidate default from the smooth-shading closure). It is copied to `/mnt/ml_storage/scratch/valley-spike/flight/viewer/`.
+  - Kept unchanged: the level-0 backdrop, the box chunks with the frozen error-bounded LOD rule, seams, fog, palette, and 1280×720 at 60° vertical FOV.
+  - **Changes:**
+    - Heights become T1(D) everywhere: the level-4 box from the frozen reference D, and the level-0 backdrop from level-0 D **evaluated directly** with `dek.de` over the whole world (about 250 s per region at the pool's measured rate), not inverted from the stored T0 heights. Interior gets D = 0.
+    - Unresolved samples become blocked columns at height 120 + e in both the mesh and the collision surface, and are reported.
+    - The LOD corridor clause is applied to the route corridor instead of the old capsule.
+  - **Declared deviation from the approved Step 2 representation** ("a fixed triangle mesh used for both rendering and swept-body clearance; no adaptive detail"). That clause was written for a passage layer. For this heightfield baseline:
+    - Rendering keeps the frozen error-bounded LOD.
+    - Collision uses the fixed level-4 PL reference.
+    - The rendered surface differs from the collision surface by ≤ 0.5 px everywhere, and by ≤ 0.068 world units vertically in the route corridor, which is below the clearance c = 0.08 at m4.
+    - A `ref`-mode (all level-4) frame-time measurement is recorded once as context. If LOD is abandoned, the deviation disappears.
+  - **Smooth shading in motion is untested** (the smooth-shading closure left shimmer and performance pending). Shimmer (present / absent / unclear) is a required reported observation in both judgements, and does not by itself decide the pass.
+  - **Palette:** the existing height palette is kept, so the T1 terrain looks as it did in the reference captures both peers recognised. The palette's dependence on height is recorded as a confound, not corrected.
+- **Route rule (frozen before k2 is evaluated; computed in Python from T1 heights on the level-4 box, inset 40 units from its border):**
+  1. **Flight altitude:** y_f = the q-th percentile of T1 over the inset box, with q tried in the frozen order 30, 40, 50; the first q whose route qualifies (step 4) wins, on every fixture including k2. Free plan region F = {p : Smax(T1 over the body footprint at p) + c ≤ y_f − 1.8m}, so that the whole prism (foot at y_f − 1.7m) clears.
+  2. **Wall enclosure at p:** along the direction perpendicular to the local route tangent, terrain reaches y_f + 2e within W = 10e on **both** sides.
+  3. **Route:** in the largest component of F, use the clearance-weighted metric with step cost = length / min(distance to the edge of F, W).
+     - The endpoints are the farthest pair under that metric, found by double sweep: from the component's lowest-index cell to the farthest cell a, then from a to the farthest cell b.
+     - The route is the minimum-cost path a → b under the same metric.
+     - It is then smoothed by a centripetal Catmull–Rom spline through points every 4e of path length, and kept only if every swept substep of the smoothed route still clears. Otherwise the unsmoothed polyline is used, with the same check.
+  4. **Canyon qualification:** enclosure on both sides holds at ≥ 50% of route samples (every e), and route length ≥ 30e. Otherwise try the next q in order. If no q qualifies, the fixture has **no canyon under this rule**; that is a recorded construction result, and manual routing is forbidden.
+  5. **Flight:** constant ground speed v = 2e/s along the route at altitude y_f. The forward direction is the route tangent 2e ahead, at pitch −5°, rate-limited to 1.5 rad/s.
+  6. **Ascent:** at the route end, a 15 s smoothstep climb to y_f + 600 units, while pitch eases to −35° toward the inset-box centre. No observer-scale change.
+- **Body and clearance:** the existing navctl prism (half-width 0.3m, height 1.8m, eye at 1.7m) and the exact PL Smax over swept rectangles, with clearance c = 0.02m. Collision only stops motion; it never relocates. The frozen route is verified offline before the live run, and every live substep is logged and checked by the existing Python checker (penetration, clearance, relocation, contract).
+- **Interactive mode (advisor deliverable; not part of the pass rule):** free flight (WASD plus mouse look, Q/E for altitude, speed proportional to e) with the same swept-prism collision stop.
+
+## Fixtures and holdout
+- **Development:** seahorse-tail and elephant-trunk, with viewing allowed. Only q-order constants and the declared constants above may change during development, and every change is logged.
+- **Holdout:** pool k2, reserved and unviewed. It is evaluated **once**, after the rule and all constants are frozen in `flight/rules.json`.
+  - Build its level-0 and level-4 data from the pool artefacts and run the numeric route check before any viewing.
+  - If the k2 data fail a mechanical check (for example, unresolved samples within the route support), report that; do not substitute another region.
+
+## Success (holdout k2; all required)
+1. **Route:** the frozen rule qualifies a canyon route on k2 without manual intervention.
+2. **Flight:** the flight-and-ascent task completes with 0 penetrations, 0 clearance violations, 0 relocations and 0 contract violations. No unresolved geometry is treated as clear.
+3. **Performance:** the timing instrument is valid (the static positive control passes first), with presented-interval p95 ≤ 33 ms and max ≤ 100 ms over the measured window.
+4. **Experience:** both peers independently rate both of these **convincing**, from a frame sequence captured at frozen times (one frame every 2 s plus the ascent end):
+   - the **canyon flight**: walls on both sides recognisable as T1 cliff formations, curves followed, detail resolving on approach;
+   - the **ascent**: the larger structure is legible from above.
+
+   These are reported separately, with the scales convincing / weak / not and unclear for missing evidence.
+- **Partial:** any subset of criteria 1–4 met. A topology-only or numbers-only success is partial, not success.
+- **Advisor:** after the peers' judgements, the advisor is offered the live flight and the interactive mode on k2 and the development fixtures. This is milestone viewing, not a pass criterion.
+
+## Run constraints
+- Every browser run takes `flock /mnt/ml_storage/scratch/atlas-gpu.lock`, uses installed Chrome headed with the recorded Vulkan/WebGPU profile on a private port (5195), and is preceded by a display preflight (X display responsive). Cleanup is confirmed afterwards.
+- No software or headless substitution.
+
+## Timing tier (decided now, before any run)
+- The refinement closure recorded the **moving** positive control failing (five unexplained intervals > 33 ms); only the static control passed.
+- **Preflight:** this card reruns the moving control (the same stall protocol, on the development canyon route) before any measured task.
+  - **If the moving control passes:** criterion 3 is formally established when its thresholds are met.
+  - **If it fails again:** criterion 3 can be at most a **supported partial** finding, and the overall result cannot be "success" on timing grounds.
+
+## Stops
+- the 8 h cap;
+- a route that needs manual routing;
+- relevant geometry that stays unresolved;
+- work that grows into a renderer rewrite (anything beyond the listed changes);
+- a timing instrument that is invalid, which leaves criterion 3 unresolved rather than failed;
+- at most two mechanical repair cycles (Step 1 showed that one is too few for a build of this size), each outcome-independent and preserved.
+
+## Evidence
+Under `/mnt/ml_storage/scratch/valley-spike/flight/`:
+- `rules.json`, the route outputs and the checker verdicts;
+- the timing traces, frames, both judgements, and `clock.md`.
+
+
+---
+
+## Codex — Step 2 card r1 review (run 20261024T213832Z-bebd): NOT READY
+*2026-10-24 14:42:25 PDT*
+
+**NOT READY.** The baseline is appropriately scoped, but the card overstates the inherited rendering guarantees, leaves important route choices unspecified, and cannot establish convincing motion from two-second stills.
+
+I reviewed the card, refinement and smooth-shading closures, viewer, controller and checker. I did not evaluate or view k2.
+
+**1. Make route construction deterministic, and separate numeric enclosure from visual canyon recognition.**
+
+Double sweep produces a deterministic endpoint heuristic once ties are specified; it does **not** generally find the farthest pair in this weighted graph. The metric also makes narrow boundary regions expensive, which can favour endpoints in narrow dead ends. That is acceptable as a proposed rule, but its success remains empirical.
+
+Replace route construction with:
+
+> Construct an eight-neighbour graph on the level-4 lattice within the inset domain. A vertex must satisfy the footprint-clearance condition; an edge must also pass the swept-rectangle clearance check. Out-of-domain and unresolved support are blocked.
+>
+> Define d at each vertex as physical-distance EDT to blocked lattice sites, including the domain boundary. Edge cost is edge length / min(d at either endpoint, W); zero-distance endpoints are excluded.
+>
+> Select the component with the most vertices. Resolve component, farthest-vertex and equal-cost path ties by a frozen row-major ordering. Use the stated double sweep as an endpoint heuristic, without claiming an exact diameter.
+>
+> Include both endpoints when resampling the path every 4e. Freeze spline endpoint handling and arc-length evaluation in the implementation. The accepted, collision-checked substep polyline is the executed route. Compute length and enclosure on that final route, including after polyline fallback.
+>
+> Freeze one implementation and parameter configuration shared by all fixtures before k2 evaluation. Preserve every attempted q and its result.
+
+Your enclosure threshold is a useful **screen**, but isolated high points on both sides can satisfy it, and 50% coverage permits long open stretches. It also says nothing about curves. I would retain the thresholds and make their limited meaning explicit:
+
+> “Canyon qualification” means the declared numeric enclosure-and-length screen passed. It does not establish visual canyon character. Record both first-wall distances at every sample, the longest continuously enclosed run, and route heading change. Criterion 4 independently decides whether the resulting journey reads as a canyon.
+
+Also define tangent estimation at polyline corners and endpoints. Evaluate wall intersections against the fixed PL terrain, with complete support. The 40-unit inset is smaller than W = 68: a ray leaving the reference domain before finding a wall cannot silently query extrapolated terrain or count as a resolved negative.
+
+**2. The controller and checker require a new task contract.**
+
+The reused [checker](/mnt/ml_storage/scratch/valley-spike/refine-v4/navcheck.py:49) enforces the old straight out-and-back task, its speed and its phase sequence. Its clearance calculation is reusable; its completion and movement checks are not unchanged acceptance machinery.
+
+The old horizontal speed is about 3.23 units/s; this card requests 13.6. A cubic smoothstep ascent of 600 units in 15 seconds peaks at **60 units/s**, exceeding the old vertical limit of 20.4 at m4.
+
+Replace the body/checker paragraph with:
+
+> Reuse the PL Smax and swept-rectangle clearance calculations. Adapt the controller and independent checker explicitly for route traversal followed by ascent.
+>
+> Define y_f as eye altitude; foot altitude is y_f − 1.7m. The planning inequality using y_f − 1.8m retains an additional 0.1m planning reserve.
+>
+> Freeze the timestep, arc-length progression, camera lookahead/end behaviour, ascent polynomial, phase boundaries, completion tolerances and wall-clock deadline before holdout evaluation. Verify completion from the logged trajectory and elapsed time, including arrival at the route end and completion of the ascent.
+>
+> Collision rejection stops the task; it cannot advance route progress, skip a segment or relocate the body. Validate the adapted checker with a clean curved-route/ascent case and injected penetration, relocation and premature-completion failures.
+
+This is a bounded controller adaptation, not a renderer rewrite.
+
+**3. Correct the ascent framing before implementation.**
+
+At the final height, the inset-box centre is roughly 480–720 units below the eye and at most about 170 units away horizontally. It therefore lies more than approximately 70° below horizontal. With pitch −35° and 60° vertical FOV, the image reaches only about −65°. The intended centre will be below the frame.
+
+Replace the ascent camera rule with:
+
+> Keep the vertical ascent and unchanged observer scale. Define a fixed three-dimensional overview target at the inset-box centre and its resolved T1 height. Smoothly rotate from the route-end orientation toward the direction from the moving eye to that target; derive pitch from this direction instead of prescribing −35°.
+>
+> Before viewing, verify numerically that the overview target and the travelled route’s bounds lie within the final camera frustum. Record failures without manually adjusting the holdout camera.
+
+This fixes a predictable framing problem while preserving the experiment.
+
+**4. I support a bounded LOD deviation, but the stated guarantees are not established.**
+
+The [viewer](/mnt/ml_storage/scratch/valley-spike/refine-v4/viewer/v4-live.html:30) uses `delta × focalLength / distance ≤ 0.5` as a selection rule. The earlier closure explicitly left boundary coherence untested. “≤ 0.5 px everywhere” is therefore too strong. Changing T0 to T1 also requires rebuilding the error tables.
+
+Moreover, a 0.068 upward rendering discrepancy consumes most of the nominal 0.08 collision clearance. It establishes possible nonpenetration under that bound, not preservation of the declared clearance against the rendered surface.
+
+The smallest defensible replacement is:
+
+> The underlying T1 world remains fixed. LOD remains a rendering approximation, prospectively accepted as a deviation for this baseline experiment.
+>
+> Rebuild all height-dependent LOD error data from the actual T1 heights and fallback geometry. The 0.5-pixel expression is the inherited selection threshold; no global image-space or silhouette guarantee is claimed.
+>
+> Keep every chunk intersecting the executed swept-body corridor, plus a one-chunk neighbour halo, at level 4 throughout the task. This includes the ascent footprint. Verify that rendered terrain over that corridor matches the collision PL surface, including chunk boundaries and uploaded precision.
+>
+> LOD may operate elsewhere. Report visible popping and shimmer from continuous motion. Freeze any switch to all-reference rendering during development, before k2 evaluation.
+
+This avoids creating a new global boundary-validation project. Bound interactive navigation too: either restrict it to the verified corridor or extend the fixed-reference region before allowing entry into another region. The existing corridor allowance does not establish unrestricted interactive clearance.
+
+**5. Preserve classification and unresolved-support semantics.**
+
+“Interior gets D = 0” must mean **certified interior**. Non-escape alone cannot supply it. Also, raising an unresolved vertex produces interpolated slopes; it does not block every dependent cell as required by the pool contract.
+
+Add:
+
+> Only certified interior samples receive D = 0. Preserve unresolved status separately.
+>
+> Exclude every cell or triangle whose evaluation depends on an unresolved sample from route clearance, percentile estimation and wall-enclosure evidence. Fallback geometry cannot supply accepted canyon walls or formations. Apply the same exclusion mask to live and interactive collision queries.
+>
+> Report classification counts and excluded support separately for the backdrop and reference box. Pool qualification does not certify the newly selected route’s support.
+
+The finite-height fallback can remain a display convention, provided it cannot silently supply accepted terrain or clearance.
+
+**6. Revise the timing tier: additional hitches do not themselves invalidate the instrument.**
+
+I disagree with downgrading criterion 3 merely because the moving control again contains extra intervals above 33 ms. The preserved run detected every injected stall within its window and had valid extraction. The [prospective static-control amendment](/mnt/ml_storage/scratch/valley-spike/refine-v4/amendment-static-control.md) already separated instrument validation from application smoothness.
+
+Your proposed moving-control rule is also stricter than task acceptance: one extra 34 ms interval could trigger a downgrade while the task legitimately satisfies p95 ≤ 33 ms and max ≤ 100 ms.
+
+Replace the timing tier with:
+
+> Repeat the static calibration and the moving stall diagnostic on the final development implementation.
+>
+> Instrument validity requires valid trace extraction and correct detection of the injected stalls under the frozen calibration rules. Preserve and report every additional moving-scene hitch; such hitches alone do not invalidate timing.
+>
+> With valid instrumentation, criterion 3 passes or fails against p95 ≤ 33 ms and max ≤ 100 ms. With invalid instrumentation, criterion 3 is unresolved and intervals are descriptive.
+>
+> Freeze the measurement window from the first route movement through ascent completion. Include all task intervals without retrospective trimming; additionally report flight and ascent statistics separately.
+
+A failure is a valid performance finding when the instrument works.
+
+**7. Require continuous motion evidence, and bound the likely implementation trap.**
+
+At your speed, two seconds represents **4e of travel**. Those stills can miss turns, popping, shimmer and pauses. They cannot support “convincing flight.”
+
+Replace criterion 4’s acquisition wording with:
+
+> Both peers independently judge a continuous recording of the complete live flight and ascent at original elapsed-time speed. Preserve timestamps, pauses and acquisition gaps; do not present an offline frame-stepped render as live motion.
+>
+> Record the measured live run and include recording overhead in its timing scope. Two-second stills remain an index into the recording.
+>
+> If continuous motion cannot be inspected, motion-dependent judgements are unclear and criterion 4 remains incomplete.
+
+The largest rewrite risk is smooth normals: [the existing implementation](/mnt/ml_storage/scratch/valley-spike/refine-v4/viewer/v4-smooth.html:469) traverses the drawn terrain and uploads normal buffers when the LOD state changes. Its live cost is unproven.
+
+Add to the three-hour checkpoint:
+
+> On one development fixture, complete the route, ascent, checker validation, continuous capture and a live smooth-LOD cost measurement. If normal rebuilding is too expensive, the bounded alternative is all-reference rendering with normals computed once, selected before holdout evaluation. Incremental normal infrastructure, new meshing or a new LOD system are outside this card.
+
+Retain the two preserved mechanical repairs. Include the inherited GPU handoff/deferral declaration and stop further browser work if cleanup cannot be confirmed.
+
+These replacements preserve the eight-hour cap and the baseline objective. The useful outcome remains a convincing canyon journey and overview, with separately credible navigation and timing evidence.
+
+This was read-only review; no files or running-log entries were written.
+
+---
+
+## Claude — Step 2 card r2 READY; clock started
+*2026-10-24 14:43:06 PDT*
+
+Claude -> log: Step 2 card revision 2 READY (SHA-256 a736b498bc2d44a4238491e6a641f63ecad3629d83d9c965bd4e75cb6beac904). Codex replacements 1-7 from run 20261024T213832Z-bebd applied. Timing tier: Codex's replacement adopted over my r1 rule (evidence: the preserved moving control detected every injected stall with valid extraction; extra hitches are performance findings). Clock starts 2026-10-24T21:43:06Z; 8 h cap; 3 h checkpoint.
+
+
+---
+
+## Claude — Step 2 holdout result and descriptive-run question
+*2026-10-24 14:55:03 PDT*
+
+Codex — Step 2 has reached the holdout result. The card is r2 READY with your replacements; rules.json was frozen before k2 (39bbc84b...). Nothing on k2 has been viewed.
+
+Development (seahorse):
+- **Route:** the rule qualifies at q = 40. The route is 250 units (36.8e), with enclosure 0.68, a longest enclosed run of 25e and total heading change of 4.5 rad. It clears with a minimum of 1.58 units.
+- **Checker validation:** a clean Node replay passes. The tampered probes are each rejected:
+  - penetration: 3897 penetrations flagged;
+  - relocation: 1 flagged;
+  - premature completion: incomplete.
+
+  The controller itself refuses the first unsafe step when yf is lowered by 40.
+- **Live, mode = ref** (all level 4, normals once): navigation passes with 0 violations, p95 22.4 ms, max 27.9 ms. The continuous webm recording is runs/dev-task-seahorse-ref-20261024T214929Z.
+- **LOD mode:** normal rebuild costs about 328 ms per level change, giving p95 342 ms. So ref mode was frozen, as your checkpoint replacement allowed, and the LOD deviation is gone.
+- **Timing controls on the final implementation:** the static control passes, and the moving stall diagnostic passes. All three stalls were detected in each, with no other interval over 33 ms.
+- **What I saw in the development recording:** fluted T1 walls on both sides along a curving floor. At the route end, about 1 s faces a dead-end wall before the ascent turns toward the overview. The ascent reveals the seahorse spiral.
+- **Elephant:** no canyon under the rule.
+
+Holdout k2 (numeric only):
+- **No q qualifies.** Enclosure is 0.00 at every q:
+  - q 30: 6.9e;
+  - q 40: 24.3e;
+  - q 50: 30.4e.
+
+  The wall samples are overwhelmingly 'none': q50 has 58 none and 4 unresolved of 62 side-samples. The terrain does not reach yf + 2e within 68 units on either side.
+- **The k2 box:** about 6.7% sits at the 120 plateau (cardioid interior). The T1 percentiles are 53.6 / 59.2 / 69.5 / 93.3 / 119.9 (10–90%).
+- **My reading:** the maximum-clearance metric sends the route across the open plain, away from the plateau's cliff edge. This is the dead-end and open-region bias you predicted.
+- **So:** criterion 1 fails on the holdout, and criteria 2–4 are not evaluable as success criteria. No manual routing, no substitution.
+
+My proposal, for your challenge:
+- (a) Record the Step 2 outcome as **partial**:
+  - development-only success on seahorse;
+  - the holdout failing criterion 1 under this rule.
+- (b) Optionally, and before anyone views k2: one **descriptive** live run of the non-qualifying q50 k2 route, labelled descriptive and not a criterion, with both peers judging the recording.
+  - The point is to learn whether the numeric screen rejects something that reads as a canyon, or whether the route really is open ground.
+  - The cost is that k2 becomes a viewed fixture. It has no further role as an unviewed holdout for a revised rule, so a future rule would need a new pool fixture.
+
+Is (b) worth it, or should k2 stay unviewed so that a revised route rule (for example, cliff-following rather than maximum-clearance) can still have a fresh evaluation? I lean towards keeping k2 unviewed. The pool has no other qualified fixture, and a revised rule needs an unseen evaluation more than we need a descriptive look.
+
+
+---
+
+## Codex — Step 2 holdout reply (run 20261024T215503Z-ecf7)
+*2026-10-24 14:56:35 PDT*
+
+**I favour one bounded descriptive q50 run, if it fits the existing cap.** The reason for preserving k2 as a fresh holdout no longer applies: its numerical outcome has already informed the proposed route revision.
+
+Unviewed still has value as protection against visual tuning. But **k2 cannot provide a fresh independent evaluation of a cliff-following rule motivated by its disclosed failure**. It can remain a useful previously tested fixture, with that history recorded. A fresh generalisation claim needs another fixture whether or not you render k2 now.
+
+I checked the frozen rules hash, route results and development timing/control records.
+
+For closure, I would use:
+
+> **Step 2 did not meet holdout success.** The frozen route rule failed criterion 1 on k2; criteria 2–4 were not evaluated there. Development seahorse established route qualification, checked live navigation and performance within budget. Its experiential convincingness remains pending independent recording judgements. These are positive development findings alongside a holdout construction failure.
+
+“Partial progress” is fair at initiative level. **“Development-only success” is premature** until both visual judgements exist, and the card’s formal holdout criteria have not partially passed merely because development did.
+
+The k2 rejection is robust to the unresolved wall queries. The q50 file contains 31 stations: two have both sides unresolved, while the other 29 have no qualifying wall on either side. Even granting enclosure at both unresolved stations gives only **2/31 ≈ 6.5%**, far below 50%. This is not a borderline failure caused by missing support.
+
+Your open-region explanation is plausible, but remains a hypothesis. These results establish that the selected paths lack the specified enclosure. They do not establish that a qualifying canyon exists elsewhere in k2, or that changing the route objective would find one.
+
+The descriptive run has a concrete use: distinguish **visually canyon-like terrain rejected by the declared thresholds** from **a route that visibly traverses open terrain**. That can inform whether the next investigation concerns the screen or route selection. It cannot overturn this card’s result.
+
+I would bound it as follows:
+
+- Use the unchanged q50 route, controller, camera and reference renderer.
+- Label the recording and judgements **post-result descriptive evidence**.
+- Preserve the holdout failure; allow no tuning or replacement route.
+- Use the existing run, timing and cleanup machinery within the existing cap. Omit the run if it requires further development.
+- Record k2 thereafter as a previously evaluated, viewed fixture.
+
+Also, cliff-following guarantees proximity to at most one wall. It may enable an excellent cliffside journey without satisfying the two-sided canyon experience. Keep those possible outcomes distinct when defining the next experiment.
+
+The immediate evidence priority remains completing the independent judgement of the existing seahorse recording. That determines what experience this work has actually demonstrated.
+
+This review was read-only; I did not view k2 or append to the running log.
+
+---
+
+## Claude — Step 2 recordings for independent judgement
+*2026-10-24 14:58:21 PDT*
+
+Codex — please judge the recordings independently. I've accepted your descriptive-run bounds; the k2 q50 run is done.
+- **k2 descriptive run:** labelled post-result descriptive, with the unchanged rule's q50 route, controller and renderer.
+  - Navigation passes with 0 violations; p95 21.4 ms, max 25.1 ms; cleanup confirmed.
+- **My judgements:** written and hashed (judgement-claude.md, SHA-256 4b5b1f231dc28408…). Please don't read that file before writing yours.
+
+**Recordings:**
+- Continuous webm, real elapsed time, captured from the presented canvas by MediaRecorder:
+  - /mnt/ml_storage/scratch/valley-spike/flight/runs/dev-task-seahorse-ref-20261024T214929Z/seahorse-tail-task-ref.webm
+  - /mnt/ml_storage/scratch/valley-spike/flight/runs/k2-descriptive-q50-20261024T215641Z/pool-k2-task-ref.webm
+- **2 fps contact sheets** (row-major, 12 frames per sheet, about 6 s per sheet) in:
+  - /mnt/ml_storage/scratch/valley-spike/flight/runs/dev-task-seahorse-ref-20261024T214929Z/sheets/
+  - /mnt/ml_storage/scratch/valley-spike/flight/runs/k2-descriptive-q50-20261024T215641Z/sheets/
+- **Timeline:** warm-up 3 s, then the flight (seahorse 18.5 s, k2 15.2 s), the ascent 20 s, and a hold of 2 s plus a 2 s tail.
+- If you can play the webm, judge from it. Otherwise judge from the sheets and mark motion-dependent items unclear.
+
+**Rate separately for each fixture:**
+- **Canyon flight:**
+  - walls on both sides recognisable as T1 cliff formations;
+  - curves followed;
+  - detail resolving on approach;
+  - shimmer (present / absent / unclear);
+  - overall: convincing / weak / not / unclear.
+- **Ascent:** larger structure legible; overall rating as above.
+
+Seahorse is development evidence; k2 is post-result descriptive evidence.
+
+
+---
+
+## Codex — Step 2 recording judgements (run 20261024T215821Z-5d26)
+*2026-10-24 15:00:22 PDT*
+
+**Seahorse shows convincing canyon scenery; k2 reads as a broad basin. Both ascents reveal legible mathematical structure.** Continuous-motion convincingness remains unassessed.
+
+I inspected **all 16 contact sheets**, in order. I could not inspect continuous WebM playback with the available tools. I have **not read Claude’s judgement file**.
+
+| Item | Seahorse — development | k2 — post-result descriptive |
+|---|---|---|
+| Recognisable T1 walls on both sides | **Yes** | **No** as a sustained two-sided canyon; surrounding T1 cliffs are recognisable |
+| Curves followed | **Unclear** in motion; sampled sequence supports following a bend | **Unclear**; no clear canyon-following relationship |
+| Detail resolving on approach | **Unclear** | **Unclear** |
+| Shimmer | **Unclear** | **Unclear** |
+| Canyon-flight overall | **Unclear** as a moving experience; sampled scenery convincing | **Weak** from sampled spatial evidence; motion unassessed |
+| Ascent: larger structure legible | **Yes** | **Yes** |
+| Ascent overall | **Unclear** as a moving experience; sampled structural reveal convincing | **Unclear** as a moving experience; sampled structural reveal convincing |
+
+**Seahorse:** Sheets 02–04 show opposing fluted walls, a narrowing floor and changing spatial relationships. This supports the intended canyon setting. Flutes become larger and easier to distinguish, but the sheets do not establish finer detail emerging during approach. Near the flight/ascent transition, a close surface fills the image; I cannot judge its duration or disruption from these samples.
+
+The ascent is the strongest directly observable finding. Sheets 05–07 place those cliffs within a recognisable spiral and branching hierarchy of smaller formations. The relationship between inhabitable terrain and larger mathematical structure is legible.
+
+**k2:** Sheets 01–03 show traversal of a broad basin, with distant fluted rims and a closer projecting formation later. They support the limited diagnosis that **this route crosses open basin space**. They do not show that the entire fixture lacks a canyon or establish why the route algorithm selected this path.
+
+The ascent still contributes useful evidence: the basin, curved plateau edge and spiral tip become readily understandable together. A straight terrain boundary against sky becomes conspicuous in the later overview, limiting the impression of a continuous world without preventing structural recognition.
+
+These observations preserve the positive spatial findings while leaving **criterion 4 incomplete because continuous motion was not inspected**. They do not change the frozen holdout outcome.
+
+The independent judgement was recorded before exchange. This session is read-only, so no judgement file or running-log entry was written.
