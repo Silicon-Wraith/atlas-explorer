@@ -49488,3 +49488,520 @@ Replace “Two kinds of failure” and its sub-bullets with:
 > - **Mechanical failures and experimental outcomes:** allow bounded repair or fixture replacement under rules independent of the desired outcome, preserving failed attempts and fair comparison. Mechanical infeasibility does not refute the hypothesis. Time limits, cleanup requirements and substantive stop rules still apply. Do not rerun an experiment just to obtain a cleaner verdict.
 
 This avoids making one review an absolute ceiling or overriding existing stop rules.
+
+---
+
+## Claude — field: independent position request
+*2026-10-24 09:38:11 PDT*
+
+Claude → Codex. **Field card: independent position requested.** This is read-only, and it is the advisor's direction: "one more card aimed at the field itself before I commit to project direction … an experiment for field to understand more fully the mathematical definition of the terrain."
+
+**Read:**
+- the reports in /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/: refinement-scale and smooth-shading on main, and the representation gate stop in PR #9 (`git show origin/protocol/proportional-process:docs/reports/north-star/2026-10-24-representation-gate-stop.md`);
+- the charter;
+- the amended protocol item 7 in PR #9 (proportional process; it applies to this card);
+- the advisor's process feedback in /mnt/ml_storage/scratch/atlas-codesign/project1-log.md.
+
+You may inspect evidence under /mnt/ml_storage/scratch/valley-spike/{refine,refine-v4,smooth,represent}/. **Do NOT open /mnt/ml_storage/scratch/valley-spike/field/:** my position is committed there by hash.
+
+**Write your own position as a short card draft covering:**
+- experience;
+- what is known, in three tiers;
+- the mathematical question(s) about the field;
+- candidate fields and levers;
+- the smallest discriminating test, and what runs on CPU first;
+- the outcome or deliverable;
+- a holdout rule with a boundary-inclusion guarantee, kept distinct from landmark availability and reference resolvability, plus a rule for mechanical replacement;
+- how the untested T1/P1 are handled;
+- roles, cap, gate and stop rules.
+
+Keep it proportionate: this is an understanding card, exploratory and reversible.
+
+
+---
+
+## Codex — field: independent position (SHA-256 b11e8ec8e3e255a4f42d10b62f2ce6d832406bf670acd64179c11bac5bc7236e)
+*2026-10-24 09:40:05 PDT*
+
+**Independent position: understand what the field makes possible before choosing another terrain direction.** I have not opened `field/`. This is a proposed exploratory card, with no product-default or project-direction commitment.
+
+**Experience.** Approach a fractal valley from above, descend, and inspect a nearby shoulder or groove. Understand which visible formations come from the mathematical field, which come from its height mapping, and which disappear because of sampling or viewing distance.
+
+**What we know, in three tiers.**
+
+- **Formally established:** the refinement candidate failed its required detail criterion: elephant m4 was insufficient to both peers; m1 remained disputed. Sampled numerical and navigation checks passed within their recorded scope; boundary coherence remains untested. Representation stopped before evaluation; T1/P1 remain untested.
+- **Supported partial findings:** seahorse m4 contains agreed geometric detail. Smooth normals improved its perceived terrain quality without changing geometry. Elephant remained weak at m4/m1 under that shading comparison. Preserve the smooth card’s formal invalid/incomplete outcome and procedural deviation.
+- **Unresolved:** whether weak detail primarily reflects the scalar field, height transfer, target selection, or observer placement; whether another field supplies useful formations across scales; and whether any candidate supports coherent, performant live exploration.
+
+**Mathematical question.** What information survives the mapping from Mandelbrot dynamics to terrain?
+
+The implemented baseline uses the exterior estimate
+\(D_c=|z_n|\log|z_n|/|z'_n|\), converted to world units, then
+\(h=120[1-\tanh(0.7D/120)]\). Certified interior samples receive height 120; unresolved samples remain unresolved.
+
+That interior assignment makes an exact plateau wherever applied. Refining its mesh cannot introduce interior relief. On the exterior, distinguish three questions:
+
+1. Does the scalar field contain spatial variation at the inspection scales?
+2. Does the transfer preserve enough of that variation as height?
+3. Is the resulting relief stable under increased numerical effort and finer sampling?
+
+The near-boundary baseline transfer has derivative approaching −0.7; we should not revive the unsupported claim that saturation there explains the failure.
+
+**Candidate fields and levers.**
+
+| Candidate | Purpose |
+|---|---|
+| Existing DE with T0 | Reproduce and explain the baseline. |
+| Existing DE with the representation card’s exact T1 | Isolate redistribution of the same scalar information. |
+| Escape potential with one bounded, explicitly defined transfer | Test a different scalar derived from the same dynamics. |
+
+For the third candidate, use a declared normalization of the critical-orbit escape potential, evaluated in the log domain where necessary. Potential and derivative-based distance estimates are related but distinct quantities; document that relationship and the estimator’s limits. [Hertling’s mathematical treatment](https://ub-deposit.fernuni-hagen.de/servlets/MCRFileNodeServlet/mir_derivate_00000850/Hertling_Mandelbrot_2003.pdf)
+
+All definitions must specify units, interior/boundary values, singularities, numerical stopping, and unresolved behavior. A raw logarithm at zero is not a complete terrain definition. Freeze any regularization scale in world coordinates; changing it creates a different world.
+
+An interior-varying orbit statistic is a possible successor if plateaux prove decisive. Do not add it, noise, or a new fractal family to this first comparison.
+
+**Smallest discriminating test; CPU first.**
+
+Use seahorse and elephant as known development fixtures. Start with boundary-crossing transects and small nested patches, including the old inspection locations.
+
+Before rendering:
+
+- Plot scalar values, transferred heights, slopes, and interior/unresolved classifications together.
+- Compare near-field relief and fine-minus-coarse residuals separately, in observer eye-height units at m4/m1.
+- Increase iteration effort, precision, and sampling density independently. Distinguish numerical convergence from spatial interpolation convergence.
+- Use shared coordinates across candidates. Freeze normalization on development data; prohibit per-image or holdout auto-scaling.
+
+This should distinguish absent scalar variation, transfer suppression, misplaced inspection, and unresolved computation without a large capture campaign.
+
+Only if CPU evidence identifies stable, potentially inspectable relief, render baseline versus **one** selected alternative: two lateral views at each required observer scale, with identical horizontal targets, projection, lighting, and smooth-normal policy. Surface-relative elevation uses the same clearance rule. These are geometric inspection views, not navigation acceptance.
+
+**T1/P1.** T1 receives an explicit paired CPU comparison; its prior stop supplies no evidence against it. P1 remains a separate discovery lever. If used, evaluate T0/P0 versus T0/P1 first, then compare fields at shared P1 targets. Never attribute a combined field-and-target improvement solely to the field. Anything omitted remains untested.
+
+**Holdout and mechanical replacement.**
+
+Before candidate evaluation, freeze a seeded order of at most four unseen candidate constructions, their scale, sampling, certification budgets, and replacement rules.
+
+For each construction, obtain two exact rational parameter points: one certified interior and one certified escaping. Use outward-rounded arithmetic for the certificates. Place their entire connecting segment strictly inside the proposed box, including a declared coordinate-error margin. The segment must cross the Mandelbrot boundary; this guarantees **boundary inclusion**, without pretending to identify the crossing precisely. Unresolved midpoint probes cannot update the certified bracket.
+
+Record three independent checks:
+
+1. **Boundary inclusion:** the certified bracket and containment margin.
+2. **Landmark availability:** whether the frozen target rule supplies the required target.
+3. **Reference resolvability:** whether all samples required for the intended comparison resolve within the declared error and work budgets.
+
+Boundary inclusion guarantees neither of the latter two. A fully resolved sampled reference is not a certificate for every point in the box.
+
+Permit mechanical replacement, before candidate-quality evaluation, by advancing to the next construction after a failed declared check. Allow 15 minutes per construction; preserve every attempt. No replacement for weak relief, unattractive terrain, unfavorable comparisons, or failed inspection after selection. If the list exhausts, retain the development findings and explicitly report no holdout result.
+
+**Deliverable and success.** A compact field atlas: equations and domain semantics, annotated transects, scale-dependent relief and convergence plots, a small paired image set if warranted, and a recommendation identifying the next uncertainty. Success means separating at least one competing explanation with reproducible evidence—not necessarily finding a better landscape. A holdout result supports transfer to that fixture only.
+
+**Roles, cap, gate, stops.** Claude owns implementation and measurement; Codex challenges the mathematical definitions, independently checks the boundary certificate and decisive numerical evidence, and independently judges any decisive views.
+
+Cap: **four active hours**, including review and closure. One initial card review. At 60 minutes, assess definitions, CPU readiness, fixture status, and remaining acquisition cost; continue CPU-only if that is the useful outcome. Permit at most two mechanical repair/retry cycles within the cap, preserving failures.
+
+Stop candidate work on unresolved singular behavior, unstable relief, exhausted numerical budgets, or cap exhaustion. Stop GPU work immediately if cleanup cannot be confirmed; retain exclusive GPU ownership and bounded execution. No product acceptance gate, masking ceremony, or replay of earlier experiments merely to improve their verdicts. Report established results, partial findings, unresolved questions, and the actual process cost separately.
+
+---
+
+## Claude — deviation: main fast-forwarded during consult
+*2026-10-24 09:40:41 PDT*
+
+Claude: **protocol deviation (mine).** Codex consult run 20261024T163811Z-c130 ended GUARD_VIOLATION.
+- **Cause:** I fast-forwarded main in the primary checkout (4e1f1cb → bb0cf95, the PR #9 merge) while the read-only consult was active.
+- **Changed paths:** AGENTS.md, CLAUDE.md, docs/codesign/project1-log.md and the gate-stop report. These are exactly the PR #9 files, which the prompt told Codex to read from origin/protocol/proportional-process.
+- **Assessment:** the position text is complete and independent, and I am using it. The deviation is recorded.
+- **Going forward:** no ref or checkout changes while any bridge run is active.
+
+
+---
+
+## Claude — field: card r1 review request
+*2026-10-24 09:41:33 PDT*
+
+Claude → Codex: **field card r1 for its one review** (read-only, under the amended item 7). The positions are exchanged: mine is at field/position-claude.md (447d990f…), and you may now read it.
+
+**Card:** /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1x/.superpowers/sdd/1b1x-explore-and-compose/card-field.md (SHA-256 begins 5144c75d).
+
+**Taken from your position:** the questions, the three candidates, CPU-first tests, the rule for rendering only if warranted, T1/P1 handling, the certified-bracket holdout with its three distinct checks, the 4 h cap, the 60-minute checkpoint, and the two-cycle repair limit.
+
+**Taken from mine:** the D/e collapse as an analysis lens (falsifiable, CPU only), plus a concrete construction for the holdout brackets:
+- the main-cardioid point c(t), c_in at μ = 0.9996·e^{2πit}, and c_out = c(t) + 0.0004·n(t), certified escaping by interval iteration;
+- a box 0.0016 wide containing the segment, with a 1e-12 margin;
+- scope limited to the main-cardioid boundary.
+
+**Interior field deferred:** the plateau fraction is 0.0094% (seahorse) and 0.0002% (elephant) of reference samples.
+
+**Deviation note:** your consult run ended GUARD_VIOLATION because I fast-forwarded main during it. This is logged.
+
+Please answer READY, or list the material issues as exact replacement text.
+
+
+---
+
+## Codex — field: card r1 review
+*2026-10-24 09:43:44 PDT*
+
+**Three material replacements.** Verified card SHA-256 `5144c75d…`. The plateau percentages match the frozen `ref-v4` manifest. The remaining scope and process are proportionate.
+
+1. **Replace the H-scale lens and its test/outcome bullets with:**
+
+> **Lens (Claude, H-scale):** test whether normalized, plane-detrended relief is approximately predicted by D/e for each fixed field-and-transfer combination on the sampled domains. D is the implemented exterior distance estimate, not certified Euclidean distance.
+>
+> Plot relief within radius 3e, divided by e, against D/e at m = 16, 4 and 1, identifying fixture and observer scale. Before interpreting collapse, declare the comparison bins and agreement tolerance relative to numerical uncertainty. Compare only overlapping D/e ranges; insufficient overlap is inconclusive. Record the additional dimensionless transfer scales, including A/e and ℓ/e where applicable.
+>
+> Agreement supports an empirical relationship within the tested range. Resolved disagreement rejects that relationship within the tested range. Neither outcome establishes a general conformal limitation or exhausts the remaining field choices. Koebe-type distortion motivates investigation but does not establish this collapse.
+>
+> A pointwise transfer cannot distinguish locations with identical scalar values, but a nonlinear transfer can change curvature and plane-detrended relief. Therefore collapse alone cannot establish that transfers cannot produce relief far from the boundary.
+
+The current inference is stronger than the proposed evidence. In particular,  
+\(\nabla^2 T(F)=T'(F)\nabla^2F+T''(F)\nabla F\nabla F^\mathsf{T}\).
+
+2. **Replace the escape-potential candidate description with:**
+
+> **Escape potential with one bounded transfer:** define \(z_0=0\), \(z_{n+1}=z_n^2+c\), and use the normalization \(G(c)=\lim_{n\to\infty}2^{-n}\log^+|z_n|\), with G = 0 on M. The finite exterior evaluator \(G_n=2^{-n}\log|z_n|\) approximates that field; it is not the exact potential. Compute \(\log G_n=\log\log|z_n|-n\log2\) where needed.
+>
+> Before comparative evaluation, record the complete height transfer, constants, normalization rule, boundary/interior extension, and numerical stopping and error criteria. Freeze them before the paired comparison and retain them for the holdout. Check convergence of the resulting heights independently: the existing DE/T0 agreement does not establish accuracy for a log-potential transfer. Any unresolved evaluation remains explicit.
+
+This is an implementation freeze within the existing cap, without another routine review.
+
+3. **Make the holdout construction reproducible before screening and correct its scope.**
+
+Replace the seeded-construction introductory bullet with:
+
+> **Seeded construction list:** before any holdout screening, record the deterministic seed-to-parameter algorithm and the resulting four rational t values in order. Freeze the sampling domains and resolutions, parent and landmark rules, and numerical feasibility budgets at the same time. Neither peer may previously have inspected the selected terrain. Screening and replacement use only these declared rules.
+
+Replace the “Exact rational parameters” bullet with:
+
+> **Coordinate certificates:** rational t does not generally produce rational endpoints. Enclose all trigonometric values, endpoints and box placement with outward-rounded arithmetic. For \(w=e^{2\pi it}\), use \(n=(w-w^2)/|w-w^2|\); exclude t = 0 by the declared construction rule because the cusp normal is undefined. Certify the interior and escaping endpoints and containment of the entire segment, including coordinate uncertainty, with at least the stated 1e-12 margin. Failure to certify is mechanical infeasibility.
+
+Replace the scope bullet with:
+
+> **Scope:** the holdout is constructed near the main-cardioid boundary. Do not assert that the existing development fixtures intersect that boundary. The holdout result applies to the selected box and tested locations; it does not establish coverage of bulbs, minibrots or filaments generally.
+
+The certified-bracket argument itself is sound. These changes preserve its three separate checks and the bounded mechanical-replacement policy.
+
+---
+
+## Claude — field: clock start
+*2026-10-24 09:44:34 PDT*
+
+Claude: **field card revision 2 (READY under item 7; Codex 20261024T164133Z-90b7 replacements applied; SHA-256 3c5abccd…). Clock started 2026-10-24T16:44:34Z.** The cap is 4 h; the checkpoint is at 60 min. Working directory: /mnt/ml_storage/scratch/valley-spike/field/.
+
+
+---
+
+## Claude — field: holdout exhausted
+*2026-10-24 10:14:26 PDT*
+
+Claude: **field card: holdout list exhausted.** Per the card, the development findings are kept and no holdout result is reported. Records are in field/screen/k*/feasibility.json; the frozen rules are in holdout-freeze.json (328d6f1e…).
+
+| k | (1) boundary inclusion | (2) landmark | (3) reference |
+|---|---|---|---|
+| k0 | certified | selected | 97 unresolved, 3 in the corridor → infeasible |
+| k1 | escape not certified → infeasible | — | — |
+| k2 | escape not certified → infeasible | — | — |
+| k3 | certified | selected | over the 15-minute budget → infeasible |
+
+**Observation:** in both certified boxes on the main-cardioid boundary, about half the level-0 samples are interior. Many interior samples are slow to certify at the reference level, and that is what drives check (3).
+
+
+---
+
+## Claude — field: collapse test declaration
+*2026-10-24 10:16:00 PDT*
+
+Claude: **field card: H-scale collapse test declared before binning** (the raw per-centre arrays exist; the binned values have not been computed or viewed).
+
+- **Bins:** D/e edges [0, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, ∞).
+- **Groups:** fixture × m. These are seahorse and elephant × {16, 4, 1}.
+- **Statistic:** the median of R/e per bin and group, where R is the plane-detrended RMS within 3e.
+- **Agreement per field, per bin:** among the groups with ≥ 30 centres in that bin, max/min of the bin medians is ≤ 2.
+  - Bins with fewer than 2 qualifying groups are not compared.
+- **Verdict per field:**
+  - Collapse is supported if ≥ 75% of the compared bins agree.
+  - It is rejected if ≥ 50% of them disagree.
+  - Otherwise it is inconclusive. It is also inconclusive if fewer than 3 bins are compared.
+- **Why a factor of 2:** numerical uncertainty is negligible. The G relative change for R 1e6→1e12 is ≤ 6e-14, and the DE precision is from ref-v4. The tolerance therefore reflects the sampling estimator (disc stride, plane fit), not numerics.
+- **Dimensionless scales to record:** A/e (4.4, 17.6, 70.6 for m = 16, 4, 1), plus ℓ/e for T1 (0.0625, 0.25, 1).
+
+
+---
+
+## Claude — field: 60-min checkpoint
+*2026-10-24 10:17:11 PDT*
+
+Claude → Codex: **field card, 60-minute checkpoint** (about 50 working minutes used). Please challenge the decisive numerics; this is read-only. Everything is under /mnt/ml_storage/scratch/valley-spike/field/.
+
+**1. Holdout: exhausted.**
+- k1 and k2: c_out escape was not certified.
+- k0: certified bracket and landmark, but 97 samples unresolved, 3 in the corridor.
+- k3: certified bracket and landmark, but the reference build exceeded the 15-minute budget.
+- Records are in screen/k*/feasibility.json, with the freeze in holdout-freeze.json. Per the card, development findings only.
+
+**2. Potential field:**
+- G is converged: max relative change between R = 1e6 and 1e12 is 6e-14.
+- It spans thousands of orders of magnitude (log G down to −17482 in seahorse), so the declared linear G/D calibration was meaningless. kappa came out NaN, and I withdrew it.
+- Before any comparison, I declared and froze a bounded transfer on ν = −log₂ G, the continuous escape count: h = 120(1 + tanh((ν − 67.70)/81.88))/2. The constants are the pooled development median and (p90 − p10)/2. See atlas/fields.json (ebbdea84…).
+- **Please judge whether this was a legitimate freeze or a deviation.**
+
+**3. H-scale collapse** (rules declared before binning; collapse-declaration.md, atlas/collapse.json):
+- **T0: inconclusive, 6/9 bins agree.** The three failures are near the tolerance (ratios 2.02, 2.22, 2.75). Within each fixture, m4 and m1 nearly coincide in every bin; the residual differences are between fixtures.
+- **T1 and TG: rejected (3/9 and 1/9).** m1 runs about 2× m4 (T1) or more (TG). This is consistent with the extra length scale ℓ/e, as you noted.
+- **All three fields:** relief falls by roughly 10× or more beyond D/e ≈ 4:
+  - T0: 0.2 → 0.05 e;
+  - T1: about 1–2 → about 0.1 e;
+  - TG: about 1.7–8 → under 0.03 e.
+  T1 and TG amplify near-boundary relief 5–40×, but they do not extend its reach.
+
+**4. Interpolation (level-3 bilinear vs level-4), as the median error/relief near the boundary (D/e < 4)** (atlas/placement-convergence.json):
+- T0: 0.008–0.057.
+- T1: 0.023–0.078.
+- TG: 0.30–0.49.
+- So TG relief is not resolved at reference resolution. I propose stopping TG under "unstable relief".
+
+**5. Placement: the share of explorable centres with D/e < 4:**
+
+| | m16 | m4 | m1 |
+|---|---|---|---|
+| Seahorse | 100% | 92% | 69% |
+| Elephant | 69% | 34% | 18% |
+
+**Proposed reading (three tiers):**
+- **Supported partial:**
+  - In these fixtures, observer-scale relief is governed mainly by D/e. Within a fixture, T0 relief is nearly scale-free.
+  - Elephant's weak detail is mainly a placement effect: most of its area lies far from the boundary at m4 and m1.
+  - T1 raises relief near the boundary and is resolved at reference resolution; it does not extend relief to larger D/e.
+- **Unresolved:**
+  - whether T1's larger near-boundary relief reads as formations or as walls;
+  - fields beyond these three;
+  - anything about generalisation, since there is no holdout.
+
+**Proposal for the remaining time:**
+- **(a) Render:** T0 vs T1 at matched views, so we can see whether T1 relief reads as formations.
+  - Stills only: two lateral views at m4 and m1.
+  - Elephant at one near-boundary target (D/e < 1, chosen by a frozen rule: the first centre in raster order at that level with D/e < 1 inside the parent), plus seahorse at its old landmark.
+  - The P1-style placement is labelled as such and is not attributed to the field.
+  - About 60–75 minutes.
+- **(b) Close CPU-only now.**
+
+Please give your recommendation and any material corrections.
+
+
+---
+
+## Codex — field: checkpoint reply
+*2026-10-24 10:21:01 PDT*
+
+**Recommend (a), after a bounded CPU check of the actual viewing neighbourhoods. Stop TG for this card.** Holdout exhaustion stands; retain development findings only.
+
+I reproduced the collapse counts and found several material corrections.
+
+1. **The TG freeze is legitimate, but its failure explanation is wrong.** The saved freeze precedes the relief arrays, and its pooled quantiles reproduce. This is consistent with the permitted pre-comparison definition step.
+
+   κ became NaN because **one certified-escaping seahorse sample has no finite potential evaluation**, contaminating `np.median`. Among finite samples, the median G/D is approximately **4.77285×10⁻²⁵**. The dynamic range makes direct exponentiation problematic; it does not make linear calibration mathematically meaningless. Preserve the failed calibration and describe the switch as a prospective transfer choice, without claiming the linear candidate was experimentally refuted.
+
+2. **“G is converged” exceeds the check.** I reproduced radius sensitivity of **5.68×10⁻¹⁴** and **2.84×10⁻¹⁴** on the respective 1,936-point subsamples. That establishes sampled escape-radius stability at the same arithmetic precision, not full-field precision or iteration convergence.
+
+   The missing seahorse potential value affects 13 saved m1 TG relief measurements. Report those exclusions explicitly. The convergence expression should use `expm1(logG₂ − logG₁)` to avoid underflow elsewhere.
+
+3. **The collapse arithmetic is correct; the interpretation needs narrowing.** T0 gives 6/9 agreeing bins, T1 3/9, TG 1/9 under the declared rule. However:
+
+   - **No m16 group qualifies:** each fixture has only 16 centres, below the 30-centre minimum.
+   - T0’s discrepancies are not exclusively between fixtures. In elephant’s `[16,32)` bin, m4 is **0.03360 e** and m1 **0.01221 e**, a **2.75×** difference.
+   - TG’s rejection describes the sampled surface; its resolution limitations prevent a conclusion about the converged field.
+
+   Replace “governed mainly by D/e” with “relief varies systematically with D/e, while the declared collapse test remains inconclusive for T0.”
+
+4. **The placement denominator is wrong for “explorable centres.”** The code samples the cropped reference boxes without applying the parent mask. Applying the frozen T0 piecewise-linear parent membership to those same centres gives:
+
+   | Fraction with D/e < 4 | m16 | m4 | m1 |
+   |---|---:|---:|---:|
+   | Seahorse | 100% | 92.2% | 69.5% |
+   | Elephant | 100% | **59.1%** | **32.2%** |
+
+   These remain sampled-centre fractions, with different centre sets at each scale—not whole-world or surface-area measurements. Elephant’s “most area is far away at m4” conclusion reverses under this denominator. Placement is a plausible contributor, not yet the established main cause.
+
+5. **Remove the universal “10× beyond four” and “does not extend reach” claims.** For example, seahorse T0 falls from **0.208 e** in `[2,4)` to **0.103 e** in `[4,8)`, about **2×**.
+
+   T1 also increases relief beyond D/e = 4: elephant m1 in `[4,8)` rises from **0.0528 e to 0.3444 e**, and in `[8,16)` from **0.0342 e to 0.0834 e**. “Reach” requires a declared relief threshold. The supported observation is declining relief with increasing D/e, with transfer-dependent magnitude.
+
+6. **L3–L4 differences do not establish L4 convergence.** They support prioritising T1 over TG, but cannot certify that T1 is resolved. Seahorse m1 T1 also has a **p90 error/relief ratio of 0.215**, substantially above its median.
+
+   Stopping TG is reasonable as **“resolution stability not established within this card’s budget.”** Do not generalise that to rejection of escape-potential terrain. Preserve the executable calculation behind `placement-convergence.json`; it is absent from `field-atlas.py`.
+
+The holdout certificates check out for the actual rounded rational endpoints: k0/k3 escape at iterations **111/481**, and their segments satisfy containment. For k1/k2, the implementation stopped on interval-width growth at **763/691**, rather than reaching the iteration ceiling; correct that diagnostic wording.
+
+For the remaining work:
+
+- Spend **at most 20 minutes** checking T0/T1 at the selected viewing neighbourhoods against finer direct evaluations, using the renderer’s triangle interpolation and tolerances fixed before checking. If readiness remains unresolved, close CPU-only.
+- Keep the proposed matched T0/T1 stills. Call the new rule a **proximity target rule**; it is different from the representation card’s residual-based P1.
+- Include **T0 at the original elephant target** with the same inspection-distance and lateral-view rules. That supplies the T0 old/new placement comparison before attributing additional changes to T1.
+- Freeze targets and poses before viewing; retain the 60–75-minute acquisition allowance and existing cleanup requirements.
+
+This can answer whether T1’s additional relief reads as formations, while keeping placement, numerical resolution, and generalisation claims separate.
+
+---
+
+## Claude — field: views freeze
+*2026-10-24 10:21:40 PDT*
+
+Claude: **field: targets, views and readiness tolerance frozen before checking or viewing.** views-freeze.json, SHA-256 8d4bf747bd15b301cf6d7462cd853df7d1bfa68a89e06abcd77c3ac38f5c5f37. It follows the Codex checkpoint recommendations: the proximity target rule, T0 at the original elephant target, and a readiness check with a 20-minute budget.
+
+
+---
+
+## Claude — field: judgement request
+*2026-10-24 10:28:00 PDT*
+
+Claude → Codex: **field card: still views ready for your independent judgement** (read-only). The capture is valid: run runs/stills-20261024T172726Z/, 20 stills, index strips verified, cleanup confirmed with 0 survivors. It needed one mechanical repair: the witnesses json was not linked on the first attempt, which is preserved. Views were frozen in views-freeze.json (8d4bf747…) and views.json.
+
+**Views:**
+- **Elephant:** T0 at the original target; T0 and T1 at the proximity target, at m4 and m1.
+- **Seahorse:** T0 and T1 at the original target, at m4 and m1.
+- Each condition has views A and B: B is A shifted laterally by 1e, for parallax.
+- Individual stills are in runs/stills-20261024T172726Z//*.png, and labelled sheets in runs/stills-20261024T172726Z//sheets/.
+- There is no masking under item 7; the conditions are labelled.
+
+**For each condition, record:**
+- whether a formation is present within 3e, recognisable across A/B through parallax: yes / no / unclear;
+- a convincingness rating: not / weakly / convincing;
+- a one-line reason.
+
+**Then answer two questions:**
+1. Does the proximity target change T0 at elephant (placement)?
+2. Does T1's additional relief read as formations or as walls/steps?
+
+I am writing my judgement before reading yours.
+
+
+---
+
+## Claude — field: view judgement (written before reading Codex)
+*2026-10-24 10:28:39 PDT*
+
+# Claude: field-card view judgement
+
+Written before reading Codex's. Run stills-20261024T172726Z; views were frozen in advance.
+
+| Condition | Formation within 3e (A/B parallax) | Rating | Reason |
+|---|---|---|---|
+| elephant m4 original T0 | no | weakly convincing | smooth slope; only gentle skyline undulation |
+| elephant m4 proximity T0 | unclear | weakly convincing | a rounded hill with a shoulder and a saddle on the right; slightly more shape than the original, nothing to inspect |
+| elephant m4 proximity T1 | **yes** | convincing (with caveats) | a massif with buttress spurs and fluted gullies on the flanks; spurs separate clearly between A and B |
+| elephant m1 original T0 | no | weakly convincing | a gently undulating ridge line |
+| elephant m1 proximity T0 | unclear | weakly convincing | rounded hills with a saddle; more curvature, still nothing to inspect |
+| elephant m1 proximity T1 | yes | weakly convincing | steep escarpment with serrated crest steps; very dark and near-silhouette, so shape is legible mainly at the skyline |
+| seahorse m4 original T0 | unclear | weakly convincing | a plateau edge with scalloped skyline grooves; little nearby form |
+| seahorse m4 original T1 | **yes** | weakly convincing | a fluted central peak with spurs and gullies reads well; the comb-tooth vertical walls at both image edges look artificial |
+| seahorse m1 original T0 | no | weakly convincing | a smooth dune crest |
+| seahorse m1 original T1 | yes | weakly convincing | a crest with serrated cornice-like steps and spurs; very steep, with overhang-looking dark silhouettes |
+
+**Q1 (placement at elephant):**
+- The proximity target with T0 adds visible curvature (rounder hills and saddles) but no inspectable formation.
+- The numbers agree: relief within 3e at m1 rises from 0.057 e to 0.237 e, which is about 4× more but still small in absolute terms.
+- **Placement alone is not sufficient under T0** in these views.
+
+**Q2 (T1):**
+- T1's extra relief **does read as formations at m4**: spurs, gullies and fluted flanks, with clear parallax.
+- At m1, and at the steepest near-boundary walls, it reads more as **walls and steps**: comb-tooth cliffs and serrated crests, often in near-black shading.
+- **Confound:** the terrain colour is keyed to height, so T1 also changes the palette (much darker browns). That is a rendering confound, not field evidence.
+
+**Overall (supported partial):**
+- In these views, the transfer, not placement, is what turns near-boundary structure into inspectable landform.
+- T1 overshoots into wall-like steepness close to the boundary, especially at m1.
+- A transfer with T1's redistribution but bounded slope is the natural next question, not adoption of T1 as is.
+
+
+---
+
+## Codex — field: view judgement
+*2026-10-24 10:33:09 PDT*
+
+**Independent judgement:** I viewed all 20 individual stills. Convincingness refers to the depicted bare terrain; formation presence requires identifiable shape across A/B, beyond a uniformly rising slope.
+
+| Condition | Formation within 3e | Convincingness | Reason |
+|---|---|---|---|
+| Elephant, original, T0, m4 | **Yes, limited** | Weakly | Shallow crest shoulders and a small saddle remain identifiable as the lateral view changes their overlap. |
+| Elephant, original, T0, m1 | **No** | Weakly | The immediate surface is largely uniform; the visible crest undulations do not establish a nearby formation. |
+| Elephant, proximity, T0, m4 | **Yes, limited** | Weakly | A rounded shoulder and adjoining depression have clearer separation across A/B, although the foreground remains broad and smooth. |
+| Elephant, proximity, T0, m1 | **Yes, limited** | Weakly | A shallow shoulder and notch remain recognisable across the pair, giving more local shape than the original target. |
+| Elephant, proximity, T1, m4 | **Yes** | Convincing | Distinct fluted buttresses and intervening recesses retain their identity while their overlap changes. |
+| Elephant, proximity, T1, m1 | **Unclear** | Weakly | A steep, largely featureless wall dominates; the upper crest is recognisable, but its qualification as a formation within 3e is unestablished. |
+| Seahorse, original, T0, m4 | **Yes** | Convincing | Several shoulders and grooves along the crest separate through parallax and read as coherent terrain. |
+| Seahorse, original, T0, m1 | **Yes, limited** | Convincing | A small crest shoulder and adjoining saddle retain identifiable shape across A/B. |
+| Seahorse, original, T1, m4 | **Yes** | Convincing | Strong buttresses, ribs and narrow recesses form a coherent cliff face with clear changes in occlusion. |
+| Seahorse, original, T1, m1 | **Unclear** | Weakly | The pair reveals a tall rib and crest, but the nearby face is mostly smooth and the distinctive upper features are overhead. |
+
+**Distance qualification:** the frozen m1 T1 poses look steeply upward. From the supplied poses, the look-at target is approximately **7.8–8.2e away in elephant** and **6.0e in seahorse**, despite its horizontal offset being about 2e. I therefore do not count the overhead crest alone as satisfying “within 3e.”
+
+**1. Placement:** Yes, the proximity target modestly improves elephant T0, most clearly at m1: a local shoulder/notch becomes readable where the original view offers mostly slope. Neither proximity pair raises my convincingness rating above weakly. This supports a placement contribution at these targets, not placement as the principal explanation for the fixture.
+
+**2. Transfer:** At m4, T1 reads as **fluted cliff formations**—walls with distinguishable buttresses and recesses. At m1, the experience is predominantly looking up a large wall, with little articulated nearby surface. I see stronger vertical structure, but no demonstrated improvement in close, observer-scale formations at both required levels. The dominant appearance is cliffs rather than stair-like terraces.
+
+---
+
+## Claude — field: report review
+*2026-10-24 10:34:10 PDT*
+
+Claude → Codex: **field card closure report for its one review** (read-only). The report is at /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-field-atlas.md; its SHA-256 begins e305e1c58e27d2d8.
+
+**What it includes:**
+- all your checkpoint corrections, in your wording where you gave it;
+- your view-judgement points, including the m1 T1 geometry. I verified this from views.json: pitch 68–75°, target 5.98–8.15 e away;
+- the peer disagreements, recorded without resolution.
+
+**Recommendation in the report:** the next card tests a bounded-slope transfer, with a holdout that can pass reference resolvability.
+
+Please answer READY, or list material fixes as exact replacement text.
+
+
+---
+
+## Codex — field: report review
+*2026-10-24 10:35:42 PDT*
+
+**Three material fixes.** Verified SHA-256 `e305e1c58e27d2d8…`. The numerical corrections otherwise match the preserved evidence.
+
+1. **Preserve the actual m1 disagreement.** Claude’s saved judgement says **yes** for both m1 T1 conditions; mine says **unclear**. “Neither peer counts…” incorrectly resolves that disagreement.
+
+Replace **Transfer at m1** with:
+
+> **Transfer at m1.** Both peers described predominantly steep walls under T1. Claude recorded formations present in both fixtures; Codex recorded unclear because the overhead features did not establish formations within 3e. The frozen views pitch upward 68–75°, with look-at targets 6.0–8.2e away in 3D. Nearby formations are therefore not jointly established. These views demonstrate steepness and a limitation of the inspection geometry; they do not establish that T1 lacks nearby formations under other poses.
+
+Replace the seahorse peer-disagreement bullet with:
+
+> **Seahorse T0 at its original target:** Codex recorded formations present and rated the terrain convincing at both levels. Claude recorded formation presence unclear at m4 and absent at m1, rating both weakly convincing.
+
+2. **Keep the summary within the report’s qualified findings.** Replace its first four bullets with:
+
+> - **In plain terms:** on the sampled development domains, measured relief varies systematically with D/e, where D is the implemented exterior distance estimate and e is eye height. Its magnitude also depends on the height transfer.
+> - **The log-type transfer (T1):** both peers recognise fluted buttresses and recesses at m4. At m1, steep walls dominate the frozen views; formations within 3e are not jointly established.
+> - **Placement under T0:** the proximity targets produce modest visual changes. The peers disagree about formation presence, while both rate the elephant proximity views weakly convincing.
+> - **The tested escape-potential transfer (TG):** resolution stability was not established within this card’s budget. This does not establish a limitation of escape-potential terrain generally.
+
+3. **Make the successor mathematically specific and keep fixture remedies provisional.** T1 already has a bounded derivative with respect to D:
+
+\[
+|T_1'(D)|\le 120k/\ell \approx 11.57,
+\]
+
+compared with T0’s bound of 0.7. A bound on this derivative is also distinct from a bound on spatial terrain slope, since \(\nabla h=T'(D)\nabla D\).
+
+Replace the **bounded-slope unresolved question** with:
+
+> **Transfer steepness and inspection:** whether reducing near-boundary transfer gain, while preserving useful relief redistribution, improves close inspection at m1. Distinguish the transfer derivative with respect to D from spatial terrain slope, and verify the actual 3D inspection distance.
+
+Replace the **Recommendation** bullets with:
+
+> - **For the advisor’s direction decision:** these development fixtures contain structure that T1 presents as recognisable cliff formations at m4. Nearby formations at m1 are not jointly established, and no holdout passed. The evidence supports further investigation of the Mandelbrot heightfield direction without establishing its general suitability.
+> - **Next card:** test a transfer with explicitly lower near-boundary gain against T1, while separating transfer effects from inspection-pose effects and verifying the required 3D proximity. If a spatial slope limit is intended, define and measure that limit rather than treating a transfer-derivative bound as sufficient.
+> - **Holdout preparation:** retain the certified-bracket guarantee and investigate reference feasibility through a bounded preflight. More certification effort or different box placement are candidate remedies, not demonstrated fixes. An exterior corridor alone does not satisfy a zero-unresolved requirement over the full reference box; unresolved samples must not be assumed interior.
+
+---
+
+## Claude — field: closed
+*2026-10-24 10:36:12 PDT*
+
+Claude: **field card closed** at about 60 working minutes. Codex review run 20261024T173410Z-f003 found three material fixes; I applied them verbatim, and the report SHA-256 now begins 3fef17fa. No further routine review, per item 7. The report is docs/reports/north-star/2026-10-24-field-atlas.md, uncommitted pending the advisor.
+
