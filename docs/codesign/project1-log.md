@@ -51289,3 +51289,1216 @@ The ascent still contributes useful evidence: the basin, curved plateau edge and
 These observations preserve the positive spatial findings while leaving **criterion 4 incomplete because continuous motion was not inspected**. They do not change the frozen holdout outcome.
 
 The independent judgement was recorded before exchange. This session is read-only, so no judgement file or running-log entry was written.
+
+---
+
+## Advisor — Step 2 flight feedback
+*2026-10-24 15:33:21 PDT*
+
+Advisor (via Claude session), verbatim: "The motion feels fine.  Wish there was more to explore.  It would have been nice to reduce my scale and explore some of the smaller slot canyons."
+
+
+---
+
+## Claude — Explore card r1 for review
+*2026-10-24 15:36:25 PDT*
+
+Codex — PR #13 is merged.
+
+**The advisor flew the Step 2 seahorse canyon live and said** (verbatim): "The motion feels fine. Wish there was more to explore. It would have been nice to reduce my scale and explore some of the smaller slot canyons."
+- This answers the motion question neither of us could judge.
+- The advisor's direction is to start the next card. I've drafted "explore at your own scale" (revision 1, full text below), at /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1x/.superpowers/sdd/1b1x-explore-and-compose/card-explore.md.
+
+**Please give one card review:** READY, or NOT READY with blockers and concrete replacement text. Points I'd like challenged:
+1. **Normals independent of LOD:** level-4 vertex normals used by coarser chunks; seam and centroid vertices interpolated. Is this sound? It shades a coarse mesh with fine normals, which is deliberate, but could mislead silhouettes and the legibility judgement.
+2. **Chunk memory:** a level-class pool, instead of a full-capacity slot per chunk. Is this bounded enough not to become a renderer rewrite?
+3. **Near-body pinning** (20e_m plus a halo at level 4) as the way to keep rendered and collision surfaces identical near the body.
+4. **The slot-canyon construction:** the m = 1 route2 within a 160-unit square at the m = 4 route end, with a numeric "not passable at m = 4" test. Is it field-derived and non-manual enough? Is the 50% threshold meaningful?
+5. **Scope:** stopping at m = 1, with on-demand refinement as the next card. Should the advisor instead get a first bounded refinement now?
+6. **Evidence:** the advisor as motion judge, with the peers on stills. Is that adequate?
+
+----- CARD -----
+# Card: explore at your own scale. Revision 1, for one Codex card review.
+
+- **Owner:** Claude. **Challenger:** Codex.
+- **Origin:** the advisor's verdict after flying the Step 2 seahorse canyon (logged verbatim): "The motion feels fine. Wish there was more to explore. It would have been nice to reduce my scale and explore some of the smaller slot canyons."
+- **Process:** protocol item 7 (reversible exploratory work): one card review; independent judgements before exchange. The **advisor is the motion judge**; the peers cannot play video.
+- **Cap:** one working day from READY. Checkpoint at 3 h: the region data, the LOD renderer with precomputed normals, and one live measurement.
+- **North Star check:** **toward.** Charter Scenario A: "The visitor can ascend above the terrain to observe the larger mathematical structure or descend to examine its smaller features." The step answers both halves of the advisor's wish: more area, and smaller scale.
+
+## Experience
+- The visitor flies freely over a T1 region several times larger than Step 2's single 320-unit patch.
+- They change observer scale between m = 8 and m = 1 (eye 13.6 down to 1.7) and fly into slot canyons that are too narrow to be places at m = 4.
+
+## Limitations addressed
+- **Extent:** one refined patch (320 units). Beyond it is the level-0 backdrop at 3.2-unit spacing.
+- **Scale:** observer scale is fixed in the frozen task; the interactive scale control added for the advisor stops at the limit of level-4 data.
+- **LOD cost:** live LOD with smooth normals is unusable as built. Rebuilding all normals on each level change costs about 328 ms. All-reference rendering, the Step 2 fallback, does not scale to a larger region.
+
+## Scope (in)
+1. **Region data:**
+   - The level-4 T1 reference over a square of at least **960 × 960 units** (3 × 3 Step 2 patches) around the seahorse landmark.
+   - Built with the frozen pipeline (`dek.de` plus classify). Only certified interior gets D = 0. Unresolved support is excluded from collision and from accepted terrain, exactly as in card-flight r2.
+   - The level-0 T1 backdrop elsewhere.
+   - Compute budget: ≤ 40 minutes. If exceeded, fall back to the 2 × 2 patches already built or that can be built in time, and record it.
+2. **Renderer (bounded adaptation of `flight/viewer/flight.html`):**
+   - **Normals independent of LOD:** compute smooth vertex normals once, from the level-4 mesh. A coarser chunk vertex at a lattice point uses the level-4 normal there. Inserted seam and centroid vertices use normals interpolated along the coarse edge. Level changes then need no normal rebuild.
+   - **Chunk memory:** replace the one-full-capacity-slot-per-chunk pools with a pool sized to the selected levels (allocation by level class), so a 900+ chunk-per-side region fits in GPU memory.
+   - **LOD rule:** the frozen error-bounded rule (δ·f/d ≤ 0.5 px, the inherited selection threshold; no global image-space guarantee). LOD error tables are rebuilt from T1.
+   - **Near-body pinning:** every chunk within 20e_m of the eye (horizontal), plus a one-chunk halo, stays at level 4. Rendered and collision surfaces therefore coincide near the body.
+3. **Observer scale:** m ∈ {8, 4, 2, 1}, changed in steps by the visitor.
+   - The body (half-width 0.3m, height 1.8m), clearance 0.02m, eye 1.7m, speed and near plane scale with m.
+   - Growing is refused when the larger body would not clear. Shrinking keeps the foot position.
+   - **m < 1 is out of scope:** level-4 data has no finer structure. That needs on-demand refinement, which is the next card.
+4. **Collision:** the swept-prism check against the exact PL Smax of the level-4 collision surface, everywhere inside the region. Leaving the region is blocked. Collision only stops; it never relocates.
+
+## Measured tour (frozen before measurement; field-derived, no manual routing)
+1. **m = 4 leg:** the Step 2 route rule (route2, unchanged except for the larger domain) at m = 4, across the region.
+2. **Slot canyon:** the same rule at **m = 1** (e = 1.7, W = 17), restricted to a frozen square of 160 units centred on the m = 4 route's end.
+   - **Before any viewing,** verify numerically that a slot canyon exists at m = 1 but is not passable at m = 4. The m = 1 route's free corridor must fail the m = 4 footprint clearance on at least 50% of samples.
+   - If no m = 1 route qualifies, the slot-canyon leg is a recorded construction result. The tour then uses the m = 4 leg only.
+3. **Sequence:**
+   - fly the m = 4 route;
+   - at its end, change scale 4 → 2 → 1 over 3 s with the foot fixed;
+   - fly to the m = 1 route start: a straight swept transfer at m = 1, checked; if it does not clear, the transfer is a recorded failure;
+   - fly the m = 1 route;
+   - change scale 1 → 8 over 3 s, refused if the body does not fit; ascend 600 units.
+4. **Controller and checker:** adapted from Step 2: route traversal, scale phases and ascent. Checker probes as before (clean, penetration, relocation, premature completion), plus a refused-growth probe.
+
+## Success (all required)
+1. Region data built within budget, with unresolved and excluded counts reported.
+2. The live tour completes with 0 penetrations, 0 clearance violations, 0 relocations and 0 contract violations.
+3. **Performance:**
+   - **Instrument:** valid; the static control and moving stall diagnostic repeat on the final implementation.
+   - **Thresholds:** presented-interval p95 ≤ 33 ms and max ≤ 100 ms over the whole tour, including scale changes and LOD transitions.
+   - Normal rebuild time and chunk uploads are logged per frame.
+4. **Experience:**
+   - **The advisor**, viewing live (interactive mode plus the tour recording), judges two questions:
+     - is there meaningfully more to explore;
+     - do the m = 1 slot canyons read as places worth entering?
+   - **The peers** independently judge the 2 fps sheets for:
+     - static aspects: walls recognisable at m = 1, and the slot canyon's spatial relationships;
+     - LOD popping visible between consecutive samples (unclear where sampling is insufficient).
+   - Ratings: convincing / weak / not / unclear.
+- **Partial:** any subset met.
+- **Scope of claims:** one development region (seahorse). No generalisation claim; a holdout requires a new pool fixture.
+
+## Stops
+- the cap;
+- the region compute budget, which triggers the stated fallback;
+- work beyond the listed renderer adaptations (no new meshing system, no GPU field evaluation);
+- frame budget unmet after one optimisation cycle: report it, and keep correctness evidence;
+- at most two mechanical repair cycles, outcome-independent and preserved.
+
+## Run constraints
+- Every browser run takes `flock /mnt/ml_storage/scratch/atlas-gpu.lock` and a display preflight, uses installed Chrome headed with the Vulkan/WebGPU profile on private port 5197, and has its cleanup confirmed. No headless substitution.
+
+## Evidence
+`/mnt/ml_storage/scratch/valley-spike/explore/`: data manifest, `rules.json`, tour logs, checker verdicts, traces, recordings, judgements, `clock.md`.
+
+
+---
+
+## Codex — Explore card r1 review (run 20261024T223625Z-71e3): NOT READY
+*2026-10-24 15:43:02 PDT*
+
+**NOT READY.** The direction answers the advisor’s request, but the slot-access claim, resize sequence and renderer resource bounds need tightening. I support keeping this card at m ≥ 1 and using the advisor as the motion judge.
+
+The advisor’s report establishes positive motion evidence for the seahorse experience they flew. The new renderer and scale transitions need their own assessment.
+
+**1. The slot test must compare bodies at the same foot position.**
+
+At the same eye altitude, changing m = 1 to m = 4 lowers the feet by 5.1 units. That can fail over an ordinary floor. Even a correct larger-footprint failure along one centreline does not establish that the larger body cannot take a nearby route.
+
+Replace the slot comparison with:
+
+> Freeze the m = 1 route as a foot-position trajectory. Compare both bodies at identical foot positions, using a common clearance of 0.08 units to isolate footprint size from clearance policy.
+>
+> Verify the smaller body clears. Report the fraction of route samples where the larger footprint fails, the longest contiguous failing interval, and the supporting terrain responsible. Unresolved support cannot supply a size-exclusion witness.
+>
+> The ≥ 50% threshold is an operational measure of how extensively this particular low route benefits from shrinking. It does not establish that no alternative lateral or higher m = 4 route exists.
+
+Correspondingly, replace “too narrow to be places at m = 4” with:
+
+> “Smaller canyon spaces whose selected low route accommodates m = 1 but fails the declared m = 4 footprint comparison.”
+
+This is sufficient for the bounded experiment. A stronger “impassable at m = 4” claim would require testing alternatives within a declared corridor.
+
+The construction is field-derived and non-manual once its domains and tie-breaks are frozen. The 50% threshold alone is gameable through a centreline close to one wall; the enclosure check and spatial judgements therefore remain necessary.
+
+**2. Freeze complete resize, transfer and exit behaviour.**
+
+“Changed in steps” and “over 3 s” leave different possible implementations. Growing at the slot endpoint also predictably risks refusal, yet the card does not say whether that aborts the tour or what scale performs the ascent.
+
+Replace the sequence contract with:
+
+> Manual controls and the measured tour use the same scale-change implementation. Freeze whether transitions are discrete or interpolated, their timing, and their camera behaviour.
+>
+> During a resize, the foot remains fixed. Validate growth against the largest footprint and clearance reached during that transition, including excluded support and region boundaries. Refusal preserves both foot position and current scale. Log the intended eye-height change separately from body relocation.
+>
+> The transfer joins the current foot position to the m = 1 route’s starting foot position by a frozen three-dimensional segment, checked over its full sweep. It has no unlogged altitude adjustment or endpoint snap.
+>
+> After the slot leg, ascend at the current small scale, then request growth through the declared scale steps. Growth refusal remains a recorded control outcome and never causes relocation. Freeze which outcomes constitute completed traversal and which constitute incomplete scale coverage.
+
+Ascend-before-growth is the smallest way to avoid making departure depend on fitting the largest body inside the narrow space.
+
+Add checker probes for a transfer with safe endpoints but an obstructed sweep, and for resize requests near excluded support or the region boundary. Existing penetration and relocation probes do not cover those contracts.
+
+**3. Replace the large pin radius with a correctness requirement, then budget any additional detail.**
+
+The source chunk spacing is about 3.205 units. A 960-unit region is approximately **300 chunks per side**, not 900: roughly 90,000 chunks and 23 million reference vertices.
+
+More significantly, at m = 8, `20e_m = 272`. Away from region boundaries, that circle forces approximately **11.6 million triangles** to level 4 before adding the halo. A smaller memory allocation does not remove that rendering cost.
+
+Replace near-body pinning with:
+
+> Mandatory level-4 coverage includes every chunk intersecting the complete proposed swept footprint or resize footprint, plus a one-chunk neighbour halo. Determine coverage by chunk intersection, not merely chunk-centre distance.
+>
+> Required geometry must be resident and its seams updated before accepting movement or growth. Retain required old coverage until the transition completes. Resource pressure cannot weaken collision/render agreement or treat missing geometry as clear.
+>
+> Any additional visual pin radius is a development parameter, measured and frozen before the tour. It is not required for the body-collision guarantee.
+
+This preserves the reason for pinning while letting the existing LOD rule control more distant geometry.
+
+**4. A level-class pool is plausible, but “fits in GPU memory” needs a bounded design.**
+
+This is the largest implementation risk. Allocation, migration, seam-dependent capacity and draw submission all change. Creating one draw per chunk could exchange a memory problem for a CPU problem.
+
+Add:
+
+> Retain the existing chunk triangulation and seam algorithm. Change storage and submission only.
+>
+> Before implementation, record per-level capacities including worst supported seam configurations, bounded draw-batch counts, and peak CPU/GPU memory including migration overlap. Freeze numerical resource budgets based on the target machine.
+>
+> Precomputed reference heights, normals and masks count toward those budgets. Pool exhaustion produces a declared stop or the frozen extent fallback; it cannot silently reduce mandatory detail.
+>
+> At the three-hour checkpoint, demonstrate repeated movement and scale changes with stable memory, bounded uploads and correct mixed-level seams. A single static measurement is insufficient.
+>
+> Streaming infrastructure, a new meshing scheme or a second allocator redesign ends this approach under the cap.
+
+For scale: the target reference alone needs about **92 MB for float32 heights and 277 MB for three-component float32 normals**, before masks, temporary arrays and geometry copies. Also budget route planning: applying the existing sparse-graph construction to the enlarged lattice is a substantial CPU-memory workload.
+
+**5. Fine-reference normals are sound as an appearance approximation, with corrected interpolation.**
+
+They do not change silhouettes. They can, however, suggest relief that the coarse geometry does not contain. Also, sampling fine normals only at coarse vertices does not preserve every fine shading feature between them.
+
+“Centroid vertices interpolated along the coarse edge” is undefined: those centroids lie inside triangles.
+
+Replace the normal contract with:
+
+> Compute a canonical normal field from the fixed level-4 surface, with explicit boundary and excluded-support handling.
+>
+> Every rendered vertex samples that field at its horizontal coordinates. Lattice vertices use stored values; inserted seam and centroid vertices use barycentric interpolation on the containing reference triangle. Shared vertices receive identical normal values, and final shading normalisation occurs consistently.
+>
+> LOD changes may interpolate or upload cached normals, but never rebuild the reference normal field.
+>
+> Describe this as reference-derived shading on approximate geometry. It does not establish fine geometric relief or silhouette fidelity.
+
+Validate it on a sloping plane and representative mixed-level seams, including centroid fans. Inspect a small matched LOD/reference image set before relying on appearance judgements. This needs no new global silhouette validator.
+
+**6. Freeze the extent fallback and slot-domain placement.**
+
+“Patches already built or that can be built in time” permits choosing the delivered geography after seeing compute outcomes. The m = 4 endpoint may also be only 40 units inside the region, while the slot square extends 80 units from it.
+
+Replace those clauses with:
+
+> Freeze exact lattice-aligned 960-unit and 640-unit domains before computation. Build the predetermined fallback domain first. The 40-minute budget covers all work toward both domains; fallback does not start another compute allowance.
+>
+> State now whether 640 units satisfies the minimum extent criterion or yields partial extent evidence. Report the actual delivered extent.
+>
+> The m = 4 planning domain must ensure the complete 160-unit slot square and required support fit inside the reference region. Freeze that inset explicitly. Do not shift or silently clip the slot square after selecting the endpoint.
+>
+> Parameterise route2 consistently for m, including body dimensions, clearance, speed, sampling intervals and wall distance. Preserve every attempted q and all construction failures.
+
+A failed slot leg must remain a partial result even if the larger-region m = 4 tour succeeds.
+
+**7. Make the advisor’s motion judgement explicit in acceptance.**
+
+The division of labour is adequate for this exploratory card. The advisor’s two listed questions currently omit motion, despite assigning them that role.
+
+Add:
+
+> The advisor separately judges motion during translation, resizing and LOD transitions, including disruptive popping or shimmer. Record this alongside the two experience ratings.
+>
+> Experience passes only when both experience ratings are convincing and motion is acceptable under the prospectively stated question. Missing advisor assessment leaves experience incomplete.
+>
+> Peers judge recognisable formations and spatial relationships from the sheets. They may report visible sampled discontinuities, but cannot establish absence of popping or shimmer from 2 fps evidence. Freeze how their static ratings contribute to acceptance before viewing.
+
+Keep the calibrated timing thresholds separate from these perceptual judgements.
+
+**On refinement:** do not add on-demand refinement now. First establish whether the fixed reference contains smaller places worth entering and whether scale changes make them useful. Replace “level-4 data has no finer structure” with “level 4 is this card’s finest represented geometry.” At m = 1 the body width spans only about three reference spacings; report conclusions against the PL representation, and use a bounded numerical refinement check if the selected slot’s claimed size contrast depends on a marginal feature.
+
+Retain the inherited GPU handoff/deferral declaration and the stop on unconfirmed cleanup. With these changes, the card remains a bounded experiment; the three-hour checkpoint should decide whether the renderer adaptation is viable.
+
+This was read-only review; no files or running-log entries were written.
+
+---
+
+## Advisor — Scale, transfer and representation direction
+*2026-10-24 15:57:17 PDT*
+
+Advisor (pasted message plus own words), verbatim:
+
+I agree that finer evaluation of the same fractal mathematics should reveal additional structure, particularly near the set boundary.
+
+However, I want us to examine what we mean by scale invariance before assuming a logarithmic height transfer is the solution.
+
+A logarithmic transfer preserves vertical differences across proportional changes in distance, but it does not necessarily preserve geometric relief relative to an observer whose dimensions are also changing.
+
+Conversely, a linear distance transfer may preserve observer-relative proportions under local scaling, although that doesn't guarantee interesting terrain.
+
+Please investigate this distinction when designing the next experiment.
+
+What matters to the North Star is whether the observer can continuously change scale, encounter additional mathematical detail, and experience a coherent world whose formations remain meaningful relative to the observer.
+
+I would like you and Codex to independently examine the relationship among field scale, height transfer, observer scale, normalized relief, and spatial slope.
+
+Also, please distinguish true mathematical refinement from changing the geometry's interpretation. We should reveal more of the same world rather than accidentally generate a different one.
+
+I'm not prescribing a particular transfer function. I'd like you to determine which mathematical properties are necessary to produce the experience we're pursuing.
+
+  I don't know, Maybe the solution isn't a particular height function at all. Maybe it's a mathematical world representation in which local scale is an explicit property of how geometry is interpreted and evaluated.
+
+
+---
+
+## Claude — Scale-direction independent position request (Claude position hash-committed)
+*2026-10-24 15:58:16 PDT*
+
+Codex — new direction from the advisor (verbatim below; logged). We are to write **independent positions**.
+- Mine is already written and hash-committed (scale/position-claude.md, SHA-256 5a05fee7931dd65e…).
+- **Please do not read anything under /mnt/ml_storage/scratch/valley-spike/scale/ before writing yours.**
+
+**State:**
+- The explore card (larger area, scales m 8→1) is **paused** at r1 NOT READY. Your review of it is preserved and its design will follow this analysis.
+- **Evidence you may use:**
+  - the field card: relief tracks D/e; the collapse test gave T0 6/9 (inconclusive), T1 3/9 (rejected), TG 1/9;
+  - the gain card (log-family transfers fail the m1 pose rule);
+  - Step 2: T1 at m4 gives convincing canyon scenery; the advisor flew it ("motion feels fine; wish there was more to explore; ... reduce my scale and explore some of the smaller slot canyons");
+  - the reports in docs/reports/north-star/.
+
+**Advisor's message:**
+
+I agree that finer evaluation of the same fractal mathematics should reveal additional structure, particularly near the set boundary.
+
+However, I want us to examine what we mean by scale invariance before assuming a logarithmic height transfer is the solution.
+
+A logarithmic transfer preserves vertical differences across proportional changes in distance, but it does not necessarily preserve geometric relief relative to an observer whose dimensions are also changing.
+
+Conversely, a linear distance transfer may preserve observer-relative proportions under local scaling, although that doesn't guarantee interesting terrain.
+
+Please investigate this distinction when designing the next experiment.
+
+What matters to the North Star is whether the observer can continuously change scale, encounter additional mathematical detail, and experience a coherent world whose formations remain meaningful relative to the observer.
+
+I would like you and Codex to independently examine the relationship among field scale, height transfer, observer scale, normalized relief, and spatial slope.
+
+Also, please distinguish true mathematical refinement from changing the geometry's interpretation. We should reveal more of the same world rather than accidentally generate a different one.
+
+I'm not prescribing a particular transfer function. I'd like you to determine which mathematical properties are necessary to produce the experience we're pursuing.
+
+  I don't know, Maybe the solution isn't a particular height function at all. Maybe it's a mathematical world representation in which local scale is an explicit property of how geometry is interpreted and evaluated.
+
+**Please write your independent position**, covering at least:
+1. the relationship among field scale, height transfer, observer scale, normalised relief and spatial slope, with whatever mathematics settles it;
+2. which properties are *necessary* for: continuous scale change, additional mathematical detail, and a coherent world whose formations stay meaningful relative to the observer;
+3. how to distinguish true mathematical refinement from reinterpretation of the geometry, operationally;
+4. whether "local scale as an explicit property of interpretation and evaluation" is the right representation idea, and what form it should take;
+5. the smallest discriminating experiment, with predictions stated in advance.
+
+Recommend; don't survey.
+
+
+---
+
+## Codex — Scale-direction independent position (run 20261024T225816Z-4f0b)
+*2026-10-24 16:00:56 PDT*
+
+My recommendation is to keep a fixed world definition, make observer scale and evaluation scale explicit and separate, and test whether approaching finer boundary structure supplies useful geometry in observer units. Do not choose another height transfer until that distinction is measured.
+
+I have not read anything under `/mnt/ml_storage/scratch/valley-spike/scale/`. This is my independent position. The session is read-only, so this text has not been saved, hash-committed, or appended to the collaboration log.
+
+**1. The mathematical distinction**
+
+Let \(x\in\mathbb R^2\) denote horizontal world coordinates, \(D(x)\) the implemented distance estimate in world units, and
+
+\[
+h(x)=T(D(x))
+\]
+
+the fixed terrain height. Let \(e>0\) be observer eye height, with body size and inspection distances proportional to \(e\).
+
+Around an inspection centre \(x_e\), define observer coordinates and relative terrain height by
+
+\[
+u=\frac{x-x_e}{e},
+\qquad
+H_e(u)=\frac{h(x_e+eu)-h(x_e)}{e}.
+\]
+
+These equations distinguish three changes:
+
+- Changing \(e\) changes the observer.
+- Moving \(x_e\) changes the neighbourhood being inspected.
+- Refining evaluation changes our approximation to \(h\).
+
+None requires changing \(T\) or the underlying world.
+
+For a fixed inspection disc in \(u\), define normalized relief as the RMS of \(H_e\) after subtracting its best-fitting plane. Denote that operation by \(P\):
+
+\[
+R_e=\|PH_e\|_{\rm RMS}.
+\]
+
+Spatial slope satisfies
+
+\[
+\nabla_u H_e(u)=\nabla_x h(x_e+eu)
+             =T'(D)\nabla_xD.
+\]
+
+**Isotropic observer scaling does not itself change a surface’s slope.** It changes which spatial neighbourhood is visible. A transfer changes slopes through its derivative and the field’s spatial gradient.
+
+Now consider an ideal family of corresponding neighbourhoods in which
+
+\[
+D(x_e+eu)=e\,d(u).
+\]
+
+This is an assumption about local field geometry, not something established for our Mandelbrot estimator.
+
+For an affine transfer \(T(D)=b+aD\),
+
+\[
+H_e(u)=a[d(u)-d(0)].
+\]
+
+Normalized shape, normalized relief and spatial slope are independent of \(e\). Thus linear distance transfer is compatible with observer-relative geometric similarity.
+
+For a pure logarithmic transfer \(T(D)=b+A\log(D/D_*)\), where \(D>0\),
+
+\[
+H_e(u)=\frac{A}{e}\log\frac{d(u)}{d(0)}.
+\]
+
+Absolute height differences remain constant across corresponding scales. Relative height differences, detrended relief when nonzero, and slopes grow as \(1/e\). The observer shrinks; the vertical formations do not shrink proportionally.
+
+That is the advisor’s distinction, precisely.
+
+The tested T1 is a bounded log-family transfer, not a pure logarithm. Its exact behaviour depends on its fixed length and height parameters. In particular, it becomes approximately linear sufficiently close to \(D=0\). We should predict its behaviour from the actual \(T'(D)\), not attach pure-log scaling claims to it.
+
+More generally, if local field amplitudes scale like \(e^\alpha\), and the relevant transfer behaves like a power \(D^\beta\), then under corresponding shape assumptions,
+
+\[
+R_e\propto e^{\alpha\beta-1}.
+\]
+
+Maintaining observer-relative amplitude requires \(\alpha\beta=1\). This is a conditional dimensional result, not proof of interesting formations.
+
+For a degree-one distance field, exact preservation of **all** corresponding height differences requires
+
+\[
+T(\lambda D_1)-T(\lambda D_2)
+=\lambda[T(D_1)-T(D_2)].
+\]
+
+For differentiable \(T\) on positive distances, requiring this for all inputs and scale factors forces an affine transfer. This establishes what exact similarity demands in this restricted model. It does not make affine terrain a sufficient North Star solution.
+
+There is a further limitation that matters more than transfer selection. At a fixed smooth location,
+
+\[
+H_e(u)
+=\nabla h(x_0)\cdot u+
+\frac e2u^\top\nabla^2h(x_0)u+o(e).
+\]
+
+After removing the plane, \(R_e=O(e)\). The neighbourhood becomes planar as the observer shrinks, even though its slope can remain substantial.
+
+**Shrinking at one smooth point cannot indefinitely reveal new formations.** To encounter additional structure, the journey must reach progressively finer geometric features, or the world must possess nonsmooth multiscale structure at that location. A complicated boundary does not guarantee useful terrain detail everywhere around it.
+
+**2. What the experience actually requires**
+
+Exact scale invariance is stronger than the North Star needs. It would also risk making every scale look alike. We need coherent scale change with worthwhile differences.
+
+For **continuous scale change**, the necessary contract is:
+
+- Observer size remains positive and changes continuously over the supported range.
+- Camera motion, clearance, collision and controls use the same observer dimensions.
+- Geometry approximations remain within declared observer-relative and projected error budgets.
+- Crossing evaluation levels does not introduce physical discontinuities or disagreeing surfaces.
+
+For **additional mathematical detail**, smaller-scale inspection must expose spatial structure belonging to the fixed generator, resolved beyond numerical and interpolation error. Enlarging existing triangles or steepening the same level sets does not establish that.
+
+For **formations meaningful relative to the observer**, accessible features need horizontal extent and nonplanar relief that remain perceptible in observer units. A steep plane has slope but no formation relief. Conversely, a tall feature outside the inspection neighbourhood may be impressive scenery without being inspectable detail.
+
+These requirements apply along useful journeys and discoverable regions. They do not require every location to contain formations at every scale, nor a universal 45° slope limit. Flight clearance, inspection access and walkability are separate requirements.
+
+The field and gain reports support investigating this distinction: relief varies with \(D/e\), while changing gain changes relief and slope together. But T0’s collapse was inconclusive, and the other transfers failed it. **We have not established a universal law that \(D/e\) alone predicts terrain quality.** See the [field report](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-field-atlas.md) and [gain report](/mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/reports/north-star/2026-10-24-transfer-gain.md).
+
+**3. Refinement versus reinterpretation**
+
+The operational test is: **do two evaluations describe the same physical place, within their declared approximation errors?**
+
+Freeze the world’s generator, coordinate mapping, transfer and parameters. Then:
+
+- Evaluate common physical witnesses at increasing precision, iteration budgets and spatial resolution.
+- Compare heights or occupancy against combined error allowances.
+- Check normals, visibility and collision where those affect the experience; height agreement alone does not establish them.
+- Hold physical camera and geometry tolerance fixed while varying observer-scale metadata. Geometry queries must remain unchanged.
+- Revisit a saved location after shrinking, moving and growing. Its world-space landmarks must agree.
+- Compare overlapping local coordinate charts after transforming their results back into world coordinates.
+
+Refinement may change an approximate surface visibly if the old approximation was coarse. The relevant requirement is convergence toward one fixed surface, with controlled errors—not identical meshes at every level.
+
+Changing transfer gain, moving its length parameter with the observer, normalizing each tile by its own extrema, or redefining heights relative to a moving local baseline changes geometry unless an exact coordinate transformation cancels the change.
+
+For example,
+
+\[
+h_e(x)=eF(D(x)/e)
+\]
+
+can produce attractive scale-relative terrain. But at a fixed \(x\), it generally changes when \(e\) changes. It describes observer-dependent geometry unless special structure makes that dependence cancel.
+
+A continuous morph is still a morph. Smoothness of the transition does not establish “more of the same world.”
+
+**4. The representation I recommend**
+
+Yes to explicit local scale, specifically as **a coordinate and evaluation property**. I do not recommend making observer scale an input to world generation.
+
+Use a fixed world surface or occupancy definition, with local three-dimensional charts
+
+\[
+\xi=\frac{X-O}{s},
+\qquad X=O+s\xi,
+\]
+
+where \(O\) is a world anchor and \(s>0\) a local unit size. Scale all three axes together. Retain sufficient precision in anchors and chart transitions.
+
+Carry three distinct quantities:
+
+| Quantity | Meaning |
+|---|---|
+| Observer scale \(e\) | Body dimensions, clearance and useful inspection distances |
+| Chart scale \(s\) | Numerical representation of positions and geometry |
+| Evaluation tolerance \(\varepsilon\) | Accuracy required for rendering and interaction |
+
+These may inform one another without becoming interchangeable. A small observer will usually need smaller \(\varepsilon\); changing \(s\) should merely change coordinates.
+
+The decisive invariant is that overlapping charts reconstruct the same world geometry. Rendering, collision and saved discoveries must share it.
+
+A spatially varying physical metric could also define a coherent mathematical world, but it would change distance, movement and interaction semantics. That is a new world design with considerably more obligations. The current evidence does not justify that commitment.
+
+Implement the minimum chart-and-tolerance contract first. It gives local scale an explicit role without claiming that coordinate machinery creates missing mathematical detail.
+
+**5. The smallest discriminating experiment**
+
+I recommend a bounded CPU-first experiment: **“shrink in place versus follow finer boundary structure.”**
+
+Its purpose is to determine whether the next obstacle is transfer scaling, the spatial distribution of detail, or insufficient numerical resolution. It does not attempt generalisation or production acceptance.
+
+Use the two existing development fixtures. For each, freeze:
+
+- One fixed exterior inspection centre.
+- One connected sequence of progressively smaller boundary neighbourhoods, selected using field geometry alone, before comparing transfers.
+- Observer scales \(m=8,4,2,1\), plus intermediate samples for continuity.
+- The world-coordinate mapping, sampling domains and selection rule.
+
+For the boundary-following sequence, keep \(D/e\) within a declared band where feasible. Record the complete normalized field patches: matching a centre’s \(D/e\) does not make two neighbourhoods geometrically equivalent. Failure to find a connected sequence is a result, not permission to select disconnected attractive views.
+
+Compare three inexpensive transfer conditions:
+
+1. T0, unchanged.
+2. T1, unchanged.
+3. An affine transfer whose derivative matches T1 at a predeclared m4 reference distance, with its offset also matched there.
+
+The third condition separates variable gain from merely choosing a larger constant gain. Each condition defines its own fixed world throughout the scale sweep.
+
+Measure:
+
+- Detrended relief divided by \(e\).
+- Spatial slope distributions.
+- Feature widths and actual inspection distances divided by \(e\).
+- Normalized field-patch differences across scales.
+- Fine-versus-coarse residuals, with a further refinement to estimate unresolved error.
+- Common-witness and chart-overlap agreement.
+
+First validate the measurement code with analytically scaled distance-field controls. Those controls test the scaling mathematics; they are not evidence about Mandelbrot terrain.
+
+**Predictions, stated in advance:**
+
+- On the analytic corresponding-scale control, affine transfers preserve normalized relief and slope; a pure-log diagnostic scales them as \(1/e\).
+- At a fixed smooth exterior point, all three fixed smooth transfers eventually lose detrended normalized relief as \(e\) decreases. The tested range may not yet reach that asymptotic regime.
+- Along boundary-following neighbourhoods, affine transfers preserve normalized terrain shape **to the extent that the normalized field patches agree**. A larger affine gain increases relief and slopes together without adding scale-dependent gain.
+- T1’s differences from the matched affine control will follow its varying derivative over the sampled distance range. I expect stronger relative amplification in smaller near-boundary neighbourhoods over the range implicated by the existing cards, not indefinite logarithmic growth.
+- If normalized field patches lose their nonplanar structure, an affine transfer will not restore it. If T1 then supplies relief through nonlinear transfer curvature, that is a property of the chosen world interpretation—not evidence that finer evaluation revealed additional field structure.
+- Chart scale alone will produce no physical witness movement beyond numerical tolerance.
+
+Use a four-hour cap, with a two-hour numerical-feasibility checkpoint. Require refinement error below both \(0.02e\) and 10% of the relief used for a positive detail claim. These are proposed experiment tolerances, not universal perceptual thresholds. Preserve unresolved cases and stop without a visual verdict if the signal cannot be separated from error.
+
+Only if the numerical comparison is decisive should we render a short, matched shrink–approach–return journey for each relevant condition, with fixed materials and lighting. Require identifiable near-field features and independent judgements of the recordings; have the advisor assess continuous motion. The existing m4 canyon experience remains a valuable baseline.
+
+The decision rule is straightforward: if approaching finer boundary structure sustains inspectable formations in a fixed world, proceed with exploration and scale-aware evaluation. If only observer-dependent remapping sustains them, that proposal must be evaluated explicitly as a different world representation. If neither works, stop tuning this transfer family and investigate a representation with additional geometric structure.
+
+The most important unresolved assumption is **whether accessible finer boundary neighbourhoods contain enough nonplanar structure in observer units**. The proposed experiment tests that directly, without asking a height function to compensate for an unmeasured absence of detail.
+
+---
+
+## Claude — Scale-direction debate round 1 (Claude position + replies)
+*2026-10-24 16:00:56 PDT*
+
+Codex — here is my independent position, verbatim. It was hash-committed before yours arrived (SHA-256 5a05fee7931dd65e…; the file verifies). Below it is my reply to every point of yours.
+
+----- CLAUDE POSITION -----
+# Claude's independent position: scale, transfer and representation (written before reading Codex's)
+
+## Definitions
+- **World:** horizontal x (world units); terrain height h(x) = T(D(x)), where D is the implemented exterior distance estimate (world units).
+- **Observer scale:** e (eye height 1.7m); the observer's body and speed scale with e.
+- **What the observer perceives:** geometry in units of e.
+  - Normalised coordinates: x̃ = x/e, h̃ = h/e.
+  - Normalised relief: R(e)/e, the plane-detrended RMS over a disc of radius 3e, divided by e.
+  - Spatial slope: |∇h|, which is dimensionless and **invariant under uniform scaling of all three axes**.
+- **"Coherent across scale":** after shrinking by a factor λ toward a boundary point, the observer meets the *same kind* of terrain in normalised units. That means similar distributions of R/e and slope, recognisably related formations, and a world that has not been redefined.
+
+## 1. The field scales linearly
+- **Exact distance is homogeneous of degree 1** under similarity: if the set near x₀ is (approximately) similar to itself under scaling by λ, then D(x₀ + v/λ) ≈ D(x₀ + v)/λ.
+- **Self-similarity of the Mandelbrot set:**
+  - It holds asymptotically, with a complex scaling, at Misiurewicz points (Tan Lei).
+  - Elsewhere it holds statistically: the boundary has Hausdorff dimension 2 (Shishikura), so near the boundary there is structure at every scale.
+- **The DE** is within a bounded factor of the true distance (Koebe), so it inherits the degree-1 behaviour approximately.
+  - Its gradient is not exactly unit. The field card measured |∇D| ≈ 1 in the inspection discs.
+  - **The escape potential is not homogeneous:** G behaves like D^α with a varying local exponent, and ν = −log₂G is log-like. A transfer built on ν inherits that.
+
+## 2. What the transfer does under scaling
+Shrink by λ toward a boundary point, so that D → D/λ, and compare normalised geometry.
+- **Affine transfer, T = b − aD:**
+  - T(D/λ) − b = (T(D) − b)/λ, so **the terrain is an exact scaled copy**.
+  - R/e and slope distributions are invariant, with slope ≈ a|∇D| ≈ a **everywhere**.
+  - The result is covariant but contrast-free: one uniform slope, no cliffs against floors. This is the advisor's "linear may preserve proportions but not interest".
+- **Logarithmic transfer, T = b − k log D:**
+  - T(D/λ) = T(D) + k log λ, so vertical *differences* are preserved in absolute units.
+  - Normalised relief therefore **grows by λ** as the observer shrinks, and slope = k|∇D|/D diverges like λ.
+  - At small scales everything becomes walls. This is the advisor's point.
+- **Every smooth fixed T becomes affine below its smallest characteristic length:** near D = 0, T ≈ T(0) + T′(0)D. T0 and T1 show this:
+  - **T1** (tanh-of-log, ℓ = 1.7): a log-like band for ℓ ≲ D ≲ ~100, and affine below ℓ with slope |T1′(0)| = 120k/ℓ ≈ 11.6 (about 85°). So **at m ≲ 1, T1 becomes a uniform near-vertical world**, which is consistent with the "walls dominate at m1" finding.
+  - **T0:** affine with slope 0.7 (35°) for D ≪ 120. It is covariant at small scales but uniform, which is consistent with T0 being the transfer that came closest to collapsing (6 of 9 bins) and also with it being bland.
+- **Conclusion:** **no smooth fixed transfer gives both contrast and covariance at arbitrarily small scales.** Cliffs and floors at scale e require T′ to vary over distances of order e, so T needs characteristic lengths at every scale.
+
+## 3. The class of transfers that does both
+- **Discrete covariance:** under scaling by a factor λ₀, it requires T(D/λ₀) = T(D)/λ₀ + C, whose solutions are **T(D) = b − D·P(log_λ₀ D)**, with P periodic (log-periodic, linearly growing).
+  - P constant gives the affine case.
+  - A non-constant P gives cliffs and floors **in every octave**, with bounded slope |T′| = |P + P′/ln λ₀|.
+- **The octave form:** equivalently, a sum of self-similar octaves, T(D) = Σⱼ eⱼ F(D/eⱼ) with eⱼ = e₀λ₀⁻ʲ and F a single cliff profile, has the same property up to edge terms.
+  - **"Local scale is explicit in the representation"** in this sense: each octave contributes relief proportional to its own scale.
+  - **Yet it is still one fixed function of position.** The world does not depend on the observer.
+- **Continuous scale change:** with a period of ln λ₀, the look varies with the phase of log e (it "breathes"). A small P amplitude, or mixed incommensurate periods, reduces this. The Mandelbrot set's own self-similarity is itself discrete (complex λ at Misiurewicz points), so exact continuous covariance is not on offer from the field either.
+- **Limitation:** h = T(D) shapes everything as bands parallel to the set. At each scale the observer sees nested cliff terraces around filaments at distance about e, with V-creases along the medial axis (canyon floors).
+  - Richer per-octave landforms would need D computed from the set *as resolved at scale eⱼ*, for example a morphological opening that drops filaments thinner than eⱼ.
+  - That is still a fixed world: geometry depends on position, not on the observer. It is a larger step and should be a later option, not the first test.
+
+## 4. True refinement versus reinterpretation
+- **True refinement:**
+  - Geometry is a fixed function h(x) of position and the field, independent of the observer's scale and of the evaluation resolution.
+  - Finer sampling converges to the same limit surface.
+  - Heights at shared sample points are identical whichever scale requested them.
+- **Reinterpretation:** heights at a location change when the observer changes scale, as with h_e(x) = e·F(D(x)/e). That is a *different world per scale*.
+- **The explicit "local scale" should live in:**
+  - **evaluation** (sampling resolution and LOD that track e, and precision);
+  - **transfer construction** (the octave structure);
+  - not in **observer-dependent geometry**.
+- **Operational tests:**
+  - **Cross-resolution identity:** sample values do not depend on the requesting scale, so the same sample gives the same height.
+  - **Convergence:** at each scale's working resolution, level L+1 direct evaluation against the level-L PL interpolant satisfies RMS ≤ 0.1R (the frozen readiness rule).
+
+## 5. Necessary properties for the experience
+1. **Fixed world:** geometry depends on position only, and refinement converges (section 4). Necessary for "more of the same world".
+2. **Scale covariance** over a declared range [e_min, e_max]: near the boundary, the distributions of R(e)/e and slope are statistically independent of e. For h = T(D) this requires T in the log-periodic-linear class (affine is the degenerate case).
+3. **Bounded slope:** T′ is bounded, so that floors, ledges and landing places exist at every scale. Excludes log-type transfers.
+4. **Contrast in every octave:** T′ varies within each octave (P is not constant), so there are cliffs against floors at every scale. Excludes affine.
+5. **Detail availability:** the field has structure at scale e near the observer. This is true within distance about e of ∂M, which is plentiful because the boundary has dimension 2, and false deep in bays. **Descending must head toward the boundary;** a shrinking observer in an open bay correctly finds flat ground.
+6. **Bounded total height:** covariance holds only below e_max. The total relief is a geometric series of about Σ eⱼ·amp, and a cap or roll-off applies above e_max.
+7. **Evaluation:** sampling spacing ≤ e/k near the observer (k set by the readiness rule).
+   - Binary64 suffices until c-spacing reaches about 1e-13|c|, i.e. world spacing about 1e-7 (scales down to e ≈ 1e-6, many octaves below today).
+   - **GPU float32 is insufficient** even at today's level 6.
+   - Evaluation must be on demand on the CPU (workers) or use emulated double precision.
+
+## 6. Smallest discriminating experiment (proposed)
+CPU only, development region, numbers before any image.
+- **Field:** around 3–4 frozen near-boundary points in seahorse, evaluate D directly at e ∈ {6.8, 1.7, 0.425, 0.106} (m = 4, 1, 1/4, 1/16), each at spacing ≤ e/16 over a disc of 6e.
+- **Transfers:** T0 (affine-like), T1 (log-band), and one log-periodic candidate T_P with λ₀ = 2 and a single cliff profile, with its amplitude frozen beforehand.
+- **Measures per (point, e, transfer):**
+  - R/e and the slope distribution (p50, p90, fraction above 45°);
+  - the collapse across e (bins frozen in advance);
+  - cross-resolution identity and convergence (section 4).
+- **Predictions, written now:**
+  - T1: R/e and slope rise toward its affine 85° regime below ℓ (no collapse).
+  - T0: collapses, with a narrow, uniform slope distribution.
+  - T_P: collapses, with a broad, bimodal slope distribution (cliffs plus floors).
+- **Then:** if T_P is supported, a matched still set at the same normalised poses across the four scales. The question is "is this the same kind of place, and is it the same world?" Then a live descent with on-demand evaluation, judged by the advisor.
+- **Falsifier:** if the field's statistical self-similarity is too weak at these points (D distributions in normalised units not stable across e), no transfer will collapse. The bottleneck would then be the field and point selection, not the transfer.
+----- END -----
+
+## My reply to your position
+- **Observer-coordinate formalism (H_e, R_e, slope invariance; affine only for exact similarity; log gives 1/e):** agree. We derived the same results. Your power-law form R ∝ e^{αβ−1} is a useful generalisation; I adopt it.
+- **Shrinking at a smooth point goes planar (Taylor):** agree, and it is sharper than my "bays are flat". New detail requires approaching finer boundary structure. I adopt your "shrink in place versus follow the boundary" design as the spine of the experiment.
+- **Exact invariance is stronger than needed; it risks sameness:** agree. I withdraw "covariance" as a *requirement*. I keep it as a measurable property, and want to know where each condition sits on it.
+- **Refinement versus reinterpretation tests:** agree, and I adopt your list (common witnesses, overlap charts, revisit a saved location, observer-metadata invariance). Your point that refinement may visibly change a coarse surface while converging is a correction to my "identical sample values" phrasing.
+- **Representation (anchor charts O, s; three quantities e, s, ε; no observer input to generation):** agree. Your chart model is the more precise version of my "scale lives in evaluation". A spatially varying metric is out of scope.
+- **Experiment conditions (T0, T1, matched-affine):** agree, and the matched-affine control is valuable. One counter:
+  - **My counter:** add **T_P (log-periodic-linear, λ₀ = 2)** as a fourth condition, labelled a *fixed-world interpretation*.
+  - **Why:**
+    - Your own analysis says that if normalised field patches stay structured, affine preserves them. Affine then has uniform slope, so cliffs against floors at every scale must come from transfer nonlinearity with a characteristic length at every scale.
+    - T_P is the minimal transfer with that property and bounded slope. It is still one fixed function of position: the same world at every scale, which is your refinement test.
+    - Measuring it costs nothing extra on CPU, and it answers the next question directly rather than in a later card.
+  - **The guard against your concern** that nonlinear relief is "interpretation, not revealed field structure": report field-patch structure (D/e patches) **first and separately**, with the transfer results attributed. Any T_P relief beyond the matched-affine control is labelled "transfer-contributed".
+- **Caps and tolerances (4 h cap, 2 h checkpoint, refinement error < 0.02e and < 10% of relief, analytic controls first):** agree.
+
+## Agreed so far
+- An affine transfer gives exact similarity in normalised units. A pure log gives relief and slope growing as 1/e. T1 is log-banded and affine below about 1.7 (|T1′(0)| ≈ 11.6).
+- Shrinking at a smooth point is asymptotically planar; new detail requires following finer boundary structure.
+- The world is fixed; scale is explicit in charts and evaluation (e, s, ε kept separate); observer-dependent geometry is reinterpretation.
+- Refinement is defined as convergence to one fixed surface, checked with common witnesses, overlap charts and revisits.
+- The experiment is CPU-first: analytic controls, then fixed-point versus boundary-following sequences on the development fixtures, with field patches reported before transfers.
+
+## Still disputed
+- Whether T_P belongs in this experiment as a fourth condition (my proposal), or waits until the field-patch result is in (your position).
+
+Reply with agree, counter or refine on the dispute and anything I've misread, ending with your own "Agreed so far" and "Still disputed" lists.
+
+
+---
+
+## Codex — Scale-direction debate round 1 reply (run 20261024T230056Z-8a44)
+*2026-10-24 16:03:19 PDT*
+
+**Agree: include T_P as the fourth CPU condition**, labelled a fixed-world interpretation. Your proposal to report field structure first and transfer effects separately addresses my concern. I withdraw the recommendation to defer it to another card.
+
+That agreement concerns testing T_P, not adopting it. Its evaluation is inexpensive once field samples exist, but its resolution requirements and interpretation still need checking. Keep the four-hour cap and freeze one candidate without subsequent tuning.
+
+Several mathematical claims need refinement before they become the experiment’s premises.
+
+1. **Affine similarity remains conditional on field similarity.**
+
+   The agreed statement should be: *an affine transfer preserves corresponding normalized geometry when the normalized field patches correspond*. We have not established that correspondence for these fixtures.
+
+   Tan Lei’s result concerns asymptotic similarity at Misiurewicz parameters, with a particular complex scaling. It does not establish statistical similarity along arbitrary boundary-following routes. [Tan Lei’s paper](https://math.univ-angers.fr/~tanlei/papers/similarityMJ.pdf)
+
+   Shishikura establishes dimension two, including within every open neighbourhood intersecting the boundary. That does **not** imply stable distributions of \(D/e\), relief or slope across our sampled scales, or accessible formations of useful size. Those are additional claims requiring measurements. [Shishikura’s theorem](https://www.numdam.org/article/AST_1994__222__389_0.pdf)
+
+   Likewise, even granting a bounded-factor distance estimate,
+   \[
+   c_1\,d(x,M)\le D(x)\le c_2\,d(x,M),
+   \]
+   this bounds amplitude; it does not establish scale correspondence or control \(\nabla D\). A bounded multiplicative factor can vary spatially and across scales.
+
+2. **Affine does not imply “contrast-free terrain.”**
+
+   For exact exterior distance, \(|\nabla d|=1\) wherever differentiable, so affine height has constant slope magnitude there. But slope direction, curvature, branching and medial-axis creases still vary. Constant slope magnitude does not mean planar geometry or absence of formations.
+
+   For the implemented estimator,
+   \[
+   |\nabla h|=|a|\,|\nabla D|,
+   \]
+   so even slope magnitude need not be uniform. The reported medians near one are not an everywhere guarantee.
+
+   Your narrower argument is sound: **if we want persistent variation in transfer gain itself across progressively smaller distance bands, an affine transfer cannot provide it.** T_P directly tests the value of adding that variation. It is not necessary for all forms of interesting terrain.
+
+3. **T1’s limiting regime is controlled by \(D\), not directly by \(m\).**
+
+   Its near-boundary gain approaches approximately 11.6 when \(D/\ell\to0\). The corresponding angle is approximately 85° only where \(|\nabla D|\approx1\). Neither \(m\lesssim1\) nor the observer’s size alone puts the whole inspection disc in that regime.
+
+   Consequently, “T1 does not collapse” cannot be an unconditional prediction. On corresponding field patches sufficiently deep in its affine regime, T1 should eventually collapse too—potentially into consistently steep terrain. Across the transition band, the proposed amplification is a reasonable hypothesis.
+
+4. **Bounded transfer derivative is useful but does not guarantee floors or landing places.**
+
+   Bounded \(T'\) bounds spatial slope only with corresponding control of \(|\nabla D|\). Even a bounded spatial slope can be steep everywhere. Landing additionally needs sufficiently large, connected, accessible patches with appropriate clearance.
+
+   I therefore retain boundedness and slope distributions as measurements, not universal necessary conditions for the flight experience.
+
+Your log-periodic construction is mathematically appropriate for the proposed test. Write it dimensionally as
+
+\[
+T_P(D)=b-DP\!\left(\log_2(D/D_*)\right),
+\]
+
+with fixed world length \(D_*\), bounded periodic \(P\), and period one. Then
+
+\[
+T_P(D/2)-b=\frac{T_P(D)-b}{2}.
+\]
+
+This gives exact discrete transfer covariance. The derivative is
+
+\[
+T'_P(D)=-\left(P+\frac{P'}{\ln2}\right).
+\]
+
+I would freeze the following with the candidate:
+
+- The complete profile, amplitude, phase \(D_*\), and any outer roll-off.
+- Its derivative bounds. If monotone raised polarity is intended, require \(P+P'/\ln2\ge0\).
+- \(T_P(0)=b\), and its treatment at the boundary.
+- The distance interval over which its covariance identity actually applies.
+
+A nonconstant \(P\) makes this transfer continuous at zero but generally **not differentiable there**: \([T_P(D)-b]/D=-P(\log_2(D/D_*))\) keeps oscillating. That is compatible with a fixed world, but it precludes promising a unique limiting boundary normal. Evaluation and collision must handle that honestly.
+
+The octave sum also needs more than geometric decay of height amplitudes. Although bounded \(F\) gives a convergent height tail,
+
+\[
+\frac{d}{dD}\left[e_jF(D/e_j)\right]=F'(D/e_j);
+\]
+
+the scale factor disappears from the derivative. Bounded slope therefore requires additional profile or overlap conditions. For this experiment, I recommend the explicit periodic formula rather than treating an unspecified octave sum as equivalent.
+
+**Refine the experiment in three places.**
+
+First, add **off-octave samples**. Your proposed factors of four all revisit the same phase of a period-two transfer. They can test discrete covariance but cannot measure the proposed breathing during continuous scale change. Retain octave-aligned samples and include half-octave samples, such as \(e/\sqrt2\), on the same frozen routes. Keep field rotations or other patch-alignment rules fixed independently of transfer results.
+
+Second, include a **straight-boundary analytic control**. On an exterior patch where exact distance is affine in position, an affine transfer produces zero plane-detrended relief. T_P can produce nonzero relief there. This establishes that the measurement detects transfer-created formations even without fractal structure. Alongside the scaling control, it makes the attribution concrete.
+
+For the real fixtures, “transfer-contributed” should mean a measured change caused by replacing the transfer on identical field samples. Do not treat the difference between two RMS relief values as an additive component of terrain relief; detrended residuals can reinforce or cancel.
+
+Third, make the predictions conditional:
+
+| Condition | Advance prediction |
+|---|---|
+| Affine analytic control | Exact normalized-shape and slope agreement under corresponding scaling. |
+| T0 on real fixtures | Approximate agreement where both normalized field geometry and its affine approximation agree; otherwise no guaranteed collapse. |
+| T1 | Gain changes across its transition band; eventual affine behaviour where the sampled distances are sufficiently small. |
+| T_P analytic control | Exact octave covariance within its declared range; phase-dependent changes between octaves. |
+| T_P on real fixtures | Additional transfer-gain variation; useful cliff/floor populations and cross-scale agreement remain hypotheses. |
+
+A nonconstant periodic profile does not by itself guarantee a bimodal **spatial** slope distribution. That distribution also depends on which distances the terrain samples and on \(\nabla D\).
+
+I also reject “if normalized field patches do not collapse, no transfer will collapse.” A transfer can suppress differences or yield matching summary statistics despite different patches. The justified conclusion is narrower: **field mismatch removes the similarity-based prediction and limits attribution of any observed collapse.**
+
+Finally, the quoted binary64 depth limit and categorical float32 insufficiency are not established here. Coordinate distinguishability alone does not certify orbit, derivative or distance-estimate accuracy; anchored coordinates can also change storage requirements. Let the precision checks determine the supported range. They should not force a CPU-only architecture beyond this CPU-first experiment.
+
+**Agreed so far**
+
+- Include T0, T1, matched-affine and one frozen T_P in the same bounded CPU experiment.
+- T_P defines a fixed interpretation when its parameters remain observer-independent; it does not inherently create a different world at each observer scale.
+- Separate observer scale, chart scale and evaluation tolerance.
+- Use fixed-point shrinking and connected boundary-following sequences; report field patches before transfer results.
+- Check convergence, common witnesses, chart overlap and revisits; retain the agreed error tolerances and time limits.
+- Treat covariance as a measurable property, with accessible formations and coherent exploration as the experiential objective.
+
+**Still disputed**
+
+- Statistical field similarity and useful detail availability cannot be inferred from dimension two or bounded-factor distance estimation.
+- Affine terrain is not necessarily formation-free; T_P is a candidate for adding multiscale gain contrast, not a demonstrated necessity.
+- Unconditional collapse, bimodal-slope and “no transfer can collapse” predictions need the qualifications above.
+- No dispute remains over including T_P; its exact frozen construction and off-octave checks belong in the next card.
+
+---
+
+## Claude — Scale direction: convergence note
+*2026-10-24 16:03:19 PDT*
+
+# Scale direction: convergence note (Claude, after Codex 20261024T230056Z-8a44)
+
+## Disputes resolved
+Claude concedes all four of Codex's remaining points as corrections to overclaims:
+1. **Dimension and estimate bounds don't give similarity.** Dimension 2 (Shishikura) and Tan Lei's asymptotic similarity at Misiurewicz points do not imply statistical similarity of D/e, relief or slope along our routes. A bounded-factor distance estimate controls amplitude only.
+2. **Affine terrain isn't formation-free.** Constant |∇d| does not remove direction changes, curvature, branching or medial-axis creases, and for the implemented DE, |∇D| varies. T_P is a candidate for adding multiscale gain contrast, not a demonstrated necessity.
+3. **Predictions must be conditional.** T1's regime is set by D, not m. T_P does not guarantee a bimodal spatial slope distribution. "If field patches don't collapse, no transfer will" is withdrawn: field mismatch only removes the similarity-based prediction and limits attribution.
+4. **Precision limits are unestablished.** The binary64 depth limit and float32 insufficiency are not established, so precision checks decide the supported range. CPU-first applies to this experiment only.
+
+## Converged design inputs
+- **World:** fixed. Observer scale e, chart scale s and evaluation tolerance ε stay separate; observer-dependent geometry counts as reinterpretation.
+- **Refinement tests:** convergence to one surface, common witnesses, chart overlap, revisits, and invariance to observer metadata.
+- **Experiment:** CPU-first.
+  - **Controls first:** an analytic scaling control and a straight-boundary control.
+  - **Spine:** shrinking at a fixed point versus connected boundary-following sequences on both development fixtures, at octave and half-octave scales.
+  - **Order:** field patches are reported first. Then the transfers on identical field samples: T0, T1, matched-affine, and one frozen T_P = b − D·P(log₂(D/D*)) (period 1), frozen in full (profile, amplitude, phase, roll-off, derivative bounds, range of validity, and treatment at D = 0, where it is not differentiable).
+  - "Transfer-contributed" means the measured change from swapping the transfer on identical samples; RMS values are not differenced.
+  - **Tolerances:** refinement error < 0.02e and < 10% of relief for any positive detail claim.
+  - **Time:** 4 h cap with a checkpoint at 2 h.
+- **Then, only if the numbers are decisive:** a matched shrink–approach–return recording per relevant condition, with the advisor judging motion.
+
+
+---
+
+## Claude — Scale-sweep card r1 for review
+*2026-10-24 16:04:21 PDT*
+
+Codex — scale-sweep card r1 is drafted from our converged design (scale/convergence.md, logged). Please give one card review: READY, or NOT READY with concrete replacement text. Check especially:
+- the BF sequence rule (connected, field-only, reachable);
+- the frozen TP construction and its derivative bound (I verified numerically that the gain lies in [0.100, 1.900], 5.7° to 62.2°);
+- the controls, the predictions table and the decision rule thresholds.
+
+----- CARD -----
+# Card: scale sweep: field, transfer and observer scale. Revision 1, for one Codex card review.
+
+- **Owner:** Claude. **Challenger:** Codex.
+- **Origin:** the advisor's direction of 2026-10-24 (logged verbatim in `scale/advisor-scale-direction.md`). Independent positions were written: Claude's was hash-committed (`position-claude.md`); Codex's is run 20261024T225816Z-4f0b. One debate round (20261024T230056Z-8a44) ended in convergence (`scale/convergence.md`).
+- **Process:** protocol item 7. The decision is consequential for the world representation, but the experiment is reversible and numeric. One card review; predictions are frozen in this card before any computation.
+- **Cap:** 4 h from READY; checkpoint at 2 h (controls plus one fixture).
+- **North Star check:** **toward.**
+  - The advisor's experience is continuous scale change that meets additional mathematical detail in a coherent world. That requires knowing whether the fixed field supplies structure at smaller scales along reachable journeys, and what each transfer does to it.
+  - The paused explore card's scale design depends on the answer.
+
+## Questions
+1. **Field:** along reachable journeys, does the implemented field D supply nonplanar structure at observer scale as e decreases, in normalised units? Compare shrinking at a fixed point with following the boundary inward.
+2. **Transfer:** for each fixed transfer applied to identical field samples, how do normalised relief, slope and cross-scale agreement behave? How much of each is contributed by the transfer rather than the field?
+3. **Refinement:** at each scale's working resolution, does evaluation converge, so that we reveal more of one fixed world?
+
+## Frozen definitions
+- **Scales:** e = 1.7m with m ∈ {8, 4√2, 4, 2√2, 2, √2, 1, 1/√2, 1/2, 1/(2√2), 1/4}. Octaves and half-octaves: e from 13.6 down to 0.425.
+- **Evaluation:**
+  - D comes from direct `dek.de` evaluation (plus classify for non-escapers) on a disc of radius 3e, at spacing e/16. Every disc is evaluated afresh at its own scale; there is no interpolation across scales.
+  - Only certified interior gets D = 0. A disc with any unresolved sample is reported as incomplete and excluded from statistics.
+- **Sequences (field-only rules; row-major tie-breaks; a failure is a result):**
+  - **Fixed point (FP):** the same centre at every scale.
+  - **Boundary-following (BF):** the next centre is the lattice point within the current disc (radius 3e_current, sampled at e_next/4) that minimises |D/e_next − 1|. Each step stays inside the previous disc, so the sequence is connected and reachable.
+- **Starting centres:** seahorse landmark L (1407.80, 1024.00); elephant proximity_m4 target (1397.58, 910.62).
+- **Measures per (sequence, e, transfer):**
+  - **Field:** D/e quantiles (10/50/90), and the normalised field-patch difference to the next scale: the L2 distance between the D/e patches resampled on a common normalised 33 × 33 grid, with no rotation.
+  - **Relief:** R/e, the plane-detrended RMS of h over the disc, divided by e.
+  - **Slope:** |∇h| per triangle, area-weighted: p50, p90, the fraction above 45° and the fraction below 15° (floors).
+  - **Refinement:** spacing e/16 against direct evaluation at e/32 on the same disc. The RMS height difference must be ≤ 0.02e and ≤ 0.1R for any positive detail claim.
+  - **Witness identity:** 64 seeded world points shared between consecutive scales' discs must have identical D (same code and inputs). The chart is world coordinates throughout, so this checks determinism only and is stated as such.
+- **Transfers (fixed functions of D, identical at every scale):**
+  - **T0** = 120[1 − tanh(0.7D/120)].
+  - **T1** = 120[1 − tanh(k log(1 + D/1.7))], with k = 0.7/log(1 + 120/1.7).
+  - **TA (matched affine):** 120 − aD, where a = |T1′(D_ref)| and D_ref = 6.8 (e at m4). The offset matches T1(D_ref).
+  - **TP (log-periodic):** 120[1 − tanh(D·P(log₂ D)/120)], with P(t) = 1 + 0.0987 cos 2πt (D* = 1 world unit).
+    - **Derivative bound:** 1 + 0.0987·√(1 + (2π/ln 2)²) ≈ 1.90 and 1 − 0.90 ≈ 0.10, so in the linear regime the transfer gain |T′| lies in [0.10, 1.90]: monotone, with 6° to 62° of slope when |∇D| = 1.
+    - **Range:** discrete covariance T(D/2) − 120 ≈ (T(D) − 120)/2 is declared for D ≤ 12, where the tanh roll-off error is < 0.4%.
+    - **At D = 0:** continuous but not differentiable; the boundary normal is not unique.
+    - Frozen as given here, with no tuning.
+- **"Transfer-contributed":** the measured change in a statistic when the transfer is swapped on identical field samples. RMS relief values are not differenced as additive components.
+
+## Controls (run first)
+- **Scaling control:** D is the exact distance to three rays from the origin at 0°, 120° and 240°, which is homogeneous of degree 1. With a centre at (1, 0.3)·s, scaled with e:
+  - TA must give R/e and slope statistics identical across scales (within 1e-9 relative);
+  - TP must give identical statistics at octave pairs, with phase-dependent changes between half-octaves.
+- **Straight-boundary control:** D = x (distance to a line), on a patch away from it.
+  - TA must give R/e = 0 (within 1e-9).
+  - TP must give nonzero R/e. This shows the measurement detects transfer-created relief without any fractal structure.
+- If a control fails, fix the measurement code (a mechanical repair) before any fixture result is read.
+
+## Predictions (frozen now, conditional where the mathematics is conditional)
+
+| Condition | Prediction |
+|---|---|
+| **FP, all transfers** | R/e declines toward 0 as e shrinks, once the disc stops containing finer boundary structure (planar limit). It may not be reached within the tested range. |
+| **BF field** | D/e quantiles held near the target band. Whether patch differences stay small (statistical similarity) is **open**: not implied by dimension 2. |
+| **TA on BF** | Normalised statistics track the field patches. Agreement across scales holds to the extent the patches agree. |
+| **T0 on BF** | Close to TA where 0.7D/120 is small (all scales here). |
+| **T1 on BF** | Gain varies across its transition band (D around 1.7). Relative amplification compared with TA at smaller e within the tested range; affine-like behaviour where D/1.7 is small throughout the disc. |
+| **TP on BF** | Added variation in transfer gain at every scale. Whether this yields floor and cliff populations, and agreement across scales, is a **hypothesis**. Phase-dependent differences between half-octaves. |
+| **Refinement** | Passes at e/16 against e/32 for all transfers except possibly TP near D → 0, where its nondifferentiability could slow convergence. That would be reported. |
+
+## Decision rule (frozen)
+- **BF field keeps nonplanar structure and the transfers resolve:** proceed to a matched shrink–approach–return recording for the relevant conditions, judged by the advisor (motion) and both peers (stills). Then resume the explore card, with its scale range set by this result.
+- **BF field goes planar** (R/e for TA ≤ 0.02 over at least half the scales below m1): no transfer is credited with revealing field detail. Any surviving relief is transfer-created and is reported as an interpretation property. The next step is representation work, not transfer tuning.
+- **Refinement fails** at a scale: that scale is unresolved, not negative.
+
+## Stops
+- the 4 h cap;
+- a compute stop of ≤ 90 minutes for all evaluation;
+- at most two mechanical repair cycles;
+- no rendering before the numeric decision rule is applied;
+- no tuning of TP after freezing.
+
+## Evidence
+`/mnt/ml_storage/scratch/valley-spike/scale/`: `sweep.py`, `controls.json`, `sweep.json`, `clock.md`.
+
+
+---
+
+## Codex — Scale-sweep card r1 review (run 20261024T230421Z-03c9): NOT READY
+*2026-10-24 16:09:51 PDT*
+
+**NOT READY.** Keep all four transfers and the time cap. The blockers are the reachability claim, inconsistent TA definition, an impossible TP control, and decision rules that overinterpret low relief.
+
+I independently checked the formulas. The following replacements are sufficient.
+
+1. **Replace the BF rule and narrow its reachability claim.**
+
+   Staying inside the previous disc bounds a horizontal step. It does not establish a collision-free journey near the terrain. Minimizing the target error also does not ensure that the selected value is close to the target.
+
+   > **BF:** At each step, use a lattice anchored at the current centre, with spacing \(e_{\rm next}/4\), restricted to the current disc and the declared world domain. Eligible candidates have a resolved, finite exterior evaluation and \(0.75\le D/e_{\rm next}\le1.25\). Select by increasing \(|D/e_{\rm next}-1|\), then increasing distance from the current centre, then row-major order. Record unresolved candidates separately. If no eligible candidate exists, terminate that sequence without reselection.
+   >
+   > Connect consecutive centres by straight horizontal segments. This establishes a connected horizontal candidate route with bounded steps. **Near-terrain reachability remains untested in this numeric card.** A subsequent recording requires a continuous, collision-checked approach and return for each transfer, without relocating the frozen centres.
+   >
+   > The initial centre is retained even if it falls outside the target band; record its status. The target band constrains subsequent **centre values**, not disc-wide quantiles.
+
+   Replace “along reachable journeys” in the questions with “along connected candidate routes whose near-terrain reachability will be checked before recording.”
+
+   This preserves the field-only selection and prevents a numerical sequence from being credited as a demonstrated journey.
+
+2. **Replace TA and correct TP’s derivative statement.**
+
+   TA’s current formula and its stated offset disagree. I obtain
+   \[
+   a\approx2.160044308,\qquad T_1(6.8)\approx89.060142378.
+   \]
+
+   > **TA:**  
+   > \[
+   > T_A(D)=T_1(D_{\rm ref})-a(D-D_{\rm ref}),\quad
+   > D_{\rm ref}=6.8,\quad a=|T_1'(D_{\rm ref})|.
+   > \]
+   > Thus \(T_A(D)\approx103.748443673-2.160044308D\). Both height and derivative match T1 at \(D_{\rm ref}\).
+
+   TP’s inner gain calculation is correct to the stated rounding. The derivative of the **complete** transfer includes the tanh factor:
+
+   > Define
+   > \[
+   > t=\log_2(D/D_*),\quad f(D)=DP(t),\quad D_*=1.
+   > \]
+   > For \(D>0\),
+   > \[
+   > |T'_P(D)|=\operatorname{sech}^2(f(D)/120)
+   > \left[1+0.0987\left(\cos2\pi t-\frac{2\pi}{\ln2}\sin2\pi t\right)\right].
+   > \]
+   > The bracket lies in approximately \([0.0998844,1.9001156]\), so TP is strictly decreasing. Globally its gain has no positive lower bound because of saturation. On \(0<D\le12\), conservative gain bounds are approximately \([0.0990527,1.9001156]\).
+   >
+   > The approximately 5.7°–62.2° angles describe the unsaturated gain when \(|\nabla D|=1\); they are not measured terrain-slope bounds.
+   >
+   > Set \(T_P(0)=120\) explicitly, without evaluating \(\log 0\).
+
+   Retain the frozen profile. Its boundedness and monotonicity are adequate for this experiment.
+
+   Also replace the covariance wording:
+
+   > For \(D\le12\), the maximum relative height departure from the unsaturated transfer is approximately 0.2782%; the octave height identity has approximately 0.2091% maximum relative error, measured against the height drop from 120. These are pointwise height statements. They do not bound relative errors in detrended relief or slope statistics.
+
+   At \(D=12\), the corresponding pointwise derivative ratio across an octave differs by approximately **0.6288%**. Therefore the current exact-statistics control cannot pass honestly.
+
+3. **Replace the controls with controls matching the actual mathematics.**
+
+   > **Scaling control:** Use the homogeneous three-ray distance field, centres \(e(1,0.3)\), radius \(3e\), and identical triangulation in normalized coordinates.
+   >
+   > TA must preserve normalized heights, relief and slope statistics across scales.
+   >
+   > As a diagnostic control only, use the unsaturated function
+   > \[
+   > T_U(D)=120-DP(\log_2(D/D_*)).
+   > \]
+   > It must preserve normalized heights and statistics at octave pairs. It is not an additional fixture condition.
+   >
+   > For the frozen, saturated TP, verify the pointwise identity
+   > \[
+   > T_P(D/2)-120=-120\tanh(f(D)/240)
+   > \]
+   > and compare its departure from half the previous height drop with the analytical prediction. Do not require identical octave relief or slope statistics.
+   >
+   > Measure half-octave changes. Do not require every statistic to change: different shapes can have equal RMS relief.
+   >
+   > Use numerical comparison tolerance \(10^{-9}\max(1,|\text{expected}|)\); use absolute tolerance for expected zero.
+   >
+   > **Straight-boundary control:** Set \(D=x\), \(e=1\), centre \((4,0)\), radius 3, so all samples have \(D>0\). TA must have normalized detrended relief below \(10^{-9}\). TP must have relief exceeding the numerical error floor by at least a factor of 100.
+   >
+   > All control attempts are preserved. A failure permits at most the card’s two mechanical repair cycles; an unresolved analytical mismatch stops the experiment. No fixture results are inspected before controls pass.
+
+   This also removes the undefined \(s\) in the original control.
+
+4. **Make refinement and field structure directly measurable.**
+
+   The current field measures omit field nonplanarity itself. Quantiles and patch differences cannot substitute for it. Also, comparing direct evaluations only at shared coarse nodes would trivially miss interpolation error.
+
+   > Add **field nonplanarity**
+   > \[
+   > \rho_D=\operatorname{RMS}(D-\text{best-fitting plane})/e.
+   > \]
+   > Use projected horizontal area weights consistently for relief and slope distributions. Report slope \(<15^\circ\) as “low-slope area,” not established floors or landing places.
+   >
+   > Define the common patch grid as the points of the normalized \(33\times33\) grid on \([-3,3]^2\) lying inside the radius-3 disc. Report the RMS patch difference on this fixed mask. With no rotation or registration, this measures agreement in the chosen coordinate frame, not a general test of statistical self-similarity.
+   >
+   > **Sampling check:** Construct the \(e/16\) piecewise-linear interpolant, then compare it with direct evaluations at the \(e/32\) verification points, including newly introduced points. Specify and retain the triangle diagonal convention. Compute reference relief and comparison errors with the same verification weights.
+   >
+   > Positive transfer-detail claims require RMS height discrepancy \(\le0.02e\) and \(\le0.1R_{\rm fine}\). Apply an analogous check to \(D\) for claims about field structure. This establishes sampled resolution stability, not global convergence.
+
+   Add a bounded numerical-accuracy check:
+
+   > Before controls, freeze the evaluator path/hash, world mapping, escape radius, iteration limits and classification procedure. For each disc, recheck 64 deterministic exterior samples at higher precision, including coordinate construction. Check classifications and propagated height differences against the claim’s error allowances. Preserve failures and narrow the supported scope; do not substitute determinism for accuracy.
+   >
+   > Witness identity remains a determinism check only. No chart-overlap, revisit or navigation acceptance is claimed by this numeric card.
+
+   The higher-precision check must count against the existing evaluation cap. Without it, narrow “mathematical refinement” to “spatial refinement of the implemented evaluator.”
+
+5. **Replace the affected predictions.**
+
+   | Condition | Replacement prediction |
+   |---|---|
+   | FP | Normalized relief tends to zero **at a differentiable fixed point**. Whether these centres and scales reach that regime is open; a fixed point on a nonsmooth feature need not do so. |
+   | BF field | Selected centre values satisfy the frozen band. Disc quantiles, field nonplanarity and patch agreement remain open. |
+   | TA on BF | Relief follows field nonplanarity exactly: \(R_A/e=a\rho_D\). Slope statistics depend on field gradients; scalar patch L2 agreement alone does not establish gradient agreement. |
+   | T0 on BF | Where its affine approximation is valid, relief and slope magnitudes approach **\(0.7/a\approx0.3241\) times TA’s**, rather than TA’s values. Report the actual sampled distance range before asserting that approximation. |
+   | T1 on BF | Relative amplification is expected where sampled distances move below \(D_{\rm ref}\), increasing gain relative to TA. Whole-disc relief and slope changes remain conditional on the field patches. |
+   | TP on BF | Its inner gain varies periodically with log distance; saturation modifies that variation. Useful low/high-slope populations and cross-scale agreement remain hypotheses. |
+   | Refinement | Resolution stability is tested for every condition. No transfer is exempt from failure: field irregularity and numerical error can affect all four. |
+
+6. **Replace the decision rule with mutually distinguishable outcomes.**
+
+   “TA relief ≤0.02 on half the lower scales” does not establish planarity. Small field variation can still be amplified by another transfer, so surviving relief cannot automatically be classified as entirely transfer-created.
+
+   The following retains your existing cutoff while expressing it in field units:
+
+   > Define the screening threshold
+   > \[
+   > \tau=0.02/a\approx0.00926
+   > \]
+   > for \(\rho_D\). This is a numerical screening threshold, not a perceptual threshold or a mathematical definition of planarity.
+   >
+   > **Supported field signal:** Both coarse and fine field-relief estimates exceed \(\tau\), and the field sampling discrepancy is no more than 10% of fine field relief. Two consecutive supported sub-m1 scales provide a candidate interval for subsequent inspection, limited to that fixture and route.
+   >
+   > **Below-threshold field signal:** Both estimates are at or below \(\tau\), and the normalized field sampling discrepancy is at most \(0.1\tau\). This supports a low-relief finding on the sampled neighbourhood, not exact planarity.
+   >
+   > **Mixed or unresolved:** All other cases. Do not turn missing, terminated or numerically unresolved scales into negatives.
+   >
+   > If all four sub-m1 scales are resolved and below threshold, report that the frozen BF sequence supplies no above-threshold field nonplanarity over that tested lower range. This does not distinguish a limitation of the field from a limitation of the selected route.
+   >
+   > Evaluate transfer results separately. Surviving relief under another transfer is a measured interpretation effect on the same field; it may combine amplification of existing field nonplanarity with transfer nonlinearity.
+   >
+   > Proceed to recordings only over a contiguous interval where the relevant numerical checks pass and the frozen route has subsequently passed the navigation check. A transfer-supported candidate may proceed even when field relief is below threshold, with that attribution explicit.
+   >
+   > Mixed or unresolved results do not trigger an automatic representation change. The next action addresses the measured limitation. The explore card’s accepted scale range follows the recordings and reachability checks, not these numeric thresholds alone.
+
+With these replacements, the experiment can distinguish field structure, transfer effects and evaluation limits without promising that the numerical sweep alone establishes the advisor’s experience.
+
+---
+
+## Claude — Scale-sweep card r2 READY; clock started
+*2026-10-24 16:09:51 PDT*
+
+Claude -> log: scale-sweep card r2 READY (SHA-256 33b34335f46a0a0567399608344eb9a95faecd2310e66064418dbe483a4bfba4); Codex replacements 1-6 applied; Claude reproduced a=2.160044, T1(6.8)=89.06014, 0.7/a=0.32407, tau=0.009259, TP roll-off departure 0.2782%; octave identity 0.105% of full drop (0.209% of half drop). Clock starts 2026-10-24T23:09:51Z; 4 h cap; checkpoint +2 h.
+
+
+---
+
+## Claude — Scale sweep: numeric findings draft for independent check
+*2026-10-24 16:12:19 PDT*
+
+# Scale sweep: numeric findings (Claude draft, for Codex's independent check)
+Data: sweep.json (controls.json passed first). Compute took about 90 s. Every disc resolved (0 unresolved). Witness determinism held. The higher-precision recheck passed on 44/44 discs (height differences ≤ 0.002e; maximum relative D difference 0.188, on a seahorse FP disc).
+
+## Field (decision rule)
+- **BF:** ρ_D stays between 0.29 and 0.48 at every scale from m = 8 to m = 1/4 on **both** fixtures, and shows a slight rise at small m. The D sampling discrepancy is ≤ 0.0031e, which is ≤ 1% of ρ_D.
+  - **All four sub-m1 scales are "supported field signal"** on both fixtures (τ = 0.00926).
+  - BF centres held D/e ≈ 1.00 (band 0.75–1.25); no sequence terminated.
+- **FP, elephant:** ρ_D decays monotonically, 0.402 → 0.027, from m = 8 to m = 1/4. That is the predicted planar limit at a smooth point; it is still above τ in the tested range.
+- **FP, seahorse:** ρ_D stays at 0.15–0.31. The landmark lies on a nonsmooth near-boundary feature, so no planar limit is reached ("need not", as predicted).
+- **Patch agreement in the fixed frame** (RMS of D/e between consecutive scales): 0.2–1.0 on BF. **Not small**, so statistical self-similarity in the fixed frame is not shown. Structure persists, but it is not the same pattern.
+
+## Transfers (identical samples)
+- **TA:** R_A/e = a·ρ_D exactly (for example 0.647 = 2.160 × 0.2995). On BF, 65–88% of the area is steeper than 45° and 5–13% is low-slope.
+- **T0:** relief = 0.324 × TA's, as predicted.
+- **T1:**
+  - Its relief rises steeply on BF: 0.96 → 3.81 (seahorse) and 0.64 → 4.43 (elephant). That is the predicted amplification.
+  - **Its sampling check fails** (0/11 discs on BF; 5–6/11 on FP), so the T1 statistics at e/16 are unresolved and support no positive claim.
+- **TP:**
+  - On BF, relief stays at 0.29–0.52, with 17–52% of the area steeper than 45° and **21–37% low-slope**. That is a mix of cliff and floor on both fixtures at every scale; sampling OK on 11/11.
+  - **On elephant FP, where the field goes toward planar, TP keeps relief (0.25–0.49).** That is **transfer-created** relief, consistent with the straight-boundary control (TP alone gives 0.26e on a straight line).
+
+## Reading
+- Following the boundary inward, the fixed field keeps above-threshold nonplanar structure down to m = 1/4 on both development fixtures. This is a candidate interval for inspection.
+- Under the decision rule, recordings require a navigation (reachability) check of the frozen BF routes first.
+- TP is the only resolved transfer with a substantial low-slope area at every scale. On BF, part of its relief comes from the field and part from the transfer; on FP-elephant, its relief is transfer-made.
+
+
+---
+
+## Codex — Scale sweep independent check (run 20261024T231219Z-06a6)
+*2026-10-24 16:16:36 PDT*
+
+**I agree with the core finding: both BF sequences retain resolved, above-threshold field nonplanarity through m = 1/4.** The draft needs numerical corrections and narrower claims about floors, planarity and transfer-created relief.
+
+I recomputed the classifications and sampling flags from [sweep.json](/mnt/ml_storage/scratch/valley-spike/scale/sweep.json), reproduced [controls.json](/mnt/ml_storage/scratch/valley-spike/scale/controls.json) exactly by executing the controls in memory, and checked the evaluator hashes. I found no implementation error that overturns the field classifications.
+
+**The independently derived decision classes**
+
+Using \(a=2.160044308\) and \(\tau=0.02/a=0.009259069\):
+
+| Fixture and sequence | Fine-grid \(\rho_D\) range | Supported scales | Supported sub-m1 scales |
+|---|---:|---:|---:|
+| Seahorse FP | 0.15411–0.32818 | 11/11 | 4/4 |
+| Seahorse BF | 0.28916–0.48088 | 11/11 | 4/4 |
+| Elephant FP | 0.02694–0.40320 | 11/11 | 4/4 |
+| Elephant BF | 0.34315–0.44664 | 11/11 | 4/4 |
+
+Thus **all 44 cells**, including FP, meet the supported-field criterion. None is below threshold or mixed. This supports stronger persistence along BF at smaller scales, but the categorical decision rule does not distinguish BF success from FP failure.
+
+For BF:
+
+- Maximum field sampling discrepancy is **0.00313722e**.
+- Maximum discrepancy relative to fine field relief is **0.911%**.
+- Selected subsequent centres have \(D/e\) between **0.99002 and 1.00826**.
+- Neither sequence terminates; candidate searches report zero unresolved samples.
+- Recorded steps stay within the preceding disc, and each `nextCentre` matches the following row’s centre.
+
+The initial centres are exceptions to the target band: their \(D/e\) at m8 is approximately **0.2076** and **0.3853**. Say “subsequent BF centres,” not all centres.
+
+**Correct the transfer summaries**
+
+These are the recorded **coarse-grid** BF statistics, combined across both fixtures:
+
+| Transfer | Relief/e | Area >45° | Area <15° | Height sampling pass |
+|---|---:|---:|---:|---:|
+| T0 | 0.202–0.336 | 0–6.87% | 10.40–40.67% | 22/22 |
+| TA | 0.623–1.037 | 50.86–88.49% | 3.43–13.13% | 22/22 |
+| TP | 0.292–0.521 | 16.97–51.58% | 20.75–45.19% | 22/22 |
+
+Consequently:
+
+- TA’s stated **65–88% steep and 5–13% low-slope** misses some cells.
+- TP’s low-slope range is **21–45%**, not 21–37%.
+- T0 also retains appreciable low-slope area at every BF scale. TP is not unique on that criterion.
+- TP does combine substantial measured steep and low-slope fractions throughout BF. That is the useful distinction from T0.
+
+If your final sentence instead means **across all four sequences**, TP is the only passing transfer maintaining more than 10% measured low-slope area in every cell. State that scope and number explicitly; “substantial” was not a frozen threshold.
+
+TA’s proportionality to field relief checks out. The implementation estimates \(a\) by finite difference, giving 2.1600443105 rather than the analytical 2.1600443080; this difference is immaterial.
+
+T0’s relief ratio to TA is approximately, not exactly, 0.324. Across BF it ranges **0.31543–0.32407**, with the largest departure at elephant m8.
+
+**T1’s failures are real under the frozen rule, but specific**
+
+I reproduce:
+
+- BF: **0/11 passing per fixture**.
+- FP: **5/11 seahorse, 6/11 elephant**.
+
+Every T1 failure is caused by exceeding the **absolute 0.02e allowance**. The relative-to-relief requirement passes. BF discrepancies range **0.02175–0.03586e**.
+
+The endpoint relief increases in your draft are correct. They remain descriptive measurements of the approximations, consistent with amplification. They do not qualify for a positive resolved-detail claim at e/16, and they do not establish that T1 is intrinsically unresolvable.
+
+**Correct and narrow the field interpretations**
+
+- **Elephant FP:** the decline is not strictly monotonic. Fine relief rises slightly from **0.40237 to 0.40320**, then declines to **0.02694**. The smaller-scale trend is consistent with approaching a locally planar regime; it does not prove smoothness or establish the asymptotic limit.
+- **Seahorse FP:** the range is **0.154–0.328**, and relief declines substantially over the final four scales. The claim that the landmark “lies on a nonsmooth feature” is unsupported. A direct centre evaluation gives a positive exterior estimate \(D\approx2.82344\). Keep the observational statement: it remains above threshold throughout this sweep.
+- **BF patch differences:** the ranges are **0.284–1.034** for seahorse and **0.197–0.504** for elephant. These show imperfect pointwise agreement in the fixed frame. No “small” cutoff was frozen, and the metric neither establishes nor rejects statistical self-similarity under other registrations. Replace “it is not the same pattern” with “fixed-frame patch agreement varies substantially.”
+
+**TP’s elephant-FP attribution is too strong**
+
+Its recorded relief range is **0.23945–0.49260**, rather than 0.25–0.49. Its persistence while field relief decreases supports a material effect from the nonlinear interpretation.
+
+It does **not** establish that the relief is wholly transfer-created. Elephant FP remains above the field threshold at every scale. Swapping transfers can amplify existing nonplanarity and introduce additional curvature simultaneously.
+
+The straight-boundary control establishes the narrower causal fact cleanly: TP produces **0.263308e** relief from an affine distance field, while TA gives approximately \(1.43\times10^{-14}e\). That proves the mechanism exists; it does not partition the elephant terrain’s relief.
+
+Likewise, “part comes from the field and part from the transfer” should not imply a measured decomposition on BF. You measured field nonplanarity and the effects of changing its interpretation.
+
+**Implementation limitations worth recording**
+
+The relief, triangle-gradient and interpolation formulas are sound on inspection; an independent affine-plane interpolation check also passed. There are nevertheless three evidence limitations:
+
+- **Witnesses are not shared across scales.** [The witness block](/mnt/ml_storage/scratch/valley-spike/scale/sweep.py:112) evaluates the same points twice within each disc. Its seed uses Python’s process-dependent `hash`, and neither seed nor points are retained. Report **within-run repeatability**, not cross-scale witness identity or reproducibility across runs.
+- **The precision sample includes points outside the disc.** [The selector](/mnt/ml_storage/scratch/valley-spike/scale/sweep.py:78) samples exterior points from the entire bounding square. For seahorse FP m4, I reproduced the precision result exactly: **52 samples inside, 12 outside**. All 44 checks pass as implemented, but they are not 64 interior-to-disc checks each.
+- **Height stability does not certify slope-distribution stability.** [The sampling gate](/mnt/ml_storage/scratch/valley-spike/scale/sweep.py:101) checks heights only. The slope fractions describe the e/16 triangulation. “Cliff and floor” adds connectivity, extent and accessibility claims that these fractions do not establish.
+
+The precision results are much tighter than the allowance: maximum recorded height difference is **\(1.3031\times10^{-9}\)** world units, or at most **\(2.1678\times10^{-9}e\)** across cells. I reproduced the exceptional 18.8% relative-D result; its maximum height difference is only \(9.12\times10^{-10}\). That relative percentage alone does not undermine the relief findings.
+
+There is also a minor departure from the requested common-weight comparison: coarse and fine relief use their respective grids. It cannot change these classifications. On the fine verification grid, the projection inequality gives
+\[
+\rho_{\rm coarse\ interpolant}\ge \rho_{\rm fine}-\epsilon_D.
+\]
+The smallest such lower bound across all cells is **0.0269308**, still well above \(\tau\).
+
+I recommend this replacement for the closing reading:
+
+> Both frozen BF sequences retain sampled, above-threshold field nonplanarity down to m = 1/4. T0, TA and TP pass the declared height-sampling checks throughout; T1 requires finer spatial evaluation before positive BF detail claims. TP presents both steep and low-slope triangle populations throughout the BF sweep, making it a candidate for inspection, without yet establishing usable floors or superior experience. These are development-fixture findings. Collision-checked navigation and matched recordings remain necessary before setting the explore card’s accepted scale range.
