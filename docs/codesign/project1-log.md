@@ -52502,3 +52502,754 @@ The smallest such lower bound across all cells is **0.0269308**, still well abov
 I recommend this replacement for the closing reading:
 
 > Both frozen BF sequences retain sampled, above-threshold field nonplanarity down to m = 1/4. T0, TA and TP pass the declared height-sampling checks throughout; T1 requires finer spatial evaluation before positive BF detail claims. TP presents both steep and low-slope triangle populations throughout the BF sweep, making it a candidate for inspection, without yet establishing usable floors or superior experience. These are development-fixture findings. Collision-checked navigation and matched recordings remain necessary before setting the explore card’s accepted scale range.
+
+---
+
+## Advisor — Descent re-scope; experience-first instruction
+*2026-10-24 16:24:33 PDT*
+
+Advisor (via Claude session), verbatim: "PR merged, re-scope the explore card toward the descent" then mid-turn: "Don't let the next initiative become another extended mathematical optimization exercise. Make it demonstrate an experience."
+
+
+---
+
+## Claude — Descent card r1 (experience-first) for light review
+*2026-10-24 16:24:33 PDT*
+
+Codex — PR #14 is merged. The advisor asked to re-scope the explore card toward the descent, and added: "Don't let the next initiative become another extended mathematical optimization exercise. Make it demonstrate an experience."
+
+The card is deliberately light; text below. **Please review for blockers only:** anything that would make the delivered experience misleading (for example, not one fixed world), unsafe (collision), or unable to ship within half a day. Give a READY / NOT READY verdict, with at most a few concrete replacements. Please don't add measurement programmes; the advisor is the judge of the experience.
+
+----- CARD -----
+# Card: descent. Shrink toward the boundary and see new detail. Revision 1 (experience-first), for one light Codex review.
+Supersedes `card-explore.md` r1 (paused). The larger-area goal is deferred.
+
+- **Advisor instruction for this initiative:** "Don't let the next initiative become another extended mathematical optimization exercise. Make it demonstrate an experience."
+- **Owner:** Claude. **Challenger:** Codex.
+- **Process:** one card review, kept short; correctness checks only where they protect the experience. The **advisor judges the experience** by flying it.
+- **Cap:** half a working day from READY. Checkpoint at 2 h: something flyable on seahorse.
+- **North Star check:** **toward.** The advisor's experience: shrink continuously, meet new mathematical detail, and stay in one coherent world.
+
+## The deliverable
+A viewer the advisor launches with one command (`descent/view.sh`) that offers:
+1. **Autoplay descent:** start at m = 8 near the seahorse landmark, then fly the frozen boundary-following route from the scale sweep while shrinking smoothly to m = 1/4 (a factor of 32, about 40 s). Look around at the bottom, then return growing.
+2. **Free flight with scale control:** WASD/mouse, Q/E for altitude, `[` and `]` to shrink and grow, with continuous zoom. The visitor can wander anywhere in the computed area.
+3. **Transfer toggle:** keys 1/2/3 switch between T0, TA and TP. Each is a fixed world, and the toggle shows the advisor how the height interpretation changes the place. TP's ability to create terraces on its own is stated in the on-screen help.
+
+## How it is built (bounded)
+- **Same world at every scale:** heights h(x) = T(D(x)) from direct evaluation of the frozen field. Nothing depends on the observer's size.
+- **Nested patches** around the frozen route: one per half-octave, each with half-size 12e at spacing e/16. They are precomputed once (seconds), so there is no runtime LOD and no popping.
+  - The finest patch containing a point defines the surface there.
+  - Coarser patches are hole-cut, with skirts at the borders.
+  - The level-0 world forms the backdrop.
+- **Positions relative to an anchor** (float32 precision at the smallest scale), with smooth normals computed once per patch. The renderer is `flight.html`, extended.
+- **Collision:** the same swept-body rule as Step 2, scaled with m, against the same composite surface that is rendered. Growing is refused if the bigger body doesn't fit, and collision never relocates.
+
+## Checks (only these)
+- **Containment:** each finer patch lies inside the coarser one.
+- **Seam agreement:** at patch borders, heights from the coarse and fine patches agree within the sweep's allowance; the worst value is reported.
+- **Autoplay:** passes the independent clearance and relocation checker for each transfer, in the CPU replay and the live run.
+- **Live timing:** p95 ≤ 33 ms and max ≤ 100 ms, with the timing instrument repeated once.
+- Headed Chrome, GPU lock, cleanup confirmed.
+
+## Success
+- **The advisor flies it and judges each transfer on three questions:**
+  - (a) Do you meet new detail as you shrink?
+  - (b) Does it feel like one world, with formations that matter at your size?
+  - (c) Is the motion and scale change acceptable?
+- **The peers:** one independent still-sheet judgement each.
+- **Anything less is partial, and is reported as it is.**
+
+## Stops
+- the cap;
+- renderer work beyond nested static patches;
+- the frame budget missed after one optimisation;
+- at most two mechanical repairs.
+
+## Evidence
+`/mnt/ml_storage/scratch/valley-spike/descent/`
+
+
+---
+
+## Codex — Descent card light review (run 20261024T232433Z-dd24)
+*2026-10-24 16:27:09 PDT*
+
+**NOT READY — two blockers, both fixable within the intended scope.** The experience and advisor-led judgement are otherwise appropriate.
+
+1. **Skirts can conceal cracks while introducing artificial walls and ambiguous collision surfaces.** A small height disagreement does not make the composite surface continuous.
+
+   Replace the patch-boundary bullets and seam check with:
+
+   > Join patches and backdrop with watertight shared boundaries, using the existing stitching approach or a fixed transition collar. Rendering and collision use the same resulting triangles. Patch selection and stitching remain fixed during flight and scale changes. Skirts must not substitute for a traversable join.
+   >
+   > Verify that joins have no gaps or overlapping surfaces. Simpler dyadic mesh levels are acceptable if they reduce implementation work; observer scale remains continuous.
+
+2. **Transfer switching can place the visitor inside the destination terrain.** The collision contract also needs to cover free flight and simultaneous movement/growth explicitly.
+
+   Replace the collision bullet with:
+
+   > Autoplay and free flight use the same swept-body collision rule, including movement combined with scale change. Scale is bounded to m = 1/4…8. Unsupported or unresolved terrain and the computed-area boundary block movement; they are never treated as empty space.
+   >
+   > Transfer switching pauses autoplay and checks the current body against the destination surface before committing. If it does not fit, refuse the switch with a visible explanation. Never reposition automatically. Autoplay uses a checked altitude path for each transfer along the frozen horizontal route.
+   >
+   > Each transfer is a separate fixed interpretation; switching is visibly labelled as a world change.
+
+I checked the frozen routes: the proposed **12e square patches do nest** on both fixtures. However, they require approximately **1.63 million field samples per fixture**, before backdrop and classification work. Remove the unsupported “seconds” promise and prioritize seahorse at the existing two-hour checkpoint.
+
+No additional measurement programme is needed. With those replacements, **READY** for the bounded descent demonstrator; the advisor decides whether it delivers the experience.
+
+---
+
+## Claude — Descent card r2 READY; clock started
+*2026-10-24 16:27:09 PDT*
+
+Claude -> log: descent card r2 READY (c9e815ff0a43173b); Codex blockers 1 (watertight collar joins, no skirts) and 2 (free-flight and transfer-switch collision contract) applied. Clock 2026-10-24T23:27:09Z; half-day cap; checkpoint +2 h.
+
+
+---
+
+## Claude — Descent still judgement request
+*2026-10-24 16:44:02 PDT*
+
+Codex — the descent build is complete. Brief:
+- **Seahorse, three transfers:** the live runs pass the checker, with p95 ≤ 23.7 ms; the mesh is watertight (tested).
+- **Please give one independent still judgement:** sheets of 16 frames each, one every 4 s from 3 s to 62 s (warm-up, descent m 8 → 1/4, hold, look-around), time-matched across transfers:
+  - /mnt/ml_storage/scratch/valley-spike/descent/judge/sheet-T0.png
+  - /mnt/ml_storage/scratch/valley-spike/descent/judge/sheet-TA.png
+  - /mnt/ml_storage/scratch/valley-spike/descent/judge/sheet-TP.png
+- **For each transfer:** new detail as the observer shrinks (yes / weak / no / unclear), one coherent world (yes / no / unclear), visible seams, and an overall rating (convincing / weak / not).
+- **Brief, please:** the advisor is the real judge here. My judgement is hashed (6582f5fe0bad6d30…); don't read judge/judgement-claude.md first.
+
+
+---
+
+## Codex — Descent still judgement
+*2026-10-24 16:44:45 PDT*
+
+Independent judgement; I did not read Claude’s.
+
+| Transfer | New detail while shrinking | One coherent world* | Visible seams | Overall |
+|---|---|---|---|---|
+| **T0** | **Weak** | **Yes** | None clearly identifiable | **Weak** |
+| **TA** | **Weak** | **Yes** | None clearly identifiable | **Weak** |
+| **TP** | **Yes** | **Yes** | None clearly identifiable | **Convincing** |
+
+- **T0:** Smaller shoulders and scalloped crests become visible, but broad smooth slopes dominate. Limited reward for getting smaller.
+- **TA:** Strong canyon enclosure, but tall, smooth walls occupy much of the view. Additional detail remains concentrated around distant or overhead rims.
+- **TP:** Terraces, rounded buttresses and smaller crest formations remain legible nearby. The later views offer the strongest sense of places worth approaching and inspecting. Some surfaces look soft or faceted, but the terrain reads convincingly.
+
+\*Visual coherence across the sampled views. The sheets cannot establish motion continuity or popping. TP’s visible detail is a judgement of the resulting terrain, not an attribution to finer fractal structure alone.
+
+---
+
+## Advisor — Direction: heightfield vs surface geometry (after flying TA/TP)
+*2026-10-25 09:25:49 PDT*
+
+I think I am seeing something more fundamental.  Our approach to the height field and projecting the fractal image into 3D.  
+
+My hypothesis
+The problem is not that the Mandelbrot source lacks detail.
+The problem is that the current 2D-to-3D heightfield projection is expressing much of the interesting structure as top-surface detail plus smooth downward extrusion.
+That means the representation may be suppressing opportunities for structure on cliff faces and transitional surfaces.
+
+  Why shouldn't that mathematics also determine what the surfaces of those formations look like in three dimensions?  
+
+The problem with the current heightfield
+A conventional heightfield is defined by:
+\[
+y=h(x,z)
+\]
+
+Every horizontal coordinate has exactly one elevation.
+That representation can produce remarkably intricate topography, but it has an inherent restriction: it cannot represent multiple surface points above the same horizontal location.
+
+What if the fractal generated the surface itself?
+Instead of only calculating an elevation, imagine defining the three-dimensional world through an implicit function:
+\[
+F(x,y,z)=0
+\]
+
+The terrain surface is wherever that function equals zero.
+Now the mathematics can create geometry that isn't constrained to one elevation per horizontal coordinate.
+
+  This would open the possibility of flying toward a cliff face, shrinking, and discovering that what initially appeared to be a smooth wall contains its own network of valleys, ridges, passages, and structures.
+That's much closer to your original vision.  
+
+After comparing TA and TP, I increasingly suspect that we're confronting a limitation of the heightfield representation rather than simply choosing the wrong height-transfer function.
+
+The Mandelbrot mathematics produces extraordinary detail across the horizontal domain, but our projection into 3D expresses that information primarily as elevation. The resulting canyon walls often appear as smooth draped surfaces, while much of the interesting structure remains on the upper terrain.
+
+I want to challenge that assumption.
+
+**Why should the fractal only determine terrain elevation? Why couldn't fractal mathematics also generate the three-dimensional geometry of the terrain surfaces themselves?**
+
+Imagine approaching one of TA's immense, smooth canyon walls. As the observer shrinks, the wall reveals its own fractal formations: ridges, recesses, ledges, branching structures, and eventually passages that can be explored.
+
+The goal is not simply adding visual texture or noise. Those formations should be actual geometry, spatially coherent, and eventually physically interactive.
+
+I'd like you both to independently investigate whether surface-relative fractal displacement, a three-dimensional implicit representation, or a hybrid approach could achieve this while preserving TA's larger landscape structure.
+
+Please also verify whether the smooth walls are actually a limitation of heightfield topology, the current distance-field transfer, or insufficient geometric variation in those regions. Those are different causes, and we shouldn't assume the representation is responsible without evidence.
+
+Preserve our fundamental invariant: **one fixed mathematical world, with additional detail revealed by finer evaluation—not geometry that changes according to observer size.**
+
+I'm not asking for an immediate rewrite. I want a mathematical and architectural assessment, followed by the smallest experiment capable of distinguishing these approaches.
+
+
+---
+
+## Claude — Surface direction: request for independent position
+*2026-10-25 09:26:29 PDT*
+
+Claude -> Codex. New advisor direction (verbatim below). Protocol rule 4: this is a direction question, so we write independent positions first. I have written mine to a file and will not share it until yours is in. Please produce your own independent position.
+
+What I need from you (read-only consult):
+1. Cause: are TA's smooth canyon walls a limitation of heightfield topology, of the distance-field transfer, or of insufficient geometric variation in the field in those regions? Give reasoning, and check against data where you can.
+2. Assessment of surface-relative fractal displacement, a 3D implicit representation F(x,y,z)=0, and hybrids, against the invariant "one fixed mathematical world, additional detail revealed by finer evaluation, not geometry that changes with observer size", and against preserving TA's large-scale landscape.
+3. The smallest experiment that would distinguish these approaches (not a rewrite).
+
+Data pointers (all under /mnt/ml_storage/scratch/valley-spike/):
+- descent/data/seahorse-tail/D00.npy .. D10.npy: distance estimate D (world units) on 11 nested patches along the seahorse boundary-following route, 385x385 each; meta.json gives each patch's centre, spacing, m, e (e = 1.7 m * m). S##.npy alongside. TA = 103.7484 - 2.160044308*D (see scale/sweep.py for T0/TA/TP and evalD).
+- descent/export.py, descent/viewer/descent.html: how heights are rendered.
+- scale/sweep.py, scale/sweep.json, scale/convergence.md: the converged scale analysis from the previous initiative (PR #14).
+- descent/judge/judgement-codex.md, judgement-claude.md: our still judgements of the descent (you found TA walls tall and smooth).
+- docs/reports/north-star/2026-10-24-scale-sweep.md in /mnt/ml_storage/dev/projects/mandelbrot_explorer.
+
+Please keep it to about 1.5 pages. State any prediction your reasoning makes about the data so it can be checked.
+
+--- Advisor message (verbatim) ---
+I think I am seeing something more fundamental.  Our approach to the height field and projecting the fractal image into 3D.  
+
+My hypothesis
+The problem is not that the Mandelbrot source lacks detail.
+The problem is that the current 2D-to-3D heightfield projection is expressing much of the interesting structure as top-surface detail plus smooth downward extrusion.
+That means the representation may be suppressing opportunities for structure on cliff faces and transitional surfaces.
+
+  Why shouldn't that mathematics also determine what the surfaces of those formations look like in three dimensions?  
+
+The problem with the current heightfield
+A conventional heightfield is defined by:
+\[
+y=h(x,z)
+\]
+
+Every horizontal coordinate has exactly one elevation.
+That representation can produce remarkably intricate topography, but it has an inherent restriction: it cannot represent multiple surface points above the same horizontal location.
+
+What if the fractal generated the surface itself?
+Instead of only calculating an elevation, imagine defining the three-dimensional world through an implicit function:
+\[
+F(x,y,z)=0
+\]
+
+The terrain surface is wherever that function equals zero.
+Now the mathematics can create geometry that isn't constrained to one elevation per horizontal coordinate.
+
+  This would open the possibility of flying toward a cliff face, shrinking, and discovering that what initially appeared to be a smooth wall contains its own network of valleys, ridges, passages, and structures.
+That's much closer to your original vision.  
+
+After comparing TA and TP, I increasingly suspect that we're confronting a limitation of the heightfield representation rather than simply choosing the wrong height-transfer function.
+
+The Mandelbrot mathematics produces extraordinary detail across the horizontal domain, but our projection into 3D expresses that information primarily as elevation. The resulting canyon walls often appear as smooth draped surfaces, while much of the interesting structure remains on the upper terrain.
+
+I want to challenge that assumption.
+
+**Why should the fractal only determine terrain elevation? Why couldn't fractal mathematics also generate the three-dimensional geometry of the terrain surfaces themselves?**
+
+Imagine approaching one of TA's immense, smooth canyon walls. As the observer shrinks, the wall reveals its own fractal formations: ridges, recesses, ledges, branching structures, and eventually passages that can be explored.
+
+The goal is not simply adding visual texture or noise. Those formations should be actual geometry, spatially coherent, and eventually physically interactive.
+
+I'd like you both to independently investigate whether surface-relative fractal displacement, a three-dimensional implicit representation, or a hybrid approach could achieve this while preserving TA's larger landscape structure.
+
+Please also verify whether the smooth walls are actually a limitation of heightfield topology, the current distance-field transfer, or insufficient geometric variation in those regions. Those are different causes, and we shouldn't assume the representation is responsible without evidence.
+
+Preserve our fundamental invariant: **one fixed mathematical world, with additional detail revealed by finer evaluation—not geometry that changes according to observer size.**
+
+I'm not asking for an immediate rewrite. I want a mathematical and architectural assessment, followed by the smallest experiment capable of distinguishing these approaches.
+
+
+---
+
+## Codex — Surface direction: independent position (run 20261025T162722Z-9238)
+*2026-10-25 09:30:03 PDT*
+
+My independent position: **the evidence supports locally smooth distance-field geometry amplified into tall slopes as the immediate cause. Heightfield topology is a separate restriction that will matter for overhangs and passages.** I recommend testing a bounded modification of one TA wall before choosing a new representation. I have not read Claude’s independent position.
+
+**Cause and evidence.** TA is affine:
+\[
+h=b-aD,\qquad \nabla h=-a\nabla D,\qquad \nabla^2h=-a\nabla^2D,\quad a=2.160044308.
+\]
+It preserves every variation in the sampled \(D\), with constant gain. It neither suppresses small variations preferentially nor introduces additional formations. Where \(D\) is nearly affine, TA produces a nearly planar, potentially steep wall. A nonlinear transfer can introduce curvature there, but remains constant along each \(D\)-contour: it cannot independently populate those contours with branching detail.
+
+I checked the arrays and [rendering path](/mnt/ml_storage/scratch/valley-spike/descent/export.py). Heights become mesh vertices; central-difference normals smooth the shading. There is no separate downward-extrusion operation.
+
+Two measurements distinguish regional complexity from local wall detail:
+
+- Across D00–D10, plane-detrended TA height RMS on radius-\(3e\) discs is **0.623–1.037 \(e\)**. The route retains substantial nonplanarity.
+- At the fixed D10 centre \((1407.3306768,1022.2119796)\), I freshly evaluated discs of radius \(0.75e,\ 0.375e,\ 0.1875e\). TA’s detrended RMS divided by radius falls **0.14769 → 0.07682 → 0.03876**, while fitted slope approaches **2.85**. Independent 65- and 129-point-diameter grids agree within 0.4%; all samples escaped. Here \(e=0.425\); metadata uses \(e=1.7m\).
+
+Thus a steep local surface becomes progressively flatter relative to inspection scale, even while the surrounding region remains intricate. This supports the proposed cause locally; I have not registered this point to the particular walls dominating the judged images.
+
+**Prediction:** at a twice-differentiable exterior point with nonzero curvature, detrended height RMS is \(O(r^2)\), so RMS/\(r\) falls approximately linearly with inspection radius. The fresh samples exhibit that trend. Boundary-following can continually find new formations; shrinking toward one ordinary smooth wall point need not. Finer evaluation alone cannot guarantee new formations there.
+
+A heightfield can carry arbitrarily intricate ridges and recesses on steep slopes. It cannot represent multiple heights at one horizontal location. Therefore **smoothness does not establish a topology failure; an intended undercut or tunnel establishes a representational requirement.**
+
+**Assessment against the fixed-world invariant.**
+
+| Approach | Preserving TA and adding geometry | Principal limit |
+|---|---|---|
+| Surface-relative displacement \(p'=p+d(p)n(p)\) | Retains TA as the scaffold; fixed wall coordinates can distribute actual geometry along both surface directions. Bound displacement in world units. | An embedded normal graph preserves the scaffold’s topology. It can produce some world-vertical overhangs, but cannot open tunnels without leaving that regime. Large displacement risks intersections. |
+| General implicit surface \(F(x,y,z)=0\) | Supports multiple sheets, cavities and passages when the chosen function actually creates them. | Merely writing \(F=y-h(x,z)\) reproduces TA exactly. A different 3D generator adds mathematical content; representation alone supplies none. Preserving TA requires explicit constraints. |
+| TA with a bounded implicit modification near its surface | Keeps the landscape scaffold while permitting local topology changes. This is my preferred experiment. | Needs coherent blending, reliable inside/outside queries and refinement across the transition. It is an implicit construction, not a wholly separate mathematical category. |
+
+All three can describe one fixed world. Freeze coordinates, orientation, phases, amplitudes and length scales independently of observer size. Evaluation tolerance may change; the function may not. A multiscale displacement can use a convergent series with a bounded unevaluated tail. Convergence of positions alone does not establish convergent normals or stable collision.
+
+“Surface-relative” coordinates must also be fixed: recomputing them from each observer-dependent coarse mesh would risk moving the formations. Any newly mapped fractal detail must be identified as an added construction, rather than recovered detail already present in TA.
+
+**Smallest discriminating experiment.** Use one image-registered smooth TA wall, one nearby intricate rim as a control, and one analytic planar wall. Freeze a small world-space volume and a maximum displacement envelope. Cap the experiment at four hours, with a two-hour numerical checkpoint.
+
+1. **Establish the baseline.** Freshly refine the same locations twice, measuring detrended relief and normal variation. This separates missing evaluation from a locally smooth field.
+2. **Compare matched constructions.** Apply one frozen, explicitly specified fractal pattern in fixed wall coordinates. Evaluate the resulting normal displacement both as a mesh and as the equivalent implicit normal graph \(F(u,v,s)=s-d(u,v)\). These should agree: disagreement diagnoses implementation, not representational superiority.
+3. **Test the additional freedom.** Extend that construction into the normal direction within the same displacement envelope, allowing multiple crossings and one connected undercut or passage. Retain TA outside the fixed band. Compare identical approach–shrink–return views and geometric clearance probes.
+
+Success requires visible wall formations across three inspection scales, unchanged world-coordinate witnesses under observer-size changes, refinement error below both \(0.02e\) and 10% of claimed relief, and preservation of the agreed TA envelope. Use identical geometry for viewing and clearance checks. Stop at the cap; unresolved convergence makes the result inconclusive.
+
+If normal displacement delivers the desired formations, it earns the next prototype. If the decisive experience requires traversing a connection that an embedded normal graph cannot provide, the bounded implicit construction earns it. Neither outcome justifies replacing the whole landscape yet.
+
+Established: affine preservation and the sampled local flattening. Supported: local field smoothness explains some smooth slopes. Unresolved: attribution to the judged walls and the experiential value of changed topology. This consult used source inspection and small CPU calculations; no GPU run or files changed. The read-only environment also prevented appending the collaboration log.
+
+---
+
+## Claude — Surface direction: independent position (written before Codex's; sha256 in position-claude.sha256)
+*2026-10-25 09:30:03 PDT*
+
+# Position (Claude), written before seeing Codex's: smooth walls, heightfield vs surface geometry
+
+Written 2026-10-25, before the cause measurement ran. The predictions below are stated so the measurement can refute them.
+
+## 1. Cause: which of the three is it?
+
+All of our worlds are h = T(D). A wall's horizontal cross-section at height y is a level set {D = T⁻¹(y)}: the boundary of M dilated by distance d = T⁻¹(y).
+
+- **Transfer.** A monotone T only relabels which contour sits at which height. It cannot change the *shape* of any contour. T0, TA and TP share the same wall cross-sections and differ only in how those cross-sections are spaced vertically. TP's terraces are contour bunching, not new horizontal shape. **The transfer is not the cause of smooth wall shape.** It only decides how much of the wall is steep or flat.
+- **Field (my predicted cause).** The level set of a distance function at distance d is smooth at every scale below about d. Every boundary feature narrower than d is filled in, and the convex parts of the dilated curve have curvature radius ≥ d. The only non-smooth parts are concave creases where two nearest-boundary points tie (the medial axis). So a point on a wall at depth d below the rim sees detail only at scale ≳ d, plus creases. Under TA, d = depth/2.16. Halfway down a 100 m wall, d ≈ 23 m, so the wall carries nothing finer than about 20 m, at any evaluation precision.
+  - This is the scale sweep's "a smooth fixed point tends to planar terrain" prediction showing up in flight. It is not new evidence about the representation.
+  - Prediction for the measurement: on wall pixels, |∇D| ≈ 1 and the curvature of D falls like 1/D at every patch level, including m = 1/4. Detail appears only where D → 0 or on medial creases.
+- **Heightfield topology.** A heightfield *can* carry detail on a steep face: vertical grooves, buttresses and ribs all have a single height per (x, z). What it cannot carry is overhangs, ledges with rock above them, arches or passages into a wall. Topology is therefore *a* limit, and it binds for "eventually passages that can be explored". **It is not why today's walls are smooth.** Today's walls would be smooth in any representation that derives them from D's offsets.
+
+**Consequence:** finer evaluation of D on a wall reveals nothing, because D is smooth there by construction. Any fix must change *what quantity is evaluated* at points on the face, not just how D is embedded in 3D.
+
+## 2. Candidate representations, tested against the invariant
+
+Constraint: a wall's footprint is a curve in the plane. A 2D field has one value per footprint point and nothing to vary with height. Structure on faces therefore needs a third coordinate with a fixed mathematical meaning, in world units and independent of observer size.
+
+The tests applied to each candidate:
+- (i) fixed world;
+- (ii) detail on faces under finer evaluation;
+- (iii) keeps TA's large structure;
+- (iv) supports overhangs and passages.
+
+| Candidate | (i) | (ii) | (iii) | (iv) | Note |
+|---|---|---|---|---|---|
+| A. Different 2D field quantity, still a heightfield (potential G, external angle, D at a different power) | yes | no on faces: every 2D exterior field (G, \|z_n\|, D) has smooth level sets off ∂M | partly | no | Diagnostic control only |
+| B. Normal displacement of the TA surface by g(x, z) (2D field) | yes | no: one value per footprint point, so it only re-shapes contours, and D-based g re-smooths | yes | no | Same limit as A |
+| C. Normal or implicit displacement by a fixed 3D fractal field g(x, y, z): F = y − TA(D) + w·g | yes, if g is fixed in world units | yes, if g has detail at all scales on faces | yes when w ≪ relief | yes, at large w | Hybrid. What g is decides everything. Arbitrary noise is excluded by the advisor's "not texture/noise" |
+| D. 3D slice of the Julibrot: solid = {(x, y, z) : orbit of z₀ = λy under z² + c, c = x + iz, stays bounded}. The y = 0 cross-section is exactly M | yes | expected yes: every horizontal cross-section is the boundary of a fractal set M_{λy}, so detail sits at every height, not only at the rim | the top/base is M itself; the large scale is a different world from TA's canyon ramp | yes: slices can be disconnected and give overhangs, dust and islands | Same Mandelbrot mathematics in one more dimension. Known DE exists (4D gradient). Risk: cross-sections may vary too smoothly in y, giving vertically extruded walls, or turn to dust |
+| E. Hybrid of TA with D-candidate: solid = {y < TA(D(x, z))} ∪ (λ-scaled Julibrot rock near the walls), or wall cross-section at height y = ∂M_{t(y)} rather than an offset of ∂M | yes | yes, from the D term | yes, from the TA term | yes | Most promising if D shows face detail. Blending is a design choice, not an observer-dependent one |
+| F. Mandelbulb or other 3D power maps | yes | yes | no: unrelated to M's 2D structure (the Mandelbulb's equatorial slice is not M) | yes | Excluded by (iii) and by "same mathematics" |
+
+**Key distinction.** Any candidate where height maps to distance from M (A, B, and the "y − T(D_t)" layered variant) produces offset curves, which are smooth. Detail on a face requires that the face *itself* is a fractal boundary at that height. That is what C (with a fractal g), D and E provide.
+
+## 3. Smallest discriminating experiment (proposal)
+
+**Static, one wall, no new viewer, no flight.** Take one TA wall on the seahorse route from the existing patches. Over a small volume (about 24e × 24e footprint, the full wall height), evaluate three worlds:
+1. **TA heightfield** (control).
+2. **Heightfield of a different 2D field**, A: tests "field change alone".
+3. **One 3D candidate**, D or E (Julibrot slice / hybrid), meshed offline by marching cubes at two evaluation resolutions.
+
+**Measurements:**
+- wall cross-section detail at mid-height: contour excess length at scale e and e/4, versus the TA offset;
+- a refinement check: the coarse surface stays within its evaluation tolerance of the fine one, so finer evaluation adds rather than changes;
+- stills at m = 4 and m = 1/2 for the advisor to judge.
+
+**Success** means the 3D candidate shows face detail that grows under refinement while the coarse surface is preserved. A failure (extruded or dusty walls) is a finding.
+
+## 4. Limits
+- I have not computed a Julibrot slice. The claim that it carries face detail at every height is a hypothesis, and the smoothness of the y-dependence is the main risk.
+- The heightfield does have a topological limit; it matters for passages, but I predict it is not the cause of the smooth walls the advisor saw.
+
+
+---
+
+## Claude — Cause measurement result
+*2026-10-25 09:30:03 PDT*
+
+# Cause measurement (Claude): cause.py, cause.json. Run 2026-10-25, after position-claude.md was written.
+Seahorse, 11 nested patches (m 8 -> 1/4). For each pixel: rms residual of TA height from a local plane over radius e (the
+patch's own observer scale), divided by e ("relief at your size"); median over pixels binned by D/e.
+
+| D/e         | 0-0.25 | 0.25-1 | 1-2  | 2-4       | 4-8       | >8        |
+|-------------|--------|--------|------|-----------|-----------|-----------|
+| relief / e  | 0.12-0.21 | 0.26-0.28 | 0.17-0.24 | 0.09-0.14 | 0.04-0.07 | 0.02-0.04 |
+| |kappa|*D (median) | 0.05 | 0.40 | 0.4 | 0.3-0.8 | 0.3-0.7 | 0.2-0.4 |
+
+- The same row holds at every level from m = 8 to m = 1/4: relief at your size depends only on D/e, falling roughly as e/D
+  once D > e. Level-set curvature ~ 0.4/D (curvature radius ~ 2.5 D), as predicted for offsets of the boundary.
+- So a wall point at depth d (D = d/2.16) shows relief ~ e/D at your size. Shrinking at a fixed wall point makes D/e grow,
+  so the wall gets *smoother* relative to you. Detail at your size exists only within about one e of the boundary (the rim).
+- Cause: the field (distance offsets are smooth at scale D), confirmed. The transfer cannot change contour shape (monotone
+  relabelling; affine TA rescales D rigidly). Heightfield topology is not needed to explain it; it is a separate limit
+  (overhangs, passages).
+- Limits: one fixture; local-plane residual is one detail measure; my crease classifier was miscalibrated (|grad D| of the
+  DE is 0.2-1, not ~1), so crease fractions are not reported.
+
+
+---
+
+## Claude — Surface: convergence, Julibrot probe, card r1 for review
+*2026-10-25 09:32:09 PDT*
+
+Claude -> Codex. Thanks; your position is logged verbatim. Mine was written before I saw yours (sha256 f1309d60…, file /mnt/ml_storage/scratch/valley-spike/surface/position-claude.md). Please read it, plus cause-result.md (my cause measurement) and jprobe.py (a Julibrot feasibility probe), all in that directory.
+
+Convergence as I see it: (1) cause = the field: D's offsets are smooth; your fresh-evaluation RMS/r trend and my 11-level relief ~ e/D table agree; (2) monotone transfer cannot add shape along contours; (3) heightfield topology is a separate limit (undercuts, passages), not the cause; (4) a hybrid keeping TA as scaffold is the right experiment class; nothing justifies replacing the landscape.
+
+The one material difference: what generates the face detail. You propose a frozen fractal pattern in fixed wall coordinates (an added construction). I propose giving the third coordinate a Mandelbrot meaning: the orbit start z0 (a Julibrot slice), so each height's cross-section is itself a fractal boundary. Probe numbers (patch 4, m=2): median boundary shift 0.05e / 0.5e / 2.5e at t = 3e-6 / 3e-5 / 3e-4 (z0 = sqrt t); near-boundary fraction 0.16-0.38, no dust at this resolution. Untested: whether the stack follows the TA wall and whether it gives ledges rather than vertical fluting.
+
+Per rule 4, I put both candidates into one card rather than arguing: card-surface.md (DRAFT r1). Please give it one challenger review: blockers only (things that would make the comparison unfair, the invariant unprotected, or the result uninterpretable), plus any simpler path. In particular: (a) what Mandelbrot-derived pattern you would freeze for C1, so it is specified before evaluation; (b) whether my C2 construction is well defined (thickened slice boundary inside a band; kappa fixed once) or needs a different form; (c) whether CPU offline stills are adequate as the advisor's evidence for this scratch experiment. Keep it short.
+
+
+---
+
+## Claude — card-surface.md r1 (DRAFT)
+*2026-10-25 09:32:09 PDT*
+
+# Card: surface. Can fractal mathematics put real geometry on a TA wall face? Revision 1 (DRAFT, for one Codex review)
+
+- **Advisor direction:** verbatim in project1-log, "Direction: heightfield vs surface geometry". The advisor wants a mathematical and architectural assessment, then the smallest experiment that distinguishes the approaches. No rewrite. Standing instruction: "Don't let the next initiative become another extended mathematical optimization exercise. Make it demonstrate an experience."
+- **Owner:** Claude. **Challenger:** Codex.
+- **Cap:** 4 h from READY, with a numerical checkpoint at 2 h. Stop at the cap; anything unresolved is reported as inconclusive.
+- **North Star check:** **toward.** The experience: approach a wall, shrink, and find formations on the face.
+
+## Already established (both peers, independently; no further work)
+- **Cause of the smooth walls: the field.**
+  - D's level sets are offsets of the boundary and are smooth below scale D.
+  - Claude (`cause-result.md`, 11 levels): relief at your size ≈ e/D once D > e, the same at every m from 8 to 1/4; curvature ≈ 0.4/D.
+  - Codex (fresh evaluation at the D10 centre): detrended RMS/r falls linearly with r.
+- **Transfer:** a monotone T relabels contours and cannot add shape along them. TA, being affine, preserves D exactly.
+- **Heightfield topology** does not cause the smoothness. It is a separate limit: overhangs, undercuts, passages.
+- **Consequence:** finer evaluation of D on a wall reveals nothing. A new quantity must be evaluated on the face.
+
+## The two candidates (one per peer; each a fixed world in world units, nothing observer-dependent)
+- **C1, surface-relative (Codex).**
+  - Freeze wall coordinates (u along the wall, v down the wall, s along the normal) once, from the fine TA field. Never recompute them from an observer-dependent mesh.
+  - Displace by a frozen, explicitly specified fractal pattern d(u, v) within a fixed world-unit envelope. The pattern must be Mandelbrot-derived, e.g. the D or potential field of M sampled in a fixed chart over (u, v); "not noise" per the advisor. It is labelled an *added construction*.
+  - Then extend the pattern into s within the same envelope, allowing one undercut or passage.
+  - Mesh and implicit evaluation of the normal graph must agree.
+- **C2, Julibrot layer (Claude).**
+  - The third coordinate is z₀, the orbit start, so the cross-section at height y is the slice M_{t(y)} = {c : orbit of √t under z² + c stays bounded}, with a fixed linear map t = κ·y.
+  - **Probe** (`jprobe.py`, patch 4, m = 2): slices deform smoothly with t. The median boundary shift is 0.05e at t = 3e-6, 0.5e at 3e-5 and 2.5e at 3e-4. The near-boundary fraction stays between 0.16 and 0.38, so no dust at this resolution.
+  - **Construction:**
+    - Rock = TA solid {y < TA(D)} outside a band around the chosen wall.
+    - Inside the band, rock = the y-stack of {D_{t(y)} < ρ}: the slice boundary thickened by a fixed ρ.
+    - κ is chosen once so the stack's footprint follows the TA wall, i.e. M_{t} recedes as the wall descends.
+  - **Risk, stated:** the stack may give vertically fluted walls with no ledges, or may not follow the TA wall at all (M_t need not recede monotonically). Either outcome is a finding.
+
+## Smallest test (static, CPU, no new viewer, no flight)
+- **One wall:** a TA wall on the seahorse route, registered to the descent stills where walls looked smooth. Volume: footprint 24e × 24e at m = 2, full wall height.
+- **Worlds:** C0 = TA (control), C1, C2.
+- **Evaluation:**
+  - C1/C2 are evaluated as implicit F on a voxel grid at two resolutions (Δ and Δ/2), meshed by marching cubes.
+  - **Stills:** an offline CPU raymarch or mesh render, identical camera poses, at three observer scales (m = 4, 1, 1/4) approaching the same world point.
+  - These stills are diagnostic for the advisor's judgement, not product acceptance, so headed Chrome is not required. The GPU lock is not needed (CPU only).
+- **Numbers, per world:**
+  - (1) **face relief at your size**: plane-detrended RMS of the surface over radius e, divided by e, on wall-face points, at each m;
+  - (2) **refinement**: |F_Δ − F_{Δ/2}| surface distance < 0.02e and < 10% of the claimed relief;
+  - (3) **TA envelope**: fraction of the volume where the surface lies more than a fixed bound from TA (it must stay inside the band);
+  - (4) **topology**: count of multi-crossing vertical rays (undercuts) and of through-passages wider than the body.
+
+## Success and decision rule
+- **A candidate succeeds** if face relief at your size stays ≥ 0.1 (C0 is about e/D, so ≤ 0.05 on mid-walls) at all three scales, refinement passes, it stays inside the TA envelope, and the advisor judges the stills as "formations on the face" rather than texture.
+- **If both succeed:** C1 earns the next prototype if no passage is needed; C2 (or C1's implicit extension) if the advisor wants passages.
+- **If neither succeeds:** record a dead end, with what failed.
+- **Not decided here:** product default, renderer architecture, collision.
+
+## Stops
+- the cap;
+- refinement fails twice after one fix (inconclusive for that candidate);
+- at most two mechanical repairs;
+- no tuning of κ, ρ or the pattern beyond one choice made before evaluation, plus one recorded revision.
+
+## Evidence
+`/mnt/ml_storage/scratch/valley-spike/surface/`
+
+
+---
+
+## Codex — card-surface r1 review (run 20261025T162722Z-9238 resume)
+*2026-10-25 09:34:55 PDT*
+
+**Not READY yet; the comparison needs four corrections.** I read the position, measurements, probe and card.
+
+1. **Narrow the established claims.** Our measurements support local flattening; they do not establish that finer evaluation reveals nothing on every wall. The implemented \(D\) is an escape-time distance estimate, not exact Euclidean distance, so exact-offset arguments are not proofs about its contours. Also, a two-dimensional pattern in **surface coordinates** can vary along both directions of a wall; it does not require a third-dimensional generator to produce face relief.
+
+2. **C2 is not fully specified.** \(D_t<\rho\), with nonescaping points assigned zero, thickens the slice’s filled set; it is not a tube around its boundary. Its exterior surface is another distance-estimate contour, so \(\rho\) may suppress precisely the detail sought. Freeze \(\rho\) relative to the smallest tested feature size. Specify the height origin, \(\kappa\), band, sign convention and continuous transition to TA; exclude that transition from scored formations. A hard replacement inside the band can manufacture seams and apparent ledges.
+
+   I reproduced the probe’s **0.051 / 0.487 / 2.536 \(e\)** values. They are median \(|D_t-D_0|\), **not boundary shifts**. Near-boundary area fraction does not establish “no dust.” Before choosing \(\kappa\), inspect actual contours at three fixed heights for position, direction of movement and connectivity. One scalar \(\kappa\) may not align the stack with TA; that is a legitimate failure. Future nonescaping samples must remain unresolved unless classified, rather than silently becoming rock. The probe’s \(c\)-derivative also provides no certified three-dimensional sphere-tracing step.
+
+3. **Freeze comparable constructions and scoring.** Use the same wall region, displacement bound, transition region, cameras and sampling locations. Remove C1’s unspecified “then extend into \(s\)” from this first comparison: that introduces a third construction and another tuning opportunity. The result selects between these frozen candidates, not between entire representation classes. Any permitted revision needs a stated trigger and equivalent allowance for both.
+
+4. **Repair refinement and feasibility.** \(|F_\Delta-F_{\Delta/2}|\) is not surface distance: multiplying \(F\) by a constant changes it without moving the surface. Measure bidirectional surface distance, and refine orbit evaluation as well as spatial sampling. Define relief using surface-area samples and orthogonal plane distances so folded surfaces remain measurable. Multiple vertical crossings establish neither a connected passage nor body clearance. The full-height, \(24e\)-wide volume also risks consuming the cap before resolving the smallest scale; make its resolution and compute budget concrete.
+
+For **C1**, I would freeze this simple Mandelbrot-derived pattern:
+
+\[
+d(u,v)=\frac{B}{2}\,w(u,v)\,
+\tanh\!\left(
+\frac{D(c_4+(u,v))-\Pi(u,v)}{3.4}
+\right).
+\]
+
+Here \(B\) is the shared displacement bound; \(c_4\) is the stored D04 centre; \(D\) uses the existing seahorse world-coordinate mapping; and \(\Pi\) is the least-squares plane fitted once to the complete stored D04 square. Freeze the wall chart’s origin and orientation and the taper \(w\) before rendering. Evaluate fresh \(D\) samples during refinement, rather than interpolating the stored raster. The denominator is a fixed world length. This is an added surface construction, with no promise of detail at every point or scale.
+
+**Simpler path:** first test C2’s footprint alignment in three two-dimensional sections. If it passes, render one small wall tile for C0/C1/C2, with TA as context; defer passages and C1’s volumetric extension.
+
+**CPU offline stills are adequate for choosing a scratch prototype**, provided geometry and rendering are checked and lighting and poses match. They can support “formations are visible on the face.” They cannot establish the approach–shrink experience, motion continuity or traversability; keep those claims for the next prototype.
+
+---
+
+## Claude — card-surface.md r2 READY (review corrections 1-4 + simpler path applied)
+*2026-10-25 09:35:41 PDT*
+
+# Card: surface. Can fractal mathematics put real geometry on a TA wall face? Revision 2, READY (Codex review 1 applied: corrections 1–4 and the simpler path)
+
+## Initiative
+- **Advisor direction:** verbatim in project1-log, "Direction: heightfield vs surface geometry". The advisor wants an assessment, then the smallest experiment that distinguishes the approaches, with no rewrite. Standing instruction: demonstrate an experience; do not turn this into an optimisation exercise.
+- **Roles:** Claude owns this initiative; Codex is the challenger.
+- **Time limit:** 4 h from READY, with a checkpoint at 2 h, by which C2's gate (step 1) is decided. At the cap we stop and report what is unresolved as inconclusive.
+- **North Star check:** **toward.** The experience is to approach a wall, shrink, and find formations on its face.
+
+## Supported so far (local, seahorse; narrowed per review)
+- **The smooth walls are locally flat in D.** D is an escape-time estimate, not an exact distance, so the offset argument is heuristic.
+  - Evidence (Claude): on 11 nested levels, relief at your size is about e/D once D > e.
+  - Evidence (Codex): a fresh evaluation at the D10 centre shows detrended RMS/r falling linearly with r.
+  - We have not shown that every wall is smooth.
+- **A monotone transfer cannot add shape along D's contours.** TA, being affine, preserves D exactly.
+- **Heightfield topology is not needed to explain this smoothness.** It limits undercuts and passages, which are not tested here.
+- **A 2D pattern in surface coordinates *can* vary in both directions on a face** (C1). A third Mandelbrot coordinate (C2) is one alternative, not a necessity.
+- **Scope of this comparison:** it chooses between these two frozen constructions. It does not decide between representation classes.
+
+## Shared frame (both candidates)
+- **Wall tile:** taken from descent patch 4 (seahorse, m = 2, centre (1411.758, 1020.042)).
+  - Choose one wall tile of 6e₁ × 6e₁ footprint, where e₁ = 1.7 m (so 10.2 m), and the tile's full height span.
+  - Choose it once, before any candidate is evaluated: the tile in patch 4 with the largest share of D ∈ [2e₁, 8e₁] (mid-wall) and the lowest TA relief at your size.
+  - Its location and chart are frozen in `frame.json`.
+- **Displacement bound:** B = 1.7 m. Both candidates must stay within B of the TA surface; C1's |d| ≤ B/2.
+- **Transition:** a cosine taper w over 1 m inside the tile edge blends each candidate into TA. Points in the taper are excluded from scoring.
+- **Cameras and lighting:**
+  - Identical poses for C0 (TA), C1 and C2: one approach line toward the tile centre, with stills at m = 4, 1 and 1/4.
+  - Each camera sits at 6e from the face, at eye height above the floor/ledge directly below, looking at the face.
+  - Lighting matches across candidates, and TA is shown as context outside the tile.
+- **Evaluation:**
+  - Fresh orbit evaluation, never interpolation of stored rasters.
+  - Refinement = halve the spatial step **and** double maxit.
+  - Unresolved (non-escaping, unclassified) samples are reported. They are never silently rock.
+
+## C1, surface-relative (Codex's specification, frozen)
+- The wall chart (origin, u along the wall, v down the wall, normal n) is fitted once from TA over the tile and frozen.
+- The displaced surface is p + d(u, v)·n. Using the stored D04 centre c₄ and Π (the least-squares plane fitted to the full stored D04 square), the displacement is:
+
+  d(u, v) = (B/2)·w(u, v)·tanh((D(c₄ + (u, v)) − Π(u, v)) / 3.4 m)
+
+- It is meshed as a normal graph. It is an added construction, with no promise of detail at every point or scale.
+
+## C2, Julibrot layer (Claude; specified before evaluation)
+- **Slice set.** M_t = {c : the orbit of z₀ = √t under z² + c stays bounded}, with D_t its escape-time distance estimate (c-derivative, z₀ fixed) in world units. Non-escaping samples are unresolved, and count as rock only if classified interior.
+- **Height map.** t(y) = κ·(y_top − y) for y ≤ y_top, where y_top = the TA height at the tile's top edge (rim side). t = 0 at the rim, so the rim is M itself.
+- **Rock.** Rock in the tile is {D_{t(y)}(x, z) < ρ} ∪ {y < y_floor(x, z)}, blended to TA by w.
+  - ρ = 0.1 m, frozen below the smallest tested feature size (e at m = 1/4 is 0.425 m).
+  - y_floor is TA − B, so the candidate cannot open holes through the floor.
+- **Step 1, gate (2D, run before anything else; it is the simpler path).**
+  - At three heights (top, middle and bottom of the tile), plot and measure the slice-boundary set {D_t < ρ} against the TA contour {D = TA⁻¹(y)}.
+  - Measure the position (median and p90 of |D₀ − TA⁻¹(y)| over slice-boundary points), the direction of movement (it should recede as y falls), and connectivity (component count, and the largest component's share).
+  - κ is fitted once, from the middle height only. The top and bottom heights are the test.
+  - The gate passes if the top and bottom medians are ≤ B and the largest component holds ≥ 50% of the boundary points.
+  - **A gate failure is a finding:** the Julibrot stack does not follow TA with one κ. C2 then stops, and C1 continues alone.
+
+## Measurements (per world, on the tile, excluding the taper)
+1. **Face relief at your size.** Surface-area-weighted samples; for each sample, the RMS orthogonal distance of surface points within radius e of the best-fit plane, divided by e; at m = 4, 1 and 1/4. These numbers are scored only at m = 1 and 1/4 (at m = 4, e = 6.8 m, which is the tile scale; m = 4 is used for context stills).
+2. **Refinement.** The bidirectional surface (Hausdorff p95) distance between evaluation Δ and Δ/2 (with maxit doubled) must be < 0.02e at the finest scored m, and < 10% of the claimed relief.
+3. **Envelope.** The maximum distance from TA, which must be ≤ B, and the fraction of the tile surface beyond B/2.
+4. **Undercuts** (report only): the count of rays from the face that cross the surface more than twice. No claim is made about passages or clearance.
+
+**Compute budget.**
+- C2 uses a voxel grid at Δ = 0.08 m (128 × 128 × ~N_y) and at Δ/2.
+- If the Δ/2 run exceeds 45 min of CPU time, refinement is measured on a 2 m sub-block instead.
+- C1 is a normal graph at 0.04 m and 0.02 m.
+
+## Success
+- **Candidate passes:**
+  - relief at your size ≥ 0.1 at m = 1 and at m = 1/4 (C0 is reported for comparison);
+  - refinement passes;
+  - it stays within the envelope;
+  - the advisor judges the stills as showing "formations on the face, not texture".
+- **Not decided here:** the product default, the renderer, collision, passages, C1's volumetric extension, and the approach–shrink experience in motion (offline stills cannot show motion).
+
+## Stops
+- **Time limit.**
+- **Refinement:** two refinement failures after one fix make that candidate inconclusive.
+- **Repairs:** at most two mechanical repairs.
+- **Revisions:** κ is the only fitted parameter. One revision is allowed for either candidate, under the same trigger: a failure caused by a mechanical error, not by the result.
+
+## Evidence
+All evidence goes in `/mnt/ml_storage/scratch/valley-spike/surface/`. The stills are diagnostic (CPU offline render), not product acceptance.
+
+
+---
+
+## Claude — Surface card r2 results
+*2026-10-25 09:38:52 PDT*
+
+# Surface card r2: results (Claude), for challenger verification
+Elapsed ~45 min of the 4 h cap. Files: frame.json/frame.py, gate.py/gate.json, c1.py/c1-surfaces.npz, measure.py/measure.json, clock.md.
+
+1. Frame frozen (frame.py): patch-4 tile 9.99 m square centred (1415.05, 1040.34); 37.3 deg; D 7.5-12.5 m; TA y 76.7-87.6.
+2. C2 spec correction before evaluation (clock.md): y_top := TA(0) (rim), per the card's stated intent; recorded as C2's one revision.
+3. C2 gate FAIL (gate.py, 0.1 m window +/-15 m, detection D_t < 0.2 m): slice-boundary D0 median 0.02 / 3.2 / 13.6 / 8.3 / 10.8 m at
+   t = 1e-5 / 3e-5 / 3e-4 / 1e-3 / 1e-2; boundary absent from the window at t = 1e-4, 1.4e-4, 2e-4, 3e-3 (min D_t 0.50, 4.44, 10.48,
+   277 m: not a detection artefact). Position is non-monotone in t, so no single kappa aligns the stack with TA; the fitted kappa
+   (6.3e-6, from a bracket spanning a gap) put top/mid/bottom slices outside the window entirely. C2 stopped per card.
+4. C1 (your frozen pattern; fresh evaluation at 0.04 m/maxit 16384 and 0.02 m/maxit 32768; 0 unresolved; fresh TA matches
+   stored D04 to 1.1 mm):
+   | world | relief at your size m=1 (med [p90]) | m=1/4 | refine p95 (param-matched, upper bound) | env max | vertical folds |
+   | C0 TA | 0.016 [0.023] | 0.0042 [0.0069] | 3.6e-5 m | 0 | 0 |
+   | C1    | 0.022 [0.027] | 0.0056 [0.0069] | 5.1e-5 m | 0.83 m (<= B/2) | 0 |
+   Threshold 0.1: C1 FAILS by ~5x at m=1 and ~18x at m=1/4. Refinement and envelope pass, so this is not numerical.
+   Reading: the pattern is D sampled about 5 m from c4 over a 10 m chart; it carries M's exterior smoothness with it.
+5. Neither candidate succeeds -> dead end per card. Stills not rendered (the decisive numbers fail by a wide margin; stills could
+   only show a smooth face). Offered to the advisor on request.
+
+Common finding: both failures trace to one property. Mandelbrot detail lives only at a boundary. A pattern sampled from the
+exterior field is smooth (C1). A family of boundaries (C2) has detail everywhere, but its positions do not follow TA's walls.
+Unresolved: whether a boundary-anchored construction (formations placed where a fractal boundary actually is) or a standalone
+Julibrot-slice world (which abandons criterion iii) would serve the advisor's experience.
+
+
+---
+
+## Claude — Request: verify surface results
+*2026-10-25 09:38:52 PDT*
+
+Claude -> Codex. Card r2 ran; please independently check the decisive evidence (rule 2/6) before I report to the advisor. Results and
+paths: /mnt/ml_storage/scratch/valley-spike/surface/results-1.md (scripts and json alongside). Specifically: (a) is the C2 gate
+failure real (gate.py: non-monotone boundary position; min D_t values), and was my y_top correction legitimate? (b) does C1 match your
+frozen specification (c1.py), and is the relief measure (measure.py) the card's? Re-evaluate a few points freshly if you can.
+(c) Do you agree with the common finding and with not rendering stills? Short answer, blockers first.
+
+
+---
+
+## Codex — Surface results verification
+*2026-10-25 09:41:28 PDT*
+
+**Blocker: C2’s result does not establish “no single κ aligns the stack.”** The fitter interpolates across a missing-boundary interval, then accepts a middle slice with no detected boundary. That is an unsuccessful fit, not a demonstrated impossibility. Either make one bounded fitting repair or report C2’s alignment question as inconclusive.
+
+**(a) The sampled failure is reproducible.** Fresh evaluation reproduces the reported minima **0.497, 4.437, 10.480 and 277.178 m**, and the sampled non-monotonicity. At the chosen κ, halving spacing to **0.05 m** and increasing maxit to **32768** gives top/middle/bottom minima **0.8304 / 3.6506 / 8.0371 m**, with no unresolved samples. Thus those slices fail detection robustly on these grids. This does not prove continuous boundary absence or exclude another κ.
+
+The **y_top correction was legitimate**: it resolves the card’s contradiction between “tile’s top edge” and “t = 0 at the rim,” and was recorded before evaluation. Update the card’s formula explicitly. Also disclose detection at **0.2 m**, versus the specified **ρ = 0.1 m**; this relaxation cannot explain the selected slices’ failure.
+
+**(b) C1 matches the frozen construction.** I independently fitted Π and freshly evaluated 48 base/pattern points: maximum C1 position discrepancy was **2.3×10⁻¹³ m**.
+
+The relief implementation is **almost** the card’s: centres are area-weighted, but neighborhood plane fitting and RMS are not. Recomputing both with area weights at 500 centres gives:
+
+| Median relief/e | m = 1 | m = ¼ |
+|---|---:|---:|
+| C0 | 0.01594 | 0.00410 |
+| C1 | 0.02173 | 0.00568 |
+
+**C1’s failure against 0.1 survives the correction decisively.** Keep refinement labelled a sampled parameter-correspondence check against bilinear surfaces; it is not a verified distance between rendered triangle meshes. Likewise, the Jacobian check is not the card’s ray-crossing measurement. Neither limitation overturns the relief failure.
+
+**(c) Narrow the common finding.** Supported: this frozen C1 samples a locally smooth field and supplies insufficient relief; the selected C2 κ fails alignment. Unsupported: “detail lives only at a boundary,” “C2 has detail everywhere,” or “no κ works.”
+
+**Stopping without stills is reasonable for this numerical screening**, provided the report records the omission and leaves appearance unjudged. Replace “stills could only show a smooth face” with “we did not obtain visual evidence.” Report **C1 failed the relief criterion; C2’s attempted fit failed, with broader feasibility unresolved**, rather than a common mathematical dead end.
+
+---
+
+## Claude — Surface card closed: report draft
+*2026-10-25 09:42:36 PDT*
+
+# Surface geometry on TA walls: assessment and screening experiment (closed 2026-10-25)
+
+**Advisor question.** Why do TA's canyon walls look like smooth drapes? Can fractal mathematics put real geometry on cliff faces (displacement, implicit F = 0, or a hybrid) while keeping TA's landscape, one fixed world, and detail revealed by finer evaluation?
+
+## Answer in brief
+- **Cause.** The field, not the heightfield and not the transfer. The two peers reached this independently.
+- **Experiment.** Neither frozen candidate put formations on the wall face.
+  - C1, a surface-relative pattern, failed the relief criterion by 5–18×.
+  - C2, a Julibrot-slice layer, failed to align with TA's walls for any scanned κ.
+- **Not tested.** Overhangs and passages, which do need more than a heightfield.
+
+## 1. Cause (established locally on seahorse; both peers)
+- **Field.** A wall's cross-section at each height is a contour of D. Our measurement over 11 nested levels (m = 8 → 1/4) found:
+  - Relief at your size ≈ e/D once D > e, the same at every scale.
+  - Contour curvature ≈ 0.4/D.
+  - A wall point at depth d (D = d/2.16) is therefore smooth relative to you, and gets *smoother* as you shrink.
+  - Codex's fresh evaluation agrees: detrended RMS/r falls linearly with r.
+  - **Reasoning:** the escape-time field is real-analytic off M, so a point at distance D has no structure much finer than D.
+  - **Limit:** D is an estimate, not an exact distance, and we have not shown that every wall is smooth.
+- **Transfer.** A monotone T only relabels contours, so it cannot add shape along them. TA, being affine, preserves D exactly.
+- **Heightfield topology.** Not needed to explain the smoothness. A heightfield *can* carry ribs and recesses on steep faces. It cannot carry undercuts, ledges with rock above, or passages.
+
+## 2. Candidates (one per peer, frozen before evaluation; card r2 after one review)
+**Test setup.** One mid-wall tile on the seahorse descent route:
+- size 10 m, slope 37°, D from 7.5 to 12.5 m;
+- displacement bound B = 1.7 m, with a taper excluded from scoring;
+- fresh evaluation at two resolutions, with maxit doubled for the finer one;
+- success threshold: relief at your size ≥ 0.1 at m = 1 and m = 1/4.
+
+| | Relief at your size, m = 1 | m = 1/4 | Refinement | Envelope | Result |
+|---|---|---|---|---|---|
+| C0 TA (control) | 0.016 | 0.0041 | ok | n/a | n/a |
+| C1 Codex: frozen pattern d = (B/2)·w·tanh((D(c₄+(u,v)) − Π)/3.4) in fixed wall coordinates | 0.022 | 0.0057 | ok | max 0.83 m ≤ B/2 | **FAIL** (relief 5× short at m = 1, 18× at m = 1/4) |
+| C2 Claude: rock at height y = the Julibrot slice M_{κ(y_rim − y)} (orbit starts at √t) | n/a | n/a | n/a | n/a | **FAIL at the alignment gate** |
+
+C2 detail, after one bounded fitting repair:
+- The slice boundary's position is non-monotone in t.
+- Over 48 values of t, none places the mid-height boundary within B of the TA contour (best: 2.26 m).
+- The boundary leaves the 30 m window entirely for 21 of the 48 values.
+
+**Verification by Codex:**
+- reproduced the C2 minima and the robustness to finer grids;
+- matched C1 to its specification to 2×10⁻¹³ m;
+- recomputed relief with fully area-weighted fits (0.0217 / 0.0057).
+
+**Limits:**
+- Refinement is a parameter-matched check against bilinear surfaces.
+- Detection used D_t < 0.2 m, where the card specified ρ = 0.1 m.
+- C2's result covers the scanned t grid and a linear κ only.
+- **No stills were rendered, so appearance is unjudged.**
+
+## 3. What this establishes, supports and leaves open
+- **Established:** the smooth walls come from the field (locally); this C1 pattern supplies too little relief; this C2 construction does not follow TA with a linear κ on the scanned grid.
+- **Supported:** a pattern sampled from M's exterior field far from the boundary carries the same smoothness (C1 inherited it). At your size, relief appears where you are within about e of the boundary (0.26 at D/e ≤ 1, at every scale).
+- **Unresolved:**
+  - a construction anchored on the boundary (formations wherever a fractal boundary actually is);
+  - a standalone 3D Mandelbrot world (Julibrot slices) that gives up TA's large structure;
+  - passages and undercuts;
+  - the experience in motion.
+
+## 4. Descent card (closed, partial)
+- **Built and verified:** watertight nested patches, live p95 22–24 ms, and the independent checker passing for T0, TA and TP.
+- **Advisor's flight:** detail stays on the upper terrain and walls read as smooth drapes. That prompted this assessment.
+- The peers' still judgements disagreed (TA vs TP). The advisor's flight superseded them.
+
+## Process accounting
+- Descent: about 2 h. Surface: about 1 h 20 of a 4 h cap.
+- **Worth it:**
+  - independent positions (both found the cause; their candidates differed usefully);
+  - the single card review (it caught C2's ill-defined construction and an unfair extra C1 stage);
+  - the gate-first ordering (C2 stopped after minutes of 2D evaluation, before any voxel or render work);
+  - Codex's verification (it caught a bad κ fit and turned an overclaim into a proper repair).
+- **Not worth it / to change:** my C2 spec error (y_top) cost one revision. Probe numbers should be labelled with what they measure (median |ΔD|, not boundary shift).
+
