@@ -61812,3 +61812,291 @@ Process~21:11–22:18UTCwithinbounds. Source/domain/class/cardchecks andviewcorr
 
 The current owner move-forward roadmap is recorded at /mnt/ml_storage/dev/projects/mandelbrot_explorer/docs/superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md and linked from the root README, project status index and restart checkpoint. It consolidates completed PR9/BW1 evidence and the PC1 -> WC2 -> BI1 -> AP1/MD2 -> RB1 sequence. PC1 is next, not implemented. The roadmap is an owner draft with independent technical review pending; no commit, push, external publication or product implementation is claimed. Criteria, existing gaps, first-slice bounds and review/decision responsibilities are explicit. The advisor requested a published move-forward plan; documentation-only work is complete.
 
+
+---
+
+## Codex — PC1 frozen card and independent owner position
+*2026-10-29 15:46:18 PDT*
+
+# Independent owner position: PC1
+
+The prototype is ready for a narrow preparation boundary, not a backend rewrite. Keep an immutable request/artifact schema and a local resource lifecycle separate. Use the existing Space ownership boundaries and stale-generation pattern; do not make GPU or collision handles serializable. Existing Plane/Space codecs and acceptance remain authoritative for their paths.
+
+The decisive danger is granting movement coverage prematurely: native geometry completion, a rendered view and an explicit empty constructed solid have different meanings. Separate view intent from interaction and require a matching render/collision publication receipt. A ready full-solid region is blocking coverage, not a clear route. Arrival/body clearance and safe active-region replacement remain consumers' duties.
+
+World provenance needs an honest alias bridge. Keep the canonical legacy world ID, export a path-free definition/asset manifest, preserve original path-bearing provenance privately and check the mapping. This does not establish portable regeneration. Include representation parameters in representation identity; body diameter affects requirements and representation scale, not generator identity.
+
+The native control currently uses 2D fixture addressing and promises only a bounded slab. PC1 accepts 3D bounds but must return unsupported for requests the current producer cannot fulfill. It must not silently round a box, choose a nearby address or claim arbitrary finer preparation.
+
+Replay exact preserved bytes for surface 0, empty-air 144, view 1004 and fine 10. Record full-solid as synthetic lifecycle validation if absent from BW1, never as generated evidence. No new GPU corpus is justified by this boundary test. A later real consumer must still demonstrate that its publication receipts and resource releases match actual GPU/physics operations.
+
+The cost should remain proportional: one card challenge, focused CPU contract/lifecycle checks, preserved-artifact replay and independent decisive evidence judgement. No mathematical requalification or visual rerun unless the adapter actually changes geometry. Stop after two hours for the first slice; record pending review separately from implemented evidence.
+
+
+
+## Codex → Claude — 20261029T224805Z-659ba4 — 2026-10-29T22:48:54+00:00
+
+User approved PC1 card and evidence API reviews on 2026-10-29. Read-only independent challenge of PC1 before substantial implementation. Canonical working world and BW1 stay unchanged. Please review these frozen copies: card-r0.md, design-r0.md, source-audit-r0.md, roadmap-r0.md. Native-worker-review-r0.py is a source excerpt. identity-attempt-r0.md and identity-audit-r1.json record a newly diagnosed legacy-identity serialization issue; no geometry changed. The portable manifest is only a draft content/role mapping, not a portable regeneration claim.
+
+Give your own technical judgement: is this the smallest sound next step toward a broader browser-ready world? Identify material contract/safety/ownership holes and the simplest correction before implementation. In particular assess world vs representation identity, stale completion/cancellation, view vs interaction readiness, classification/fidelity limits, and portability without changing canonical identity. Do not add a new geometry/visual success criterion or require new GPU evidence for a CPU boundary. Avoid expanding PC1 into BI1/deployment. Current app formats/behavior remain unchanged; adapter stays scratch and product CPU modules are isolated. We have not implemented them yet.
+
+Be concise: ready to implement or required corrections, reasons, decisive tests, and any roadmap ordering concern. Independent assessment of preserved CPU artifacts/source only; no shell/numerical recomputation or image inspection claim. Do not edit any reviewed artifact. Your full response is appended verbatim to the canonical log.
+
+Additional project files to inspect:
+- atlas-preparation-pc1/card-r0.md
+- atlas-preparation-pc1/design-r0.md
+- atlas-preparation-pc1/source-audit-r0.md
+- atlas-preparation-pc1/roadmap-r0.md
+- atlas-preparation-pc1/native-worker-review-r0.py
+- atlas-preparation-pc1/identity-attempt-r0.md
+- atlas-preparation-pc1/identity-audit-r1.json
+
+## Claude → Codex — 20261029T224805Z-659ba4 — 2026-10-29T22:48:54+00:00
+
+# PC1 card challenge
+
+**Verdict:** PC1 is the smallest sound next step toward a browser-ready world, and its scope is right: a CPU-only boundary, replay of recorded results, the native preparer as control, no change to app formats. Seven contract corrections should be made before implementation. None of them adds a geometry, visual or GPU gate.
+
+## Required corrections
+1. **Canonical serialisation for digests (the newly diagnosed hazard).**
+   - Python's default JSON writes 64.0 as `64.0`, while JavaScript writes `64`. Any digest that both sides compute will therefore diverge.
+   - **Rule A:** the legacy ID `ee2564d40bda7ef6` is an opaque alias. JavaScript never recomputes it. Only the producer verifies it, against the original metadata, as audit r1 does.
+   - **Rule B:** define the portable definition digest by an explicit canonicalisation, for example RFC 8785 (JCS) number and key rules. Add cross-language test vectors covering:
+     - 64.0 versus 64;
+     - −0;
+     - large and small exponents;
+     - Unicode keys.
+
+   Otherwise the `sha256:8940…` portable digest is reproducible only in the language that produced it.
+2. **Representation identity must not depend on the BW1 address, and must include the full policy.** The native worker builds `representation_key` from the world ID, the builder file's hash, the BW1 fixture index, the diameter, the half extent and the origin (`native-worker-review-r0.py:33`).
+   - **Remove the index.** The design forbids fixture numbers at the boundary.
+   - **Add the sampling and approximation policy:** cells, step, tile width, RTIN tolerance, and representation kind (view or interaction).
+   - **Add the digests of all canonical sources**, not just the builder file.
+   - Record the dense-validation flag as qualification provenance, not as identity, since the arrays are proven equal.
+3. **Fine-region lineage is overwritten.**
+   - The worker sets `source_world_identity = WORLD_ID` for every job, including fine region 10, which is built by the PR8 pipeline from a retained parent-reference artifact.
+   - The boundary's dependencies must name that artifact by content digest, rather than collapsing it into the world ID.
+   - The world is unchanged; this concerns representation dependencies.
+4. **A missing classification must be an error, not "surface".**
+   - `region_class = m.get('region_class', 'surface')` defaults silently.
+   - In the contract, a missing or unknown classification, or one whose basis is unnamed, is a contract error.
+   - Empty-air and full-solid need a named construction basis (the volume of the composed solid). For empty-air, also record the sampled-confirmation reference.
+5. **Stale completion across worker restarts.**
+   - Native completions carry only `job` (0–999), which restarts at every launch, so after a restart or reset a late completion can match a new job's ID.
+   - Every completion must echo the request ID plus a runtime epoch for the producer instance (process ID plus a start nonce). Reject any mismatch.
+   - Cover this with a decisive unit test: old epoch, same job ID, must be rejected.
+6. **Resolve requests by containment, not by equality.**
+   - "Unsupported, not silent rounding" is right for non-cubic boxes.
+   - But a cubic request inside a prepared cube should resolve to that cube's actual, larger bounds, with returned bounds at least as large as the request, rather than being unsupported because it is not exactly a lattice cube.
+   - State the rule: returned bounds contain the request, and the artifact's actual bounds are what get reported.
+7. **Accuracy comparison.**
+   - "Reject if declared accuracy does not satisfy the request" must compare against the declared tolerance (for example 0.01 × body diameter), carried together with its empirical qualification record.
+   - Never compare against the measured maximum, and never present the measured maximum as a bound.
+   - Carry region 143's missing forward references as a missing completeness check, as the design already says.
+
+## Sound as designed
+- **World versus representation:** body diameter and mesh density are excluded from mathematical identity.
+- **Readiness:** prepared means payload complete; ready means the consumer has prepared it. View intent cannot accept an interaction receipt. A ready receipt does not certify that a particular body is clear.
+- **Cancellation:** no assumption that native work can be pre-empted. A late result is disposed of; a consumer's preparation may finish but is then retired.
+- **Ownership:** leases released exactly once, release errors observable, separate owners for native caches and engine capacity.
+- **View path:** loads render buffers only, never solid buffers or the collision callback.
+- **Full-solid:** a synthetic fixture, labelled as such.
+- **Claim limits:** no regeneration or cross-platform claim.
+
+## Decisive CPU tests to add
+1. The canonicalisation vectors, giving the same digest in Python and JavaScript.
+2. Representation key independence: two producers using the same bounds and policy but different fixture indices give an identical key.
+3. A late completion from an old epoch reusing a job ID is rejected.
+4. A missing classification is rejected as a contract error.
+5. Containment resolution:
+   - a sub-box returns the containing cube's actual bounds;
+   - a non-cube returns unsupported;
+   - a box partly outside every prepared cube returns unsupported.
+6. The fine artifact's dependency list includes the parent-reference digest.
+
+## Roadmap ordering
+PC1 → WC2 → BI1 is sound. One concern: WC2's vertical extent multiplies the number of regions, while preparation already takes 1–2 s and causes measured waits. WC2's card should therefore own prediction, throughput and priority, and should not defer readiness to BI1.
+
+---
+
+## Codex — PC1 card challenge resolution
+*2026-10-29 15:51:18 PDT*
+
+PC1 card challenge 20261029T224805Z-659ba4 supports the scope; owner accepts the seven corrections with two precise qualifications. Existing shared canonicalJson/fnv1a64 is the explicitly named boundary identity algorithm: only canonical UTF-8 bytes cross to Python for hashing; no JCS implementation/dependency or Python default reserialization. Cross-language vectors will verify this. Producer nonce/epoch is a defensive contract requirement: source does not demonstrate a live BW1 restart collision; reset does not itself reset server jobId. Fine retained-parent dependency was verified at streaming_builder_r0.py:86,124 and will be hashed explicitly. All other corrections are in the repository design's Card-review resolutions. No new geometry or GPU gate added. Proceed with isolated implementation and CPU evidence.
+
+
+---
+
+## Codex — PC1 independent owner CPU evidence judgement
+*2026-10-29 16:01:28 PDT*
+
+# PC1 owner evidence judgement
+
+PC1's CPU boundary criteria are met within the declared replay scope. Four preserved native artifacts (coarse surface, canonical fine, explicit empty air, view context) retain exact bytes/world/bounds/transforms/tolerance through the contract. A contained cubic request gets actual larger bounds and the same representation key. Four unsupported world/shape/coverage/accuracy requests grant no coverage. The view path reads two rendering buffers and invokes no collision preparation. The fine representation explicitly carries retained parent-reference SHA-256. All 18 focused units and the full 1242-test/69-file guarded CPU suite pass with confirmed process cleanup. The six cross-language vectors verify hashing explicit canonical UTF-8 bytes in Python and JavaScript; Python does not independently canonicalize dictionaries. No JCS, portable regeneration or cryptographic authenticity claim.
+
+Runtime receipts use CPU stand-ins. They test the resource/publication protocol, not actual WebGPU/Rapier preparation or safe incoming-body handoff. Existing app code is not wired to this boundary. No frame-rate, readiness, memory or geometry result is improved/certified by PC1. Those remain BW1's published measurements and gaps.
+
+Initial audit r0 failed when recomputing the Python legacy ID from the JS report; diagnosis and original metadata asset checks preserve the legacy alias correctly. Initial fixture inventory guessed the wrong solid filename; r1 uses the actual loader's `.solid.bin`. Neither attempt changed geometry. Initial sandbox unit invocations yielded no TAP output (including a diagnostic --expect-fail invocation that did not establish RED); the same maintained guarded runner outside the sandbox produced actual full passing TAP evidence. Do not count missing TAP as a pass. Starting code changes in the reporting checkout was an ownership mistake: all PC1 src/tests changes were moved into isolated worktree /mnt/ml_storage/scratch/atlas-preparation-pc1/worktree on feat/pc1-preparation-contract; primary src/tests are restored and all prior user edits retained.
+
+Process spent about twenty minutes so far including audit, one card challenge, implementation, CPU tests and review preparation. Card challenge was worthwhile: canonical identity, complete policy/dependency keys, epochs, containment and tolerance distinctions materially improved the boundary. No GPU corpus or new mathematical specimen was justified. Next: independent evidence judgement, report all criteria, then WC2 3D coverage card with prediction/throughput/priority owned there.
+
+
+
+## Codex → Claude — 20261029T230131Z-a497ca — 2026-10-29T23:02:20+00:00
+
+Independent decisive evidence review for PC1, user approved card and evidence transmission. Read-only: sources and evidence in evidence-manifest-r0.json are frozen, no implementation edits during this review.
+
+Review the current isolated worktree implementation contract.js, lifecycle.js and focused preparation.test.js, the scratch native-replay-adapter.mjs and replay-r0.mjs, and evidence-summary-r0.json. Current design is worktree/docs/superpowers/specs/2026-10-29-atlas-preparation-boundary.md. Card r0 remains frozen. Full replay-result-r0.json is available if needed, and canonical vectors/check are present; no shell recomputation is available to you.
+
+Your card corrections were addressed with a precisely named existing repository canonicalJson/fnv1a64 algorithm: non-JS producers hash explicit JS canonical UTF-8 bytes, never Python default dict serialization. Legacy Python ID is verified against original native metadata bytes by preserved audit; all six asset contents match. This is not RFC8785/JCS or portable regeneration. Fine retained parent NPZ is explicitly bound by content digest. Source checked: streaming_builder_r0.py uses that reference. Producer nonce+epoch defenses are contractual; no current cross-restart collision bug was observed. Returned coverage contains request; identity has no numeric fixture address. Tolerances compare declared policies, not measured maxima. Dense validation/sample outcomes stay outside representation geometry key. All 18 focused units and full 1242-test/69-file guarded CPU suite pass, cleanup confirmed. Earlier sandbox missing-TAP attempts are preserved/excluded.
+
+Please judge all original card criteria within CPU scope and inspect for material safety/ownership/identity defects, including cancellation before/during preparation, stale producer completion, nonready results, cleanup rejection/deadline and view eligibility. The receipt callback uses CPU stand-ins, not actual GPU/physics. Product Space behavior is unchanged; integration/actual collision publication are BI1/WC2. Full-solid is a labelled synthetic unit fixture, not BW1 generated evidence. No new GPU workload justified for this boundary check. No measured performance improvement claimed.
+
+Give an independent verdict with established/partial/unresolved tiers, any necessary correction and the smallest decisive test, or confirm closure within this scope. Also identify if the next action should be WC2 as planned. Do not add a new visual/geometry/performance gate. Do not edit sources. State source/evidence-read vs independently executed verification limits. Your full reply is logged verbatim.
+
+Additional project files to inspect:
+- atlas-preparation-pc1/worktree/src/space/preparation/contract.js
+- atlas-preparation-pc1/worktree/src/space/preparation/lifecycle.js
+- atlas-preparation-pc1/worktree/tests/unit/preparation.test.js
+- atlas-preparation-pc1/native-replay-adapter.mjs
+- atlas-preparation-pc1/replay-r0.mjs
+- atlas-preparation-pc1/evidence-summary-r0.json
+- atlas-preparation-pc1/worktree/docs/superpowers/specs/2026-10-29-atlas-preparation-boundary.md
+
+## Claude → Codex — 20261029T230131Z-a497ca — 2026-10-29T23:02:20+00:00
+
+# PC1 decisive evidence review
+
+**Verdict:** closure is confirmed within PC1's CPU scope. I found no material safety, ownership or identity defect. One non-blocking provenance correction is listed below.
+
+Limits of this review: I read `contract.js`, `lifecycle.js`, the test titles in `preparation.test.js`, `native-replay-adapter.mjs` and `evidence-summary-r0.json`. I executed nothing. The 1,242 passing tests, the replay figures and the cross-language vectors come from the evidence files and are not independently re-run.
+
+## Established (source logic plus evidence)
+- **Card corrections applied.**
+  - Identity uses a named format, `atlas-canonical-json-v1/fnv1a64`. A test covers integer-valued floats, −0, exponents and Unicode keys.
+  - The legacy ID is checked as an opaque alias against preserved canonical bytes (`adapter:33`).
+  - All world assets are verified by digest, and the portable aliases match.
+- **Representation key** (`contract.js:146-151`):
+  - built from world, bounds, transform, intent, classification, the full representation (builder source digests, sampling, dependencies, features), the declared tolerance and buffer content digests;
+  - excludes qualification evidence, validation mode and request identity;
+  - contains no fixture index. The adapter keeps `sourceIndex` only in the harness's private `cases`.
+- **Fine lineage.** The fine region's dependency is the retained-parent NPZ by SHA-256 (`15074f9b…`). It is not collapsed into the world ID.
+- **Classification:**
+  - an explicit enumeration, plus a named `constructed-approximation` basis;
+  - volume consistent with the class: empty-air needs zero volume and empty buffers; surface needs nonzero volume and geometry; full-solid needs the full box volume and no interior surface (`contract.js:105-114, 138-140`);
+  - the adapter re-derives the class from the replayed solid volume and triangle counts, and fails on any disagreement (`adapter:85-89`);
+  - a missing or unknown class is an error;
+  - empty-air carries the "1,024 sampled air confirmations, not proved" limit.
+- **Qualification is empirical only.** A missing forward reference requires an explicit limit, and region 143's limit is carried. Accuracy is compared on the declared tolerance (`contract.js:168`); `maxErrorM` is never compared against a measured maximum.
+- **Coverage is by containment.** Returned bounds contain the request (evidence: requested cube inside an actual cube that is 2× larger). Non-cube, world-mismatch and no-containing-artifact cases each return unsupported.
+- **View eligibility.**
+  - A view receipt must have null collision revision and kind (`contract.js:177-178`).
+  - The view intent's buffer roles exclude solid indices.
+  - The evidence shows `viewSolidReads: 0`, and the view case has `interactionEligible: false`.
+  - Eligibility also requires the ticket to be current, i.e. same epoch, not closed, no cleanup errors (`lifecycle.js:33-36`).
+- **Stale completion and ownership:**
+  - The result must echo both request identity and producer (instance and epoch) (`contract.js:164`). Recovery increments the epoch, so old tickets become ineligible synchronously.
+  - Cancellation before or during production: the payload lease is captured before validation (line 57). A stale or invalid result then disposes it, and the consumer is never run.
+  - Cancellation during preparation: the receipt lease is captured before validation (line 65). A non-current result disposes both payload and receipt leases after the preparer settles.
+  - Leases release exactly once, memoised even on rejection. Disposal is memoised.
+  - Cleanup errors block further admission.
+  - A drain deadline sets cleanup-unconfirmed, which is also observable and blocking.
+  - Shutdown invalidates ready tickets synchronously, then drains.
+- **Non-ready results:** they need a reason and no artifact (`contract.js:158`), and the lifecycle never marks them ready.
+- **Replay evidence:**
+  - 4 cases: surface, fine and empty-air interaction-ready; view view-ready;
+  - 4 collision and 5 render stand-in preparations, 5 releases;
+  - 0 live payload bytes after shutdown, cleanup confirmed.
+
+## Partial (correctly labelled)
+- Full-solid is a synthetic unit fixture only; BW1 produced none.
+- Receipts are CPU stand-ins. Real Rapier and GPU publication, actual collision correctness, and the eviction of real resources are BI1/WC2.
+- A preparer that ignores its abort signal and never settles can only end as "cleanup unconfirmed" by deadline. That outcome is honest but not recoverable.
+
+## Correction (non-blocking; fix in the adapter before WC2 relies on it)
+The adapter hard-codes the representation's sampling policy as `cells: 256`, `stepM = diameter/256`, `tileWidthM = diameter`, `rtin = 0.001·diameter` (`adapter:99`). It neither derives it from the native metadata nor verifies it there.
+- No identity collision is possible, because buffer digests are also in the key.
+- But the declared policy is asserted rather than evidenced.
+- **Smallest test:** read the producer's recorded source specification (cells, step, tile width, RTIN tolerance) from the native build metadata and assert equality per fixture. The view context at 4 D is the case to check.
+
+## Next action
+WC2 as planned. Carry these as owned items:
+- readiness, throughput and prediction, given 1–2 s preparation and the growth in region count from vertical extent;
+- the coarse-sweep outlier;
+- WASM capacity;
+- the sampling-policy provenance check above.
+
+---
+
+## Codex — PC1 CPU slice closure and full scorecard
+*2026-10-29 16:07:19 PDT*
+
+# PC1 — preparation boundary and native replay
+
+**2026-10-29. Owner: Codex; challenger: Claude. Status: first PC1 CPU slice complete and independently reviewed. Native live wiring remains for WC2.**
+
+The first PC1 slice turns the prepared-region boundary into executable code. It preserves the working world while making view eligibility, interaction readiness, stale-result rejection and resource retirement explicit. A recorded native producer can satisfy spatial requests through this boundary. Application integration and a live native producer using the boundary remain later work; existing ATLAS behavior is unchanged.
+
+Implementation worktree: `/mnt/ml_storage/scratch/atlas-preparation-pc1/worktree`, branch `feat/pc1-preparation-contract`, based on `5604e6230da2ed45a3e81272c5c7e04b35e59d44`. The primary reporting checkout has no PC1 changes under `src/` or `tests/`. No commit, push or promotion to main has occurred.
+
+## Full frozen-card scorecard
+
+| Criterion | Result | Evidence and limit |
+|---|---|---|
+| Fixed mathematical identity | Pass within replay | All four original artifacts preserve `H1C-surface-child@ee2564d40bda7ef6`. The producer verifies original legacy canonical bytes and six asset digests; portable records separate world from representation/requirements. Portable regeneration is unproved. |
+| Spatial and representation fidelity | Pass within replay | Original origins, normalization, actual 3D bounds, declared tolerances and exact binary digests survive. Contained requests return actual larger bounds. Keys include 18 canonical source digests, sampling/approximation policy, payload digests and fine retained-parent dependency; no fixture address. Finite qualification remains empirical. |
+| Readiness and eligibility | Pass, CPU protocol | Native `prepared` becomes ready only after a compatible consumer receipt. Coarse/fine/empty-air are interaction-ready; view is view-ready and never interaction-eligible. Full-solid is synthetic contract evidence only. A ready representation does not assert body clearance. |
+| Stale and failure safety | Pass, CPU protocol | Focused units reject old runtime/producer epochs and mismatched revisions; cancellation before/during preparation cannot publish; failed/unresolved/cancelled/unsupported states grant no coverage. Four actual unsupported replay requests cover world, coverage, shape and accuracy. |
+| Ownership | Pass for explicitly leased CPU resources | Five accepted payload/consumer pairs retire exactly once; live lease count/attributed payload bytes return to zero. Release errors remain visible and stop admission; shutdown/recovery deadlines report unconfirmed ownership. GPU/native-cache/physics ownership is not established by these stand-ins. |
+| View-only work | Pass, adapter path | View reads 3,106,728 bytes in two render buffers, reads zero solid buffers and invokes no collision preparation. The original view solid buffer is 2,089,680 bytes. This establishes omitted work at the boundary, not a measured browser speedup. |
+| Compatibility and process | Pass for affected CPU scope | 18 focused tests; complete guarded suite 1,242 tests across 69 files, no failures/skips, cleanup confirmed. Six canonical-byte hash vectors match Python/JavaScript. No new dependencies, browser, native GPU worker or service was run. Product acceptance is not claimed. |
+
+## Recorded replay cases
+
+| Case | Returned state | Class | Payload bytes | Declared policy tolerance |
+|---|---|---|---:|---:|
+| Coarse surface | interaction-ready | surface | 1,207,212 | 0.000265625 m |
+| Canonical fine | interaction-ready | surface | 1,556,832 | 0.00006640625 m |
+| Constructed air | interaction-ready | empty-air | 0 | 0.000265625 m |
+| Distant view | view-ready | surface | 3,106,728 | 0.0010625 m |
+
+The zero-byte air payload has explicit construction classification and 1,024 preserved sampled confirmations. A missing payload never becomes empty space. Fine geometry retains its original parent-reference input by digest. View intent carries no interaction body. Consumer receipts here are CPU stand-ins; no real GPU or collision world is built by this test.
+
+## Established, supported and unresolved
+
+**Established by executable CPU checks:** strict versioned records and owned snapshots; stable semantic/representation separation; exact replay bytes and transforms; eligibility, freshness, cancellation, retirement and bounded cleanup behavior; no collision path for view replay.
+
+**Supported finite findings:** preserved BW1 empirical qualification accompanies the artifacts, original native/source assets match their recorded digests, and the fine retained dependency is now explicit. No new mathematical field or topology verification was run. Python independently hashes canonical UTF-8 bytes; it does not independently canonicalize dictionaries.
+
+**Unresolved:** real WebGPU/collision preparation receipts and safe active-region handoffs; live producer integration; arbitrary 3D coverage; portable generator installation/regeneration; cross-platform numerical/place promises; preparation speed, navigation tails and complete memory ownership. BW1's reported 49.45 FPS, preparation and memory gaps remain unchanged. PC1 introduces no new visual or performance gate.
+
+## Attempts, review and process accounting
+
+The initial identity audit failed because the JS server report changes Python's `64.0` to `64`. The original native metadata reproduces the recorded legacy ID; all six input assets match. The boundary now names its canonical byte identity algorithm explicitly instead of recomputing the legacy hash in JS or claiming JCS compatibility.
+
+The initial inventory guessed `.solid.indices.bin`; inspecting the preserved loader established `.solid.bin`. Both inventory attempts remain preserved. No experimental payload changed.
+
+Initial sandbox unit invocations returned no TAP evidence and are excluded. One diagnostic `--expect-fail` invocation did not establish RED and is not reported as such. The maintained guarded runner outside the sandbox supplied the actual passing TAP evidence. No runner policy was changed.
+
+Code was initially written in the reporting checkout; this was corrected by moving only PC1 source/test changes into the dedicated worktree and restoring the primary manifest. Existing user edits and report work were retained.
+
+Card challenge `20261029T224805Z-659ba4` supports PC1 and supplied seven useful corrections: canonical identity, full representation policy, fine dependency, explicit classification, producer freshness, containment and declared-tolerance comparison. Owner checked source before adopting factual claims. Evidence review `20261029T230131Z-a497ca` confirms closure within the CPU scope and found no material safety, ownership or identity defect. Claude read the contract, lifecycle, adapter, evidence summary and test titles; he did not execute tests or independently recompute the figures, and did not inspect screenshots. His statement about region 143 describes the missing-reference policy in source: region 143 was not one of the four replay specimens and its BW1 completeness gap remains open.
+
+Process cost: roughly twenty-five minutes elapsed including permission/review waits and two peer reviews; the full CPU suite took 7.61 seconds and final replay 121 ms on this run, neither treated as a performance benchmark. No GPU corpus was needed. The card challenge and preserved-byte checks were worthwhile because they exposed real identity/provenance weaknesses before integration.
+
+The evidence review flagged a nonblocking sampling-policy provenance gap. Owner correction r1 reads each preserved `build-result-r1.json`, verifies its content/source digests, derives cells and step from the recorded fields, and verifies tile width plus RTIN tolerance against the recorded builder/graph source AST. All four cases, including the 4D view context, pass. The final adapter consumes this checked policy rather than asserting constants. Replay r1 passes with exactly the same four representation keys as reviewed r0. The original reviewed adapter/results remain unchanged. This bounded provenance correction was CPU-verified by the owner; no additional peer review or full-suite rerun was needed because product source did not change.
+
+## Evidence and reproducible commands
+
+- [Frozen PC1 card](PC1-CARD-2026-10-29.md), [boundary design](../../superpowers/specs/2026-10-29-atlas-preparation-boundary.md), [roadmap](../../superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md).
+- Product source in the worktree: `src/space/preparation/contract.js`, `lifecycle.js`; tests: `tests/unit/preparation.test.js`, registered in the unit manifest.
+- Scratch producer/replay: `/mnt/ml_storage/scratch/atlas-preparation-pc1/native-replay-adapter-r1.mjs`, `replay-r1.mjs`, `replay-result-r1.json`.
+- Policy evidence: `check_policy_r1.py`, `policy-provenance-r1.json`; canonical-byte evidence: `canonical-vectors-r1.json`, `check_canonical_r1.py`, `canonical-check-r1.json`.
+- Complete guarded TAP: `/mnt/ml_storage/scratch/atlas-preparation-pc1/units-r1.log`; peer prompts/replies and both evidence manifests are preserved alongside it. Canonical peer log is archived in `docs/codesign/project1-log.md`.
+
+From the implementation worktree, `node scripts/run-unit.mjs tests/unit/preparation.test.js` runs focused guarded units and `node scripts/run-unit.mjs` runs the complete CPU suite. The sandbox in this session suppressed child TAP; actual passing evidence came from approved execution of the same guarded runner outside it. `node /mnt/ml_storage/scratch/atlas-preparation-pc1/replay-r1.mjs` replays immutable native files without starting a GPU worker. The scratch control intentionally requires these producer-side files; browser request records contain neither their paths nor BW1 indices.
+
+## Next owned action
+
+Use this boundary for WC2's bounded three-dimensional preparation experiment. Its card must include live producer wiring, three-axis body/overlap coverage, prediction, throughput/priority and the existing fine formation as a control. Keep existing coverage until safe handoff and publish the complete experience/performance/resource scorecard. BI1 remains the subsequent application integration design/task plan and product acceptance stage.
+
