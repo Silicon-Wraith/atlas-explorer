@@ -4,6 +4,8 @@
 
 A local fractal workbench: an adaptive-precision Mandelbrot Plane and a WebGPU Space for calibration objects, Mandelbulbs and quaternion Julia sets. Plain JavaScript, WebGL 2, WebGPU, Web Workers, and a small Node.js server. No runtime packages, accounts, API keys, or external asset requests.
 
+The [current move-forward plan](docs/superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md) tracks the prepared-world prototype and its planned integration into this application.
+
 ![Seahorse valley, calculated by ATLAS](assets/seahorse.png)
 
 ## Run
