@@ -3,8 +3,8 @@
 **Date:** 2026-10-29
 **Owner:** Codex
 **Challenger:** Claude
-**Status:** Current owner roadmap and supporting research evidence. The roadmap has received independent challenge. PC1 has a reviewed CPU prototype in an isolated worktree; its specification, code and results are proposed in a dependent implementation PR. This roadmap does not claim the listed work has shipped.
-**Immediate next item:** publish the reviewed PC1 CPU boundary in its implementation PR, then WC2 live producer wiring and bounded three-dimensional coverage.
+**Status:** Current owner roadmap, recorded in the repository working tree. The roadmap and PC1 card have received independent challenge; PC1's first CPU slice is implemented and reviewed within its declared scope. This is not a claim that the listed work has shipped.
+**Immediate next item:** WC2, live producer wiring and bounded three-dimensional coverage, using the completed PC1 CPU boundary.
 
 Governing intent: [ATLAS North Star](../specs/2026-10-23-atlas-north-star-charter.md) and the [fixed-world engineering interpretation](../specs/2026-10-29-atlas-multiscale-world-clarification.md). This plan continues after the [local multiscale plan](2026-10-29-multiscale-feature-experience.md), [PR9 lifecycle](../../reports/project1-interactive/PR9-LIFECYCLE-2026-10-29.md) and [BW1 wider-world result](../../reports/project1-interactive/BW1-OBSERVER-REGIONS-2026-10-29.md). Their original evidence and criteria remain preserved.
 
@@ -138,7 +138,7 @@ The first supported browser-world milestone is reached when a visitor can enter 
 | Local prepared navigation | Demonstrated | Preserved evidence in PR1–6 and later checks |
 | Local multiscale fixed-world experience | Demonstrated | PR9 remains the control |
 | BW1 wider-world foundation | Demonstrated, with reported gaps | Native prototype and launcher retained |
-| PC1 preparation boundary | **Reviewed CPU prototype; separate implementation PR** | Publish its contract, lifecycle, tests and replay evidence together; live producer wiring remains for WC2 |
+| PC1 preparation boundary | **First CPU slice complete, independently reviewed** | [Contract, lifecycle and native replay report](../../reports/project1-interactive/PC1-PREPARATION-BOUNDARY-2026-10-29.md); live producer wiring remains for WC2 |
 | WC2 three-dimensional coverage | **Next** | Live producer wiring, one bounded 3D candidate and full scorecard including prediction, throughput and priority |
 | BI1 application integration | Planned | Integration design, task plan and one end-to-end application slice |
 | AP1 appearance | Planned | First lighting/material increment on integrated geometry |
