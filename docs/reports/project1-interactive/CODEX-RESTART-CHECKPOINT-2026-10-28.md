@@ -1,6 +1,6 @@
 # Codex restart checkpoint — 2026-10-28, 20:04 UTC
 
-[Current move-forward plan](../../superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md) — PC4/BI1.A2 session recovery is implemented and independently confirmed; final gate24/24. Next after advisor merge of PR21: BI1.B persistence/history, then BI1.C device/preparer recovery.
+[Current move-forward plan](../../superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md) — PC4/PR21 merged at5013ba6. BI1.B portable scenes/history/files is active in project `.worktrees/bi1b`, branch `feat/bi1b`: [design](../../superpowers/specs/2026-10-30-atlas-bi1b-scenes-history.md), [plan](../../superpowers/plans/2026-10-30-atlas-bi1b-implementation.md), [card](BI1B-CARD-2026-10-30.md). Baseline1,298 units passes; independent card challenge precedes implementation. BI1.C follows.
 
 > **Current PC4 result — [final full scorecard](PC4-FINAL-ACCEPTANCE-2026-10-30.md):** independently confirmed bounded A2 closure; final gate24/24,1,298 units, protected ownership, production expiry/retained-pose retry, finite audits and actual owned-page launcher pass.49.970FPS overall/49.877during preparation; navp994.100ms and interaction-readinessmax2.307s miss targets; memory attribution unverified. All owned processes/ports/lock released. [PR21](https://github.com/Silicon-Wraith/atlas-explorer/pull/21) ready for advisor merge; measured codef108ec5 in project `.worktrees/pc4`. Original failed attempts preserved.
 
