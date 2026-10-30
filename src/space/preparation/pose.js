@@ -21,6 +21,11 @@ export function preparedForward(pose) {
   const [w, x, y, z] = pose.orientationWxyz;
   return [-2 * (x * z + w * y), 2 * (w * x - y * z), 2 * (x * x + y * y) - 1];
 }
+// A restored quaternion also owns the image's up direction (including roll).
+export function preparedUp(pose) {
+  const [w, x, y, z] = pose.orientationWxyz;
+  return [2 * (x * y - w * z), 1 - 2 * (x * x + z * z), 2 * (y * z + w * x)];
+}
 
 export function createPreparedPoseModel({ world, grid, fineBounds }) {
   const reference = worldReference(world), { origin, diameter: D, axes, domain, spacing } = grid.config;

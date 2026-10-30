@@ -1,5 +1,5 @@
 import { createSpatialGrid } from './spatial-grid.js';
-import { createPreparedPoseModel, preparedOrientation, preparedForward } from './pose.js';
+import { createPreparedPoseModel, preparedOrientation, preparedForward, preparedUp } from './pose.js';
 import { createPreparedRuntime } from './runtime.js';
 import { createApplicationPreparationClient } from './application-client.js';
 import { createBrowserPreparer } from './browser-preparer.js';
@@ -118,7 +118,7 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
     }catch(error){phase='unavailable';status(error.message);event('workspace-error',{message:error.message});deactivate();return;}
     frameId=raf(t=>frame(state,t));
   }
-  function draw(state){const r=state.runtime.frame(),pose=r.pose;state.renderer.render({position:pose.positionLocalM.map(x=>x/state.poseModel.D),forward:preparedForward(pose),bodyScale:pose.bodyDiameterM/state.poseModel.D,verticalFovDegrees:pose.verticalFovDegrees,active:r.active,view:r.view,home:r.home});}
+  function draw(state){const r=state.runtime.frame(),pose=r.pose;state.renderer.render({position:pose.positionLocalM.map(x=>x/state.poseModel.D),forward:preparedForward(pose),up:preparedUp(pose),bodyScale:pose.bodyDiameterM/state.poseModel.D,verticalFovDegrees:pose.verticalFovDegrees,active:r.active,view:r.view,home:r.home});}
   async function resize(state){
     if(!state.renderer||state.cancelled)return;const rect=canvas.getBoundingClientRect(),ratio=win.devicePixelRatio??1;let width=Math.max(1,Math.round(rect.width*ratio)),height=Math.max(1,Math.round(rect.height*ratio));
     const factor=Math.min(1,Math.sqrt(2300000/(width*height)));width=Math.max(1,Math.floor(width*factor));height=Math.max(1,Math.floor(height*factor));

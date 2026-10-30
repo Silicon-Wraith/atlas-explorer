@@ -39,3 +39,17 @@ test('prepared local-to-native conversion stays inside the smallest-body roundof
   const enormous=createSpatialGrid({origin:[1e16,0,0],axes,diameter:D});
   assert.throws(()=>createPreparedPoseModel({world,grid:enormous,fineBounds}),/numerical budget/);
 });
+
+test('a saved rolled quaternion supplies its full orthonormal render basis and sign-equivalent image',async()=>{
+ const {preparedUp}=await import('../../src/space/preparation/pose.js');
+ const {preparedViewBasis}=await import('../../src/space/render/webgpu/prepared-regions.js');
+ const q=[Math.SQRT1_2,0,0,Math.SQRT1_2],pose={orientationWxyz:q},flipped={orientationWxyz:q.map(x=>-x)};
+ const basis=preparedViewBasis(preparedForward(pose),preparedUp(pose));
+ const expected={forward:[0,0,-1],right:[0,1,0],up:[-1,0,0]};
+ for(const key of Object.keys(expected))assert.ok(basis[key].every((x,i)=>Math.abs(x-expected[key][i])<1e-14));
+ assert.deepEqual(preparedViewBasis(preparedForward(flipped),preparedUp(flipped)),basis);
+ for(const yaw of [-2,0,1])for(const pitch of [-1,.2,1]){
+  const p={orientationWxyz:preparedOrientation(yaw,pitch)},actual=preparedViewBasis(preparedForward(p),preparedUp(p)),prior=preparedViewBasis(preparedForward(p));
+  for(const key of ['forward','right','up'])assert.ok(actual[key].every((x,i)=>Math.abs(x-prior[key][i])<1e-14));
+ }
+});

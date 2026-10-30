@@ -26,7 +26,7 @@ const camera=pose=>Object.fromEntries(['kind','originM','positionLocalM','orient
 async function ready(expected){await page.waitForFunction(value=>{const s=atlas.landscape.state;return s.active&&s.payload?.session?.verified&&(!value||JSON.stringify(s.pose.positionLocalM)===JSON.stringify(value));},expected??null,{timeout:60000});}
 async function press(key,ms){await page.keyboard.down(key);try{await delay(ms);}finally{await page.keyboard.up(key);}}
 async function begin(label){
- const dir=path.join(root,label);await fs.mkdir(dir);phase={label,dir,started:Date.now(),runs:[],errors:[]};observer=observeOwnedProcesses();
+ const dir=path.join(root,label);await fs.mkdir(dir);phase={label,dir,mode:'files',started:Date.now(),runs:[],errors:[]};observer=observeOwnedProcesses();
  service=await createApplicationServer({runRoot:dir,port:5196});
  browser=await chromium.launch({channel:'chrome',headless:false,chromiumSandbox:true,timeout:30000,env:chromeLaunchEnv(),args:['--disable-dev-shm-usage',...PROJECT0_LAUNCH_ARGS]});
  context=boundContext(await browser.newContext({viewport:{width:1280,height:720},acceptDownloads:true}));
@@ -108,6 +108,6 @@ finally{
  detail.cleanup=!detail.cleanupFailure&&detail.phases.length>0&&detail.phases.every(p=>p.cleanup);
  if(detail.cleanup&&!detail.failure)pass('Prepared file workflow confirms source identity and every owned process cleanup');
  if(!detail.cleanup){report.push({name:'FAIL',error:'CLEANUP-UNCONFIRMED'});process.exitCode=125;}
- detail.sources={};for(const name of ['src/space/preparation/scene-adapter.js','src/space/preparation/scene-history.js','src/space/preparation/workspace.js','src/space/mode-host.js','src/app.js','index.html','src/ui/style.css','tests/space-prepared-files.mjs'])detail.sources[name]=createHash('sha256').update(await fs.readFile(name)).digest('hex');
+ detail.sources={};for(const name of ['src/space/preparation/pose.js','src/space/render/webgpu/prepared-regions.js','src/space/preparation/scene-adapter.js','src/space/preparation/scene-history.js','src/space/preparation/workspace.js','src/space/mode-host.js','src/app.js','index.html','src/ui/style.css','tests/space-prepared-files.mjs'])detail.sources[name]=createHash('sha256').update(await fs.readFile(name)).digest('hex');
  detail.ended=Date.now();await fs.writeFile(path.join(root,'files.json'),JSON.stringify(detail,null,2)+'\n');await fs.mkdir('artifacts',{recursive:true});await fs.writeFile('artifacts/space-prepared-files-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({root,pass:detail.pass&&!detail.failure,cleanup:detail.cleanup,failure:detail.failure}));
 }

@@ -14,6 +14,11 @@ struct Out {@builtin(position) clip:vec4f,@location(0) world:vec3f,@location(1) 
 }`;
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const norm = v => { const n = Math.hypot(...v); if (!n) throw new Error('Camera direction is zero'); return v.map(x => x / n); };
+export function preparedViewBasis(direction, cameraUp = [0, 1, 0]) {
+  const forward = norm(direction); let right = cross(forward, cameraUp);
+  right = Math.hypot(...right) < 1e-9 ? [1, 0, 0] : norm(right);
+  return { forward, right, up: cross(right, forward) };
+}
 
 export async function createPreparedRenderer({ canvas, anchor, diameter, lightDirection, onError = () => {} }) {
   let device, context, depth, disposed = false;
@@ -53,11 +58,11 @@ export async function createPreparedRenderer({ canvas, anchor, diameter, lightDi
       try { await device.queue.onSubmittedWorkDone(); }
       finally { region.buffer?.destroy(); region.uniform?.destroy(); resources.delete(region); }
     }
-    function encodeFrame({ position, forward, bodyScale = 1, view, active, home, verticalFovDegrees }, colorView, depthView, width, height) {
+    function encodeFrame({ position, forward, up: cameraUp, bodyScale = 1, view, active, home, verticalFovDegrees }, colorView, depthView, width, height) {
       const fine = active?.kind === 'fine' ? active : null;
       const visible = [view && [view, 'view'], ...(fine ? [[home, 'coarse'], [active, 'fine']] : [[active, 'coarse']])].filter(item => item?.[0]);
-      forward = norm(forward); let right = cross(forward, [0, 1, 0]);
-      right = Math.hypot(...right) < 1e-9 ? [1, 0, 0] : norm(right); const up = cross(right, forward);
+      const basis = preparedViewBasis(forward, cameraUp); forward = basis.forward;
+      const { right, up } = basis;
       const encoder = device.createCommandEncoder(), pass = encoder.beginRenderPass({
         colorAttachments: [{ view: colorView, clearValue: { r: .035, g: .064, b: .105, a: 1 }, loadOp: 'clear', storeOp: 'store' }],
         depthStencilAttachment: { view: depthView, depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store' } });
