@@ -20,16 +20,17 @@ export function preparedViewBasis(direction, cameraUp = [0, 1, 0]) {
   return { forward, right, up: cross(right, forward) };
 }
 
-export async function createPreparedRenderer({ canvas, anchor, diameter, lightDirection, onError = () => {} }) {
-  let device, context, depth, disposed = false;
+let nextDeviceEpoch = 0;
+export async function createPreparedRenderer({ canvas, anchor, diameter, lightDirection, onError = () => {}, gpu = globalThis.navigator?.gpu }) {
+  let device, context, depth, disposed = false, lost = false, epoch;
   const resources = new Set();
   try {
-    const adapter = await navigator.gpu?.requestAdapter({ powerPreference: 'high-performance' });
+    const adapter = await gpu?.requestAdapter({ powerPreference: 'high-performance' });
     if (!adapter) throw new Error('Hardware WebGPU adapter unavailable');
-    device = await adapter.requestDevice();
-    device.addEventListener('uncapturederror', event => onError(event.error.message));
-    device.lost.then(info => { if (!disposed) onError('GPU device lost: ' + info.message); });
-    context = canvas.getContext('webgpu'); const format = navigator.gpu.getPreferredCanvasFormat();
+    device = await adapter.requestDevice(); epoch = ++nextDeviceEpoch;
+    device.addEventListener('uncapturederror', event => { if (!disposed) onError(event.error.message, { code: 'gpu-error', epoch }); });
+    device.lost.then(info => { lost = true; if (!disposed) onError('GPU device lost: ' + info.message, { code: 'device-lost', reason: info.reason, epoch }); });
+    context = canvas.getContext('webgpu'); const format = gpu.getPreferredCanvasFormat();
     context.configure({ device, format, alphaMode: 'opaque' });
     depth = device.createTexture({ size: [canvas.width, canvas.height], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT });
     const shader = device.createShaderModule({ code: PREPARED_REGION_SHADER });
@@ -38,7 +39,7 @@ export async function createPreparedRenderer({ canvas, anchor, diameter, lightDi
     const pipeline = await device.createRenderPipelineAsync({ layout: 'auto', vertex: { module: shader, entryPoint: 'vs', buffers: [{ arrayStride: 24, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }] }] },
       fragment: { module: shader, entryPoint: 'fs', targets: [{ format }] }, primitive: { topology: 'triangle-list', cullMode: 'none' }, depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' } });
     async function upload(artifact, expanded) {
-      if (disposed || !(expanded instanceof Float32Array) || expanded.length % 18 || expanded.byteLength > 64 * 2 ** 20) throw new Error('Invalid/over-budget prepared GPU payload');
+      if (disposed || lost || !(expanded instanceof Float32Array) || expanded.length % 18 || expanded.byteLength > 64 * 2 ** 20) throw new Error('Invalid/over-budget or unavailable prepared GPU payload');
       let buffer, uniform;
       try {
         if (expanded.length) {
@@ -50,12 +51,15 @@ export async function createPreparedRenderer({ canvas, anchor, diameter, lightDi
         const offset = artifact.transform.originM.map((x, i) => (x - anchor[i]) / diameter);
         const region = { buffer, uniform, bind, offset, scale: artifact.transform.metresPerUnit / diameter,
           half: (artifact.bounds.max[0] - artifact.bounds.min[0]) / (2 * diameter), count: expanded.length / 6, bytes: expanded.byteLength + (uniform ? 160 : 0), retired: false };
-        await device.queue.onSubmittedWorkDone(); resources.add(region); return region;
+        await device.queue.onSubmittedWorkDone();
+        if (disposed || lost) throw new Error('GPU execution ended before upload completed');
+        resources.add(region); return region;
       } catch (error) { buffer?.destroy(); uniform?.destroy(); throw error; }
     }
     async function retire(region) {
       if (region.retired) return; region.retired = true;
       try { await device.queue.onSubmittedWorkDone(); }
+      catch (error) { if (!lost) throw error; }
       finally { region.buffer?.destroy(); region.uniform?.destroy(); resources.delete(region); }
     }
     function encodeFrame({ position, forward, up: cameraUp, bodyScale = 1, view, active, home, verticalFovDegrees }, colorView, depthView, width, height) {
@@ -106,12 +110,13 @@ export async function createPreparedRenderer({ canvas, anchor, diameter, lightDi
       } finally { read?.destroy(); color?.destroy(); z?.destroy(); for (const gpu of created) await retire(gpu); }
     }
     const adapterInfo = adapter.info ?? await adapter.requestAdapterInfo?.();
-    return Object.freeze({ upload, retire, controls,
+    return Object.freeze({ upload, retire, controls, epoch,
+      testAdapter: Object.freeze({ destroyDevice() { device.destroy(); return device.lost; } }),
       adapterInfo: { vendor: adapterInfo?.vendor, architecture: adapterInfo?.architecture, device: adapterInfo?.device, description: adapterInfo?.description },
-      render(frame) { if (!disposed) device.queue.submit([encodeFrame(frame, context.getCurrentTexture().createView(), depth.createView(), canvas.width, canvas.height).finish()]); },
-      done: () => device.queue.onSubmittedWorkDone(),
+      render(frame) { if (!disposed && !lost) device.queue.submit([encodeFrame(frame, context.getCurrentTexture().createView(), depth.createView(), canvas.width, canvas.height).finish()]); },
+      async done() { await device.queue.onSubmittedWorkDone(); if (disposed || lost) throw new Error('GPU execution ended before presentation'); },
       async resize(width, height) {
-        if (disposed || ![width, height].every(Number.isSafeInteger) || width < 1 || height < 1 || width * height > 2300000) throw new RangeError('Prepared viewport exceeds its pixel budget');
+        if (disposed || lost || ![width, height].every(Number.isSafeInteger) || width < 1 || height < 1 || width * height > 2300000) throw new RangeError('Prepared viewport unavailable or exceeds its pixel budget');
         if (width === canvas.width && height === canvas.height) return;
         const replacement = device.createTexture({ size: [width, height], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT });
         try { await device.queue.onSubmittedWorkDone(); }
@@ -121,8 +126,10 @@ export async function createPreparedRenderer({ canvas, anchor, diameter, lightDi
       bytes: () => [...resources].reduce((sum, p) => sum + p.bytes, canvas.width * canvas.height * 4),
       async dispose() {
         if (disposed) return; disposed = true;
-        try { for (const region of [...resources]) await retire(region); }
-        finally { depth.destroy(); context.unconfigure(); device.destroy(); }
+        const errors = [];
+        for (const region of [...resources]) try { await retire(region); } catch (error) { errors.push(error); }
+        for (const release of [() => depth.destroy(), () => context.unconfigure(), () => device.destroy()]) try { release(); } catch (error) { errors.push(error); }
+        if (errors.length) throw new AggregateError(errors, 'Prepared GPU retirement failed');
       },
     });
   } catch (error) { disposed = true; for (const r of resources) { r.buffer?.destroy(); r.uniform?.destroy(); } depth?.destroy(); context?.unconfigure(); device?.destroy(); throw error; }

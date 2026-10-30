@@ -81,6 +81,9 @@
     "tests/unit/prepared-wasm.test.js",
     "tests/unit/prepared-page-lifetime.test.js",
     "tests/unit/prepared-scene.test.js",
-    "tests/unit/prepared-history.test.js"
+    "tests/unit/prepared-history.test.js",
+    "tests/unit/native-controller.test.js",
+    "tests/unit/prepared-execution.test.js",
+    "tests/unit/prepared-run-root.test.js"
   ]
 }

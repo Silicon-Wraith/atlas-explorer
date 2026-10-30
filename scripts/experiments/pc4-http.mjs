@@ -1,3 +1,4 @@
+import {preparedRunRoot} from '../../tests/support/prepared-run-root.mjs';
 // Native-free HTTP/session integration. No browser, Python, native job or GPU.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -6,7 +7,7 @@ import { createApplicationServer } from '../preparation/application-server.mjs';
 import { createPreparationRequest, worldReference } from '../../src/space/preparation/contract.js';
 import { preparedFixture, deferred } from '../../tests/support/prepared-fixture.mjs';
 
-const root=path.resolve(process.argv[2]??process.env.ATLAS_SESSION_HTTP_ROOT??'/mnt/ml_storage/scratch/atlas-pc4/http-'+new Date().toISOString().replace(/[:.]/g,'-'));assert.ok(['/mnt/ml_storage/scratch/atlas-pc4/','/mnt/ml_storage/scratch/atlas-bi1b/'].some(prefix=>root.startsWith(prefix)));await fs.mkdir(root);
+const root=path.resolve(process.argv[2]??process.env.ATLAS_SESSION_HTTP_ROOT??'/mnt/ml_storage/scratch/atlas-pc4/http-'+new Date().toISOString().replace(/[:.]/g,'-'));preparedRunRoot(root,'http');await fs.mkdir(root);
 const fixture=preparedFixture(),report={nativeFree:true,started:Date.now(),checks:[],cleanup:false};let time=0,service,factoryCalls=0;
 await fs.writeFile(path.join(root,'feature-r0.json'),JSON.stringify({world_point:[0,0,-1],light_direction:[1,0,0]}));
 await fs.writeFile(path.join(root,'certificate.json'),'{}');

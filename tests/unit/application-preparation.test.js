@@ -127,3 +127,8 @@ test('cancelled runtime cannot hide an unconfirmed request-identity retirement f
  await Promise.resolve();const drain=session.shutdown();gate.resolve();await drain;
  assert.equal(producer.snapshot().remoteRetirementFailures,1);assert.equal(session.diagnostics().live,0);
 });
+test('native preparer failure is unavailable rather than lease expiry and cannot defer unconfirmed close',async()=>{
+ const r=leaseRig((seq,{session,response})=>seq===2?response({error:'Native preparation stopped. Save and restart ATLAS.',code:'preparer-lost'},503):response({session:session(seq)}),{closeFails:true});
+ await r.client.open();assert.equal(await r.client.revalidate(),false);assert.equal(r.client.snapshot().session.state,'unavailable');assert.equal(r.client.snapshot().session.failureCode,'preparer-lost');assert.equal(r.client.check(),false);
+ await assert.rejects(r.client.close({allowDeferred:true}),/offline/);
+});

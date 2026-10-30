@@ -44,7 +44,11 @@ export async function createNativeAdapter({ bundle, runRoot, python, onEvent = (
   bundle = path.resolve(bundle); runRoot = path.resolve(runRoot);
   ensure(runRoot.startsWith('/mnt/ml_storage/scratch/'), 'native outputs must be under scratch');
   const output = path.join(runRoot, 'native');
-  const controller = createNativeController({ bundle, output, python, onEvent });
+  let stopped = false, terminal = null;
+  const controller = createNativeController({ bundle, output, python, onEvent: event => {
+    if (event.type === 'worker-exit' && !stopped) terminal = Object.assign(new Error('Native preparation stopped. Save your scene and restart ATLAS.'), { code: 'preparer-lost' });
+    onEvent(event);
+  } });
   let hello, world, grid, D, viewGrid, fineOrigin, fineBounds;
   try {
     onController(controller);
@@ -59,7 +63,7 @@ export async function createNativeAdapter({ bundle, runRoot, python, onEvent = (
     if (![...publications.values()].some(p => p.cacheKey === publication.cacheKey)) cache.delete(publication.cacheKey);
     onEvent({ type: 'producer-retired', time: Date.now(), token, identity: publication.identity });
   } });
-  let certificate = null, totalOutputBytes = 0, stopped = false;
+  let certificate = null, totalOutputBytes = 0;
   function remember(raw, key) {
     records.push(raw); totalOutputBytes += raw.outputBytes ?? 0;
     ensure(totalOutputBytes <= 4 * 2 ** 30, 'native output quota exceeded');
@@ -89,6 +93,7 @@ export async function createNativeAdapter({ bundle, runRoot, python, onEvent = (
     return createPreparationResult({ schema: 'atlas.preparation.result', schemaVersion: 1, identity: q.identity, producer: actualProducer(), status, reason, artifact });
   }
   async function prepare(input, { signal, qualification = false, rebuild = false } = {}) {
+    if (terminal) throw terminal;
     const q = createPreparationRequest(input);
     ensure(!stopped && same(q.producer, actualProducer()), 'preparer closed or stale producer');
     const selected = resolveRequest(q);
@@ -105,6 +110,7 @@ export async function createNativeAdapter({ bundle, runRoot, python, onEvent = (
       throw error;
     }
     if (raw.status !== 'prepared') return { result: resultFor(q, raw.status, raw.reason), token: null };
+    if (terminal) throw terminal;
     const artifact = nativeArtifact(raw, { hello, world, certificate, qualification });
     const result = assertResultForRequest(resultFor(q, 'prepared', null, artifact), q);
     if (signal?.aborted || publications.cancelled(q.identity)) throw Object.assign(new Error('Native request cancelled before publication'), { name: 'AbortError' });
@@ -117,16 +123,19 @@ export async function createNativeAdapter({ bundle, runRoot, python, onEvent = (
     hello: () => ({ ...controller.hello(), definition: world, certificate }),
     installCertificate(value) { ensure(value.sourcesKey === nativeSourcesKey(hello), 'certificate source mismatch'); certificate = value; },
     async buffer(token, role) {
+      if (terminal) throw terminal;
       const publication = publications.get(token); ensure(publication, 'retired publication');
       const descriptor = publication.artifact.buffers.find(b => b.role === role); ensure(descriptor, 'buffer role not allowed for intent');
       const source = publication.raw.buffers.find(b => b.role === role); ensure(source.file.startsWith(output + path.sep), 'buffer outside owned output root');
       const bytes = await fs.readFile(source.file);
+      if (terminal) throw terminal;
       ensure(bytes.byteLength === descriptor.byteLength && digest(bytes) === descriptor.sha256, 'native payload mismatch'); return bytes;
     },
     retire: publications.retire,
     cancelRequest: publications.cancel,
-    snapshot: () => ({ queue: queue.snapshot(), publications: publications.size(), cacheEntries: cache.size, totalOutputBytes, pid: controller.pid }),
+    snapshot: () => ({ queue: queue.snapshot(), activeRequest: queue.activeRequest(), publications: publications.size(), cacheEntries: cache.size, totalOutputBytes, pid: controller.pid, failure: terminal ? { code: terminal.code, message: terminal.message } : null }),
     async reset() {
+      if (terminal) throw terminal;
       ensure(publications.size() === 0 && queue.snapshot().active === 0 && queue.snapshot().queued === 0, 'reset requires retired idle state');
       publications.reset(); cache.clear(); await controller.reset(); return actualProducer();
     },

@@ -27,7 +27,7 @@ export function createSpaceModeHost({ modes, initial = 'viewer', onState = () =>
     if (pending === task) pending = null;
     if (result?.outcome === 'activated') { selected = visible = mode; notify(); modes[mode].focus?.(); return { outcome: 'activated' }; }
     modes[mode].deactivate();
-    if (mode === 'landscape') { onMessage(result?.reason ?? 'Landscape is unavailable'); return select('viewer'); }
+    if (mode === 'landscape') { onMessage(result?.reason ?? 'Landscape is unavailable', { restartRequired: result?.restartRequired === true }); return select('viewer'); }
     notify(); return result;
   }
   function deactivate() {

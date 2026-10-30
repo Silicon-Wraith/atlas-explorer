@@ -1,0 +1,96 @@
+{
+  "scope": "Before actual BI1.C hardware; derived old-data audit compatibility is not product acceptance",
+  "baselineUnits": 1327,
+  "currentUnits": 1352,
+  "unitFiles": 85,
+  "nativeRed": "RED confirmed: \"native controller rejects new work immediately after observed exit without writing to the dead pipe\" fails on an assertion\n",
+  "currentUnitSummary": "UNIT {\"state\":\"passed\",\"reason\":\"1352 tests passed\",\"cleanup\":\"confirmed\",\"files\":85,\"summary\":{\"tests\":1352,\"pass\":1352,\"fail\":0,\"cancelled\":0,\"skipped\":0,\"todo\":0}}",
+  "build": "\n> atlas-mandelbrot@1.0.0 build\n> node scripts/build.mjs\n\nStatic application built in dist/\n",
+  "originalHttp": [
+    "Passive status never constructs the fake or native adapter",
+    "Status discloses no owner capability; second-tab close retire and open cannot mutate the owner",
+    "Reordered renewal does not extend the accepted deadline",
+    "Exact deadline retires silent ownership before the periodic sweep",
+    "Old-session cleanup cannot retire or close replacement resources",
+    "Known cancelled in-flight work may drain but its late result cannot revive the old client",
+    "Failed retirement stays sticky and blocks replacement admission",
+    "All controls use the injected fake adapter; no native controller starts"
+  ],
+  "recoveryHttp": [
+    "Recovery HTTP status is passive before startup",
+    "Client adapter is admitted once for healthy operations",
+    "Native loss is typed for open prepare transfer and heartbeat",
+    "A held result after terminal loss is retired before publication",
+    "Loss cleanup remains available and never constructs a replacement",
+    "Failed startup confirms cleanup and remains restart-required",
+    "Post-construction certificate failure closes its owned adapter",
+    "Startup cleanup failure stays sticky even after a later teardown acknowledgement",
+    "Recovery HTTP fixtures use no native process and confirm owned cleanup"
+  ],
+  "noNativeStartupPid": true,
+  "mathAndShader": {
+    "nativeWorkerUnchanged": true,
+    "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4",
+    "shaderUnchanged": true,
+    "shaderSha256": "ba360f907e4efc6331af2ee707ca54957860ea2a2d3deb58f0a34e92cd9f2263"
+  },
+  "auditRehearsal": {
+    "scope": "Derived old accepted data; schema/audit compatibility only",
+    "source": "/mnt/ml_storage/scratch/atlas-bi1b/files-gate-r2/save",
+    "runs": [
+      {
+        "script": "pc2-qualify.py",
+        "pid": 1829628,
+        "exitCode": 0,
+        "stdout": "{\"representationKey\": \"fnv1a64:03a17384a7c07d06\", \"kind\": \"coarse\", \"origin\": [1414.9757562519364, 79.21086912557448, 1040.6400501279961], \"classification\": \"surface\", \"sampling\": {\"cells\": 256, \"stepM\": 0.000103759765625, \"tileWidthM\": 0.0265625, \"rtinToleranceM\": 2.65625e-05, \"coordinateType\": \"float32-local-metres-per-unit\"}, \"toleranceM\": 0.000265625, \"referenceSamples\": 608, \"meshSamples\": 512, \"referenceToMeshMaxM\": 2.789774079877749e-05, \"meshCrossingUpperMaxM\": 6.640625e-05, \"forwardReferenceGrid\": null, \"limits\": [], \"pass\": true}\n{\"representationKey\": \"fnv1a64:ba146a5abc5a5630\", \"kind\": \"view\", \"origin\": [1414.9757562519364, 79.21086912557448, 1040.6400501279961], \"classification\": \"surface\", \"sampling\": {\"cells\": 256, \"stepM\": 0.0004150390625, \"tileWidthM\": 0.10625, \"rtinToleranceM\": 0.00010625, \"coordinateType\": \"float32-local-metres-per-unit\"}, \"toleranceM\": 0.0010625, \"referenceSamples\": 826, \"meshSamples\": 512, \"referenceToMeshMaxM\": 0.00012510109628894342, \"meshCrossingUpperMaxM\": 0.00016601562499999993, \"forwardReferenceGrid\": null, \"limits\": [], \"pass\": true}\n{\"representationKey\": \"fnv1a64:4b2f1f5b20858a82\", \"kind\": \"coarse\", \"origin\": [1414.982253306491, 79.22229320887675, 1040.6419659057447], \"classification\": \"surface\", \"sampling\": {\"cells\": 256, \"stepM\": 0.000103759765625, \"tileWidthM\": 0.0265625, \"rtinToleranceM\": 2.65625e-05, \"coordinateType\": \"float32-local-metres-per-unit\"}, \"toleranceM\": 0.000265625, \"referenceSamples\": 1, \"meshSamples\": 512, \"referenceToMeshMaxM\": 1.0849888795040796e-05, \"meshCrossingUpperMaxM\": 3.320312500000003e-05, \"forwardReferenceGrid\": null, \"limits\": [], \"pass\": true}\n{\"pass\": true, \"specimens\": 3, \"elapsedS\": 9.999751672148705, \"error\": null}\n",
+        "stderr": ""
+      },
+      {
+        "script": "pc2-buffer-audit.py",
+        "pid": 1829934,
+        "exitCode": 0,
+        "stdout": "{\"pass\": true, \"pid\": 1829934, \"nativeRecords\": 3, \"outputBytes\": 14352141, \"cacheBounds\": true, \"viewInteractionCacheEvictions\": 0, \"input\": {}}\n",
+        "stderr": ""
+      },
+      {
+        "script": "pc2-audit.py",
+        "pid": 1829979,
+        "exitCode": 0,
+        "stdout": "{\"pass\": true, \"pid\": 1829979, \"error\": null, \"elapsedS\": 0.06246186187490821, \"scope\": \"Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.\"}\n",
+        "stderr": ""
+      }
+    ]
+  },
+  "closure": {
+    "checkedAt": 1793392100.9971056,
+    "auditPids": [
+      1829628,
+      1829934,
+      1829979
+    ],
+    "alive": [],
+    "portsClosed": {
+      "5190": true,
+      "5196": true,
+      "5198": true,
+      "5199": true,
+      "5200": true
+    },
+    "lockFree": true,
+    "cleanup": true
+  },
+  "negativeRoots": [
+    {
+      "script": "scripts/experiments/bi1c-http.mjs",
+      "exitCode": 1,
+      "directoryAbsent": true,
+      "stderr": "file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c/tests/support/prepared-run-root.mjs:5\n if(!initiatives[role]?.some(name=>root.startsWith('/mnt/ml_storage/scratch/atlas-'+name+'/')))throw Error('Prepared '+role+' evidence root required');\n                                                                                                     ^\n\nError: Prepared recovery evidence root required\n    at preparedRunRoot (file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c/tests/support/prepared-run-root.mjs:5:102)\n    at file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c/scripts/experiments/bi1c-http.mjs:9:12\n    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)\n    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v20.20.2\n"
+    },
+    {
+      "script": "scripts/experiments/pc4-http.mjs",
+      "exitCode": 1,
+      "directoryAbsent": true,
+      "stderr": "file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c/tests/support/prepared-run-root.mjs:5\n if(!initiatives[role]?.some(name=>root.startsWith('/mnt/ml_storage/scratch/atlas-'+name+'/')))throw Error('Prepared '+role+' evidence root required');\n                                                                                                     ^\n\nError: Prepared http evidence root required\n    at preparedRunRoot (file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c/tests/support/prepared-run-root.mjs:5:102)\n    at file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c/scripts/experiments/pc4-http.mjs:10:168\n    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)\n    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v20.20.2\n"
+    }
+  ]
+}

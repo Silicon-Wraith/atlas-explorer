@@ -10,16 +10,17 @@ export async function deadline(promise, ms, label) {
   finally { clearTimeout(timer); }
 }
 
-export function createNativeController({ bundle, output, python = '/mnt/ml_storage/scratch/venvs/gpu/bin/python', onEvent = () => {} }) {
-  let resolveReady, rejectReady, resetWaiter, stopped = false, closed = false, sequence = 0, hello = null;
+export function createNativeController({ bundle, output, python = '/mnt/ml_storage/scratch/venvs/gpu/bin/python', onEvent = () => {}, spawnWorker = spawn, writeRecord = fs.writeFile }) {
+  let resolveReady, rejectReady, resetWaiter, stopped = false, closed = false, didExit = false, closing, exitError, sequence = 0, hello = null;
   const pending = new Map(), diagnostics = [];
-  const worker = spawn(python, [fileURLToPath(new URL('./native-worker.py', import.meta.url)), '--bundle', bundle, '--output', output], {
+  const worker = spawnWorker(python, [fileURLToPath(new URL('./native-worker.py', import.meta.url)), '--bundle', bundle, '--output', output], {
     env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1', TMPDIR: '/mnt/ml_storage/scratch/atlas-1a-tmp', CUPY_CACHE_DIR: output + '/cupy-cache', CUDA_CACHE_PATH: output + '/cuda-cache' },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   const startup = new Promise((r, j) => { resolveReady = r; rejectReady = j; });
   const exited = new Promise(resolve => worker.once('close', (code, signal) => {
-    const error = new Error('native worker exited');
+    didExit = true;
+    const error = exitError = Object.assign(new Error('Native preparation stopped. Save your scene and restart ATLAS.'), { code: 'preparer-lost' });
     rejectReady(error); for (const job of pending.values()) job.reject(error); pending.clear(); resetWaiter?.reject(error);
     onEvent({ type: 'worker-exit', pid: worker.pid, code, signal }); resolve({ code, signal });
   }));
@@ -45,7 +46,9 @@ export function createNativeController({ bundle, output, python = '/mnt/ml_stora
   ready.catch(() => {});
   return Object.freeze({ ready, pid: worker.pid,
     hello: () => hello,
+    health: () => ({ exited: didExit, closed }),
     async run(request) {
+      if (didExit) throw exitError;
       if (closed || pending.size) throw new Error('native worker closed or already active');
       const job = ++sequence;
       const result = new Promise((resolve, reject) => { pending.set(job, { resolve, reject, request }); });
@@ -54,22 +57,23 @@ export function createNativeController({ bundle, output, python = '/mnt/ml_stora
       catch (error) { worker.kill('SIGTERM'); throw error; }
     },
     async reset() {
+      if (didExit) throw exitError;
       if (closed || pending.size || resetWaiter) throw new Error('native reset requires idle worker');
       const wait = new Promise((resolve, reject) => { resetWaiter = { resolve, reject }; });
       worker.stdin.write(JSON.stringify({ type: 'reset' }) + '\n');
       return deadline(wait, 5000, 'native reset');
     },
-    async close() {
-      if (!closed) { closed = true; worker.stdin.end(JSON.stringify({ type: 'stop' }) + '\n'); }
+    close() { return closing ??= (async () => {
+      if (!closed) { closed = true; if (!didExit) worker.stdin.end(JSON.stringify({ type: 'stop' }) + '\n'); }
       let exit;
       for (const [ms, signal] of [[5000, null], [3000, 'SIGTERM'], [3000, 'SIGKILL']]) {
         if (signal) worker.kill(signal);
         try { exit = await deadline(exited, ms, 'native close'); break; } catch { /* bounded escalation */ }
       }
       const result = { cleanup: !!exit, pid: worker.pid, exit, stopped, diagnostics };
-      await fs.writeFile(output + '-controller.json', JSON.stringify(result, null, 2) + '\n');
+      await writeRecord(output + '-controller.json', JSON.stringify(result, null, 2) + '\n');
       if (!result.cleanup) throw new Error('native process cleanup unconfirmed');
       return result;
-    },
+    })(); },
   });
 }

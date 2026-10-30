@@ -6,13 +6,13 @@ export function createApplicationPreparationClient({ runtimeId, fetcher = fetch,
   const headers = { 'Content-Type': 'application/json', 'X-Atlas-Client': runtimeId, 'X-Atlas-Session': nonce };
   let opening, closing, closed = false, expired = false, confirmed = false, verified = false, hidden = false;
   let policy = null, deadline = 0, wallDeadline = 0, sequence = 0, timer = null, renewing = null, renewalController = null;
-  let message = '';
+  let message = '', failureCode = null;
   const emit = (type, data = {}) => onEvent({ type, time: performance.timeOrigin + performance.now(), ...data });
   function clearSchedule() { if (timer != null) clearTimer(timer); timer = null; }
-  function lose(reason) {
+  function lose(reason, code = 'session-expired') {
     if (closed || expired) return;
-    expired = true; verified = false; message = reason; clearSchedule(); renewalController?.abort();
-    emit('session-lost', { reason }); onSessionLost(reason);
+    expired = true; verified = false; message = reason; failureCode = code; clearSchedule(); renewalController?.abort();
+    emit('session-lost', { reason, code }); onSessionLost(reason, { code });
   }
   function timeValid() {
     if (closed || expired || !confirmed) return false;
@@ -44,7 +44,7 @@ export function createApplicationPreparationClient({ runtimeId, fetcher = fetch,
         const response = await fetcher('/api/preparation/heartbeat', { method: 'POST', headers, body: JSON.stringify({ sequence: mine }), signal: cancellation.signal });
         const output = await response.json();
         if (mine !== sequence || closed || expired) return false;
-        if (!response.ok) { lose(output.error ?? 'The landscape session is unavailable. Retry Landscape.'); return false; }
+        if (!response.ok) { lose(output.error ?? 'The landscape session is unavailable. Retry Landscape.', output.code); return false; }
         const next = sessionValue(output.session);
         if (next.sequence !== mine) throw new Error('Landscape renewal identity mismatch');
         // Credit time from send, never arrival. A wall-clock jump can expire
@@ -73,10 +73,10 @@ export function createApplicationPreparationClient({ runtimeId, fetcher = fetch,
     const cleanup = /\/(?:retire\/|cancel$)/.test(url);
     if (!cleanup && !timeValid()) throw Object.assign(new Error('Landscape session is not active'), { name: 'AbortError' });
     const response = await fetcher(url, { ...options, headers: { ...options.headers, ...headers } });
-    if (response.status === 410 || response.status === 409) {
+    if (response.status === 410 || response.status === 409 || response.status === 503) {
       const output = await (response.clone ? response.clone() : response).json();
       if (cleanup && response.status === 410 && output.sessionRetired === true) return new Response(JSON.stringify({ closedSession: true }), { status: 200 });
-      if (!cleanup) lose(output.error ?? 'The landscape session has ended. Retry Landscape.');
+      if (!cleanup && (response.status !== 503 || ['preparer-lost', 'preparer-unavailable'].includes(output.code))) lose(output.error ?? 'The landscape session has ended. Retry Landscape.', output.code);
     }
     if (!cleanup && response.ok && !timeValid()) {
       response.body?.cancel().catch(() => {});
@@ -89,7 +89,7 @@ export function createApplicationPreparationClient({ runtimeId, fetcher = fetch,
     closed = true; verified = false; clearSchedule(); controller.abort(); renewalController?.abort();
   }
   return Object.freeze({ produce: producer.produce,
-    snapshot: () => ({ ...producer.snapshot(), session: { state: closed ? 'closed' : expired ? 'expired' : verified && !hidden ? 'ready' : 'checking', verified: verified && !hidden,
+    snapshot: () => ({ ...producer.snapshot(), session: { state: closed ? 'closed' : expired ? failureCode?.startsWith('preparer-') ? 'unavailable' : 'expired' : verified && !hidden ? 'ready' : 'checking', verified: verified && !hidden, failureCode,
       remainingMs: confirmed ? Math.max(0, Math.min(deadline - now(), wallDeadline - wallNow())) : 0, sequence, message } }),
     check: () => timeValid() && verified && !hidden,
     pause() { hidden = true; verified = false; message = 'Landscape is paused while this tab is hidden.'; },
@@ -103,7 +103,7 @@ export function createApplicationPreparationClient({ runtimeId, fetcher = fetch,
           const response = await fetcher('/api/preparation/open', { method: 'POST', headers, body: JSON.stringify({ runtimeId }), signal: controller.signal });
           if (response.status === 404) throw new Error('Landscape preparation is unavailable. Start ATLAS with npm run dev:world, then retry Landscape.');
           const output = await response.json();
-          if (!response.ok) throw new Error(output.error ?? 'Landscape preparation is unavailable');
+          if (!response.ok) throw Object.assign(new Error(output.error ?? 'Landscape preparation is unavailable'), { code: output.code });
           if (closed) throw new Error('Landscape opening was superseded');
           policy = sessionValue(output.session);
           if (!await renew(true)) throw new Error(message || 'Landscape session verification failed');
@@ -126,7 +126,7 @@ export function createApplicationPreparationClient({ runtimeId, fetcher = fetch,
           // request/payload/local retirement succeeded. A new open still has
           // to pass the authoritative server fence. Retirement errors are not
           // covered by this exception.
-          if (allowDeferred && expired && !received) { emit('session-close-deferred', { reason: error.message }); return { confirmed: false, expiryBounded: true }; }
+          if (allowDeferred && expired && !failureCode?.startsWith('preparer-') && !received) { emit('session-close-deferred', { reason: error.message }); return { confirmed: false, expiryBounded: true }; }
           throw error;
         } finally { clearTimer(timeout); }
       })(); return closing;

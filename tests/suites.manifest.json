@@ -190,6 +190,48 @@
         "Saved and restored delivered geometry passes finite buffer and recorded-motion audits",
         "Prepared file workflow confirms source identity and every owned process cleanup"
       ]
+    },
+    {
+      "id": "preparation-recovery-http",
+      "gpu": false,
+      "server": false,
+      "timeoutMs": 30000,
+      "command": [
+        "scripts/experiments/bi1c-http.mjs"
+      ],
+      "report": "artifacts/preparation-recovery-http-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "Recovery HTTP status is passive before startup",
+        "Client adapter is admitted once for healthy operations",
+        "Native loss is typed for open prepare transfer and heartbeat",
+        "A held result after terminal loss is retired before publication",
+        "Loss cleanup remains available and never constructs a replacement",
+        "Failed startup confirms cleanup and remains restart-required",
+        "Post-construction certificate failure closes its owned adapter",
+        "Startup cleanup failure stays sticky even after a later teardown acknowledgement",
+        "Recovery HTTP fixtures use no native process and confirm owned cleanup"
+      ]
+    },
+    {
+      "id": "space-prepared-recovery",
+      "gpu": true,
+      "timeoutMs": 420000,
+      "command": [
+        "tests/space-prepared-recovery.mjs"
+      ],
+      "report": "artifacts/space-prepared-recovery-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "Prepared recovery uses the maintained headed hardware profile",
+        "First actual device destroy fences input and automatically returns to the exact scene and histories",
+        "Repeated device loss stays stopped and explicit Retry rebuilds without changing history",
+        "An actual collision worker error stops explicitly and Retry uses a fresh worker at the same place",
+        "An owned helper exit with an outstanding request stops with a typed restart reason and preserves the requested place",
+        "After confirmed owned restart the actual saved scene returns with a fresh producer and exact bytes",
+        "Recovery and restarted delivered geometry pass finite buffer and actual-motion audits",
+        "Recovery workflow confirms all owned native browser worker and GPU cleanup"
+      ]
     }
   ],
   "diagnostics": [
