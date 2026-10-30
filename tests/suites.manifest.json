@@ -129,6 +129,46 @@
         "Finite delivered-geometry qualification and actual application flight checks pass",
         "Prepared application has no runtime errors and confirms owned cleanup"
       ]
+    },
+    {
+      "id": "preparation-session-http",
+      "gpu": false,
+      "server": false,
+      "timeoutMs": 30000,
+      "command": [
+        "scripts/experiments/pc4-http.mjs"
+      ],
+      "report": "artifacts/preparation-session-http-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "Passive status never constructs the fake or native adapter",
+        "Status discloses no owner capability; second-tab close retire and open cannot mutate the owner",
+        "Reordered renewal does not extend the accepted deadline",
+        "Exact deadline retires silent ownership before the periodic sweep",
+        "Old-session cleanup cannot retire or close replacement resources",
+        "Known cancelled in-flight work may drain but its late result cannot revive the old client",
+        "Failed retirement stays sticky and blocks replacement admission",
+        "All controls use the injected fake adapter; no native controller starts"
+      ]
+    },
+    {
+      "id": "space-preparation-session",
+      "gpu": true,
+      "timeoutMs": 300000,
+      "command": [
+        "tests/space-preparation-session.mjs"
+      ],
+      "report": "artifacts/space-preparation-session-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "Session recovery uses the maintained headed hardware profile",
+        "A visible healthy owner survives production renewals and a second tab cannot take over",
+        "Silent loss expires the old owner and late messages cannot mutate its replacement",
+        "Expired living page fences input and explicitly retries at its own retained pose",
+        "Session-control geometry buffers and recorded movement pass finite independent audits",
+        "Launcher keeps another owned page alive and stops after its final page closes",
+        "Session controls preserve source identity and confirm owned process cleanup"
+      ]
     }
   ],
   "diagnostics": [

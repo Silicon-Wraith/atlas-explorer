@@ -1,0 +1,7 @@
+# PC4 loss-control preflight correction
+
+The first full-gate launch on implementation9cdd00f passed units/build, then was intentionally stopped during the owned CPU-reference stage. The gate records `reference: incomplete, interrupted: SIGTERM` and confirmed cleanup. No browser/GPU or PC4 recovery scenario had run. Preserve `/mnt/ml_storage/scratch/atlas-pc4/gate-r0/` and its gate record; this is neither a mathematical-reference failure nor a passing full gate.
+
+Source audit found the abrupt-loss fixture blocked heartbeat and final close, but page teardown could still deliver per-request cancel/retire. That could retire the held unknown-token response before expiry and weaken the intended observation. The correction blocks all four delivery paths for the lost page using context-level test routing. The living-page control still allows per-request retirement while withholding heartbeat/final close, as required by its different ownership case.
+
+A normal server `client-retiring` event records the cleanup cause before abort/retirement. The test now checks event order: expiry begins, the specifically held publication retires, and expiry completes. No new timing threshold, debug endpoint, shortened lease, workload or geometry change is introduced. The first stopped attempt has no recovery result to improve; the correction makes the original frozen loss-of-delivery condition decisive before hardware evaluation. It is the bounded mechanical fixture correction; preserve both source commits and the subsequent run separately.

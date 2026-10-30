@@ -78,6 +78,7 @@
     "tests/unit/application-preparation.test.js",
     "tests/unit/space-mode-host.test.js",
     "tests/unit/prepared-workspace.test.js",
-    "tests/unit/prepared-wasm.test.js"
+    "tests/unit/prepared-wasm.test.js",
+    "tests/unit/prepared-page-lifetime.test.js"
   ]
 }

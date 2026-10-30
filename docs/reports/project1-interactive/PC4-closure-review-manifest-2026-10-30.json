@@ -1,0 +1,38 @@
+{
+  "measuredHead": "f108ec5ab461a440ca974886190d5c64300fbdd6",
+  "applicationHead": "0ddff2536d13d2aad770cb1a705c140e39515c0f",
+  "files": {
+    "docs/reports/project1-interactive/PC4-FINAL-ACCEPTANCE-2026-10-30.md": {
+      "sha256": "b03fcf0282c83d91fcf1e5831c2f205748e3b63f803e5eec7f05d3b1dd15c0aa",
+      "bytes": 11243
+    },
+    "docs/reports/project1-interactive/PC4-final-product-gate-2026-10-30.json": {
+      "sha256": "22c455063d4a7a0a8710dcdf9a24a4dad942e15ca505e097c94a840db4f8458d",
+      "bytes": 5900
+    },
+    "docs/reports/project1-interactive/PC4-final-evidence-summary-2026-10-30.json": {
+      "sha256": "d4c593d3bd258d7e64c2a2244e7c357aacda6e99d4eb1cc8b1ee2445a7dcfda0",
+      "bytes": 22502
+    },
+    "docs/reports/project1-interactive/PC4-final-session-ledger-2026-10-30.json": {
+      "sha256": "6649ff40f8dc73623a045dac439eacf3e0115f16950acf4bc7384462c3963612",
+      "bytes": 22025
+    },
+    "docs/reports/project1-interactive/PC4-final-closure-2026-10-30.json": {
+      "sha256": "66021fdb6cb9f6db2d1a6b45f004572acbee7237132057dd33d9fcd8aa92f60b",
+      "bytes": 483
+    },
+    "docs/reports/project1-interactive/PC4-FINAL-VERIFICATION-CARD-2026-10-30.md": {
+      "sha256": "d1f687915878584ec2daf05ac346793b6778ceab9327f13646cdfe1243ac9e03",
+      "bytes": 3604
+    },
+    "tests/space-preparation-session.mjs": {
+      "sha256": "785a9f11b5b443584470c69398516d54da4b6a4f12aa31912f7e5185cf110ca1",
+      "bytes": 18038
+    },
+    "tests/support/session-loss-proxy.mjs": {
+      "sha256": "364256567ea93de6edcafeab377b9b652c66b540898e46566ca01b3cddfc3b31",
+      "bytes": 1929
+    }
+  }
+}

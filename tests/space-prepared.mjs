@@ -17,7 +17,7 @@ import { PROJECT0_LAUNCH_ARGS, checkEffectiveArguments, collectVisibleText, acti
 if(!process.env.ATLAS_GPU_HANDOFF||process.env.ATLAS_GPU_DEFERRED)throw Error('Prepared-world acceptance requires an explicit hardware handoff');
 installSuiteDeadline('space-prepared',300000);
 const exec=promisify(execFile),stamp=new Date().toISOString().replace(/[:.]/g,'-'),root=process.env.ATLAS_PREPARED_RUN_ROOT??'/mnt/ml_storage/scratch/atlas-pc3/application-'+stamp;
-if(!path.resolve(root).startsWith('/mnt/ml_storage/scratch/atlas-pc3/'))throw Error('PC3 evidence root required');await fs.mkdir(root);
+if(!path.resolve(root).startsWith('/mnt/ml_storage/scratch/atlas-pc3/')&&!path.resolve(root).startsWith('/mnt/ml_storage/scratch/atlas-pc4/'))throw Error('Prepared application evidence root required');await fs.mkdir(root);
 const report=[],detail={started:Date.now(),mode:'application',errors:[],runs:[],controls:[],cleanup:false},observer=observeOwnedProcesses();
 let browser,context,page,service,plainServer;const allEvents=[];
 const pass=(name,data={})=>{report.push({name,...data});console.log('PASS '+name);};

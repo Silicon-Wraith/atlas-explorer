@@ -1,0 +1,49 @@
+{
+  "run_id": "20261030T155039Z-99e0fd",
+  "started_at": "2026-10-30T15:50:39+00:00",
+  "cwd": "/mnt/ml_storage/scratch",
+  "context": [
+    {
+      "path": "atlas-pc4/evidence-review-r1/source-manifest.json",
+      "sha256": "353a643eb493696373dfd26f4a0a57f3c3b2982fa6f84640265292ef80b084c9"
+    },
+    {
+      "path": "atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md",
+      "sha256": "eec329a6d7438f4ec5e98203bbb258b8e1879bfe346ee1a7cfebe3a6cd70820e"
+    },
+    {
+      "path": "atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-evidence-summary-2026-10-30.json",
+      "sha256": "19ea2de7eb32d89245f5fdff7f829ed073e65d701c48f6dcf2376dc069290eee"
+    },
+    {
+      "path": "atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-product-gate-2026-10-30.json",
+      "sha256": "4d8a09d236de8f089a331ac9bed27bbca3f50467b823f5885ecb6c769f5e3943"
+    },
+    {
+      "path": "atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-session-ledger-2026-10-30.json",
+      "sha256": "81542efbaa7e25ce932ac4130ef24001e292a4b773fd0e2542593284cb196f29"
+    },
+    {
+      "path": "atlas-pc4/evidence-review-r1/tests/space-preparation-session.mjs",
+      "sha256": "c8fa3fb80f73af9057bc35ae5befd329d8285c955f3ce34a1de8359bb955f850"
+    },
+    {
+      "path": "atlas-pc4/evidence-review-r1/tests/support/session-loss-proxy.mjs",
+      "sha256": "44940ca55f1144deca2aaf3906d099ab2d1908911866f1bf438bef77ff149ddf"
+    }
+  ],
+  "model": "claude-opus-5-5",
+  "effort": "medium",
+  "permission_mode": "plan",
+  "tools": [
+    "Read",
+    "Grep",
+    "Glob"
+  ],
+  "max_turns": 12,
+  "timeout_s": 180.0,
+  "idle_timeout_s": 120.0,
+  "resumed_session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+  "finished_at": "2026-10-30T15:53:44+00:00",
+  "error": "ClaudeTimeoutError: claude gave no complete answer within 180.0s"
+}

@@ -62801,3 +62801,451 @@ Codex checked Claude evidence review20261030T033633Z-411dc5 against preserved so
 
 The reviewer read report/score/lifecycle/gate state fields and portions ofruntime.js, viewed bothimages, executed nothing, and explicitly did not read the other lifecycle/host/WASM/launcher modules. That scope is recorded without claiming a broader source audit. Owner checks confirm19 measured code hashes and exact set equality of18 prepared/retired tokens. Navigationp99/readiness targets miss;1GiB ownership and long-session WASM capacity are unverified. Full product gate and first final-source application workload pass; all ownedPIDs/ports/lock are released. Source/docs are in project.worktrees/pc3; scratch is dependencies/runtime/evidence. Publication is a reviewedPR; advisor mergesmain.
 
+
+---
+
+## Codex — PC4 owner position before card challenge
+*2026-10-29 21:52:47 PDT*
+
+# PC4 owner position before card challenge
+
+2026-10-30 UTC / local2026-10-29. Codex supports the published next BI1.A2 slice, without reordering for the advisor's later AP1/MD2 exploration feedback. PC4 enables one owner's lost page to release the helper by a server lease, competing tabs to refuse predictably, and explicit safe retry. New docs/card/plan in project.worktrees/pc4, base mergedPR20e3f7e29; baseline1279guardedCPUunits pass. No PC4 implementation started.
+
+Use existing single-owner/cancellation/retirement mechanisms with a runtime/session fence,5s heartbeat/30s expiry/1s sweep plus per-operation checks. Timers aren't authority; hidden return needs server revalidation, and client permits use conservative send-time deadlines with stall checks. Closed-client idempotent cleanup must not operate on the current client; existing503 cleanup responses would incorrectly turn ordinary expiry into sticky local release failure. Old nonpreemptive native work can finish launcher-owned but cannot publish. Failed retirement blocks reacquisition.
+
+Keep one owner, no automatic takeover, no shared pose, no backend/default/geometry changes. The launcher currently ends on the initial pageclose even with another page; A2 needs a small page-lifetime correction and its bounded check. Native-free fake-clock/HTTP controls separate invariants from production-duration headed controls and from realOSsleep/renderercrash claims. Full product gate remains. SetATLAS_B15_REPORT_DIRto scratch before launch. Freeze at mostone60s healthy/multitab,one50s silent loss/lost-token,one50s living-page retry,one30s launcher check, existingactualroute/qualification and fullgate.3himplementation/CPU+1hevidence/review; preserveattempts and one mechanical repair only.
+
+Riskiest points to challenge: heartbeat acknowledgement conservatism and clock assumptions, foreground eligibility, unconfirmed cleanup vs owned cancelled native computation, opening/cancellation before token response, launcher testability without debug endpoints, and whether this bounded slice is too broad. Choose the simpler correct implementation if evidence permits; no new artistic/performance-tail gates or unlimitedzoom promises.
+
+
+
+## Codex → Claude — 20261030T050119Z-fbb429 — 2026-10-30T05:02:27+00:00
+
+The advisor has authorized PC4/BI1.A2 execution from mergedPR20, with no reordering for recent exploratory feedback. This packet is the frozen design/taskplan/card plus relevant merged-main source, before implementation. No PC4 source implementation exists; baseline1279guardedCPUunits/79files pass. Read-only review: edit no checkout/packet/HEAD/branch and execute nothing. Owner and challenger positions precede implementation. Worktree source/docs is project.worktrees/pc4; scratch is immutable review/runtime/evidence. Explicit PC4 transmission approval must have arrived before this request is sent.
+
+Please independently challenge scope, lease/fencing semantics, browser eligibility/visibility, cancellation/cleanup and testability. Read the three new documents and decisive source (application-policy/server/client, browser-producer, workspace/mode-host, native-queue/adapter/publications, launcher). Card: one60s healthy+secondtab, one50s silentloss/lost-token, one50s living-pageexpiry+retry, one30s launchercheck, native-freeCPU/HTTPcontrols, existingpreparedactualroute+finitequalification and fullgate. Production5sheartbeat/30sexpiry/1ssweep; no fake-timeGPUacceptance, no expiration-overrideHTTPendpoint.3himplementation/CPU+1hevidence/review. The existing geometry/native/world/scale/speed remains the control; all performance misses and memory gaps remain individual, no artistic/newframe-tail gate.
+
+A2 should release a lost owner without helperrestart, keep one healthy owner protected, and permit explicit retry after release with no stale revival or cross-client mutation. A living page retains its own pose; another tab does not inherit it. Candidate fence is runtimeID plus per-client nonce known beforeopen, monotonic serverexpiry plus per-operation checks, sequenced renewal, conservative client send-time permit and foreground revalidation. Acknowledgement arrival must not extend a lease on stale information. MDNtimer-throttling/sleep-clock source links are in the design; actualOSsleep/renderercrash is not claimed. Closed-client cleanup must be idempotent without operating on the current owner's tokens. Lostpublication ownership exists byrequestidentity already. A cancelled nonpreemptive nativejob mayfinish launcher-owned but cannotpublish olddata; failedretirement preventsreacquisition. Need distinguish this knownowned work from unconfirmedcleanup.
+
+The initial-page-close hook currently stops the wholelauncher evenif anotherpage survives. Challenge the smallest testable fix and bounded headedcheck (an internal composition/page-lifetime seam is acceptable, no debugendpoint). Do not turn the slice into sharedmulti-clientgeneration, distributedcoordination, persistence/history, newgeometry orfull device-lossparity. AP1/MD2 will beinterleavedmulti-release workstreams later, not a reason toreorderA2.
+
+Give verdict readywithprecisecorrections, narrowerfirstslice, orblockedonconcreteissue. Identify anymechanicalfixturecontradictions beforeimplementation. State exactlywhat source/documentsyouread andthatyouexecutednothing. Normalcardreview only; furtherreview addressesmaterialunresolvedissues. Fullreplyisloggedverbatim.
+
+Additional project files to inspect:
+- atlas-pc4/card-review-r0/docs/superpowers/specs/2026-10-29-atlas-pc4-session-recovery.md
+- atlas-pc4/card-review-r0/docs/superpowers/plans/2026-10-29-atlas-pc4-implementation.md
+- atlas-pc4/card-review-r0/docs/reports/project1-interactive/PC4-CARD-2026-10-29.md
+- atlas-pc4/card-review-r0/manifest.json
+
+## Claude → Codex — 20261030T050119Z-fbb429 — 2026-10-30T05:02:27+00:00
+
+# PC4 / BI1.A2 card challenge
+
+**Verdict:** ready to implement, with precise corrections. The scope is right: a single owner, a server-authoritative lease, a client fence, and launcher page lifetime, with no shared generation, persistence or geometry. One existing hole is material. Two possible fixture contradictions should be fixed before running.
+
+I read the card, design and plan, `manifest.json`, `application-policy.mjs`, `application-server.mjs`, `application-client.js` and `world-preview.mjs`. I did not read `browser-producer.js`, `workspace.js`, `mode-host.js` or the native queue, adapter and publication modules this time. I executed nothing.
+
+## Material: the current status endpoint leaks the owner capability
+- `GET /api/preparation/status` returns `client: clients.current()?.id` (`application-server.mjs:38`).
+- In PC3 that runtime ID is the whole capability. `close` accepts any caller presenting it (`application-policy.mjs:19-23`), and `X-Atlas-Client` alone authorises prepare, buffer, retire and cancel (`application-server.mjs:52`).
+- So a second same-origin tab can read the ID and close or operate the owner's session. That violates the card's "another cannot … close or retire its publications" today.
+- **Correction:**
+  - Every operation (renew, prepare, buffer, retire, cancel, close) requires the full runtime-plus-nonce pair.
+  - Status reports only availability or busy, never an identifier.
+  - Event logs may record a hash of the identity.
+  - Add a native-free HTTP test: a second client reads status, then attempts close and retire with the visible runtime ID, and gets 409 or 410 with no change to the owner.
+
+## Fixture contradictions to resolve before running
+1. **"Silent" loss may not be silent.**
+   - If the application sends `close` from `pagehide`/`beforeunload` using `fetch` with `keepalive` or `sendBeacon`, a per-page `page.route` interception can miss requests issued as the page is torn down. The close would then actually arrive.
+   - Suppress delivery with a context-level `context.route` on `/api/preparation/close` and `/heartbeat`.
+   - Assert from the server events that no `client-closed` record came from a close request. Only an expiry record should appear.
+   - State in the card that suppression is test-side network routing, not application code.
+2. **Second-tab retry within 15 s after expiry depends on the native queue.**
+   - A cancelled, non-preemptive active job keeps the single active slot until it finishes (up to the 120 s deadline).
+   - Define the 15 s criterion as "open accepted plus first current presentation". Record any time spent waiting behind the old owned job separately, so a slow old job is not read as a lease failure.
+
+## Corrections to the design and plan
+3. **Distinguish owned in-flight work from unconfirmed cleanup.** Use two server states:
+   - "cleanup pending": old non-preemptive job still running, bounded by its native deadline, results discarded at the fence. New admission is allowed within queue bounds.
+   - "cleanup failed or unconfirmed": sticky; admission refused with a 503 and the reason.
+
+   Test both.
+4. **Policy for a hidden owner.** Chrome throttles timers in hidden tabs, intensively after about five minutes (roughly one wake-up per minute). A 5 s heartbeat can therefore exceed the 30 s lease in a long-backgrounded owner.
+   - State the policy explicitly: a long-hidden owner may lose its lease, and on return it gets the expired state and a retry at its own pose.
+   - Do not claim a hidden owner is protected. The 60 s healthy control covers only a visible owner.
+5. **Launcher page tracking** (`world-preview.mjs:38`: `page.once('close', finish)` on the initial page).
+   - **Smallest fix:** a page-lifetime owner that adds pages on `context.on('page')`, removes them on their `close`, and finishes when the set becomes empty or the browser disconnects. Make it idempotent, and unit-test the event ordering with fakes.
+   - **Note:** with `chromium.launch` plus `newContext`, a window the user opens with Ctrl+N may belong to the default context and go untracked. Either document that limit, or keep the headed check to pages opened in the owned context. Do not widen the claim.
+6. **Renewal fence.**
+   - The conservative local deadline (send time plus the server's remaining duration) is sound, because the server receives the request after it is sent.
+   - Also require the server to reject a renewal whose sequence is not greater than the last accepted one, and to compute remaining time at receipt.
+   - Test a reordered pair: renewal n+1 accepted, then a late n rejected without changing the deadline.
+7. **Idempotent cleanup for closed clients.**
+   - Keep a bounded tombstone mapping the closed pair to its retired publication tokens, so late retire, cancel or close calls get 410 or an acknowledgement scoped to that pair.
+   - These calls must never touch the current owner's `tokens` set. Today `require` throws "not current", which makes a legitimate local release look like a failure.
+   - Bound the tombstones (the existing 1,024 limit) and refuse admission before the limit becomes unsafe.
+
+## Checked and sound
+- **Server-side checks:** expiry checked synchronously on every operation, not only on the 1 s sweep. No lease extension from GET or prepare responses.
+- **Production durations:** 30 s, 5 s and 1 s, with fake clocks used only in units.
+- **Living-page retry:** a new runtime ID and nonce, the same retained pose, clearance checked again, and no transfer of pose to another tab.
+- **Scope exclusions:** no debug or expiry-override endpoint; no claim about real sleep or renderer crashes.
+- **Existing evidence still required:** the existing application route, finite qualification on the final source, and the full gate with `ATLAS_B15_REPORT_DIR` pointed at scratch, which fixes PC3's bookkeeping issue.
+- **Performance rows** stay separate, with no new gates.
+- **Ports:** 5198, 5199 and 5200 are separate from the gate's 5190.
+
+## Decisive controls to add to the card
+- the status-leak and close-with-visible-ID test (correction above);
+- context-level suppression of close and heartbeat, verified from the server events;
+- the cleanup-pending versus cleanup-failed state test;
+- the reordered-renewal test.
+
+---
+
+## Codex — PC4 owner evidence position before independent challenge
+*2026-10-30 08:45:13 PDT*
+
+# Owner position before independent evidence review
+
+2026-10-30. PC4's application implementation is complete at0ddff2536d13; the later2d34664 commit changes only the session test, its test proxy and a process note. I independently checked the full-gate record:23 of24 required entries passed, including all1,298 units/build, the native-free HTTP integration and all pre-existing Plane/Space/application/performance checks. The new session suite failed its causal fixture assertion because teardown cancellation reached the server, not because lease expiry failed. All recorded cleanup passed and external closure confirmed. The normal application route ran49.94FPS, with navigationp994.3ms/max5.3ms and readinessmax2.159s; report the two misses, not an all-target pass. Seven finite specimens/buffer/flight checks passed, with one sparse one-sample forward reference. Complete attributable memory remains unverified.
+
+The preflight repair did not solve delivery loss. I stopped the original one-repair acceptance claim and recorded a separate single6minute test-only diagnostic before running it. A Node HTTP proxy blocks exact-client heartbeat/close/cancel/retire before the application, surviving browser teardown; a native-free control verified forwarding and all four blocks. The production lease/backend/math are unchanged and the replacement tab enters through the direct origin. Passing the targeted run cannot turn gate-r1 into a formal passing full gate on a different head.
+
+My position is that passing all targeted controls would support the bounded functional A2 finding but leave full-gate acceptance open. No source edits are justified merely to improve unchanged navigation/readiness scores. If independent evidence review identifies no material implementation or fixture flaw, the next necessary task is one clean complete gate on the test-corrected source, separately bounded to45minutes, with no further repair allowance and confirmed cleanup. This is required final validation after a fixture correction, not repeating a completed experiment for a nicer score. It must have a separate recorded verification card and remain distinct from original PC4's elapsed1hour bound. If it fails, preserve the result and publish a draft with acceptance open. BI1.B does not start until this ownership boundary is reviewable; no change to geometry/navigation release sequence.
+
+
+---
+
+## Codex — PC4 final partial-result position before evidence challenge
+*2026-10-30 08:49:38 PDT*
+
+# Owner position before independent evidence review
+
+2026-10-30. PC4's application implementation is complete at0ddff2536d13; the later2d34664 commit changes only the session test, its test proxy and a process note. I independently checked the full-gate record:23 of24 required entries passed, including all1,298 units/build, the native-free HTTP integration and all pre-existing Plane/Space/application/performance checks. The new session suite failed its causal fixture assertion because teardown cancellation reached the server, not because lease expiry failed. All recorded cleanup passed and external closure confirmed. The normal application route ran49.94FPS, with navigationp994.3ms/max5.3ms and readinessmax2.159s; report the two misses, not an all-target pass. Seven finite specimens/buffer/flight checks passed, with one sparse one-sample forward reference. Complete attributable memory remains unverified.
+
+The preflight repair did not solve delivery loss. I stopped the original one-repair acceptance claim and recorded a separate single6minute test-only diagnostic before running it. A Node HTTP proxy blocks exact-client heartbeat/close/cancel/retire before the application, surviving browser teardown; a native-free control verified forwarding and all four blocks. The production lease/backend/math are unchanged and the replacement tab enters through the direct origin. Passing the targeted run cannot turn gate-r1 into a formal passing full gate on a different head.
+
+My position is that passing all targeted controls would support the bounded functional A2 finding but leave full-gate acceptance open. No source edits are justified merely to improve unchanged navigation/readiness scores. If independent evidence review identifies no material implementation or fixture flaw, the next necessary task is one clean complete gate on the test-corrected source, separately bounded to45minutes, with no further repair allowance and confirmed cleanup. This is required final validation after a fixture correction, not repeating a completed experiment for a nicer score. It must have a separate recorded verification card and remain distinct from original PC4's elapsed1hour bound. If it fails, preserve the result and publish a draft with acceptance open. BI1.B does not start until this ownership boundary is reviewable; no change to geometry/navigation release sequence.
+
+Actual diagnostic outcome: the four individual headed controls passed, but the aggregate error assertion failed. The test proxy returned503 to a heartbeat before A closed; A correctly stopped and reported sticky cleanup failure because the fixture deliberately blocked its retirement requests. B's expiry/retry was successful with no cleanup error. The lost-page cleanup error is at1793375028996.8, before the held response was prepared at1793375029405. This is not evidence that B's recovery failed. No third run: stop, preserve partial results and create a draft. Session math audits and headed launcher were after the failed assertion and did not run. Independent evidence reviewer should challenge the classification and whether separating A's intentionally refused cleanup from B's required clean recovery is the correct future fixture repair. Original full-gate acceptance stays open; do not run the previously contemplated follow-up gate yet.
+
+
+---
+
+## Codex — PC4 evidence review request (verbatim; bridge returned no completed answer)
+*2026-10-30 08:54:50 PDT*
+
+The advisor explicitly approved PC4 source/CPU/GPU/fixed-image transmission through this bridge. Read-only independent evidence review. Execute nothing and edit nothing. The frozen packet at /mnt/ml_storage/scratch/atlas-pc4/evidence-review-r1 has a source-manifest pinning all files, app source0ddff25, test-only diagnostic2d34664 and report/docs6030f39. No reviewed checkout/HEAD edits will occur during the review.
+
+Read the PC4-SESSION-RECOVERY-2026-10-30.md full scorecard FIRST, its evidence-summary, failed product-gate and session-ledger JSON, fixture-replacement note, then decisive source. Open all four supplied fixed PNGs. Your earlier card challenge20261030T050119Z-fbb429 was adopted; no further card review is requested. Main point: all1298 units and23/24 full-gate entries passed. First session fixture did not suppress teardown cancel. A separately frozen single diagnostic replaced interception with a test HTTP proxy, passed individual production-duration expiry/replacement/retained-pose controls, then FAILED aggregate cleanup-error assertion. No third run, no acceptance waiver, no passing full-gate claim. Headed launcher and diagnostic math audits were after failure and remain unrun. Owner recommends draft/acceptance open and next bounded fixture verification before BI1.B.
+
+Independently inspect application-policy/server pair fencing and expiry, application-client renewal/input permit, workspace/browser-producer/lifecycle cleanup proof (remoteRetirementFailures), owned page-lifetime/launcher, test and session-loss-proxy. Challenge source AND classification. Proxy returns503 on blocked A heartbeat before pageclose; A correctly loses session, and all its retirement requests are deliberately blocked, yielding sticky cleanup-error. B's living expiry/retry was clean. Is the aggregate all-page no-error assertion a fixture contradiction, a product defect, or still uncertain? Future candidate could separate intentional lost-A cleanup failure from strict B/newowner cleanliness, or simulate transport drop rather than authoritative503; no code changes/reruns yet. Verify held-token retirement causality, input fencing, exact retained pose, token retirement and gate scope against ledger/source. Note held-response delivery reports fulfilled even though A closed: API interception acceptance does not establish browser receipt. Do not treat that field alone as old-client consumption.
+
+Also check the conservative presentation-timing field (recorded after heldTask, earlier <=15s assert), incomplete tombstone provenance bound (historical IDs differ from16 live publications), sparse one-sample forward reference, and deferred empty finalclose proof. No all-memory<=1GiB or realOSsleep/crash claim. Main49.94FPS/Navp994.3ms/readymax2.159s and separate performance misses should be checked from preserved summary; do not invent a new artistic/frame-tail gate. No changing world/default/backend/AP1-MD2 sequence.
+
+Give independent verdict for partial findings, concrete implementation blockers if any, and smallest next action. Report exact files/images read, omissions and that you executed nothing. Do not propose repeated review rounds absent material unresolved issues. The owner position is included but form your own assessment from evidence. Remain within one bounded review.
+
+Additional project files to inspect:
+- atlas-pc4/evidence-review-r1/source-manifest.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-evidence-summary-2026-10-30.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-product-gate-2026-10-30.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-session-ledger-2026-10-30.json
+- atlas-pc4/evidence-review-r1/tests/space-preparation-session.mjs
+- atlas-pc4/evidence-review-r1/tests/support/session-loss-proxy.mjs
+
+
+---
+
+## Bridge — PC4 evidence consultation timeout; no Claude judgement
+*2026-10-30 08:54:50 PDT*
+
+ClaudeTimeoutError: claude gave no complete answer within 180.0s
+
+
+---
+
+## Codex — PC4 extended review request (verbatim; bridge buffer failure)
+*2026-10-30 09:00:14 PDT*
+
+Continuation requested by the advisor: give Claude enough time to complete the verification, rather than move forward without an independent judgement. The previous180s bridge deadline was too short and returned no completed answer. This attempt allows900s, idle300s and24turns. Continue the same read-only assessment of the SAME frozen evidence-review-r1 packet. Current branch f7c6ad0 adds only review/stop documentation after packet report head6030f39; no application/test source changed. Draft PR21 exists only as preserved WIP, is not ready for merge, and PC4 remains at the evidence-review stage. No work on BI1.B will proceed without a completed assessment and resolution of material findings.
+
+Please complete the independent assessment. Focus on factual/source verification of the reported partial results, the product safety/ownership invariants, and whether the two failed fixtures are correctly diagnosed. Do not bless a failed suite or skip a material source concern merely to finish. You may batch related file reads to fit24turns, and must open the four fixed images. If an earlier interrupted review left partial context, continue from it. We need your actual judgement, precise inspected/omitted scope, and the smallest necessary correction/verification before acceptance. No source edit or execution is permitted.
+
+The advisor explicitly approved PC4 source/CPU/GPU/fixed-image transmission through this bridge. Read-only independent evidence review. Execute nothing and edit nothing. The frozen packet at /mnt/ml_storage/scratch/atlas-pc4/evidence-review-r1 has a source-manifest pinning all files, app source0ddff25, test-only diagnostic2d34664 and report/docs6030f39. No reviewed checkout/HEAD edits will occur during the review.
+
+Read the PC4-SESSION-RECOVERY-2026-10-30.md full scorecard FIRST, its evidence-summary, failed product-gate and session-ledger JSON, fixture-replacement note, then decisive source. Open all four supplied fixed PNGs. Your earlier card challenge20261030T050119Z-fbb429 was adopted; no further card review is requested. Main point: all1298 units and23/24 full-gate entries passed. First session fixture did not suppress teardown cancel. A separately frozen single diagnostic replaced interception with a test HTTP proxy, passed individual production-duration expiry/replacement/retained-pose controls, then FAILED aggregate cleanup-error assertion. No third run, no acceptance waiver, no passing full-gate claim. Headed launcher and diagnostic math audits were after failure and remain unrun. Owner recommends draft/acceptance open and next bounded fixture verification before BI1.B.
+
+Independently inspect application-policy/server pair fencing and expiry, application-client renewal/input permit, workspace/browser-producer/lifecycle cleanup proof (remoteRetirementFailures), owned page-lifetime/launcher, test and session-loss-proxy. Challenge source AND classification. Proxy returns503 on blocked A heartbeat before pageclose; A correctly loses session, and all its retirement requests are deliberately blocked, yielding sticky cleanup-error. B's living expiry/retry was clean. Is the aggregate all-page no-error assertion a fixture contradiction, a product defect, or still uncertain? Future candidate could separate intentional lost-A cleanup failure from strict B/newowner cleanliness, or simulate transport drop rather than authoritative503; no code changes/reruns yet. Verify held-token retirement causality, input fencing, exact retained pose, token retirement and gate scope against ledger/source. Note held-response delivery reports fulfilled even though A closed: API interception acceptance does not establish browser receipt. Do not treat that field alone as old-client consumption.
+
+Also check the conservative presentation-timing field (recorded after heldTask, earlier <=15s assert), incomplete tombstone provenance bound (historical IDs differ from16 live publications), sparse one-sample forward reference, and deferred empty finalclose proof. No all-memory<=1GiB or realOSsleep/crash claim. Main49.94FPS/Navp994.3ms/readymax2.159s and separate performance misses should be checked from preserved summary; do not invent a new artistic/frame-tail gate. No changing world/default/backend/AP1-MD2 sequence.
+
+Give independent verdict for partial findings, concrete implementation blockers if any, and smallest next action. Report exact files/images read, omissions and that you executed nothing. Do not propose repeated review rounds absent material unresolved issues. The owner position is included but form your own assessment from evidence. Remain within one bounded review.
+
+Additional project files to inspect:
+- atlas-pc4/evidence-review-r1/source-manifest.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-evidence-summary-2026-10-30.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-product-gate-2026-10-30.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-session-ledger-2026-10-30.json
+- atlas-pc4/evidence-review-r1/tests/space-preparation-session.mjs
+- atlas-pc4/evidence-review-r1/tests/support/session-loss-proxy.mjs
+
+
+---
+
+## Bridge — PC4 extended review transport error; no completed judgement
+*2026-10-30 09:00:14 PDT*
+
+ClaudeProtocolError: Failed to decode JSON: JSON message exceeded maximum buffer size of 1048576 bytes...
+
+
+
+## Codex → Claude — 20261030T160015Z-8e5a4d — 2026-10-30T16:01:21+00:00
+
+The advisor requested completion of this independent review and allowed more time. The900s continuation then hit an SDK JSON message buffer limit of1048576bytes, not an engineering verdict. This invocation keeps the same original bridge and its read-only tools/isolation but configures the documented ClaudeAgentOptions.max_buffer_size to16MiB in memory; no installed bridge or ATLAS source was edited. Continue the SAME frozen evidence-review-r1 packet and same resumed session, preserving completed reading if available.900s remains available. Do not reread already inspected context unnecessarily, but finish factual/source and four-image inspection and your actual judgement. Prior timeout and protocol error are not review findings.
+
+Continuation requested by the advisor: give Claude enough time to complete the verification, rather than move forward without an independent judgement. The previous180s bridge deadline was too short and returned no completed answer. This attempt allows900s, idle300s and24turns. Continue the same read-only assessment of the SAME frozen evidence-review-r1 packet. Current branch f7c6ad0 adds only review/stop documentation after packet report head6030f39; no application/test source changed. Draft PR21 exists only as preserved WIP, is not ready for merge, and PC4 remains at the evidence-review stage. No work on BI1.B will proceed without a completed assessment and resolution of material findings.
+
+Please complete the independent assessment. Focus on factual/source verification of the reported partial results, the product safety/ownership invariants, and whether the two failed fixtures are correctly diagnosed. Do not bless a failed suite or skip a material source concern merely to finish. You may batch related file reads to fit24turns, and must open the four fixed images. If an earlier interrupted review left partial context, continue from it. We need your actual judgement, precise inspected/omitted scope, and the smallest necessary correction/verification before acceptance. No source edit or execution is permitted.
+
+The advisor explicitly approved PC4 source/CPU/GPU/fixed-image transmission through this bridge. Read-only independent evidence review. Execute nothing and edit nothing. The frozen packet at /mnt/ml_storage/scratch/atlas-pc4/evidence-review-r1 has a source-manifest pinning all files, app source0ddff25, test-only diagnostic2d34664 and report/docs6030f39. No reviewed checkout/HEAD edits will occur during the review.
+
+Read the PC4-SESSION-RECOVERY-2026-10-30.md full scorecard FIRST, its evidence-summary, failed product-gate and session-ledger JSON, fixture-replacement note, then decisive source. Open all four supplied fixed PNGs. Your earlier card challenge20261030T050119Z-fbb429 was adopted; no further card review is requested. Main point: all1298 units and23/24 full-gate entries passed. First session fixture did not suppress teardown cancel. A separately frozen single diagnostic replaced interception with a test HTTP proxy, passed individual production-duration expiry/replacement/retained-pose controls, then FAILED aggregate cleanup-error assertion. No third run, no acceptance waiver, no passing full-gate claim. Headed launcher and diagnostic math audits were after failure and remain unrun. Owner recommends draft/acceptance open and next bounded fixture verification before BI1.B.
+
+Independently inspect application-policy/server pair fencing and expiry, application-client renewal/input permit, workspace/browser-producer/lifecycle cleanup proof (remoteRetirementFailures), owned page-lifetime/launcher, test and session-loss-proxy. Challenge source AND classification. Proxy returns503 on blocked A heartbeat before pageclose; A correctly loses session, and all its retirement requests are deliberately blocked, yielding sticky cleanup-error. B's living expiry/retry was clean. Is the aggregate all-page no-error assertion a fixture contradiction, a product defect, or still uncertain? Future candidate could separate intentional lost-A cleanup failure from strict B/newowner cleanliness, or simulate transport drop rather than authoritative503; no code changes/reruns yet. Verify held-token retirement causality, input fencing, exact retained pose, token retirement and gate scope against ledger/source. Note held-response delivery reports fulfilled even though A closed: API interception acceptance does not establish browser receipt. Do not treat that field alone as old-client consumption.
+
+Also check the conservative presentation-timing field (recorded after heldTask, earlier <=15s assert), incomplete tombstone provenance bound (historical IDs differ from16 live publications), sparse one-sample forward reference, and deferred empty finalclose proof. No all-memory<=1GiB or realOSsleep/crash claim. Main49.94FPS/Navp994.3ms/readymax2.159s and separate performance misses should be checked from preserved summary; do not invent a new artistic/frame-tail gate. No changing world/default/backend/AP1-MD2 sequence.
+
+Give independent verdict for partial findings, concrete implementation blockers if any, and smallest next action. Report exact files/images read, omissions and that you executed nothing. Do not propose repeated review rounds absent material unresolved issues. The owner position is included but form your own assessment from evidence. Remain within one bounded review.
+
+Additional project files to inspect:
+- atlas-pc4/evidence-review-r1/source-manifest.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-evidence-summary-2026-10-30.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-product-gate-2026-10-30.json
+- atlas-pc4/evidence-review-r1/docs/reports/project1-interactive/PC4-session-ledger-2026-10-30.json
+- atlas-pc4/evidence-review-r1/tests/space-preparation-session.mjs
+- atlas-pc4/evidence-review-r1/tests/support/session-loss-proxy.mjs
+
+## Claude → Codex — 20261030T160015Z-8e5a4d — 2026-10-30T16:01:21+00:00
+
+# PC4 / BI1.A2 independent evidence review (evidence-review-r1)
+
+**Verdict:** the partial findings are supported. PC4 acceptance stays open and the failed session suite is not passed.
+- **Diagnostic failure:** the aggregate cleanup-error failure is a fixture contradiction, not a product defect. I can trace it deterministically through the source, so it is not left uncertain.
+- **Product source:** I found no implementation blocker for this slice.
+- **Before acceptance:** one test-only correction is needed, then a native-free rehearsal, one corrected session suite run and one complete final gate.
+
+## Is the aggregate assertion failure a fixture contradiction? Yes
+The path, from source and ledger:
+1. `lossProxy.block(aId)` runs before the wheel input (test line 76).
+2. Page A's next heartbeat, at about …028980, gets the proxy's 503. `application-client.js:47` treats any non-ok renewal as authoritative and calls `lose()`. The browser records `session-lost` at …028983.
+3. The workspace's `sessionLost` deactivates and then releases. The release:
+   - retires three tokens through the proxy, each refused with 503, and `browser-producer.js:14` counts each as a remote failure;
+   - aborts the held fine fetch, whose `/cancel` is refused (line 51 counts it);
+   - surfaces `drain` (lifecycle.js:96) as "preparation resource release failed";
+   - attempts `close`, which gets a 503. Because a response was received, deferral is not allowed and it throws.
+4. That produces `cleanup-error` at …028996.8, with exactly the message in the ledger.
+5. The suppression counts (heartbeat 1, cancel 1, retire 3, close 1) match A's three delivered tokens, its one in-flight request and its final close.
+6. Line 113 then forbids any cleanup-error across `savedA` plus B, so the suite was certain to fail.
+
+This is the correct product behaviour: the client refuses to claim a release it could not confirm.
+
+**Classification correction.** Switching to a transport drop alone does not fix the contradiction if A is still alive when it tries to clean up. A dropped `retire` still increments `remoteRetirementFailures`. It works only because, with a drop rather than a 503, A goes to "checking" rather than "lost". A's permit lasts about 30 s and its page closes about 1 s later, so A never starts cleanup before teardown.
+
+**Scenario label.** With the 503, A was not lost silently on the browser side. It knew it had lost the session and stopped before the held result even existed (fine prepared at …029402, after the cleanup error at …028996). The server-side silence, and so the expiry causality, is unaffected. The scenario name overstates the browser side.
+
+## Facts verified against the ledger and source
+- **Held-token causality:** token `6a62a329` (request :6) was prepared at …029402. It retired at …054693, between `client-retiring(expired)` and `client-expired`. There is no `client-closed` for A.
+  - The server put the token in A's set because `route.fetch` consumed the response. "Held before delivery" therefore holds only on the browser side.
+  - `delivery:"fulfilled"` came about 35 s after A's page had closed. It is not evidence that the old client consumed the response; I agree with that caveat.
+- **Expiry timings:**
+  - A: 023977 → 054693 = 30.716 s.
+  - B: 064815 → 094835 = 30.020 s. B's client lost its permit at …094824.4, 10.6 ms before the server expired it, so the conservative permit is observed working.
+- **Late old-client messages:**
+  - A retire of a token it never owned → 410 via the tombstone, without an `http-error` because nothing is thrown (server lines 74–76).
+  - A heartbeat with sequence 999 → 410, logged at …057648.
+  - Publications and owner unchanged.
+- **Input fencing:**
+  - `frame` gates motion, prediction and drawing on `client.check()`; `scale` and `orient` check it too.
+  - Lines 100–101 assert no pose, navigation or request change while unverified, and they passed because the failure was at line 113.
+  - `queriesDuringPause:0` and `poseRetained:true` are literal values. They are justified only by those assertions passing.
+- **Exact retained pose:** asserted by deep equality after expiry (line 103) and after retry (line 107). The retry pose goes through `poseModel.validate(retained)`.
+- **Publications:** 8 prepared, 8 retired, enumerated from the ledger: A 4, B's first session 2, B's final session 2. The main route's 17/17 is from the summary only.
+- **Deferred empty close:**
+  - B's `retire` calls reached the server at …094835 and triggered the per-operation expiry. The server shows `client-expired tokens:2`, after which the retires were acknowledged as `alreadyRetired`.
+  - The close was then aborted ("Failed to fetch") and deferred. Deferral requires lost session, no errors, zero remote failures, expired, and no response received (workspace lines 77–78, client line 129).
+  - For this run, the ledger shows nothing was left. In general the claim holds only if every retire was acknowledged. The deferred close is never re-sent, which is acceptable.
+- **Presentation timing:**
+  - The recorded 9.714 s is the time the held task completed (≈ 029405 + 35000 → 064407, minus expiry at 054693). It is not a presentation measurement.
+  - The real criterion is line 87, `ready(b)` within 15 s of expiry, which passed. B's view was prepared at …057507, about 2.8 s after expiry.
+  - Record the timestamp at line 87 and rename the field.
+- **Healthy owner:** 13 renewals including setup sequence 1; 12 fall inside the 60 s window. Reported accurately.
+- **Pair fencing and status privacy (my earlier card finding):** resolved.
+  - Status returns only state, remaining time and closed-client count.
+  - Close, renew, retire and cancel all require the runtime ID and nonce; a nonce mismatch gives 409, an ended session 410.
+  - Renewal sequences must strictly increase.
+  - Expiry is checked on every operation as well as by the 1 s sweep.
+  - A prepare whose session expires while it runs retires its output (server lines 98–102).
+- **Tombstones:** each tombstone copies the live token set at close (retired tokens are already removed). That set is bounded by live publications at close, not by historical token IDs; tombstones are capped at 1,024. The report's wording is correct.
+- **Gate:** 23/24 entries passed on 0ddff25; `space-preparation-session` failed at its line-84 causal assertion. The source digests recorded by the diagnostic equal the packet manifest's for the pinned application and test files.
+- **First fixture (gate r1):** the diagnosis is consistent with the assertion message and with A's own produce path, which sends `/cancel` on abort. I cannot independently verify it, because the r1 server events are not in the packet.
+
+## Minor source notes (not blockers)
+1. `application-policy.mjs` `finish()`: if `onClose` throws, `healthy()` throws before the tombstone is written and before `current` is cleared. The state stays stuck in a closed-current, cleanup-failed condition, and the expiry event is not emitted. That is safe and sticky (503), but confirm a unit test covers it.
+2. Any non-ok heartbeat, including generic 503s such as a malformed request, ends the session immediately. That is conservative and acceptable for a local same-origin server.
+3. **Launcher:** the page-lifetime owner correctly tracks pages only within its own context and is idempotent, with dispose in `finally`. Windows opened in the default context (for example with Ctrl+N) are not owned; that limit should be stated. The headed check did not run.
+
+## Performance and geometry (from the preserved summary)
+- **Frame rate:** 49.94 FPS (49.88 during preparation) against a 30 FPS target: pass. The p50 frame time of 20 ms suggests a 50 Hz cadence; that is descriptive only.
+- **Navigation:** p99 4.30 ms against 2 ms is a miss; the maximum of 5.30 ms against 8 ms passes.
+- **Readiness:** interaction readiness has a median of 0.877 s and a maximum of 2.159 s, so the maximum misses. View readiness (median 1.719 s, max 1.728 s, n=2) also exceeds 1 s if the same target applies. The report should name it explicitly rather than "some readiness".
+- **Waiting:** 1.080 s, 6.29% of active intervals.
+- **Sparse specimen:** specimen `4b2f1f5b` has a single reference sample, so its reference-to-mesh direction is essentially unchecked. Only the mesh-side direction has 512 samples. Its limit is stated; it should not count as surface-fidelity evidence.
+- No 1 GiB memory claim, no real OS sleep or renderer crash claim, and no new frame-tail gate.
+
+## The four images
+- **Second-tab refusal:** shows the "another tab" message and Retry, with the Fractal viewer selected. Consistent.
+- **Expired page:**
+  - Inert and blank with a Retry button. The blank is consistent with `drawImage` of a WebGPU canvas after presentation.
+  - The expiry message appears twice (two status elements). This is cosmetic and not a gate.
+- **Retried page:** terrain at scale 1. The exact pose comes from the assertion; it cannot be confirmed visually.
+- **Fine inspection:** scale 0.25 on the main route.
+
+## Smallest next action (test only; no application change)
+1. In `session-loss-proxy`, simulate transport loss for A by holding or destroying the socket instead of answering 503. A then stays "checking" until its page closes, which matches "silent loss".
+2. Scope the error assertion per page:
+   - The B and replacement-owner sessions stay strict: no runtime, device or cleanup errors.
+   - A must have no error before the fault time. Any A cleanup-error must postdate the block and match the proxy's suppression counts.
+3. Record presentation time at line 87.
+4. Rehearse the proxy behaviour without native work, then make one corrected session run and one complete final gate. That run will also cover the launcher check and the finite audits that never ran.
+
+No further review round is needed unless that run fails.
+
+## Scope
+**Read this session (frozen packet):**
+- Documents and evidence: `source-manifest.json`, the PC4 scorecard, evidence-summary, product-gate and session-ledger JSON, and the fixture-replacement note.
+- Tests: `tests/space-preparation-session.mjs`, `tests/support/session-loss-proxy.mjs`.
+- Source: `application-policy.mjs`, `application-server.mjs`, `application-client.js`, `workspace.js`, `browser-producer.js`, `page-lifetime.mjs`, `world-preview.mjs`, and lines 60–109 of `lifecycle.js`, plus a grep across `src/space/preparation`.
+- All four PNGs.
+
+**Not read:** `runtime.js` and `contract.js`, the native adapter, queue, worker and publications modules, the unit tests, `pc4-http.mjs`, the card amendment, the preflight note, `app.js`, `index.html`, `mode-host.js`, the gate r1 raw run, and the raw scratch reports.
+
+I executed nothing and edited nothing.
+
+---
+
+## Codex — PC4 owner response and final verification disposition
+*2026-10-30 09:05:01 PDT*
+
+Claude's completed review20261030T160015Z-8e5a4d supports the partial findings and confirms the deterministic fixture contradiction, with no inspected product blocker. I adopt the recommended test-only transport drop, page-scoped error assertions and correctly placed presentation timestamp, and froze a separate final-verification card before correction. A native-free realHTTP rehearsal passes: forwarded healthy client, transport failure means checking rather than authoritative loss, all four exact-client operations withheld, other requests forwarded, timer/listener closure. Preserve both old failed runs; no retrospective waiver. One corrected headed session and one complete final gate are next, bounded45minutes without repair allowance; failure returns to review.
+
+Source claim checked: the sticky onClose failure has a unit. I do not rely on the tighter tombstone16-ID assertion: application-server deletes tokens for explicit retire but not /cancel; adapter cancelRequest can retire completed publications while their IDs remain in client.tokens. Historical provenance can exceed native-live publication count, though existing request/client capacities bound it. No product change is needed to retain the report's explicit broader resource limit. Adopt explicit view-readiness miss and sparse-reference limitation. Completed review source/image/omission/execution scope remains verbatim.
+
+
+---
+
+## Codex — PC4 owner final-acceptance position and focused closure verification request
+*2026-10-30 09:42:55 PDT*
+
+The advisor requested completed independent verification rather than moving on unverified. Your completed review20261030T160015Z-8e5a4d found no inspected implementation blocker, confirmed the fixture contradiction and prescribed a test-only correction/rehearsal/session/fullgate. We followed it. This is a focused confirmation of those previously unresolved final acceptance conditions, not a new design/artistic gate or a review restart. Read-only, execute/edit nothing. Same approved PC4 source/results scope. No reviewed checkout/HEAD edits while active.900s and16MiB SDK buffer remain configured.
+
+Frozen final packet /mnt/ml_storage/scratch/atlas-pc4/closure-review-r0. Read owner full-ten-criterion final report, actual final gate (24/24 passed), final summary/ledger/closure, and corrected session test/proxy. Application source remains byte-identical0ddff25; measured/gated commitf108ec5ab461a440ca974886190d5c64300fbdd6. Corrections are exactly socket drop, per-page error checks and presentation timestamp as you prescribed, plus HTTP-detail newline serializer. Separate nativefree rehearsal passed and corrected headed session-r3 passed all7 before fullgate. Final gate16:08:14.804–16:39:56.296 passed24/24,1298units, all3sceneperformancegroups3validtrials, actualLandscape and finalsession/finiteaudits/ownedlauncher. No repair/repeat after this followupcard. Main18tokensprepared/18retired (raw application-server-ledger included), session8/8, zero ownererrorchecks, all known PIDs/auditworkers/launcher processes absent, portsclosed, GPUlockfree. Final renderedFPS49.970/49.877preparation, navp994.100ms misses2/max4.700passes8, interactionmedian0.871/max2.307s misses1s onslowcases, view1.683–1.761s alsoabovegeneral1starget, memory1GiBunverified, sparseone-sampleforwardchecknotfidelity. Source digests in finalsummary/manifest; reportcurrentisdocs-onlyaftergatedhead.
+
+Owner recommendation before this confirmation: bounded A2 acceptance and PR ready with these carried limits, BI1.B next after advisor merge. Prior failed attempts remain failed and linked. Your review reading scope and noexecutions remain explicit; main performance is summary-level unless you inspect the provided scorer. Correct one prior bound before relying: explicit retire deletes client.tokens, /cancel does not, while adapter.cancelRequest can retire a completed publication; therefore historical IDs may remain in the tombstone. We keep bounded historical-provenance wording and claim no<=16storedID bound. Existing stickyfinishfailure unit is present. No product change for those notes.
+
+Please verify the concrete new acceptance facts/source/causal ledger and give completed concise judgement: are your final conditions satisfied for bounded A2 closure, or what material blocker remains? State files read/omissions/execution scope and any factual correction needed. No new screenshots are being claimed independently reviewed here; the four images you already read remain the visual evidence. No extra round is needed unless there is a material unresolved issue.
+
+
+
+## Codex → Claude — 20261030T164255Z-d6d17b — 2026-10-30T16:43:45+00:00
+
+The advisor requested completed independent verification rather than moving on unverified. Your completed review20261030T160015Z-8e5a4d found no inspected implementation blocker, confirmed the fixture contradiction and prescribed a test-only correction/rehearsal/session/fullgate. We followed it. This is a focused confirmation of those previously unresolved final acceptance conditions, not a new design/artistic gate or a review restart. Read-only, execute/edit nothing. Same approved PC4 source/results scope. No reviewed checkout/HEAD edits while active.900s and16MiB SDK buffer remain configured.
+
+Frozen final packet /mnt/ml_storage/scratch/atlas-pc4/closure-review-r0. Read owner full-ten-criterion final report, actual final gate (24/24 passed), final summary/ledger/closure, and corrected session test/proxy. Application source remains byte-identical0ddff25; measured/gated commitf108ec5ab461a440ca974886190d5c64300fbdd6. Corrections are exactly socket drop, per-page error checks and presentation timestamp as you prescribed, plus HTTP-detail newline serializer. Separate nativefree rehearsal passed and corrected headed session-r3 passed all7 before fullgate. Final gate16:08:14.804–16:39:56.296 passed24/24,1298units, all3sceneperformancegroups3validtrials, actualLandscape and finalsession/finiteaudits/ownedlauncher. No repair/repeat after this followupcard. Main18tokensprepared/18retired (raw application-server-ledger included), session8/8, zero ownererrorchecks, all known PIDs/auditworkers/launcher processes absent, portsclosed, GPUlockfree. Final renderedFPS49.970/49.877preparation, navp994.100ms misses2/max4.700passes8, interactionmedian0.871/max2.307s misses1s onslowcases, view1.683–1.761s alsoabovegeneral1starget, memory1GiBunverified, sparseone-sampleforwardchecknotfidelity. Source digests in finalsummary/manifest; reportcurrentisdocs-onlyaftergatedhead.
+
+Owner recommendation before this confirmation: bounded A2 acceptance and PR ready with these carried limits, BI1.B next after advisor merge. Prior failed attempts remain failed and linked. Your review reading scope and noexecutions remain explicit; main performance is summary-level unless you inspect the provided scorer. Correct one prior bound before relying: explicit retire deletes client.tokens, /cancel does not, while adapter.cancelRequest can retire a completed publication; therefore historical IDs may remain in the tombstone. We keep bounded historical-provenance wording and claim no<=16storedID bound. Existing stickyfinishfailure unit is present. No product change for those notes.
+
+Please verify the concrete new acceptance facts/source/causal ledger and give completed concise judgement: are your final conditions satisfied for bounded A2 closure, or what material blocker remains? State files read/omissions/execution scope and any factual correction needed. No new screenshots are being claimed independently reviewed here; the four images you already read remain the visual evidence. No extra round is needed unless there is a material unresolved issue.
+
+Additional project files to inspect:
+- atlas-pc4/closure-review-r0/source-manifest.json
+- atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-FINAL-ACCEPTANCE-2026-10-30.md
+- atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-final-product-gate-2026-10-30.json
+- atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-final-evidence-summary-2026-10-30.json
+- atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-final-session-ledger-2026-10-30.json
+- atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-final-closure-2026-10-30.json
+- atlas-pc4/closure-review-r0/tests/space-preparation-session.mjs
+- atlas-pc4/closure-review-r0/tests/support/session-loss-proxy.mjs
+
+## Claude → Codex — 20261030T164255Z-d6d17b — 2026-10-30T16:43:45+00:00
+
+# PC4 / BI1.A2 closure confirmation (closure-review-r0)
+
+**Verdict:** my final conditions are met, and bounded A2 closure is supported. I found no material blocker. The one factual correction below is the owner's own, and I accept it.
+
+## The prescribed corrections are present in the test source
+- **Socket drop instead of 503:** the proxy now calls `response.destroy()` for blocked requests. It records each fault with its time and operation, and records when the block started.
+- **Per-page error checks (test lines 114–118):**
+  - The living and replacement owners must have no runtime, device or cleanup errors.
+  - The lost owner may have only cleanup-errors after the fault time. That condition is fairly permissive, but here it was not needed.
+- **Presentation time:** `replacementPresentedAt` is recorded right after `ready(b)` (line 88). The held task's completion is a separate field, `heldResponseSettledAfterExpiryMs`.
+- **Test digests:** the ledger's digests for the test and proxy match the closure manifest.
+- **Application source is byte-identical:** the eight application source digests in the ledger match the r1 manifest (application-policy, application-server, world-preview, page-lifetime, application-client, workspace, app.js, index.html).
+
+## The final causal ledger checks out
+- **Lost owner A:**
+  - Last renewal was at …307430 (sequence 13); the fault began at …311677.
+  - Two heartbeats were dropped 1 ms apart, at …312436 and …312437. This is probably the browser retrying the POST once after the reset; it is harmless, since neither reached the server.
+  - The teardown `/cancel` at …313286 was dropped. That is the exact leak that broke gate-r1, now suppressed at a boundary that survives page teardown.
+  - A sent no close or retire calls, and A has no errors (`lostOwner: []`).
+- **Held token:** `d549761c` (request :6) was prepared at …312850. It retired at …338160, between `client-retiring(expired)` and `client-expired`. Expiry came 30.730 s after the last renewal, under the 32 s limit, and there was no `client-closed` for A. The `delivery:"fulfilled"` field still does not show the old client received the response.
+- **Replacement:** session `58beee74` opened at …338281. The recorded presentation time is 2.895 s after expiry, under 15 s. The old client's heartbeat got a 410 at …341080.
+- **Living page:** last renewal at …348307, server expiry at …378326, so 30.019 s. Both tokens retired at expiry. The retry at the exact retained pose is supported by the assertions at lines 104 and 108, which passed. The whole loss and retry took 32.898 s, under 50 s.
+- **Final session `ca0f7b88`:** two tokens prepared and explicitly retired at …381310, then closed with zero tokens left.
+- **Session publications:** 8 prepared, 8 retired (4 + 2 + 2).
+- **Launcher:** cleanup true, no cleanup errors, all nine owned process IDs gone. The page-lifetime assertions sit inside the suite that passed.
+
+## Gate and closure records
+- The gate on f108ec5 ran from 16:08:14.804 to 16:39:56.296. All 24 of 24 entries passed, including `space-preparation-session` and `cleanup`.
+- The closure check shows cleanup true, no surviving processes, ports 5190/5196/5198/5199/5200/46817 closed, and the GPU lock free.
+
+## Summary figures match the report
+- **Main route:**
+  - 49.970 FPS overall and 49.877 FPS during preparation, against a 30 FPS target.
+  - Navigation p99 is 4.100 ms, which misses the 2 ms target; the maximum of 4.700 ms passes the 8 ms limit.
+  - Interaction readiness (n=9): median 0.871 s, maximum 2.307 s.
+  - View readiness (n=2): 1.683 s and 1.761 s.
+  - Waiting 1.140 s, 6.62% of active intervals.
+- **Resources:** peak GPU 32,426,144 bytes; RSS 2,983 MiB, which includes browser and interpreter overhead; 18 tokens prepared and 18 retired.
+- **Qualification:** nine application specimens and four session specimens pass. The specimen with a single reference sample is flagged in both sets.
+- The report's limits and its "miss" wording are accurate. I did not inspect the per-trial records for the three scene-performance groups; I rely on the gate entries passing.
+
+## Factual correction (accepted)
+My earlier statement that retired tokens are already removed from the tombstone copy was incomplete. In `application-server.mjs`, `/cancel` calls `adapter.cancelRequest` without deleting anything from `client.tokens`, so the tombstone can hold historical token IDs. The request capacity of 4,096 per client bounds them; there is no bound of 16 or fewer. The owner's wording is correct.
+
+As a result, expiry or close can retire an already-retired token a second time. This run shows no cleanup failure from that. I did not re-read `publications.mjs` to confirm the second retire is idempotent. It is not a blocker.
+
+## Scope
+**Read in `closure-review-r0`:**
+- `source-manifest.json`
+- `PC4-FINAL-ACCEPTANCE-2026-10-30.md`
+- `PC4-final-product-gate-2026-10-30.json`
+- `PC4-final-closure-2026-10-30.json`
+- `PC4-final-session-ledger-2026-10-30.json`: lines 1–60 and 785–891 in full, plus an extract of the server events
+- `PC4-final-evidence-summary-2026-10-30.json`: grep extract of key fields only
+- `tests/space-preparation-session.mjs` and `tests/support/session-loss-proxy.mjs`
+
+**Not read:**
+- the final verification card
+- the peer-review copy
+- the rehearsal and session-r3 artifacts
+- the performance scorer and per-trial records
+- raw application-server ledgers
+- unit tests
+- `publications.mjs`
+- any new screenshots
+
+The four images from my previous review remain the visual evidence. I executed nothing and edited nothing.

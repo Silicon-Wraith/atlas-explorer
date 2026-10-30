@@ -5,13 +5,14 @@ const epoch = () => performance.timeOrigin + performance.now();
 export function createBrowserProducer({ onEvent = () => {}, baseUrl = '/pc2', headers = {}, fetcher = fetch } = {}) {
   if (!/^\/(?!\/)[a-zA-Z0-9/_-]+$/.test(baseUrl)) throw new TypeError('Same-origin preparation endpoint required');
   headers = { ...headers };
-  let livePayloadBytes = 0, peakPayloadBytes = 0, releases = 0;
+  let livePayloadBytes = 0, peakPayloadBytes = 0, releases = 0, remoteRetirementFailures = 0;
   async function retire(token) {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 5000);
     try {
       const r = await fetcher(baseUrl + '/retire/' + token, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, signal: controller.signal });
       if (!r.ok) throw new Error('Producer retirement failed');
-    } finally { clearTimeout(timer); }
+    } catch (error) { remoteRetirementFailures++; throw error; }
+    finally { clearTimeout(timer); }
   }
   async function produce(request, signal) {
     const controller = new AbortController(), abort = () => controller.abort(), timer = setTimeout(abort, 130000);
@@ -47,10 +48,11 @@ export function createBrowserProducer({ onEvent = () => {}, baseUrl = '/pc2', he
       else {
         const cancellation = new AbortController(), deadline = setTimeout(() => cancellation.abort(), 5000);
         try { const response = await fetcher(baseUrl + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(request.identity), signal: cancellation.signal }); if (!response.ok) throw new Error('Request-identity retirement failed'); }
+        catch (failure) { remoteRetirementFailures++; throw failure; }
         finally { clearTimeout(deadline); }
       }
       throw error;
     } finally { signal.removeEventListener('abort', abort); clearTimeout(timer); }
   }
-  return Object.freeze({ produce, snapshot: () => ({ livePayloadLeaseBytes: livePayloadBytes, peakPayloadLeaseBytes: peakPayloadBytes, releases }) });
+  return Object.freeze({ produce, snapshot: () => ({ livePayloadLeaseBytes: livePayloadBytes, peakPayloadLeaseBytes: peakPayloadBytes, releases, remoteRetirementFailures }) });
 }
