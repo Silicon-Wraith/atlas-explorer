@@ -62,7 +62,7 @@ finally{
  if(service)report.lastServer=await service.close();
  report.cleanup=report.firstServer?.cleanup===true&&report.lastServer?.cleanup===true&&values.size===0;
  report.factoryCalls=factoryCalls;report.retiredTokens=retired.length;report.cancelledRequests=cancelled.length;report.ended=Date.now();
- await fs.writeFile(path.join(root,'http-session.json'),JSON.stringify(report,null,2)+'\\n');
+ await fs.writeFile(path.join(root,'http-session.json'),JSON.stringify(report,null,2)+'\n');
  await fs.mkdir('artifacts',{recursive:true});await fs.writeFile('artifacts/preparation-session-http-report.json',JSON.stringify(report.pass&&report.cleanup?report.checks.map(name=>({name})):[{name:'FAIL',error:report.error??'cleanup unconfirmed'}],null,2)+'\n');
  console.log(JSON.stringify({root,pass:report.pass,cleanup:report.cleanup,checks:report.checks,error:report.error}));
 }

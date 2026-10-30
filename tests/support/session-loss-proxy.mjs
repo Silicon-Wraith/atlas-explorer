@@ -5,14 +5,15 @@ import { once } from 'node:events';
 export async function createSessionLossProxy(upstream) {
   const target = new URL(upstream);
   const suppressed = { heartbeat: 0, close: 0, cancel: 0, retire: 0 };
-  let blockedClient = null, origin;
+  let blockedClient = null, origin, blockedAt = null;
+  const faults = [];
   const server = http.createServer((request, response) => {
     const operation = new URL(request.url, origin).pathname.split('/')[3];
     if (blockedClient && request.headers['x-atlas-client'] === blockedClient && operation in suppressed) {
       suppressed[operation]++;
+      faults.push({ time: Date.now(), operation });
       request.resume();
-      response.writeHead(503, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({ error: 'Test delivery withheld' }));
+      response.destroy();
       return;
     }
     const headers = { ...request.headers, host: target.host };
@@ -31,8 +32,9 @@ export async function createSessionLossProxy(upstream) {
   await once(server, 'listening');
   origin = `http://127.0.0.1:${server.address().port}`;
   return {
-    origin, suppressed,
-    block(client) { blockedClient = client; },
+    origin, suppressed, faults,
+    get blockedAt() { return blockedAt; },
+    block(client) { blockedClient = client; blockedAt = Date.now(); },
     async close() {
       const closed = new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
       server.closeAllConnections();

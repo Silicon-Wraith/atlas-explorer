@@ -1,0 +1,46 @@
+{
+  "pass": true,
+  "nativeFree": true,
+  "started": 1793376254010,
+  "ended": 1793376254065,
+  "checks": [
+    "Healthy client verified through forwarded Host/Origin",
+    "Blocked renewal is a transport rejection; client checks connection without authoritative loss",
+    "All four exact-client cleanup/renewal paths withheld from upstream",
+    "Other requests still forwarded",
+    "Close failure preserved; client timers cancelled"
+  ],
+  "suppressed": {
+    "heartbeat": 2,
+    "close": 2,
+    "cancel": 1,
+    "retire": 1
+  },
+  "faults": [
+    {
+      "time": 1793376254053,
+      "operation": "heartbeat"
+    },
+    {
+      "time": 1793376254057,
+      "operation": "heartbeat"
+    },
+    {
+      "time": 1793376254058,
+      "operation": "close"
+    },
+    {
+      "time": 1793376254059,
+      "operation": "cancel"
+    },
+    {
+      "time": 1793376254060,
+      "operation": "retire"
+    },
+    {
+      "time": 1793376254065,
+      "operation": "close"
+    }
+  ],
+  "cleanup": true
+}

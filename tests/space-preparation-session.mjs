@@ -59,6 +59,7 @@ try{
  // The lost page delivers no cleanup; the living page can still confirm its
  // per-request retirement while final close/heartbeat delivery is suppressed.
  detail.lossSuppression=lossProxy.suppressed;
+ detail.lossFaults=lossProxy.faults;
  await context.route(/\/api\/preparation\/(?:heartbeat|close|cancel|retire\/[^/?]+)(?:\?.*)?$/,async route=>{
   const id=route.request().headers()['x-atlas-client'];
   const operation=new URL(route.request().url()).pathname.split('/')[3];
@@ -73,7 +74,7 @@ try{
    try{await route.fulfill({response});detail.heldResponse.delivery='fulfilled';}catch{detail.heldResponse.delivery='closed-target';}
   })();heldTask.catch(error=>{detail.heldResponseError=error.message;heldReady();});return heldTask;
  });
- lossProxy.block(aId);await a.mouse.move(600,400);await a.mouse.wheel(0,-120);await within(held,20000,'native response held before token delivery');
+ lossProxy.block(aId);detail.lossFaultAt=lossProxy.blockedAt;await a.mouse.move(600,400);await a.mouse.wheel(0,-120);await within(held,20000,'native response held before token delivery');
  assert.ok(!detail.heldResponseError,detail.heldResponseError);assert.ok(service.snapshot().native.publications>0);
  const aEvents=savedA=await events(a),healthyEvents=aEvents.filter(e=>e.time>=healthyStart);
  detail.runs.push({scenario:'visible-healthy-owner',started:healthyStart,ended:Date.now(),seconds:(Date.now()-healthyStart)/1000,events:healthyEvents,frames:healthyEvents.filter(e=>e.type==='frame')});allEvents.push(...aEvents);
@@ -84,13 +85,13 @@ try{
  const heldRetirement=service.events.findIndex(e=>e.type==='producer-retired'&&e.token===heldToken),expiryEnd=service.events.indexOf(expiredA);
  assert.ok(expiryBegin>=0&&heldRetirement>expiryBegin&&heldRetirement<expiryEnd,'The held publication must retire inside expiry cleanup, not an earlier request');
  detail.heldResponse.retiredByExpiry=true;
- await b.bringToFront();await b.click('#landscape-retry');await ready(b,15000);assert.ok(Date.now()-expiredA.time<=15000);bId=service.snapshot().client;assert.notEqual(bId,aId);
+ await b.bringToFront();await b.click('#landscape-retry');await ready(b,15000);const replacementPresentedAt=Date.now();assert.ok(replacementPresentedAt-expiredA.time<=15000);bId=service.snapshot().client;assert.notEqual(bId,aId);
  const pubs=service.snapshot().native.publications,foreignToken=service.events.filter(e=>e.type==='producer-prepared'&&e.identity.runtimeId===bId).at(-1).token;
  const oldRetire=await fetch(base+'/api/preparation/retire/'+foreignToken,{method:'POST',headers:aHeaders,body:'{}'});assert.equal(oldRetire.status,410);
  const oldRenewal=await fetch(base+'/api/preparation/heartbeat',{method:'POST',headers:aHeaders,body:JSON.stringify({sequence:999})});assert.equal(oldRenewal.status,410);
  assert.equal(service.snapshot().native.publications,pubs);assert.equal(service.snapshot().client,bId);
  await heldTask;assert.ok(!detail.heldResponseError,detail.heldResponseError);assert.equal(service.snapshot().client,bId);
- detail.controls.push({scenario:'silent-owner-loss',seconds:(Date.now()-lossStart)/1000,expiryMs:expiredA.time-lastRenewal,replacementPresentationMs:Date.now()-expiredA.time,termination:'expiry',oldQueueAtAdmission:'held result had already completed native work'});
+ detail.controls.push({scenario:'silent-owner-loss',seconds:(Date.now()-lossStart)/1000,expiryMs:expiredA.time-lastRenewal,replacementPresentationMs:replacementPresentedAt-expiredA.time,heldResponseSettledAfterExpiryMs:Date.now()-expiredA.time,termination:'expiry',oldQueueAtAdmission:'held result had already completed native work'});
  pass('Silent loss expires the old owner and late messages cannot mutate its replacement');
 
  await b.locator('#landscape-canvas').click({position:{x:600,y:350}});await ready(b);await press(b,'e',500);const retained=(await state(b)).pose;
@@ -108,9 +109,13 @@ try{
  assert.ok((Date.now()-livingStart)/1000<=50);await b.screenshot({path:path.join(root,'session-retried.png')});
  detail.controls.push({scenario:'living-page-expiry-retry',seconds:(Date.now()-livingStart)/1000,expiryMs:expiredB.time-lastB,poseRetained:true,queriesDuringPause:0});
  pass('Expired living page fences input and explicitly retries at its own retained pose');
- await ev(b,async()=>{await atlas.workspaces.switchTo('plane');await atlas.landscape.whenReleased();},null,'final Landscape drain',30000);allEvents.push(...await events(b));
+ await ev(b,async()=>{await atlas.workspaces.switchTo('plane');await atlas.landscape.whenReleased();},null,'final Landscape drain',30000);const bEvents=await events(b);allEvents.push(...bEvents);
  assert.equal(detail.errors.length,0,detail.errors.join('\n'));
- assert.ok(!allEvents.some(e=>['runtime-error','device-error','cleanup-error'].includes(e.type)));
+ const errorTypes=['runtime-error','device-error','cleanup-error'];
+ assert.ok(!bEvents.some(e=>errorTypes.includes(e.type)),'Living and replacement owners must have no runtime/device/cleanup errors');
+ const lostErrors=savedA.filter(e=>errorTypes.includes(e.type));
+ assert.ok(lostErrors.every(e=>e.type==='cleanup-error'&&e.time>=detail.lossFaultAt&&lossProxy.suppressed.cancel+lossProxy.suppressed.retire>0&&lossProxy.suppressed.close>0),'Lost-owner errors must follow its deliberately refused cleanup; pre-fault/runtime/device errors fail');
+ detail.errorChecks={livingAndReplacement:0,lostOwner:lostErrors};
  assert.ok(allEvents.filter(e=>e.type==='workspace-error').every(e=>e.message.includes('another tab')));
  detail.pass=true;
 }catch(error){detail.failure=String(error.stack??error);process.exitCode=1;report.push({name:'FAIL',error:detail.failure});console.error(detail.failure);if(b&&!b.isClosed())await b.screenshot({path:path.join(root,'failure.png')}).catch(()=>{});}
