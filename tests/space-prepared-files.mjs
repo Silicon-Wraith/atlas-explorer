@@ -1,5 +1,6 @@
 // BI1.B actual downloaded-file restoration after owned helper/browser restart.
 import './support/entry-guard.mjs';
+import {preparedRunRoot} from './support/prepared-run-root.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -15,7 +16,7 @@ import {PROJECT0_LAUNCH_ARGS,checkEffectiveArguments,collectVisibleText,activeGp
 if(!process.env.ATLAS_GPU_HANDOFF||process.env.ATLAS_GPU_DEFERRED)throw Error('Headed hardware handoff required');
 installSuiteDeadline('space-prepared-files',360000);
 const root=path.resolve(process.env.ATLAS_BI1B_RUN_ROOT??'/mnt/ml_storage/scratch/atlas-bi1b/files-'+new Date().toISOString().replace(/[:.]/g,'-'));
-assert.ok(root.startsWith('/mnt/ml_storage/scratch/atlas-bi1b/'));await fs.mkdir(root);
+preparedRunRoot(root,'files');await fs.mkdir(root);
 const detail={started:Date.now(),errors:[],phases:[],checks:[],cleanup:false},report=[],exec=promisify(execFile),base='http://127.0.0.1:5196';
 let service,browser,context,page,observer,phase,interactionMs=0;
 const delay=ms=>within(new Promise(resolve=>setTimeout(resolve,ms)),ms+2000,'file workflow interval');

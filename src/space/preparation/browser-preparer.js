@@ -4,45 +4,59 @@ import { initializeObservedWasm, observedWasmCapacity } from './wasm-memory.js';
 
 const vec = a => ({ x: a[0], y: a[1], z: a[2] });
 const rotation = { x: 0, y: 0, z: 0, w: 1 };
-export async function createBrowserPreparer({ renderer, workerUrl, loadPhysics, onEvent = () => {} }) {
+let nextWorkerId = 0;
+export async function createBrowserPreparer({ renderer, workerUrl, loadPhysics, onEvent = () => {}, onFailure = () => {},
+  workerFactory = url => new Worker(url, { type: 'module' }), setTimer = setTimeout, clearTimer = clearTimeout }) {
   if (!workerUrl || typeof loadPhysics !== 'function') throw new TypeError('Explicit collision worker and physics loader required');
   let engine, capacity, initialization;
   async function rapier() {
     initialization ??= (async () => { engine = await loadPhysics(); capacity = await initializeObservedWasm(engine); })();
     await initialization; return engine;
   }
-  const worker = new Worker(workerUrl, { type: 'module' });
-  const pending = new Map(); let nextId = 0, closed = false, workerCapacity = 0, resolveReady, rejectReady;
+  const worker = workerFactory(workerUrl), workerId = ++nextWorkerId;
+  const pending = new Map(); let nextId = 0, closed = false, terminal = null, workerCapacity = 0, resolveReady, rejectReady;
   const ready = new Promise((r, j) => { resolveReady = r; rejectReady = j; });
+  function fail(error, code) {
+    if (closed) return;
+    terminal = Object.assign(new Error(error.message, { cause: error }), { code }); closed = true;
+    rejectReady(terminal);
+    for (const job of pending.values()) { clearTimer(job.timer); job.reject(terminal); }
+    pending.clear(); worker.terminate(); onFailure(terminal);
+  }
   worker.onmessage = ({ data }) => {
+    if (closed) return;
     if (data.type === 'ready') { resolveReady(); return; }
-    const job = pending.get(data.id); if (!job) return; pending.delete(data.id); clearTimeout(job.timer);
+    const job = pending.get(data.id); if (!job) return;
+    if (data.error) { fail(new Error(data.error), 'worker-job-failed'); return; }
+    pending.delete(data.id); clearTimer(job.timer);
     workerCapacity = Math.max(workerCapacity, data.wasmCapacity ?? 0);
-    data.error ? job.reject(new Error(data.error)) : job.resolve(data);
+    job.resolve(data);
   };
-  worker.onerror = event => { const error = new Error(event.message); rejectReady(error); for (const job of pending.values()) { clearTimeout(job.timer); job.reject(error); } pending.clear(); };
+  worker.onerror = event => { event.preventDefault?.(); fail(new Error(event.message), 'worker-error'); };
+  worker.onmessageerror = () => fail(new Error('Collision worker message could not be read'), 'worker-message-error');
   let startup;
-  try { await Promise.race([ready, new Promise((_, reject) => { startup = setTimeout(() => reject(new Error('Collision worker startup deadline')), 10000); })]); }
-  catch (error) { worker.terminate(); throw error; } finally { clearTimeout(startup); }
+  try { await Promise.race([ready, new Promise((_, reject) => { startup = setTimer(() => { fail(new Error('Collision worker startup deadline'), 'worker-timeout'); reject(terminal); }, 10000); })]); }
+  catch (error) { if (!closed) { closed = true; worker.terminate(); } throw error; } finally { clearTimer(startup); }
   function build(artifact, buffers) {
-    if (closed) return Promise.reject(new Error('Browser preparer closed'));
+    if (closed) return Promise.reject(terminal ?? new Error('Browser preparer closed'));
     const id = ++nextId;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { reject(new Error('Browser indexing deadline; worker owns unfinished job')); }, 20000);
+      const timer = setTimer(() => fail(new Error('Browser indexing deadline'), 'worker-timeout'), 20000);
       pending.set(id, { resolve, reject, timer });
       const data = { id, intent: artifact.intent, classification: artifact.classification, vertices: buffers.vertices, indices: buffers['surface-indices'], solid: buffers['solid-indices'] };
       try { worker.postMessage(data, Object.values(buffers)); }
-      catch (error) { pending.delete(id); clearTimeout(timer); reject(error); }
+      catch (error) { fail(error, 'worker-message-error'); }
     });
   }
   async function prepare(artifact, buffers, signal) {
     let surface, solid, collider, gpu;
     try {
       const built = await build(artifact, buffers);
-      if (signal.aborted) throw new Error('Preparation cancelled before consumer publication');
+      if (closed || signal.aborted) throw terminal ?? new Error('Preparation cancelled before consumer publication');
       const restoreBegin = performance.now(); let restoreMs = 0, warmupMs = 0;
       if (artifact.intent === 'interaction' && artifact.classification === 'surface') {
         const R = await rapier();
+        if (closed || signal.aborted) throw terminal ?? new Error('Preparation cancelled before collision restore');
         surface = R.World.restoreSnapshot(new Uint8Array(built.surfaceSnapshot));
         solid = R.World.restoreSnapshot(new Uint8Array(built.solidSnapshot)); collider = solid.getCollider(built.handle);
         if (!surface || !solid || !collider) throw new Error('Prepared collision restore failed');
@@ -54,6 +68,7 @@ export async function createBrowserPreparer({ renderer, workerUrl, loadPhysics, 
         warmupMs = performance.now() - warm;
       } else if (built.surfaceSnapshot || built.solidSnapshot) throw new Error('Unexpected collision snapshots for view/constant occupancy');
       const uploadBegin = performance.now(); gpu = await renderer.upload(artifact, new Float32Array(built.expanded));
+      if (closed || signal.aborted) throw terminal ?? new Error('Preparation cancelled before consumer publication');
       const key = representationKey(artifact), value = { artifact, gpu, surface, solid, collider, key, shape: surface ? new engine.Ball(.5) : null, castQueries: 0 };
       const timings = { workerBegin: built.begin, workerEnd: built.end, normalsMs: built.normalsMs, collisionMs: built.collisionMs, restoreMs, warmupMs, uploadMs: performance.now() - uploadBegin,
         workerWasmCapacity: workerCapacity, mainWasmCapacity: observedWasmCapacity(), gpuBytes: gpu.bytes,
@@ -71,11 +86,12 @@ export async function createBrowserPreparer({ renderer, workerUrl, loadPhysics, 
       throw error;
     }
   }
-  return Object.freeze({ prepare,
-    capacity: () => ({ workerWasmCapacity: workerCapacity, mainWasmCapacity: observedWasmCapacity(), workerJobs: pending.size }),
+  return Object.freeze({ prepare, workerId,
+    testAdapter: Object.freeze({ crash() { if (!closed) worker.postMessage({ type: 'atlas-test-error' }); } }),
+    capacity: () => ({ workerWasmCapacity: workerCapacity, mainWasmCapacity: observedWasmCapacity(), workerJobs: pending.size, terminal: terminal?.code ?? null }),
     close() {
       if (closed) return; closed = true;
-      for (const job of pending.values()) { clearTimeout(job.timer); job.reject(new Error('Browser preparer terminated')); }
+      for (const job of pending.values()) { clearTimer(job.timer); job.reject(new Error('Browser preparer terminated')); }
       pending.clear(); worker.terminate();
     },
   });

@@ -35,6 +35,7 @@ export function createNativeQueue({ dispatch, maxQueued = 2, onEvent = () => {},
     queue.push(job); onEvent({ type: 'queued', order: job.order, kind: request.kind }); pump(); return promise;
   }
   return Object.freeze({ submit,
+    activeRequest: () => active?.request.identity ?? null,
     snapshot: () => ({ active: active ? 1 : 0, queued: queue.length, closed }),
     close() {
       closed = true;

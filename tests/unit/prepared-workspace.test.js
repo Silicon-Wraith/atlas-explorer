@@ -9,17 +9,17 @@ import { createPreparationResult } from '../../src/space/preparation/contract.js
 import { boundaryViolations } from '../support/import-boundary.mjs';
 
 const browser=installFakeBrowser();
-function rig({openGate,consumerGate,sessionGate,closeError,remoteRetirementFailures=0,classification='empty-air',onRestoreRequested,fileReadMs,produceFactory,scaleIntentMs}={}){
- const f=preparedFixture({gate:consumerGate,classification}),doc=browser.document,frames=new Map(),calls=[],clients=[];let seq=0,clientSeq=0,nextConsumer=null,bodyBlocked=false;const consuming=deferred(),consumerWaits=new Set(),downloads=[];doc.hidden=false;
- const rendererFactory=async({canvas})=>({adapterInfo:{synthetic:true},render:()=>calls.push('render'),done:async()=>{},bytes:()=>1024,resize:async(w,h)=>{canvas.width=w;canvas.height=h;},dispose:async()=>calls.push('renderer-dispose')});
+function rig({openGate,consumerGate,sessionGate,closeError,remoteRetirementFailures=0,classification='empty-air',onRestoreRequested,fileReadMs,produceFactory,scaleIntentMs,rendererFailureAt}={}){
+ const f=preparedFixture({gate:consumerGate,classification}),doc=browser.document,frames=new Map(),calls=[],clients=[];let seq=0,clientSeq=0,nextConsumer=null,bodyBlocked=false;const consuming=deferred(),consumerWaits=new Set(),downloads=[],renderers=[],preparers=[];doc.hidden=false;
+ const rendererFactory=async options=>{if(rendererFailureAt===renderers.length+1)throw Error('synthetic GPU rebuild failed');const canvas=options.canvas,r={epoch:renderers.length+1,fail:(code='device-lost',message='synthetic device failure')=>options.onError(message,{code}),adapterInfo:{synthetic:true},render:()=>calls.push('render'),done:async()=>{},bytes:()=>1024,resize:async(w,h)=>{canvas.width=w;canvas.height=h;},dispose:async()=>calls.push('renderer-dispose')};renderers.push(r);return r;};
  const produce=produceFactory?produceFactory(f):f.produce;
- const clientFactory=options=>{const client={allowed:true,produce,check:()=>client.allowed,pause:()=>{client.allowed=false;},revalidate:async()=>{if(sessionGate)await sessionGate.promise;client.allowed=true;return true;},expire(){client.allowed=false;options.onSessionLost('The landscape session expired. Retry Landscape.');},snapshot:()=>({synthetic:true,remoteRetirementFailures,session:{message:'Checking the landscape session…'}}),cancelOpening:()=>calls.push('cancel-open'),close:async options=>{calls.push('client-close');client.closeOptions=options;if(closeError)throw Error(closeError);},open:async()=>{
+ const clientFactory=options=>{const client={allowed:true,produce,check:()=>client.allowed,pause:()=>{client.allowed=false;},revalidate:async()=>{if(sessionGate)await sessionGate.promise;client.allowed=true;return true;},expire(){client.allowed=false;options.onSessionLost('The landscape session expired. Retry Landscape.');},loseNative(){client.allowed=false;options.onSessionLost('Native preparation stopped. Save your scene and restart ATLAS.',{code:'preparer-lost'});},snapshot:()=>({synthetic:true,remoteRetirementFailures,session:{message:'Checking the landscape session…'}}),cancelOpening:()=>calls.push('cancel-open'),close:async options=>{calls.push('client-close');client.closeOptions=options;if(closeError)throw Error(closeError);},open:async()=>{
   if(openGate)await openGate.promise;return{world:f.world,producer:f.producerIdentity,grid:f.grid.config,viewGrid:f.viewGrid.config,fineBounds:f.fineBounds,feature:{point:[-1,-1,-1],light:[1,0,0]}};
  }};clients.push(client);return client;};
- const preparerFactory=async()=>({prepare:async(...args)=>{if(nextConsumer){const gate=nextConsumer;nextConsumer=null;consumerWaits.add(gate);consuming.resolve();await gate.promise;consumerWaits.delete(gate);}const receipt=await f.prepare(...args);if(receipt.lease.value.collider)receipt.lease.value.collider.containsPoint=()=>bodyBlocked;return receipt;},capacity:()=>({synthetic:true}),close:()=>{calls.push('worker-close');consumerGate?.resolve();for(const gate of consumerWaits)gate.resolve();}});
+ const preparerFactory=async options=>{const p={workerId:preparers.length+1,fail:code=>options.onFailure(Object.assign(Error('synthetic worker failure'),{code})),prepare:async(...args)=>{if(nextConsumer){const gate=nextConsumer;nextConsumer=null;consumerWaits.add(gate);consuming.resolve();await gate.promise;consumerWaits.delete(gate);}const receipt=await f.prepare(...args);if(receipt.lease.value.collider)receipt.lease.value.collider.containsPoint=()=>bodyBlocked;return receipt;},capacity:()=>({synthetic:true}),close:()=>{calls.push('worker-close');consumerGate?.resolve();for(const gate of consumerWaits)gate.resolve();}};preparers.push(p);return p;};
  const workspace=createPreparedWorldWorkspace({shell:fakeShell(doc),workerUrl:'synthetic',loadPhysics:()=>{},rendererFactory,preparerFactory,clientFactory,onRestoreRequested,env:{document:doc,window:globalThis,fileReadMs,scaleIntentMs,download:(blob,name)=>downloads.push({blob,name}),runtimeId:()=>`workspace-client-${++clientSeq}`,requestFrame:fn=>{frames.set(++seq,fn);return seq;},cancelFrame:id=>frames.delete(id)}});
  const runFrame=(time=performance.now()+20)=>{const due=[...frames.values()];frames.clear();for(const fn of due)fn(time);};
- return{workspace,calls,clients,f,doc,frames,runFrame,downloads,consuming,pauseNextConsumer:gate=>{nextConsumer=gate;},blockBody:value=>{bodyBlocked=value;},canvas:doc.querySelector('#landscape-canvas')};
+ return{workspace,calls,clients,renderers,preparers,f,doc,frames,runFrame,downloads,consuming,pauseNextConsumer:gate=>{nextConsumer=gate;},blockBody:value=>{bodyBlocked=value;},canvas:doc.querySelector('#landscape-canvas')};
 }
 test('prepared workspace stops input on leave and re-enters the retained pose after releasing resources',async()=>{
  const r=rig();assert.equal((await r.workspace.activate(1)).outcome,'activated');r.workspace.focus();
@@ -186,4 +186,56 @@ test('deferred scale still checks the current body clearance when coverage arriv
   assert.match(r.doc.querySelector('#landscape-status').textContent,/clear.*detail coverage/i);
   assert.equal(r.workspace.inspection.events().filter(e=>e.type==='scale').length,0);
  }finally{r.gate.resolve();await r.workspace.destroy();}
+});
+
+async function awaitRecovery(check){for(let i=0;i<60;i++){if(check())return;await flushScaleWork();}assert.ok(check(),'Controlled recovery did not settle');}
+test('first active device loss settles one gesture and rebuilds the exact requested place and histories',async()=>{
+ const r=rig();await r.workspace.activate();r.workspace.focus();globalThis.dispatchEvent({type:'keydown',key:'e'});r.runFrame();const pose=r.workspace.inspection.state.pose;
+ r.renderers[0].fail();assert.equal(r.workspace.inspection.state.active,false);assert.equal(r.workspace.inspection.state.recovery.automaticRecoveries,1);
+ await awaitRecovery(()=>r.workspace.inspection.state.active);assert.equal(r.clients.length,2);assert.deepEqual(r.workspace.inspection.state.pose,pose);assert.equal(r.workspace.inspection.history.camera.length,2);assert.equal(r.workspace.inspection.history.undoDepth,0);
+ r.runFrame();assert.deepEqual(r.workspace.inspection.state.pose,pose);r.renderers[0].fail();assert.equal(r.workspace.inspection.state.active,true);await r.workspace.destroy();
+});
+test('repeated device loss stays stopped until explicit Retry resets the automatic allowance',async()=>{
+ const r=rig();await r.workspace.activate();r.renderers[0].fail();await awaitRecovery(()=>r.workspace.inspection.state.active);const history=r.workspace.inspection.history;
+ r.renderers[1].fail();await r.workspace.inspection.whenReleased();await flushScaleWork();assert.equal(r.workspace.inspection.state.phase,'stopped');assert.equal(r.clients.length,2);assert.deepEqual(r.workspace.inspection.history,history);
+ assert.equal((await r.workspace.inspection.retry()).outcome,'activated');assert.equal(r.workspace.inspection.state.recovery.automaticRecoveries,0);assert.equal(r.clients.length,3);await r.workspace.destroy();
+});
+test('leaving a pending automatic recovery prevents late activation and ordinary reentry keeps the allowance consumed',async()=>{
+ const r=rig();await r.workspace.activate();const gate=deferred();r.pauseNextConsumer(gate);r.renderers[0].fail();await r.consuming.promise;
+ const pose=r.workspace.inspection.state.pose;globalThis.dispatchEvent({type:'keydown',key:'w'});r.workspace.inspection.look(2,.4);assert.equal(await r.workspace.inspection.scale(true),false);r.runFrame();assert.deepEqual(r.workspace.inspection.state.pose,pose);
+ r.workspace.deactivate();await r.workspace.inspection.whenReleased();await flushScaleWork();assert.equal(r.workspace.inspection.state.active,false);assert.equal(r.frames.size,0);
+ await r.workspace.activate();assert.equal(r.workspace.inspection.state.recovery.automaticRecoveries,1);const count=r.clients.length;r.renderers.at(-1).fail();await r.workspace.inspection.whenReleased();assert.equal(r.clients.length,count);assert.equal(r.workspace.inspection.state.phase,'stopped');await r.workspace.destroy();
+});
+test('a new file supersedes automatic recovery without accepting the old pose or callback',async()=>{
+ const r=rig();await r.workspace.activate();const gate=deferred();r.pauseNextConsumer(gate);r.renderers[0].fail();await r.consuming.promise;
+ assert.equal((await r.workspace.inspection.openSceneText(requestedFile(r,.2))).ok,true);assert.deepEqual(r.workspace.inspection.state.pose.positionLocalM,[.2,0,0]);assert.equal(r.workspace.inspection.history.undoDepth,1);
+ r.renderers[1].fail();r.preparers[1].fail('worker-error');assert.equal(r.workspace.inspection.state.active,true);assert.deepEqual(r.workspace.inspection.state.requestedScene.camera.positionLocalM,[.2,0,0]);await r.workspace.destroy();
+});
+test('GPU errors worker failure and native loss stop explicitly without consuming an automatic device attempt',async t=>{
+ for(const kind of ['gpu-error','worker-error','preparer-lost'])await t.test(kind,async()=>{
+  const r=rig();await r.workspace.activate();const history=r.workspace.inspection.history;
+  if(kind==='gpu-error')r.renderers[0].fail(kind,'misleading text saying device lost');
+  if(kind==='worker-error')r.preparers[0].fail(kind);
+  if(kind==='preparer-lost')r.clients[0].loseNative();
+  await r.workspace.inspection.whenReleased();await flushScaleWork();assert.equal(r.workspace.inspection.state.phase,'stopped');assert.equal(r.workspace.inspection.state.recovery.automaticRecoveries,0);assert.equal(r.clients.length,1);assert.deepEqual(r.workspace.inspection.history,history);
+  if(kind==='preparer-lost')assert.match(r.doc.querySelector('#landscape-status').textContent,/restart ATLAS/);
+  await r.workspace.destroy();
+ });
+});
+test('failed automatic startup stops rather than retrying or losing the scene',async()=>{
+ const r=rig({rendererFailureAt:2});await r.workspace.activate();const before=r.workspace.inspection.state.requestedScene;r.renderers[0].fail();await awaitRecovery(()=>r.workspace.inspection.state.phase==='stopped');
+ assert.equal(r.clients.length,2);assert.deepEqual(r.workspace.inspection.state.requestedScene,before);assert.equal(r.workspace.inspection.state.recovery.automaticRecoveries,1);await flushScaleWork();assert.equal(r.clients.length,2);await r.workspace.destroy();
+});
+test('a device loss during a requested restore retains that request and requires explicit retry',async()=>{
+ const r=rig();await r.workspace.activate();const gate=deferred();r.pauseNextConsumer(gate);const restoring=r.workspace.inspection.openSceneText(requestedFile(r,.1));await r.consuming.promise;r.renderers[1].fail();
+ assert.equal((await restoring).ok,false);assert.deepEqual(r.workspace.inspection.state.requestedScene.camera.positionLocalM,[.1,0,0]);assert.equal(r.workspace.inspection.state.recovery.automaticRecoveries,0);
+ await r.workspace.inspection.retry();assert.deepEqual(r.workspace.inspection.state.pose.positionLocalM,[.1,0,0]);await r.workspace.destroy();
+});
+test('automatic recovery never clamps an occupied requested body into another place',async()=>{
+ const r=rig({classification:'surface'});await r.workspace.activate();const pose=r.workspace.inspection.state.pose;r.blockBody(true);r.renderers[0].fail();await awaitRecovery(()=>r.workspace.inspection.state.phase==='stopped');
+ assert.deepEqual(r.workspace.inspection.state.pose,pose);assert.deepEqual(r.workspace.inspection.state.requestedScene.camera.positionLocalM,pose.positionLocalM);r.blockBody(false);await r.workspace.inspection.retry();assert.deepEqual(r.workspace.inspection.state.pose,pose);await r.workspace.destroy();
+});
+test('unconfirmed cleanup blocks automatic and explicit recovery before a new client is acquired',async()=>{
+ const r=rig({closeError:'unconfirmed remote retirement'});await r.workspace.activate();r.renderers[0].fail();await assert.rejects(r.workspace.inspection.whenReleased(),/unconfirmed/);await flushScaleWork();
+ assert.equal(r.clients.length,1);assert.equal((await r.workspace.inspection.retry()).outcome,'unavailable');assert.equal(r.clients.length,1);await assert.rejects(r.workspace.destroy(),/unconfirmed/);
 });

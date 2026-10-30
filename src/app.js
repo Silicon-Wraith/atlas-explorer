@@ -34,7 +34,7 @@ const discoveries = createDiscoveriesController({ sources: [local], sceneCodec }
 
 const plane = createPlaneWorkspace({ shell, discoveries, sourceId: local.id });
 const viewer = createSpaceWorkspace({ shell });
-function landscapeUnavailable(reason) { const element = shell.$('#space-mode-error'); element.textContent = reason; element.hidden = false; shell.$('#landscape-retry').hidden = false; }
+function landscapeUnavailable(reason, { restartRequired = false } = {}) { const element = shell.$('#space-mode-error'); element.textContent = reason; element.hidden = false; shell.$('#landscape-retry').hidden = restartRequired; }
 const landscape = createPreparedWorldWorkspace({ shell, workerUrl: preparationWorkerUrl, loadPhysics: loadPreparedPhysics, onUnavailable: landscapeUnavailable,
   onRestoreRequested: () => switcher.current() === 'space' ? space.restart('landscape') : Promise.resolve({ outcome: 'inactive' }) });
 const space = createSpaceModeHost({ modes: { viewer, landscape }, onState(state) {
@@ -47,7 +47,7 @@ const space = createSpaceModeHost({ modes: { viewer, landscape }, onState(state)
   if (mode === 'viewer' && state.pending !== 'landscape') shell.$('#landscape-status').hidden = true;
 }, onMessage: landscapeUnavailable });
 for (const id of ['viewer', 'landscape']) shell.$('#space-mode-' + id).addEventListener('click', () => { space.select(id); });
-shell.$('#landscape-retry').addEventListener('click', () => { space.select('landscape'); });
+shell.$('#landscape-retry').addEventListener('click', () => { landscape.inspection.retry(); });
 const switcher = createWorkspaceSwitcher({ root: document, workspaces: { plane, space }, initial: 'plane', toast: shell.toast });
 // Share links that arrive while Plane is inactive (Space active or preparing) are routed, never lost (spec §14).
 const links = createShareLinkRouter({ plane, switcher, report: shell.toast });

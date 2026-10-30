@@ -36,6 +36,9 @@ export function installCollisionWorker({ loadPhysics }) {
     } catch (error) { self.postMessage({ id: data.id, error: error.stack ?? String(error) }); }
     finally { surface?.free(); solid?.free(); }
   }
-  self.onmessage = ({ data }) => { chain = chain.then(() => build(data)); };
+  self.onmessage = ({ data }) => {
+    if (data.type === 'atlas-test-error') { queueMicrotask(() => { throw new Error('ATLAS collision worker diagnostic error'); }); return; }
+    chain = chain.then(() => build(data));
+  };
   self.postMessage({ type: 'ready' });
 }

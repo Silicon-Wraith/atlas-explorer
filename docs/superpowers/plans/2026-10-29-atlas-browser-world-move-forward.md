@@ -3,8 +3,8 @@
 **Date:** 2026-10-29
 **Owner:** Codex
 **Challenger:** Claude
-**Status:** Current owner roadmap. PC1, PC2/WC2, PC3/BI1.A1, PC4/BI1.A2 and BI1.B are implemented and independently reviewed within their declared bounded scopes. Full BI1 and the browser-world release remain open.
-**Immediate next item:** BI1.C device/preparer recovery after advisor merge of BI1.B. [BI1.B full scorecard](../../reports/project1-interactive/BI1B-SCENES-HISTORY-2026-10-30.md): portable files, cold return, camera/edit histories and capacity-safe scale requests implemented/reviewed;1,327 units/build and25/25 gate pass on71dc60a. Branchfeat/bi1b in project.worktrees/bi1b remains isolated from main5013ba6. Performance/readiness/restore-latency and memory limits are explicit. AP1/MD2 stay interleaved multirelease workstreams.
+**Status:** Current owner roadmap. PC1, PC2/WC2 and BI1.A1/A2/B/C are implemented and independently reviewed within their declared bounded local scopes. The tested local BI1 integration route is complete; the broader browser-world release and production backend remain open.
+**Immediate next item:** advisor merge of BI1.C, then the first interleaved AP1/MD2 experience card. [BI1.C full scorecard](../../reports/project1-interactive/BI1C-RECOVERY-2026-10-30.md): one automatic active-device rebuild, explicit browser Retry and native Save/restart with actual-file return. Final source/test head `72ac955` passes 1,352 units/85 files/build and 27/27 gate, completed review and physical closure. Branch `feat/bi1c` is under project `.worktrees/bi1c`, based on merged PR22/main `57ba3b9`. Standing performance/memory and finite-world limits carry forward; RB1 retains release-backend selection.
 
 Governing intent: [ATLAS North Star](../specs/2026-10-23-atlas-north-star-charter.md) and the [fixed-world engineering interpretation](../specs/2026-10-29-atlas-multiscale-world-clarification.md). This plan continues after the [local multiscale plan](2026-10-29-multiscale-feature-experience.md), [PR9 lifecycle](../../reports/project1-interactive/PR9-LIFECYCLE-2026-10-29.md) and [BW1 wider-world result](../../reports/project1-interactive/BW1-OBSERVER-REGIONS-2026-10-29.md). Their original evidence and criteria remain preserved.
 
@@ -20,8 +20,8 @@ The mathematical world is fixed. Mathematical detail generation, mesh representa
 | Local multiscale discovery | PR9 shows additional mathematical relief, contact and stable return in one fixed construction. | Finer interaction is available near one starting formation; arbitrary recursion is unproved. |
 | Wider spatial preparation | PC2 prepares fresh parent/cutter regions in a bounded three-dimensional domain with fixed mathematical lineage. | Finite domain and two body scales; general detail placement and unlimited coverage remain unproved. |
 | Surrounding view | A coarser representation keeps distant terrain visible through local empty air. | No general watertight seam or continuous horizon guarantee. |
-| Interactive performance | BI1.B final application route:49.99FPS; navigation max4.600ms. | See the full BI1.B scorecard for individual p99/readiness targets and restore latency. Complete region-memory attribution remains unverified. |
-| Application experience | Application entry, session recovery and explicit portable scene/history workflows are integrated and independently reviewed within their bounded scopes. | Device/preparer recovery, supported deployment and broader world/detail experience remain. |
+| Interactive performance | BI1.C final route: 49.978 FPS overall / 49.879 during preparation; navigation maximum 5.100 ms. | Navigation p99 4.100 ms and interaction-readiness maximum 2.191 s miss targets; complete region-memory attribution remains unverified. See the full BI1.C scorecard for restore/recovery timing. |
+| Application experience | Entry, session recovery, portable scene/history and bounded execution recovery are integrated and independently reviewed. | Driver/hang recovery, supported deployment and broader world/detail experience remain. A dead native helper uses Save plus an explicit owned restart. |
 
 **We are moving from a successful bounded research prototype into application engineering.** The prototype establishes enough to build on; it does not establish a finished browser-ready world.
 
@@ -142,7 +142,7 @@ The first supported browser-world milestone is reached when a visitor can enter 
 | BW1 wider-world foundation | Demonstrated, with reported gaps | Native prototype and launcher retained |
 | PC1 preparation boundary | **First CPU slice complete, independently reviewed** | [Contract, lifecycle and native replay report](../../reports/project1-interactive/PC1-PREPARATION-BOUNDARY-2026-10-29.md); live producer wiring remains for WC2 |
 | WC2 three-dimensional coverage | **Bounded experience complete, independently reviewed** | [PC2 source/evidence and full scorecard](../../reports/project1-interactive/PC2-LIVE-3D-COVERAGE-2026-10-29.md); latency/navigation misses, ownership and final-source limits explicit |
-| BI1 application integration | **A1/A2/B bounded slices independently reviewed** | PC3/PC4 reports remain preserved. [BI1.B full scorecard](../../reports/project1-interactive/BI1B-SCENES-HISTORY-2026-10-30.md): actual file return, histories, truthful restore and fixed dropped scale intent;1,327 units/25-entry gate pass. Advisor merge then C device/preparer recovery; full BI1 still open. |
+| BI1 application integration | **A1/A2/B/C bounded local route independently reviewed** | [BI1.C full scorecard](../../reports/project1-interactive/BI1C-RECOVERY-2026-10-30.md): device/worker recovery, native Save/restart, exact file return, 1,352 units/27-entry gate and cleanup pass. Advisor merge then interleaved AP1/MD2 releases; release backend/world breadth remain open. |
 | AP1 appearance | Planned | First lighting/material increment on integrated geometry |
 | MD2 broader mathematical discovery | Planned | Bounded additional locations/scales with fixed lineage |
 | RB1 supported release | Planned | Backend decision, ownership/recovery evidence, supported launch and reviewed PR |

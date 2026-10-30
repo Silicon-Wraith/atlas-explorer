@@ -1,11 +1,8 @@
 # ATLAS session handoff
 
-## Current —2026-10-30: BI1.B prepared scenes/history
+## Current — 2026-10-30: BI1.C prepared execution recovery
 
-[Full scorecard](docs/reports/project1-interactive/BI1B-SCENES-HISTORY-2026-10-30.md), [roadmap](docs/superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md), [current restart checkpoint](docs/reports/project1-interactive/CODEX-RESTART-CHECKPOINT-2026-10-28.md). Portable Landscape file cold return, separate navigation/edit histories and safe requested-state restoration are implemented and independently reviewed. Final measured source71dc60a passes1,327 units/82 files, build and25/25 gate; standing performance/memory limits remain explicit. All owned processes/ports/lock are released. Branchfeat/bi1b in project.worktrees/bi1b awaits advisor PR merge; main remains5013ba6. Next is BI1.C, then interleaved AP1/MD2 increments. Standing Claude-call approval is in both agent instruction files.
-
-Earlier handoff sections below preserve historical acceptance state and commands; do not restart their completed promotion work.
-
+[Full scorecard](docs/reports/project1-interactive/BI1C-RECOVERY-2026-10-30.md), [roadmap](docs/superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md), [restart checkpoint](docs/reports/project1-interactive/CODEX-RESTART-CHECKPOINT-2026-10-28.md). Active device loss gets one automatic rebuild; repeated/other browser failures stop with explicit Retry. Requested scene, pose and histories survive in-page rebuilding. A dead native helper stops truthfully and requires Save plus owned launcher/browser restart; the actual download returned to the same place with a new producer. Histories remain page-local. Final measured source/test head `72ac955e010327a79212ff04352431cc4a52606b` passes 1,352 guarded units/85 files, build and 27/27 gate; completed Claude reviews and fresh physical cleanup are archived. Later changes are documentation/evidence only. Performance/resource and finite-world limits are explicit in the full scorecard. Branch `feat/bi1c` in project `.worktrees/bi1c` awaits advisor merge; base/main is merged PR22 `57ba3b9`. Next are interleaved AP1/MD2 increments; RB1 retains the release-backend decision. Standing Claude-call approval remains in both agent instruction files.
 
 ## 2026-10-23 — Project 1b.1 B15 evidence and documentation handoff
 
