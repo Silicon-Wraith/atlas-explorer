@@ -1,0 +1,4706 @@
+{
+  "head": "72ac955e010327a79212ff04352431cc4a52606b",
+  "pass": true,
+  "cleanup": true,
+  "interactionMs": 19146,
+  "wallSeconds": 45.459,
+  "checks": [
+    "Prepared recovery uses the maintained headed hardware profile",
+    "First actual device destroy fences input and automatically returns to the exact scene and histories",
+    "Repeated device loss stays stopped and explicit Retry rebuilds without changing history",
+    "An actual collision worker error stops explicitly and Retry uses a fresh worker at the same place",
+    "An owned helper exit with an outstanding request stops with a typed restart reason and preserves the requested place",
+    "After confirmed owned restart the actual saved scene returns with a fresh producer and exact bytes",
+    "Recovery and restarted delivered geometry pass finite buffer and actual-motion audits",
+    "Recovery workflow confirms all owned native browser worker and GPU cleanup"
+  ],
+  "download": {
+    "filename": "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/actual-recovery-scene.json",
+    "sha256": "3f573f7400d68afa495359e9a6f7f57a6d9c8ea04b6f0de07e0a11c6d800c5a6",
+    "scene": {
+      "appearance": {
+        "lightDirection": [
+          0.6516696944239625,
+          0.141721981586483,
+          0.7451452806698703
+        ],
+        "lighting": "pc2-lambert-v1",
+        "material": "neutral"
+      },
+      "application": "ATLAS",
+      "applicationVersion": "1.0.0",
+      "camera": {
+        "bodyDiameterM": 0.0265625,
+        "kind": "prepared-pose-v1",
+        "orientationWxyz": [
+          0.694988416321868,
+          -0.3381745597100256,
+          0.5705688873447808,
+          0.27763323492962966
+        ],
+        "originM": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "positionLocalM": [
+          0,
+          0.010359374999978854,
+          0
+        ],
+        "verticalFovDegrees": 75.13718405765499
+      },
+      "conventions": "atlas-prepared-yup-metres-v1",
+      "iteration": null,
+      "model": {
+        "id": "prepared-world",
+        "version": 1
+      },
+      "parameters": {
+        "world": {
+          "assets": [
+            {
+              "role": "base-field-evaluator",
+              "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+            },
+            {
+              "role": "canonical-parent-frame",
+              "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+            },
+            {
+              "role": "canonical-parent-samples",
+              "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+            },
+            {
+              "role": "construction",
+              "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+            },
+            {
+              "role": "descendant-rule",
+              "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+            },
+            {
+              "role": "parent-field-kernel",
+              "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+            }
+          ],
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "generator": {
+            "id": "atlas.surface-descendant",
+            "version": "surface-descendant-r1"
+          },
+          "id": "H1C-surface-child@ee2564d40bda7ef6",
+          "lineage": [
+            {
+              "id": "H1C@61bbb572d425d9ee",
+              "parent": null
+            },
+            {
+              "id": "H1C/gchild/surface-descendant-r1",
+              "parent": "H1C@61bbb572d425d9ee"
+            }
+          ],
+          "parameters": {
+            "amplitude_m": 0.0002,
+            "chart_centre": [
+              -0.029882812666932553,
+              -0.11953125059172012
+            ],
+            "half_support_m": 0.0033203125,
+            "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+            "source_scale": 64
+          }
+        }
+      },
+      "provenance": {
+        "createdBy": "atlas"
+      },
+      "sampling": {
+        "profile": "retained-native-r1"
+      },
+      "schema": "atlas.scene",
+      "schemaVersion": 1,
+      "slices": [],
+      "tracing": {
+        "coverageProfile": "pc2-half-d-r1",
+        "maxErrorFraction": 0.01,
+        "profile": "prepared-triangles-v1"
+      },
+      "workspace": "space"
+    },
+    "pose": {
+      "kind": "prepared-pose-v1",
+      "conventions": "atlas-prepared-yup-metres-v1",
+      "world": {
+        "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+        "id": "H1C-surface-child@ee2564d40bda7ef6"
+      },
+      "originM": [
+        1414.9757562519364,
+        79.21086912557448,
+        1040.6400501279961
+      ],
+      "positionLocalM": [
+        0,
+        0.010359374999978854,
+        0
+      ],
+      "orientationWxyz": [
+        0.694988416321868,
+        -0.3381745597100256,
+        0.5705688873447808,
+        0.27763323492962966
+      ],
+      "bodyDiameterM": 0.0265625,
+      "verticalFovDegrees": 75.13718405765499
+    }
+  },
+  "reopened": {
+    "producer": "95272d60-583a-4337-a757-760ff8fac8eb",
+    "exactReexport": true,
+    "history": {
+      "revision": 1,
+      "canUndo": true,
+      "canRedo": false,
+      "canBack": true,
+      "canForward": false,
+      "undoDepth": 1,
+      "redoDepth": 0,
+      "camera": {
+        "index": 1,
+        "length": 2
+      },
+      "gesture": null
+    }
+  },
+  "phases": [
+    {
+      "label": "interruption",
+      "producer": {
+        "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+        "epoch": 0
+      },
+      "prepared": 8,
+      "retired": 8,
+      "allRetired": true,
+      "cleanup": true,
+      "controls": [
+        {
+          "kind": "actual-device-destroy",
+          "started": 1793392204859,
+          "presented": 1793392207716,
+          "frozen": {
+            "state": {
+              "active": false,
+              "phase": "preparing",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29481.324655,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 1,
+                "lastFailure": {
+                  "code": "device-lost",
+                  "message": "GPU device lost: Device was destroyed.",
+                  "detail": "GPU device lost: Device was destroyed.",
+                  "at": 1793392204860.5,
+                  "runtimeId": "318adac5-55e8-4691-99e0-5049b8708f51"
+                }
+              },
+              "execution": {
+                "runtimeId": "318adac5-55e8-4691-99e0-5049b8708f51",
+                "deviceEpoch": 1,
+                "workerId": 1
+              },
+              "pending": [
+                "0,1,1",
+                "0,1,2"
+              ],
+              "runtime": {
+                "pose": {
+                  "kind": "prepared-pose-v1",
+                  "conventions": "atlas-prepared-yup-metres-v1",
+                  "world": {
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                    "id": "H1C-surface-child@ee2564d40bda7ef6"
+                  },
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "active": null,
+                "key": null,
+                "pending": [
+                  "0,1,1",
+                  "0,1,2"
+                ],
+                "resident": [
+                  "0,0,0",
+                  "v:0,0,0"
+                ],
+                "ownedInteraction": 3,
+                "ownedView": 1,
+                "session": {
+                  "epoch": 0,
+                  "closed": true,
+                  "live": 4,
+                  "cleanupErrors": 0,
+                  "cleanupUnconfirmed": false
+                },
+                "error": null
+              },
+              "cleanupError": null,
+              "gpuBytes": 3686400,
+              "capacity": {
+                "workerWasmCapacity": 26017792,
+                "mainWasmCapacity": 26607616,
+                "workerJobs": 0,
+                "terminal": null
+              },
+              "payload": {
+                "livePayloadLeaseBytes": 0,
+                "peakPayloadLeaseBytes": 4313940,
+                "releases": 2,
+                "remoteRetirementFailures": 0,
+                "session": {
+                  "state": "closed",
+                  "verified": false,
+                  "failureCode": null,
+                  "remainingMs": 25910.38327861853,
+                  "sequence": 1,
+                  "message": ""
+                }
+              },
+              "adapter": {
+                "vendor": "nvidia",
+                "architecture": "lovelace",
+                "device": "0x26b1",
+                "description": "NVIDIA RTX 6000 Ada Generation"
+              }
+            },
+            "history": {
+              "revision": 2,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 2,
+                "length": 3
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:8e8c834853c8f30b"
+          },
+          "recovered": {
+            "state": {
+              "active": true,
+              "phase": "active",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29999.316781,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 1,
+                "lastFailure": {
+                  "code": "device-lost",
+                  "message": "GPU device lost: Device was destroyed.",
+                  "detail": "GPU device lost: Device was destroyed.",
+                  "at": 1793392204860.5,
+                  "runtimeId": "318adac5-55e8-4691-99e0-5049b8708f51"
+                }
+              },
+              "execution": {
+                "runtimeId": "9bfa820f-ac51-45c7-95f7-433d1a221bb5",
+                "deviceEpoch": 2,
+                "workerId": 2
+              },
+              "pending": [],
+              "runtime": {
+                "pose": {
+                  "kind": "prepared-pose-v1",
+                  "conventions": "atlas-prepared-yup-metres-v1",
+                  "world": {
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                    "id": "H1C-surface-child@ee2564d40bda7ef6"
+                  },
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "active": "0,0,1",
+                "key": "fnv1a64:4b2f1f5b20858a82",
+                "pending": [],
+                "resident": [
+                  "0,0,1",
+                  "v:0,0,0"
+                ],
+                "ownedInteraction": 1,
+                "ownedView": 1,
+                "session": {
+                  "epoch": 0,
+                  "closed": false,
+                  "live": 2,
+                  "cleanupErrors": 0,
+                  "cleanupUnconfirmed": false
+                },
+                "error": null
+              },
+              "cleanupError": null,
+              "gpuBytes": 16063448,
+              "capacity": {
+                "workerWasmCapacity": 1310720,
+                "mainWasmCapacity": 26607616,
+                "workerJobs": 0,
+                "terminal": null
+              },
+              "payload": {
+                "livePayloadLeaseBytes": 3109728,
+                "peakPayloadLeaseBytes": 3109728,
+                "releases": 0,
+                "remoteRetirementFailures": 0,
+                "session": {
+                  "state": "ready",
+                  "verified": true,
+                  "failureCode": null,
+                  "remainingMs": 27242.486723999995,
+                  "sequence": 1,
+                  "message": ""
+                }
+              },
+              "adapter": {
+                "vendor": "nvidia",
+                "architecture": "lovelace",
+                "device": "0x26b1",
+                "description": "NVIDIA RTX 6000 Ada Generation"
+              }
+            },
+            "history": {
+              "revision": 2,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 2,
+                "length": 3
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:8e8c834853c8f30b"
+          },
+          "noNavigationBetweenFailureAndPresentation": true
+        },
+        {
+          "kind": "repeated-device-stop-and-explicit-retry",
+          "stopped": {
+            "state": {
+              "active": false,
+              "phase": "stopped",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29999.316781,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 1,
+                "lastFailure": {
+                  "code": "device-lost",
+                  "message": "GPU device lost: Device was destroyed.",
+                  "detail": "GPU device lost: Device was destroyed.",
+                  "at": 1793392207851.5,
+                  "runtimeId": "9bfa820f-ac51-45c7-95f7-433d1a221bb5"
+                }
+              },
+              "execution": {
+                "runtimeId": null,
+                "deviceEpoch": null,
+                "workerId": null
+              },
+              "pending": [],
+              "runtime": null,
+              "cleanupError": null,
+              "gpuBytes": 0,
+              "capacity": {
+                "mainWasmCapacity": 26607616,
+                "workerWasmCapacity": 0,
+                "workerJobs": 0
+              },
+              "payload": null,
+              "adapter": null
+            },
+            "history": {
+              "revision": 2,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 2,
+                "length": 3
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:8e8c834853c8f30b"
+          },
+          "retried": {
+            "state": {
+              "active": true,
+              "phase": "active",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29999.499770000002,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 0,
+                "lastFailure": {
+                  "code": "device-lost",
+                  "message": "GPU device lost: Device was destroyed.",
+                  "detail": "GPU device lost: Device was destroyed.",
+                  "at": 1793392207851.5,
+                  "runtimeId": "9bfa820f-ac51-45c7-95f7-433d1a221bb5"
+                }
+              },
+              "execution": {
+                "runtimeId": "2835b826-fe1d-45f5-ae6a-bfd930135334",
+                "deviceEpoch": 3,
+                "workerId": 3
+              },
+              "pending": [],
+              "runtime": {
+                "pose": {
+                  "kind": "prepared-pose-v1",
+                  "conventions": "atlas-prepared-yup-metres-v1",
+                  "world": {
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                    "id": "H1C-surface-child@ee2564d40bda7ef6"
+                  },
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "active": "0,0,1",
+                "key": "fnv1a64:4b2f1f5b20858a82",
+                "pending": [],
+                "resident": [
+                  "0,0,1",
+                  "v:0,0,0"
+                ],
+                "ownedInteraction": 1,
+                "ownedView": 1,
+                "session": {
+                  "epoch": 0,
+                  "closed": false,
+                  "live": 2,
+                  "cleanupErrors": 0,
+                  "cleanupUnconfirmed": false
+                },
+                "error": null
+              },
+              "cleanupError": null,
+              "gpuBytes": 16063448,
+              "capacity": {
+                "workerWasmCapacity": 1310720,
+                "mainWasmCapacity": 26607616,
+                "workerJobs": 0,
+                "terminal": null
+              },
+              "payload": {
+                "livePayloadLeaseBytes": 3109728,
+                "peakPayloadLeaseBytes": 3109728,
+                "releases": 0,
+                "remoteRetirementFailures": 0,
+                "session": {
+                  "state": "ready",
+                  "verified": true,
+                  "failureCode": null,
+                  "remainingMs": 27317.9755859375,
+                  "sequence": 1,
+                  "message": ""
+                }
+              },
+              "adapter": {
+                "vendor": "nvidia",
+                "architecture": "lovelace",
+                "device": "0x26b1",
+                "description": "NVIDIA RTX 6000 Ada Generation"
+              }
+            },
+            "history": {
+              "revision": 2,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 2,
+                "length": 3
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:8e8c834853c8f30b"
+          },
+          "retryMs": 2745,
+          "observationMs": 1000
+        },
+        {
+          "kind": "actual-uncaught-worker-error",
+          "before": {
+            "state": {
+              "active": true,
+              "phase": "active",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29999.499770000002,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 0,
+                "lastFailure": {
+                  "code": "device-lost",
+                  "message": "GPU device lost: Device was destroyed.",
+                  "detail": "GPU device lost: Device was destroyed.",
+                  "at": 1793392207851.5,
+                  "runtimeId": "9bfa820f-ac51-45c7-95f7-433d1a221bb5"
+                }
+              },
+              "execution": {
+                "runtimeId": "2835b826-fe1d-45f5-ae6a-bfd930135334",
+                "deviceEpoch": 3,
+                "workerId": 3
+              },
+              "pending": [],
+              "runtime": {
+                "pose": {
+                  "kind": "prepared-pose-v1",
+                  "conventions": "atlas-prepared-yup-metres-v1",
+                  "world": {
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                    "id": "H1C-surface-child@ee2564d40bda7ef6"
+                  },
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "active": "0,0,1",
+                "key": "fnv1a64:4b2f1f5b20858a82",
+                "pending": [],
+                "resident": [
+                  "0,0,1",
+                  "v:0,0,0"
+                ],
+                "ownedInteraction": 1,
+                "ownedView": 1,
+                "session": {
+                  "epoch": 0,
+                  "closed": false,
+                  "live": 2,
+                  "cleanupErrors": 0,
+                  "cleanupUnconfirmed": false
+                },
+                "error": null
+              },
+              "cleanupError": null,
+              "gpuBytes": 16063448,
+              "capacity": {
+                "workerWasmCapacity": 1310720,
+                "mainWasmCapacity": 26607616,
+                "workerJobs": 0,
+                "terminal": null
+              },
+              "payload": {
+                "livePayloadLeaseBytes": 3109728,
+                "peakPayloadLeaseBytes": 3109728,
+                "releases": 0,
+                "remoteRetirementFailures": 0,
+                "session": {
+                  "state": "ready",
+                  "verified": true,
+                  "failureCode": null,
+                  "remainingMs": 27313.9755859375,
+                  "sequence": 1,
+                  "message": ""
+                }
+              },
+              "adapter": {
+                "vendor": "nvidia",
+                "architecture": "lovelace",
+                "device": "0x26b1",
+                "description": "NVIDIA RTX 6000 Ada Generation"
+              }
+            },
+            "history": {
+              "revision": 2,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 2,
+                "length": 3
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:8e8c834853c8f30b"
+          },
+          "stopped": {
+            "state": {
+              "active": false,
+              "phase": "stopped",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29999.499770000002,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 0,
+                "lastFailure": {
+                  "code": "worker-error",
+                  "message": "Landscape collision preparation stopped. Retry Landscape to continue.",
+                  "detail": "Uncaught Error: ATLAS collision worker diagnostic error",
+                  "at": 1793392211727.2,
+                  "runtimeId": "2835b826-fe1d-45f5-ae6a-bfd930135334"
+                }
+              },
+              "execution": {
+                "runtimeId": null,
+                "deviceEpoch": null,
+                "workerId": null
+              },
+              "pending": [],
+              "runtime": null,
+              "cleanupError": null,
+              "gpuBytes": 0,
+              "capacity": {
+                "mainWasmCapacity": 26607616,
+                "workerWasmCapacity": 0,
+                "workerJobs": 0
+              },
+              "payload": null,
+              "adapter": null
+            },
+            "history": {
+              "revision": 2,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 2,
+                "length": 3
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:8e8c834853c8f30b"
+          },
+          "recovered": {
+            "state": {
+              "active": true,
+              "phase": "active",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.009031249999992497,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29999.441929,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 0,
+                "lastFailure": {
+                  "code": "worker-error",
+                  "message": "Landscape collision preparation stopped. Retry Landscape to continue.",
+                  "detail": "Uncaught Error: ATLAS collision worker diagnostic error",
+                  "at": 1793392211727.2,
+                  "runtimeId": "2835b826-fe1d-45f5-ae6a-bfd930135334"
+                }
+              },
+              "execution": {
+                "runtimeId": "5068da35-83f4-45c0-b4c4-3b55cd483377",
+                "deviceEpoch": 4,
+                "workerId": 4
+              },
+              "pending": [],
+              "runtime": {
+                "pose": {
+                  "kind": "prepared-pose-v1",
+                  "conventions": "atlas-prepared-yup-metres-v1",
+                  "world": {
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                    "id": "H1C-surface-child@ee2564d40bda7ef6"
+                  },
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.009031249999992497,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "active": "0,0,1",
+                "key": "fnv1a64:4b2f1f5b20858a82",
+                "pending": [],
+                "resident": [
+                  "0,0,1",
+                  "v:0,0,0"
+                ],
+                "ownedInteraction": 1,
+                "ownedView": 1,
+                "session": {
+                  "epoch": 0,
+                  "closed": false,
+                  "live": 2,
+                  "cleanupErrors": 0,
+                  "cleanupUnconfirmed": false
+                },
+                "error": null
+              },
+              "cleanupError": null,
+              "gpuBytes": 16063448,
+              "capacity": {
+                "workerWasmCapacity": 1310720,
+                "mainWasmCapacity": 26607616,
+                "workerJobs": 0,
+                "terminal": null
+              },
+              "payload": {
+                "livePayloadLeaseBytes": 3109728,
+                "peakPayloadLeaseBytes": 3109728,
+                "releases": 0,
+                "remoteRetirementFailures": 0,
+                "session": {
+                  "state": "ready",
+                  "verified": true,
+                  "failureCode": null,
+                  "remainingMs": 27376.984801,
+                  "sequence": 1,
+                  "message": ""
+                }
+              },
+              "adapter": {
+                "vendor": "nvidia",
+                "architecture": "lovelace",
+                "device": "0x26b1",
+                "description": "NVIDIA RTX 6000 Ada Generation"
+              }
+            },
+            "history": {
+              "revision": 2,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 2,
+                "length": 3
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:8e8c834853c8f30b"
+          },
+          "retryMs": 2681
+        },
+        {
+          "kind": "owned-native-process-kill",
+          "pid": 1840479,
+          "startTicks": "343262384",
+          "command": [
+            "/mnt/ml_storage/scratch/venvs/gpu/bin/python",
+            "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c/scripts/preparation/native-worker.py",
+            "--bundle",
+            "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1",
+            "--output",
+            "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/interruption/native",
+            ""
+          ],
+          "activeRequest": {
+            "epoch": 0,
+            "requestId": "5068da35-83f4-45c0-b4c4-3b55cd483377:3",
+            "runtimeId": "5068da35-83f4-45c0-b4c4-3b55cd483377"
+          },
+          "activeQueueAtKill": 1,
+          "killedAt": 1793392214785,
+          "stoppedAt": 1793392215001,
+          "nativeBefore": {
+            "state": {
+              "active": true,
+              "phase": "active",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.010359374999978854,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.010359374999978854,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.010359374999978854,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29999.441929,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 0,
+                "lastFailure": {
+                  "code": "worker-error",
+                  "message": "Landscape collision preparation stopped. Retry Landscape to continue.",
+                  "detail": "Uncaught Error: ATLAS collision worker diagnostic error",
+                  "at": 1793392211727.2,
+                  "runtimeId": "2835b826-fe1d-45f5-ae6a-bfd930135334"
+                }
+              },
+              "execution": {
+                "runtimeId": "5068da35-83f4-45c0-b4c4-3b55cd483377",
+                "deviceEpoch": 4,
+                "workerId": 4
+              },
+              "pending": [
+                "0,1,1",
+                "0,1,2"
+              ],
+              "runtime": {
+                "pose": {
+                  "kind": "prepared-pose-v1",
+                  "conventions": "atlas-prepared-yup-metres-v1",
+                  "world": {
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                    "id": "H1C-surface-child@ee2564d40bda7ef6"
+                  },
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.010359374999978854,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "active": "0,0,1",
+                "key": "fnv1a64:4b2f1f5b20858a82",
+                "pending": [
+                  "0,1,1",
+                  "0,1,2"
+                ],
+                "resident": [
+                  "0,0,1",
+                  "v:0,0,0"
+                ],
+                "ownedInteraction": 3,
+                "ownedView": 1,
+                "session": {
+                  "epoch": 0,
+                  "closed": false,
+                  "live": 4,
+                  "cleanupErrors": 0,
+                  "cleanupUnconfirmed": false
+                },
+                "error": null
+              },
+              "cleanupError": null,
+              "gpuBytes": 16063448,
+              "capacity": {
+                "workerWasmCapacity": 1310720,
+                "mainWasmCapacity": 26607616,
+                "workerJobs": 0,
+                "terminal": null
+              },
+              "payload": {
+                "livePayloadLeaseBytes": 3109728,
+                "peakPayloadLeaseBytes": 3109728,
+                "releases": 0,
+                "remoteRetirementFailures": 0,
+                "session": {
+                  "state": "ready",
+                  "verified": true,
+                  "failureCode": null,
+                  "remainingMs": 27183.98486328125,
+                  "sequence": 1,
+                  "message": ""
+                }
+              },
+              "adapter": {
+                "vendor": "nvidia",
+                "architecture": "lovelace",
+                "device": "0x26b1",
+                "description": "NVIDIA RTX 6000 Ada Generation"
+              }
+            },
+            "history": {
+              "revision": 3,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 3,
+                "length": 4
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:6c25dc66780d4910"
+          },
+          "nativeStopped": {
+            "state": {
+              "active": false,
+              "phase": "stopped",
+              "pose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.010359374999978854,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "publishedPose": {
+                "kind": "prepared-pose-v1",
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "world": {
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+                  "id": "H1C-surface-child@ee2564d40bda7ef6"
+                },
+                "originM": [
+                  1414.9757562519364,
+                  79.21086912557448,
+                  1040.6400501279961
+                ],
+                "positionLocalM": [
+                  0,
+                  0.010359374999978854,
+                  0
+                ],
+                "orientationWxyz": [
+                  0.694988416321868,
+                  -0.3381745597100256,
+                  0.5705688873447808,
+                  0.27763323492962966
+                ],
+                "bodyDiameterM": 0.0265625,
+                "verticalFovDegrees": 75.13718405765499
+              },
+              "requestedScene": {
+                "application": "ATLAS",
+                "schema": "atlas.scene",
+                "schemaVersion": 1,
+                "applicationVersion": "1.0.0",
+                "workspace": "space",
+                "model": {
+                  "id": "prepared-world",
+                  "version": 1
+                },
+                "conventions": "atlas-prepared-yup-metres-v1",
+                "parameters": {
+                  "world": {
+                    "assets": [
+                      {
+                        "role": "base-field-evaluator",
+                        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                      },
+                      {
+                        "role": "canonical-parent-frame",
+                        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                      },
+                      {
+                        "role": "canonical-parent-samples",
+                        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                      },
+                      {
+                        "role": "construction",
+                        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                      },
+                      {
+                        "role": "descendant-rule",
+                        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                      },
+                      {
+                        "role": "parent-field-kernel",
+                        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                      }
+                    ],
+                    "generator": {
+                      "id": "atlas.surface-descendant",
+                      "version": "surface-descendant-r1"
+                    },
+                    "id": "H1C-surface-child@ee2564d40bda7ef6",
+                    "lineage": [
+                      {
+                        "id": "H1C@61bbb572d425d9ee",
+                        "parent": null
+                      },
+                      {
+                        "id": "H1C/gchild/surface-descendant-r1",
+                        "parent": "H1C@61bbb572d425d9ee"
+                      }
+                    ],
+                    "parameters": {
+                      "amplitude_m": 0.0002,
+                      "chart_centre": [
+                        -0.029882812666932553,
+                        -0.11953125059172012
+                      ],
+                      "half_support_m": 0.0033203125,
+                      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                      "source_scale": 64
+                    },
+                    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                  }
+                },
+                "camera": {
+                  "kind": "prepared-pose-v1",
+                  "originM": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "positionLocalM": [
+                    0,
+                    0.010359374999978854,
+                    0
+                  ],
+                  "orientationWxyz": [
+                    0.694988416321868,
+                    -0.3381745597100256,
+                    0.5705688873447808,
+                    0.27763323492962966
+                  ],
+                  "bodyDiameterM": 0.0265625,
+                  "verticalFovDegrees": 75.13718405765499
+                },
+                "slices": [],
+                "iteration": null,
+                "tracing": {
+                  "profile": "prepared-triangles-v1",
+                  "coverageProfile": "pc2-half-d-r1",
+                  "maxErrorFraction": 0.01
+                },
+                "appearance": {
+                  "material": "neutral",
+                  "lighting": "pc2-lambert-v1",
+                  "lightDirection": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                },
+                "sampling": {
+                  "profile": "retained-native-r1"
+                },
+                "provenance": {
+                  "createdBy": "atlas"
+                }
+              },
+              "sceneRequest": 0,
+              "navigationGesture": false,
+              "metadata": {
+                "world": {
+                  "assets": [
+                    {
+                      "role": "base-field-evaluator",
+                      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+                    },
+                    {
+                      "role": "canonical-parent-frame",
+                      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+                    },
+                    {
+                      "role": "canonical-parent-samples",
+                      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+                    },
+                    {
+                      "role": "construction",
+                      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+                    },
+                    {
+                      "role": "descendant-rule",
+                      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+                    },
+                    {
+                      "role": "parent-field-kernel",
+                      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+                    }
+                  ],
+                  "generator": {
+                    "id": "atlas.surface-descendant",
+                    "version": "surface-descendant-r1"
+                  },
+                  "id": "H1C-surface-child@ee2564d40bda7ef6",
+                  "lineage": [
+                    {
+                      "id": "H1C@61bbb572d425d9ee",
+                      "parent": null
+                    },
+                    {
+                      "id": "H1C/gchild/surface-descendant-r1",
+                      "parent": "H1C@61bbb572d425d9ee"
+                    }
+                  ],
+                  "parameters": {
+                    "amplitude_m": 0.0002,
+                    "chart_centre": [
+                      -0.029882812666932553,
+                      -0.11953125059172012
+                    ],
+                    "half_support_m": 0.0033203125,
+                    "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+                    "source_scale": 64
+                  },
+                  "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+                },
+                "producer": {
+                  "instanceId": "1a9e4d54-512b-465f-ab68-cc2d07d453de",
+                  "epoch": 0
+                },
+                "grid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.0265625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -3,
+                      9
+                    ],
+                    [
+                      -3,
+                      3
+                    ],
+                    [
+                      -2,
+                      2
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "viewGrid": {
+                  "origin": [
+                    1414.9757562519364,
+                    79.21086912557448,
+                    1040.6400501279961
+                  ],
+                  "axes": [
+                    [
+                      0,
+                      0.16538701891281857,
+                      -0.9862287432310676
+                    ],
+                    [
+                      -0.8721772490151933,
+                      0.4824532290228802,
+                      0.08090567412540195
+                    ],
+                    [
+                      0.4891899899837377,
+                      0.860166272170984,
+                      0.14424679517820585
+                    ]
+                  ],
+                  "diameter": 0.10625,
+                  "spacing": 0.5,
+                  "domain": [
+                    [
+                      -1,
+                      3
+                    ],
+                    [
+                      -1,
+                      1
+                    ],
+                    [
+                      -1,
+                      1
+                    ]
+                  ],
+                  "floatSlack": 1e-08
+                },
+                "fineBounds": {
+                  "min": [
+                    1414.9560006245179,
+                    79.18620366657039,
+                    1040.6248597870242
+                  ],
+                  "max": [
+                    1414.982563124518,
+                    79.2127661665704,
+                    1040.6514222870244
+                  ]
+                },
+                "session": {
+                  "protocol": "atlas.preparation.session.v1",
+                  "leaseMs": 30000,
+                  "remainingMs": 29999.441929,
+                  "sequence": 0,
+                  "heartbeatMs": 5000
+                },
+                "approach": {
+                  "entry": [
+                    1414.9725530789312,
+                    79.20523683251973,
+                    1040.6391056126752
+                  ],
+                  "inspection": [
+                    1414.9678323657242,
+                    79.19693617558808,
+                    1040.6377136223134
+                  ],
+                  "target": [
+                    1414.9660106701047,
+                    79.19373300062107,
+                    1040.6371764613734
+                  ],
+                  "fineOrigin": [
+                    1414.969281874518,
+                    79.1994849165704,
+                    1040.6381410370243
+                  ],
+                  "fineDiameter": 0.006640625
+                },
+                "feature": {
+                  "point": [
+                    1414.9633882829503,
+                    79.19479113629488,
+                    1040.6375945535403
+                  ],
+                  "light": [
+                    0.6516696944239625,
+                    0.141721981586483,
+                    0.7451452806698703
+                  ]
+                }
+              },
+              "recovery": {
+                "automaticRecoveries": 0,
+                "lastFailure": {
+                  "code": "preparer-lost",
+                  "message": "Native preparation stopped. Save your scene and restart ATLAS.",
+                  "detail": "Native preparation stopped. Save your scene and restart ATLAS.",
+                  "at": 1793392214910.7998,
+                  "runtimeId": "5068da35-83f4-45c0-b4c4-3b55cd483377"
+                }
+              },
+              "execution": {
+                "runtimeId": null,
+                "deviceEpoch": null,
+                "workerId": null
+              },
+              "pending": [],
+              "runtime": null,
+              "cleanupError": null,
+              "gpuBytes": 0,
+              "capacity": {
+                "mainWasmCapacity": 26607616,
+                "workerWasmCapacity": 0,
+                "workerJobs": 0
+              },
+              "payload": null,
+              "adapter": null
+            },
+            "history": {
+              "revision": 3,
+              "canUndo": false,
+              "canRedo": false,
+              "canBack": true,
+              "canForward": false,
+              "undoDepth": 0,
+              "redoDepth": 0,
+              "camera": {
+                "index": 3,
+                "length": 4
+              },
+              "gesture": null
+            },
+            "hash": "fnv1a64:6c25dc66780d4910"
+          }
+        }
+      ],
+      "pageErrors": [],
+      "peakOwnedRssMiB": 2515.21484375,
+      "processes": {
+        "ownedPids": [
+          1840247,
+          1840257,
+          1840258,
+          1840260,
+          1840286,
+          1840288,
+          1840292,
+          1840320,
+          1840373,
+          1840401,
+          1840410,
+          1840479
+        ],
+        "alive": []
+      },
+      "browserEventCounts": {
+        "activation-requested": 4,
+        "session-renewed": 4,
+        "configuration": 4,
+        "request": 15,
+        "transfer-ready": 8,
+        "consumer-prepared": 8,
+        "ready": 8,
+        "entry": 4,
+        "first-presented": 4,
+        "frame": 72,
+        "navigation": 39,
+        "device-error": 2,
+        "execution-failed": 4,
+        "deactivated": 4,
+        "suspended": 4,
+        "automatic-recovery-requested": 1,
+        "request-settled": 7,
+        "resources-released": 4,
+        "explicit-recovery-requested": 2,
+        "scale-deferred": 1,
+        "session-lost": 1
+      },
+      "audits": {
+        "qualification": {
+          "pass": true,
+          "specimens": [
+            {
+              "representationKey": "fnv1a64:03a17384a7c07d06",
+              "kind": "coarse",
+              "origin": [
+                1414.9757562519364,
+                79.21086912557448,
+                1040.6400501279961
+              ],
+              "classification": "surface",
+              "sampling": {
+                "cells": 256,
+                "stepM": 0.000103759765625,
+                "tileWidthM": 0.0265625,
+                "rtinToleranceM": 2.65625e-05,
+                "coordinateType": "float32-local-metres-per-unit"
+              },
+              "toleranceM": 0.000265625,
+              "referenceSamples": 608,
+              "meshSamples": 512,
+              "referenceToMeshMaxM": 2.789774079877749e-05,
+              "meshCrossingUpperMaxM": 6.640625e-05,
+              "forwardReferenceGrid": null,
+              "limits": [],
+              "pass": true
+            },
+            {
+              "representationKey": "fnv1a64:ba146a5abc5a5630",
+              "kind": "view",
+              "origin": [
+                1414.9757562519364,
+                79.21086912557448,
+                1040.6400501279961
+              ],
+              "classification": "surface",
+              "sampling": {
+                "cells": 256,
+                "stepM": 0.0004150390625,
+                "tileWidthM": 0.10625,
+                "rtinToleranceM": 0.00010625,
+                "coordinateType": "float32-local-metres-per-unit"
+              },
+              "toleranceM": 0.0010625,
+              "referenceSamples": 826,
+              "meshSamples": 512,
+              "referenceToMeshMaxM": 0.00012510109628894342,
+              "meshCrossingUpperMaxM": 0.00016601562499999993,
+              "forwardReferenceGrid": null,
+              "limits": [],
+              "pass": true
+            },
+            {
+              "representationKey": "fnv1a64:4b2f1f5b20858a82",
+              "kind": "coarse",
+              "origin": [
+                1414.982253306491,
+                79.22229320887675,
+                1040.6419659057447
+              ],
+              "classification": "surface",
+              "sampling": {
+                "cells": 256,
+                "stepM": 0.000103759765625,
+                "tileWidthM": 0.0265625,
+                "rtinToleranceM": 2.65625e-05,
+                "coordinateType": "float32-local-metres-per-unit"
+              },
+              "toleranceM": 0.000265625,
+              "referenceSamples": 1,
+              "meshSamples": 512,
+              "referenceToMeshMaxM": 1.0849888795040796e-05,
+              "meshCrossingUpperMaxM": 3.320312500000003e-05,
+              "forwardReferenceGrid": null,
+              "limits": [
+                "Sparse forward sample does not establish complete surface coverage; reverse mesh samples are separate."
+              ],
+              "pass": true
+            }
+          ],
+          "error": null,
+          "sourcesKey": "fnv1a64:3470e8e94420cec7",
+          "elapsedS": 9.834863703232259,
+          "scope": "Finite direct CPU world-reference checks; original geometry, tolerance and world unchanged. Missing forward references remain explicit; not a global enclosure proof."
+        },
+        "buffer-audit": {
+          "pass": true,
+          "pid": 1841798,
+          "representations": [
+            {
+              "key": "fnv1a64:03a17384a7c07d06",
+              "roles": 3,
+              "pass": true
+            },
+            {
+              "key": "fnv1a64:ba146a5abc5a5630",
+              "roles": 3,
+              "pass": true
+            },
+            {
+              "key": "fnv1a64:4b2f1f5b20858a82",
+              "roles": 3,
+              "pass": true
+            }
+          ],
+          "nativeRecords": 9,
+          "outputBytes": 49240046,
+          "cacheBounds": true,
+          "viewInteractionCacheEvictions": 0,
+          "input": {}
+        },
+        "flight-audit": {
+          "pass": true,
+          "pid": 1841830,
+          "error": null,
+          "runs": [
+            {
+              "scenario": "before-execution-loss",
+              "entries": [],
+              "contacts": [],
+              "checkedFrames": 30,
+              "waitingFramesStationary": 0,
+              "maxStepM": 0.0002669531250063528,
+              "pass": true
+            },
+            {
+              "scenario": "after-browser-recovery",
+              "entries": [],
+              "contacts": [],
+              "checkedFrames": 6,
+              "waitingFramesStationary": 0,
+              "maxStepM": 0.0002656249999972715,
+              "pass": true
+            }
+          ],
+          "elapsedS": 0.06190228508785367,
+          "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof."
+        }
+      }
+    },
+    {
+      "label": "restart",
+      "producer": {
+        "instanceId": "95272d60-583a-4337-a757-760ff8fac8eb",
+        "epoch": 0
+      },
+      "prepared": 2,
+      "retired": 2,
+      "allRetired": true,
+      "cleanup": true,
+      "controls": [],
+      "pageErrors": [],
+      "peakOwnedRssMiB": 2185.3515625,
+      "processes": {
+        "ownedPids": [
+          1841101,
+          1841111,
+          1841112,
+          1841114,
+          1841139,
+          1841141,
+          1841149,
+          1841173,
+          1841218,
+          1841232,
+          1841336
+        ],
+        "alive": []
+      },
+      "browserEventCounts": {
+        "restore-requested": 1,
+        "activation-requested": 1,
+        "session-renewed": 1,
+        "configuration": 1,
+        "request": 4,
+        "transfer-ready": 2,
+        "consumer-prepared": 2,
+        "ready": 2,
+        "entry": 1,
+        "first-presented": 1,
+        "restore-presented": 1,
+        "frame": 17,
+        "navigation": 5,
+        "deactivated": 1,
+        "suspended": 1,
+        "request-settled": 2,
+        "resources-released": 1
+      },
+      "audits": {
+        "qualification": {
+          "pass": true,
+          "specimens": [
+            {
+              "representationKey": "fnv1a64:4b2f1f5b20858a82",
+              "kind": "coarse",
+              "origin": [
+                1414.982253306491,
+                79.22229320887675,
+                1040.6419659057447
+              ],
+              "classification": "surface",
+              "sampling": {
+                "cells": 256,
+                "stepM": 0.000103759765625,
+                "tileWidthM": 0.0265625,
+                "rtinToleranceM": 2.65625e-05,
+                "coordinateType": "float32-local-metres-per-unit"
+              },
+              "toleranceM": 0.000265625,
+              "referenceSamples": 1,
+              "meshSamples": 512,
+              "referenceToMeshMaxM": 1.0849888795040796e-05,
+              "meshCrossingUpperMaxM": 3.320312500000003e-05,
+              "forwardReferenceGrid": null,
+              "limits": [
+                "Sparse forward sample does not establish complete surface coverage; reverse mesh samples are separate."
+              ],
+              "pass": true
+            },
+            {
+              "representationKey": "fnv1a64:ba146a5abc5a5630",
+              "kind": "view",
+              "origin": [
+                1414.9757562519364,
+                79.21086912557448,
+                1040.6400501279961
+              ],
+              "classification": "surface",
+              "sampling": {
+                "cells": 256,
+                "stepM": 0.0004150390625,
+                "tileWidthM": 0.10625,
+                "rtinToleranceM": 0.00010625,
+                "coordinateType": "float32-local-metres-per-unit"
+              },
+              "toleranceM": 0.0010625,
+              "referenceSamples": 826,
+              "meshSamples": 512,
+              "referenceToMeshMaxM": 0.00012510109628894342,
+              "meshCrossingUpperMaxM": 0.00016601562499999993,
+              "forwardReferenceGrid": null,
+              "limits": [],
+              "pass": true
+            }
+          ],
+          "error": null,
+          "sourcesKey": "fnv1a64:3470e8e94420cec7",
+          "elapsedS": 8.91453243792057,
+          "scope": "Finite direct CPU world-reference checks; original geometry, tolerance and world unchanged. Missing forward references remain explicit; not a global enclosure proof."
+        },
+        "buffer-audit": {
+          "pass": true,
+          "pid": 1842156,
+          "representations": [
+            {
+              "key": "fnv1a64:4b2f1f5b20858a82",
+              "roles": 3,
+              "pass": true
+            },
+            {
+              "key": "fnv1a64:ba146a5abc5a5630",
+              "roles": 3,
+              "pass": true
+            }
+          ],
+          "nativeRecords": 3,
+          "outputBytes": 11736706,
+          "cacheBounds": true,
+          "viewInteractionCacheEvictions": 0,
+          "input": {}
+        },
+        "flight-audit": {
+          "pass": true,
+          "pid": 1842188,
+          "error": null,
+          "runs": [
+            {
+              "scenario": "after-owned-restart",
+              "entries": [],
+              "contacts": [],
+              "checkedFrames": 5,
+              "waitingFramesStationary": 0,
+              "maxStepM": 0.0002656249999972715,
+              "pass": true
+            }
+          ],
+          "elapsedS": 0.05380641529336572,
+          "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof."
+        }
+      }
+    }
+  ],
+  "sources": {
+    "src/space/preparation/workspace.js": "2a17366153d31d5f7fc0625b1385da3ea69250b28be95890484ac63cbacf5540",
+    "src/space/preparation/browser-preparer.js": "f0aecb4ce386ece6742ac3153e9579006d11b11725540689668ddb9c2952947d",
+    "src/space/preparation/collision-worker.js": "360abe584c649cddd01f230d6cdd00ef659ce7fbe644b98674791e4109fad692",
+    "src/space/preparation/application-client.js": "dfe1299e36c2c20337f1e177325135a3428ae2fcc2faa8d67e73bb7314b936fc",
+    "src/space/preparation/runtime.js": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+    "src/space/preparation/scene-adapter.js": "165ae04108aed50d91d7a48aab02f360cae17108fcbc98606d2a5ef86b39b377",
+    "src/space/preparation/scene-history.js": "c57abbe7a6f53190f07cbb7e8c91d9ee86ff86e7acc4ddc4ca7c4b2fc94108c7",
+    "src/space/render/webgpu/prepared-regions.js": "5c68ada69cab32035167da8dac341665e86089e25f928f41a2a9a3f4d7887b3e",
+    "src/space/mode-host.js": "b35eeb98d12802df118a8932752d4c5e9519be0eaa5662c51a9a689df70ced95",
+    "src/app.js": "d0fa72036f846cb11bfa6a424b58c66f4a5f2f76b7b88902738a90e9b5723bee",
+    "scripts/preparation/application-server.mjs": "f22dff99c128edb3be3838785bfcc1bd387e19aee0b4026603ac158d52cd8bf9",
+    "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+    "scripts/preparation/native-controller.mjs": "105730c8b3f9ff940c34eeda3d02e1f4b2da32bdf82e0c01bd72f92cf2e5d6fb",
+    "scripts/preparation/native-adapter.mjs": "26fde8a52d4ce1e7a2e12c29f57c1b4b88bfdc07f5724e42c861093499eab173",
+    "scripts/preparation/native-queue.mjs": "6a5459a7289fd50c1931173bda481c8eaeb4ad679ba973cae1ae48a83767f6af",
+    "tests/space-prepared-recovery.mjs": "6e1d779264f9f5151906d6a1db569c0ef1948d44256203d6feb1c99c75f5e594",
+    "tests/support/prepared-run-root.mjs": "a6b9ee3d2929048d4a958b169f968e4bd5e6b9804f3ef7b93f7e3e32b679f5c9"
+  },
+  "physicalClosure": {
+    "checkedAt": 1793392378.7174425,
+    "observer": "host namespace, require_escalated",
+    "checkedPids": [
+      1840235,
+      1840236,
+      1840247,
+      1840257,
+      1840258,
+      1840260,
+      1840286,
+      1840288,
+      1840292,
+      1840320,
+      1840373,
+      1840401,
+      1840410,
+      1840479,
+      1841101,
+      1841111,
+      1841112,
+      1841114,
+      1841139,
+      1841141,
+      1841149,
+      1841173,
+      1841218,
+      1841232,
+      1841336,
+      1841798,
+      1841830,
+      1842156,
+      1842188
+    ],
+    "reusedPids": [],
+    "alive": [],
+    "portsClosed": {
+      "5190": true,
+      "5196": true,
+      "5197": true,
+      "5198": true,
+      "5199": true,
+      "5200": true
+    },
+    "lockFree": true,
+    "sources": [
+      "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/recovery.json",
+      "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/restart/flight-audit.json",
+      "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/restart/buffer-audit.json",
+      "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/restart/browser.json",
+      "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/interruption/flight-audit.json",
+      "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/interruption/browser.json",
+      "/mnt/ml_storage/scratch/atlas-bi1c/recovery-r0/interruption/buffer-audit.json"
+    ],
+    "cleanup": true
+  },
+  "limits": [
+    "Deliberate GPUDevice.destroy; no driver-level failure claim.",
+    "Uncaught module-worker diagnostic; native SIGKILL while a Node preparation request was outstanding, not a kernel-level claim.",
+    "Native helper requires explicit owned restart; files preserve the place, histories remain page-local.",
+    "Incoming clearance is enforced by the runtime. Finite sampled geometry and actual-motion audits are not global/continuous mathematical body proof.",
+    "Same retained native world/domain/two scales; no backend/appearance/new-world expansion; standing readiness/navigation/memory/roll findings remain."
+  ]
+}

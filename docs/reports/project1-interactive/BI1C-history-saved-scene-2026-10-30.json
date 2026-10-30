@@ -1,0 +1,111 @@
+{
+  "appearance": {
+    "lightDirection": [
+      0.6516696944239625,
+      0.141721981586483,
+      0.7451452806698703
+    ],
+    "lighting": "pc2-lambert-v1",
+    "material": "neutral"
+  },
+  "application": "ATLAS",
+  "applicationVersion": "1.0.0",
+  "camera": {
+    "bodyDiameterM": 0.0265625,
+    "kind": "prepared-pose-v1",
+    "orientationWxyz": [
+      0.694988416321868,
+      -0.3381745597100256,
+      0.5705688873447808,
+      0.27763323492962966
+    ],
+    "originM": [
+      1414.9757562519364,
+      79.21086912557448,
+      1040.6400501279961
+    ],
+    "positionLocalM": [
+      0,
+      0.010626328125013629,
+      0
+    ],
+    "verticalFovDegrees": 75.13718405765499
+  },
+  "conventions": "atlas-prepared-yup-metres-v1",
+  "iteration": null,
+  "model": {
+    "id": "prepared-world",
+    "version": 1
+  },
+  "parameters": {
+    "world": {
+      "assets": [
+        {
+          "role": "base-field-evaluator",
+          "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+        },
+        {
+          "role": "canonical-parent-frame",
+          "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+        },
+        {
+          "role": "canonical-parent-samples",
+          "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+        },
+        {
+          "role": "construction",
+          "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+        },
+        {
+          "role": "descendant-rule",
+          "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+        },
+        {
+          "role": "parent-field-kernel",
+          "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+        }
+      ],
+      "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+      "generator": {
+        "id": "atlas.surface-descendant",
+        "version": "surface-descendant-r1"
+      },
+      "id": "H1C-surface-child@ee2564d40bda7ef6",
+      "lineage": [
+        {
+          "id": "H1C@61bbb572d425d9ee",
+          "parent": null
+        },
+        {
+          "id": "H1C/gchild/surface-descendant-r1",
+          "parent": "H1C@61bbb572d425d9ee"
+        }
+      ],
+      "parameters": {
+        "amplitude_m": 0.0002,
+        "chart_centre": [
+          -0.029882812666932553,
+          -0.11953125059172012
+        ],
+        "half_support_m": 0.0033203125,
+        "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+        "source_scale": 64
+      }
+    }
+  },
+  "provenance": {
+    "createdBy": "atlas"
+  },
+  "sampling": {
+    "profile": "retained-native-r1"
+  },
+  "schema": "atlas.scene",
+  "schemaVersion": 1,
+  "slices": [],
+  "tracing": {
+    "coverageProfile": "pc2-half-d-r1",
+    "maxErrorFraction": 0.01,
+    "profile": "prepared-triangles-v1"
+  },
+  "workspace": "space"
+}

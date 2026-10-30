@@ -1,0 +1,668 @@
+{
+  "application": {
+    "pass": true,
+    "failure": null,
+    "cleanup": true,
+    "eventCounts": {
+      "session-opened": 8,
+      "client-opening": 8,
+      "worker-ready": 1,
+      "client-opened": 8,
+      "session-renewed": 22,
+      "queued": 26,
+      "dispatch": 22,
+      "producer-prepared": 17,
+      "finished": 22,
+      "cancelled": 10,
+      "http-error": 10,
+      "producer-retired": 17,
+      "client-retiring": 8,
+      "client-closed": 8,
+      "session-closed": 8,
+      "worker-exit": 1
+    },
+    "publications": {
+      "preparedDistinct": 17,
+      "retiredDistinct": 17,
+      "allPreparedRetired": true
+    },
+    "qualification": {
+      "pass": true,
+      "specimens": [
+        {
+          "representationKey": "fnv1a64:03a17384a7c07d06",
+          "kind": "coarse",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 608,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 2.789774079877749e-05,
+          "meshCrossingUpperMaxM": 6.640625e-05,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:ba146a5abc5a5630",
+          "kind": "view",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.0004150390625,
+            "tileWidthM": 0.10625,
+            "rtinToleranceM": 0.00010625,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.0010625,
+          "referenceSamples": 826,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 0.00012510109628894342,
+          "meshCrossingUpperMaxM": 0.00016601562499999993,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:4b2f1f5b20858a82",
+          "kind": "coarse",
+          "origin": [
+            1414.982253306491,
+            79.22229320887675,
+            1040.6419659057447
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 1.0849888795040796e-05,
+          "meshCrossingUpperMaxM": 3.320312500000003e-05,
+          "forwardReferenceGrid": null,
+          "limits": [
+            "Sparse forward reference: one sample. Reverse checks do not establish complete surface coverage."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:5ff3ab10c8a3d225",
+          "kind": "coarse",
+          "origin": [
+            1414.9706697024023,
+            79.2287007908247,
+            1040.643040434229
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:b74f104ca2024264",
+          "kind": "coarse",
+          "origin": [
+            1414.9771667569569,
+            79.24012487412698,
+            1040.6449562119776
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:108f9a2487d58e99",
+          "kind": "coarse",
+          "origin": [
+            1414.9771667569569,
+            79.24232142047191,
+            1040.6318578614814
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:2dea1425132a0dfe",
+          "kind": "coarse",
+          "origin": [
+            1414.969259197382,
+            79.1994450422722,
+            1040.6381343502476
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 760,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 3.0231962211664583e-05,
+          "meshCrossingUpperMaxM": 4.150390625000001e-05,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+          "kind": "fine",
+          "origin": [
+            1414.969281874518,
+            79.1994849165704,
+            1040.6381410370243
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 2.593994140625e-05,
+            "tileWidthM": 0.006640625,
+            "rtinToleranceM": 6.640625e-06,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 6.640625e-05,
+          "referenceSamples": 655,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 6.856193813217745e-06,
+          "meshCrossingUpperMaxM": 8.300781250000007e-06,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        }
+      ],
+      "elapsedS": 14.609476018231362,
+      "sourceKey": "fnv1a64:3470e8e94420cec7"
+    },
+    "bufferAudit": {
+      "pass": true,
+      "pid": 1890852,
+      "representations": [
+        {
+          "key": "fnv1a64:03a17384a7c07d06",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:ba146a5abc5a5630",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:5ff3ab10c8a3d225",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:b74f104ca2024264",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:108f9a2487d58e99",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:2dea1425132a0dfe",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:d9d2e86c8fd6a571",
+          "roles": 3,
+          "pass": true
+        }
+      ],
+      "nativeRecords": 22,
+      "outputBytes": 100921922,
+      "cacheBounds": true,
+      "viewInteractionCacheEvictions": 0,
+      "input": {}
+    },
+    "flightAudit": {
+      "pass": true,
+      "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.",
+      "runs": [
+        {
+          "scenario": "application-route",
+          "entries": 11,
+          "contacts": 30,
+          "checkedFrames": 855,
+          "waitingFramesStationary": 53
+        }
+      ]
+    },
+    "nativeRecords": 22,
+    "outputBytes": 100921922,
+    "cachePeaks": {
+      "source": 100394480,
+      "validation": 80,
+      "topology": 54336928
+    },
+    "peakOwnedRssMiB": 2913.9609375,
+    "browserSeconds": 110.576,
+    "pageErrors": []
+  },
+  "session": {
+    "pass": true,
+    "failure": null,
+    "cleanup": true,
+    "eventCounts": {
+      "session-opened": 3,
+      "client-opening": 3,
+      "worker-ready": 1,
+      "client-opened": 3,
+      "session-renewed": 17,
+      "queued": 12,
+      "dispatch": 9,
+      "producer-prepared": 8,
+      "finished": 9,
+      "http-error": 6,
+      "cancelled": 4,
+      "client-retiring": 3,
+      "producer-retired": 8,
+      "client-expired": 2,
+      "session-expired": 2,
+      "client-closed": 1,
+      "session-closed": 1,
+      "worker-exit": 1
+    },
+    "publications": {
+      "preparedDistinct": 8,
+      "retiredDistinct": 8,
+      "allPreparedRetired": true
+    },
+    "qualification": {
+      "pass": true,
+      "specimens": [
+        {
+          "representationKey": "fnv1a64:03a17384a7c07d06",
+          "kind": "coarse",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 608,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 2.789774079877749e-05,
+          "meshCrossingUpperMaxM": 6.640625e-05,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:ba146a5abc5a5630",
+          "kind": "view",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.0004150390625,
+            "tileWidthM": 0.10625,
+            "rtinToleranceM": 0.00010625,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.0010625,
+          "referenceSamples": 826,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 0.00012510109628894342,
+          "meshCrossingUpperMaxM": 0.00016601562499999993,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:4b2f1f5b20858a82",
+          "kind": "coarse",
+          "origin": [
+            1414.982253306491,
+            79.22229320887675,
+            1040.6419659057447
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 1.0849888795040796e-05,
+          "meshCrossingUpperMaxM": 3.320312500000003e-05,
+          "forwardReferenceGrid": null,
+          "limits": [
+            "Sparse forward reference: one sample. Reverse checks do not establish complete surface coverage."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+          "kind": "fine",
+          "origin": [
+            1414.969281874518,
+            79.1994849165704,
+            1040.6381410370243
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 2.593994140625e-05,
+            "tileWidthM": 0.006640625,
+            "rtinToleranceM": 6.640625e-06,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 6.640625e-05,
+          "referenceSamples": 655,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 6.856193813217745e-06,
+          "meshCrossingUpperMaxM": 8.300781250000007e-06,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        }
+      ],
+      "elapsedS": 11.08407443528995,
+      "sourceKey": "fnv1a64:3470e8e94420cec7"
+    },
+    "bufferAudit": {
+      "pass": true,
+      "pid": 1894160,
+      "representations": [
+        {
+          "key": "fnv1a64:03a17384a7c07d06",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:ba146a5abc5a5630",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:d9d2e86c8fd6a571",
+          "roles": 3,
+          "pass": true
+        }
+      ],
+      "nativeRecords": 9,
+      "outputBytes": 46471388,
+      "cacheBounds": true,
+      "viewInteractionCacheEvictions": 0,
+      "input": {}
+    },
+    "flightAudit": {
+      "pass": true,
+      "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.",
+      "runs": [
+        {
+          "scenario": "visible-healthy-owner",
+          "entries": 0,
+          "contacts": 0,
+          "checkedFrames": 3060,
+          "waitingFramesStationary": 0
+        }
+      ]
+    },
+    "nativeRecords": 9,
+    "outputBytes": 46471388,
+    "cachePeaks": {
+      "source": 82429152,
+      "validation": 80,
+      "topology": 40190448
+    },
+    "peakOwnedRssMiB": 2682.8515625,
+    "browserSeconds": 137.066,
+    "pageErrors": []
+  },
+  "routes": [
+    {
+      "scenario": "application-route",
+      "wallSeconds": 22.241,
+      "frames": 855,
+      "renderedFrames": 855,
+      "renderSubmissionFps": 49.978079789008774,
+      "rafFps": 49.978079789008774,
+      "preparationRenderSubmissionFps": 49.87862465429161,
+      "frameMs": {
+        "n": 855,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20.100000000002183,
+        "max": 40
+      },
+      "navigationMs": {
+        "n": 726,
+        "p50": 0.10009765625,
+        "p95": 2.60009765625,
+        "p99": 4.10009765625,
+        "max": 5.099853515625
+      },
+      "navigationByClass": {
+        "waiting": {
+          "n": 53,
+          "p50": 0,
+          "p95": 0.10009765625,
+          "p99": 0.10009765625,
+          "max": 0.10009765625
+        },
+        "constant": {
+          "n": 129,
+          "p50": 0.099853515625,
+          "p95": 0.199951171875,
+          "p99": 0.2998046875,
+          "max": 0.300048828125
+        },
+        "firstSurface": {
+          "n": 3,
+          "p50": 0.199951171875,
+          "p95": 0.2001953125,
+          "p99": 0.2001953125,
+          "max": 0.2001953125
+        },
+        "steadySurface": {
+          "n": 541,
+          "p50": 0.10009765625,
+          "p95": 3.800048828125,
+          "p99": 4.199951171875,
+          "max": 5.099853515625
+        }
+      },
+      "interactionReadinessMs": {
+        "n": 8,
+        "p50": 809.5,
+        "p95": 2190.89990234375,
+        "p99": 2190.89990234375,
+        "max": 2190.89990234375
+      },
+      "viewReadinessMs": {
+        "n": 2,
+        "p50": 1694.699951171875,
+        "p95": 1719.5,
+        "p99": 1719.5,
+        "max": 1719.5
+      },
+      "waitingMs": 1060,
+      "waitingFraction": 0.06196112815947286,
+      "sessionPausedMs": 0,
+      "contacts": 30,
+      "maxInteraction": 8,
+      "maxView": 1,
+      "peakGpuBytes": 32426144
+    }
+  ],
+  "sessionControls": [
+    {
+      "scenario": "visible-healthy-owner",
+      "started": 1793394623798,
+      "ended": 1793394683799,
+      "renewals": 13
+    },
+    {
+      "scenario": "silent-owner-loss",
+      "seconds": 34.571,
+      "expiryMs": 30789,
+      "replacementPresentationMs": 2864,
+      "heldResponseSettledAfterExpiryMs": 9690,
+      "termination": "expiry",
+      "oldQueueAtAdmission": "held result had already completed native work"
+    },
+    {
+      "scenario": "living-page-expiry-retry",
+      "seconds": 32.794,
+      "expiryMs": 30017,
+      "poseRetained": true,
+      "queriesDuringPause": 0
+    }
+  ],
+  "heldResponse": {
+    "preparedAt": 1793394685002,
+    "tokenSha256": "c167e9accfe7e972255b4e0890a453e52d9b223ef10b93ca08eeff668b1fa10f",
+    "retiredByExpiry": true,
+    "delivery": "fulfilled"
+  },
+  "lossSuppression": {
+    "heartbeat": 2,
+    "close": 0,
+    "cancel": 1,
+    "retire": 0
+  },
+  "launcher": {
+    "cleanup": true,
+    "cleanupErrors": [],
+    "openedUrl": "http://127.0.0.1:5200/",
+    "browser": "155.0.8059.84"
+  },
+  "scope": [
+    "One bounded actual-input application route; active-Landscape frame intervals exclude initial activation and mode waits.",
+    "Rendered=false intervals are excluded from render-submission count but their time remains in its denominator; RAF cadence is separate.",
+    "Production-duration controlled loss of close/heartbeat and lost-page cleanup delivery; not OS sleep, renderer-crash or complete-network-outage acceptance.",
+    "Finite sampling/recorded-motion evidence, not global geometry completeness; current two scales/domain unchanged.",
+    "Attributable region memory and long-session WASM bounds remain unverified."
+  ],
+  "sourceDigests": {
+    "application": {
+      "src/app.js": "d0fa72036f846cb11bfa6a424b58c66f4a5f2f76b7b88902738a90e9b5723bee",
+      "index.html": "d6f30c3490b3b164d226d61dddd561189d6482c6c267568e3df454f25f1d4fe5",
+      "src/ui/style.css": "f76fac56866dadffde40a44b804d8dcb692de3cb38d19e8a1d6f3ee9c333f755",
+      "src/space/mode-host.js": "b35eeb98d12802df118a8932752d4c5e9519be0eaa5662c51a9a689df70ced95",
+      "src/space/preparation/workspace.js": "2a17366153d31d5f7fc0625b1385da3ea69250b28be95890484ac63cbacf5540",
+      "src/space/preparation/runtime.js": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+      "src/space/preparation/pose.js": "d52fef63979d5ff41af4716c78c0231b1c6940659e108101e7e8e0aba874c380",
+      "src/space/preparation/application-client.js": "dfe1299e36c2c20337f1e177325135a3428ae2fcc2faa8d67e73bb7314b936fc",
+      "src/space/preparation/browser-producer.js": "04051ea4cb64c3a20c897aa310376ccbded979fd52f7f828851213ad521ed33b",
+      "src/space/preparation/browser-preparer.js": "f0aecb4ce386ece6742ac3153e9579006d11b11725540689668ddb9c2952947d",
+      "src/space/preparation/collision-worker.js": "360abe584c649cddd01f230d6cdd00ef659ce7fbe644b98674791e4109fad692",
+      "src/preparation-bootstrap.js": "4b3535a98d6fd08752964ecb4694aed3f1c1bcefc686705df145a4831f3158cd",
+      "src/preparation-worker.js": "eb89dfc4e48edc2dab7d16c25d916f05c314ca6d1a204890c1ab3da949468659",
+      "src/space/render/webgpu/prepared-regions.js": "5c68ada69cab32035167da8dac341665e86089e25f928f41a2a9a3f4d7887b3e",
+      "scripts/preparation/application-server.mjs": "f22dff99c128edb3be3838785bfcc1bd387e19aee0b4026603ac158d52cd8bf9",
+      "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+      "scripts/preparation/native-adapter.mjs": "26fde8a52d4ce1e7a2e12c29f57c1b4b88bfdc07f5724e42c861093499eab173",
+      "scripts/preparation/native-worker.py": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4",
+      "tests/space-prepared.mjs": "ab02843b1d082f4c9e36382aa73a6e03bfa22d3342f7aaeae45c3995563533e8"
+    },
+    "session": {
+      "src/space/preparation/pose.js": "d52fef63979d5ff41af4716c78c0231b1c6940659e108101e7e8e0aba874c380",
+      "src/space/preparation/scene-adapter.js": "165ae04108aed50d91d7a48aab02f360cae17108fcbc98606d2a5ef86b39b377",
+      "src/space/preparation/scene-history.js": "c57abbe7a6f53190f07cbb7e8c91d9ee86ff86e7acc4ddc4ca7c4b2fc94108c7",
+      "src/space/render/webgpu/prepared-regions.js": "5c68ada69cab32035167da8dac341665e86089e25f928f41a2a9a3f4d7887b3e",
+      "src/space/mode-host.js": "b35eeb98d12802df118a8932752d4c5e9519be0eaa5662c51a9a689df70ced95",
+      "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+      "scripts/preparation/application-server.mjs": "f22dff99c128edb3be3838785bfcc1bd387e19aee0b4026603ac158d52cd8bf9",
+      "scripts/world-preview.mjs": "a0d423c10778f0a07ec5c5370547c7bed318d4ff31f1cb6e71800b471c8bdf7f",
+      "scripts/preparation/page-lifetime.mjs": "c5be90cc3dd0192fdc7c8234df98cec12183641a509aa33833944738cb3fffd2",
+      "src/space/preparation/application-client.js": "dfe1299e36c2c20337f1e177325135a3428ae2fcc2faa8d67e73bb7314b936fc",
+      "src/space/preparation/workspace.js": "2a17366153d31d5f7fc0625b1385da3ea69250b28be95890484ac63cbacf5540",
+      "src/app.js": "d0fa72036f846cb11bfa6a424b58c66f4a5f2f76b7b88902738a90e9b5723bee",
+      "index.html": "d6f30c3490b3b164d226d61dddd561189d6482c6c267568e3df454f25f1d4fe5",
+      "tests/space-preparation-session.mjs": "7ef7f4111810a700ecc05a12aad9be157971d644e81c045d01db175252c7319e",
+      "tests/support/session-loss-proxy.mjs": "364256567ea93de6edcafeab377b9b652c66b540898e46566ca01b3cddfc3b31"
+    }
+  }
+}
