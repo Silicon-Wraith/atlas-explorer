@@ -2,6 +2,8 @@
 
 **Owner result, 2026-10-29; independently reviewed.** ATLAS now opens the prepared mathematical landscape through its actual application, with explicit Fractal viewer/Landscape modes inside Space. Real movement, contact, smaller mathematical detail, safe growth refusal and leave/return to the retained pose work in the bounded world. The product gate passes on the pinned implementation. Claude supports bounded closure and proceeding to A2 in review `20261030T033633Z-411dc5`. This closes the implemented first application slice; it does not close all of BI1 or meet every performance target.
 
+Implementation, design, plan and evidence are published in [PR #20](https://github.com/Silicon-Wraith/atlas-explorer/pull/20), open for advisor review/merge.
+
 Governing [design](../../superpowers/specs/2026-10-29-atlas-bi1-application-integration.md), [task plan](../../superpowers/plans/2026-10-29-atlas-pc3-bi1a-implementation.md), [frozen r0 card](PC3-CARD-2026-10-29.md) and [r1 amendment](PC3-CARD-AMENDMENT-2026-10-29.md). Claude's card challenge `20261030T014341Z-f372da` preceded implementation. The amendment narrows PC3 to **BI1.A1**: validated in-memory pose and explicit client close. Abrupt-client expiry/multi-tab recovery are BI1.A2; persistent scene/history/file workflows are BI1.B; complete device-loss recovery is BI1.C.
 
 ## Full frozen scorecard, with r1 scope
