@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applicationRequestAllowed, createApplicationClientOwner } from '../../scripts/preparation/application-policy.mjs';
 import { createApplicationPreparationClient } from '../../src/space/preparation/application-client.js';
+import { createBrowserProducer } from '../../src/space/preparation/browser-producer.js';
+import { createPreparationSession } from '../../src/space/preparation/lifecycle.js';
+import { preparedFixture } from '../support/prepared-fixture.mjs';
 import { deferred } from '../support/prepared-fixture.mjs';
 
 test('local preparation accepts only the actual Host and same-origin JSON mutations',()=>{
@@ -116,4 +119,11 @@ test('wall elapsed stall expires conservatively even when the monotonic clock di
 test('only explicit proof of retired resources permits deferring an expired empty session close',async()=>{
  const strict=leaseRig(null,{closeFails:true});await strict.client.open();strict.advance(30001);strict.client.check();await assert.rejects(strict.client.close(),/offline/);
  const retired=leaseRig(null,{closeFails:true});await retired.client.open();retired.advance(30001);retired.client.check();assert.deepEqual(await retired.client.close({allowDeferred:true}),{confirmed:false,expiryBounded:true});assert.equal(retired.timers.size,0);
+});
+test('cancelled runtime cannot hide an unconfirmed request-identity retirement from transport accounting',async()=>{
+ const fixture=preparedFixture(),gate=deferred(),producer=createBrowserProducer({fetcher:async url=>{if(url.endsWith('/prepare')){await gate.promise;throw Object.assign(Error('cancelled'),{name:'AbortError'});}throw Error('retirement delivery failed');}});
+ const session=createPreparationSession({runtimeId:'cancelled-client',producer:fixture.producerIdentity});
+ session.start({world:{id:fixture.world.id,definitionKey:fixture.world.definitionKey},bounds:fixture.grid.bounds([0,0,0]),intent:'interaction',requirements:{bodyDiameterM:1,maxErrorM:.01}},{produce:producer.produce,prepare:fixture.prepare});
+ await Promise.resolve();const drain=session.shutdown();gate.resolve();await drain;
+ assert.equal(producer.snapshot().remoteRetirementFailures,1);assert.equal(session.diagnostics().live,0);
 });

@@ -6,10 +6,10 @@ import { createPreparedWorldWorkspace } from '../../src/space/preparation/worksp
 import { boundaryViolations } from '../support/import-boundary.mjs';
 
 const browser=installFakeBrowser();
-function rig({openGate,consumerGate,sessionGate,closeError}={}){
+function rig({openGate,consumerGate,sessionGate,closeError,remoteRetirementFailures=0}={}){
  const f=preparedFixture({gate:consumerGate}),doc=browser.document,frames=new Map(),calls=[],clients=[];let seq=0,clientSeq=0;doc.hidden=false;
  const rendererFactory=async({canvas})=>({adapterInfo:{synthetic:true},render:()=>calls.push('render'),done:async()=>{},bytes:()=>1024,resize:async(w,h)=>{canvas.width=w;canvas.height=h;},dispose:async()=>calls.push('renderer-dispose')});
- const clientFactory=options=>{const client={allowed:true,produce:f.produce,check:()=>client.allowed,pause:()=>{client.allowed=false;},revalidate:async()=>{if(sessionGate)await sessionGate.promise;client.allowed=true;return true;},expire(){client.allowed=false;options.onSessionLost('The landscape session expired. Retry Landscape.');},snapshot:()=>({synthetic:true,session:{message:'Checking the landscape session…'}}),cancelOpening:()=>calls.push('cancel-open'),close:async()=>{calls.push('client-close');if(closeError)throw Error(closeError);},open:async()=>{
+ const clientFactory=options=>{const client={allowed:true,produce:f.produce,check:()=>client.allowed,pause:()=>{client.allowed=false;},revalidate:async()=>{if(sessionGate)await sessionGate.promise;client.allowed=true;return true;},expire(){client.allowed=false;options.onSessionLost('The landscape session expired. Retry Landscape.');},snapshot:()=>({synthetic:true,remoteRetirementFailures,session:{message:'Checking the landscape session…'}}),cancelOpening:()=>calls.push('cancel-open'),close:async options=>{calls.push('client-close');client.closeOptions=options;if(closeError)throw Error(closeError);},open:async()=>{
   if(openGate)await openGate.promise;return{world:f.world,producer:f.producerIdentity,grid:f.grid.config,viewGrid:f.viewGrid.config,fineBounds:f.fineBounds,feature:{point:[-1,-1,-1],light:[1,0,0]}};
  }};clients.push(client);return client;};
  const preparerFactory=async()=>({prepare:f.prepare,capacity:()=>({synthetic:true}),close:()=>{calls.push('worker-close');consumerGate?.resolve();}});
@@ -53,4 +53,9 @@ test('expired workspace retires before explicit retry and old callbacks cannot s
 test('actual local cleanup failure stays sticky and prevents a new session',async()=>{
  const r=rig({closeError:'client close failed'});await r.workspace.activate();r.workspace.deactivate();await assert.rejects(r.workspace.inspection.whenReleased(),/client close failed/);
  assert.equal((await r.workspace.activate()).outcome,'unavailable');assert.equal(r.clients.length,1);await assert.rejects(r.workspace.destroy(),/client close failed/);
+});
+test('expired workspace cannot defer close after an unconfirmed remote retirement',async()=>{
+ const r=rig({remoteRetirementFailures:1,closeError:'remote close unconfirmed'});await r.workspace.activate();r.clients[0].expire();
+ await assert.rejects(r.workspace.inspection.whenReleased(),/remote close unconfirmed/);assert.equal(r.clients[0].closeOptions.allowDeferred,false);
+ assert.equal((await r.workspace.activate()).outcome,'unavailable');await assert.rejects(r.workspace.destroy(),/remote close unconfirmed/);
 });

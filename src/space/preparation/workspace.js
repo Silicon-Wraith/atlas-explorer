@@ -74,7 +74,8 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
     if(!state)return;return state.release??=(async()=>{
       state.cancelled=true;state.client.cancelOpening();const drain=state.runtime?.suspend();state.preparer?.close();
       const errors=[];for(const operation of [()=>drain,()=>state.renderer?.dispose()])try{await operation();}catch(error){errors.push(error);}
-      try{await state.client.close({allowDeferred:!!state.sessionLostReason&&!errors.length});}catch(error){errors.push(error);}
+      const remoteConfirmed=(state.client.snapshot().remoteRetirementFailures??0)===0;
+      try{await state.client.close({allowDeferred:!!state.sessionLostReason&&!errors.length&&remoteConfirmed});}catch(error){errors.push(error);}
       if(errors.length){cleanupError=errors.map(error=>error.message).join('; ');event('cleanup-error',{message:cleanupError});throw new AggregateError(errors,cleanupError);}
       event('resources-released',{runtimeId:state.id});
     })();
