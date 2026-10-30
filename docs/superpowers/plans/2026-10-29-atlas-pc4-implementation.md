@@ -1,6 +1,6 @@
 # PC4 / BI1.A2 — implementation plan
 
-**Status:** Implementing after independent card challenge `20261030T050119Z-fbb429`,2026-10-29. Governing [design](../specs/2026-10-29-atlas-pc4-session-recovery.md), preserved [card](../../reports/project1-interactive/PC4-CARD-2026-10-29.md) and [r1 corrections](../../reports/project1-interactive/PC4-CARD-AMENDMENT-2026-10-29.md). Base `e3f7e293ddc96fb90eccf8decbccc59917639f4a`, branch `feat/pc4`, project `.worktrees/pc4`. Baseline1,279 registered guarded CPU units pass. Implementation started only after challenge and adopted corrections.
+**Status:** Implementation complete; acceptance open after bounded full-gate/diagnostic attempts. See the [full scorecard](../../reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md). Independent card challenge `20261030T050119Z-fbb429`,2026-10-29. Governing [design](../specs/2026-10-29-atlas-pc4-session-recovery.md), preserved [card](../../reports/project1-interactive/PC4-CARD-2026-10-29.md) and [r1 corrections](../../reports/project1-interactive/PC4-CARD-AMENDMENT-2026-10-29.md). Base `e3f7e293ddc96fb90eccf8decbccc59917639f4a`, branch `feat/pc4`, project `.worktrees/pc4`. Baseline1,279 registered guarded CPU units pass. Implementation started only after challenge and adopted corrections.
 
 ## 1. Server lease owner and application transport
 
@@ -46,6 +46,6 @@ Three hours implementation/CPU plus one hour hardware/evidence/review, excluding
 | Baseline CPU | Complete;1,279 units,79 files |
 | Design/plan/card | Written for independent challenge |
 | Peer card review | Complete; explicit PC4 permission received, challenge20261030T050119Z-fbb429 and r1 adopted |
-| Implementation | Lease owner/transport/client/workspace retry and page-lifetime implementation complete;1,296 guarded units/build and native-free HTTP checks pass |
-| Frozen controls/product gate | Maintained production-duration controls written; hardware/full gate not run |
-| Evidence review/report/PR | Not started |
+| Implementation | Lease owner/transport/client/workspace retry and page-lifetime implementation complete;1,298 guarded units/80 files, build and native-free HTTP checks pass |
+| Frozen controls/product gate | Full gate23/24 entries pass on0ddff25; new session fixture fails. Test-only2d34664 diagnostic establishes individual recoveries but fails aggregate error assertion; launcher/audits after it unrun. Stop recorded; acceptance open |
+| Evidence review/report/PR | Full report/evidence preserved; independent evidence review pending; draft PR next |

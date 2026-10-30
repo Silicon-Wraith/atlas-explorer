@@ -4,7 +4,7 @@
 **Owner:** Codex
 **Challenger:** Claude
 **Status:** Current owner roadmap. PC1's CPU boundary, PC2/WC2's bounded live 3D experience and PC3/BI1.A1's application entry/retained pose are implemented and independently reviewed within their declared scopes. This is not a claim that all listed work has shipped.
-**Immediate next item:** BI1.A2 abrupt-client recovery and multi-tab policy, following advisor merge of PC3. Preserve the measured native control, readiness/navigation/memory obligations and final-source evidence limits.
+**Immediate next item:** finish PC4/BI1.A2 acceptance after its bounded stop. Implementation and individual headed recovery controls work; the full gate is23/24 with a mechanical loss-fixture failure. See the [PC4 scorecard](../../reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md). Correct the contradictory lost-page error expectation under a new bounded verification card; then final complete gate. BI1.B persistence/history follows A2, then BI1.C device/preparer recovery. Preserve readiness/navigation/memory obligations and source limits.
 
 Governing intent: [ATLAS North Star](../specs/2026-10-23-atlas-north-star-charter.md) and the [fixed-world engineering interpretation](../specs/2026-10-29-atlas-multiscale-world-clarification.md). This plan continues after the [local multiscale plan](2026-10-29-multiscale-feature-experience.md), [PR9 lifecycle](../../reports/project1-interactive/PR9-LIFECYCLE-2026-10-29.md) and [BW1 wider-world result](../../reports/project1-interactive/BW1-OBSERVER-REGIONS-2026-10-29.md). Their original evidence and criteria remain preserved.
 
@@ -74,7 +74,7 @@ PC2 now demonstrates the bounded 3D experience at about50FPS, with request-readi
 
 ### 4. AP1 and MD2 — improve appearance and broaden mathematical discovery
 
-These are separate increments after the initial application slice. Their relative scheduling can follow what users can actually experience; neither needs to wait for a general optimization campaign.
+These are interleaved workstreams after the initial application slice, likely several releases/subplans each and much of the remaining user-facing V1 work. Schedule their increments around complete exploration experiences. Neither needs to wait for a general optimization campaign. Coarse triangles remaining coarse relative to zoom is one end-to-end case: distinguish mathematical feature generation, mesh approximation, lighting/material cues and safe navigation rather than assume subdivision alone supplies missing mathematical detail.
 
 **AP1: lighting and materials.** Add a bounded first appearance pass to the working terrain: readable lighting, a material treatment and usable exploration controls. Appearance parameters remain separate from mathematical generation. Check that shading and materials preserve geometric cues, contact consistency, motion and the declared frame-rate target. Do not invent a required wall shape, artistic feature or pixel pattern as a product success gate.
 
@@ -142,7 +142,7 @@ The first supported browser-world milestone is reached when a visitor can enter 
 | BW1 wider-world foundation | Demonstrated, with reported gaps | Native prototype and launcher retained |
 | PC1 preparation boundary | **First CPU slice complete, independently reviewed** | [Contract, lifecycle and native replay report](../../reports/project1-interactive/PC1-PREPARATION-BOUNDARY-2026-10-29.md); live producer wiring remains for WC2 |
 | WC2 three-dimensional coverage | **Bounded experience complete, independently reviewed** | [PC2 source/evidence and full scorecard](../../reports/project1-interactive/PC2-LIVE-3D-COVERAGE-2026-10-29.md); latency/navigation misses, ownership and final-source limits explicit |
-| BI1 application integration | **A1 bounded slice implemented and reviewed; A2 next** | [PC3 full scorecard](../../reports/project1-interactive/PC3-APPLICATION-ENTRY-2026-10-29.md): actual app route/retained return and full product gate pass; navigation/readiness misses and memory limits explicit. A2 abrupt-client recovery, B persistence/history, C device-loss parity remain. |
+| BI1 application integration | **A1 reviewed; A2 implemented with partial acceptance** | [PC3 full scorecard](../../reports/project1-interactive/PC3-APPLICATION-ENTRY-2026-10-29.md): actual app route/retained return and full product gate pass; navigation/readiness misses and memory limits explicit. [A2/PC4 scorecard](../../reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md): individual recoveries observed; fixture/launcher/final-gate acceptance remains open. B persistence/history and C device/preparer recovery follow. |
 | AP1 appearance | Planned | First lighting/material increment on integrated geometry |
 | MD2 broader mathematical discovery | Planned | Bounded additional locations/scales with fixed lineage |
 | RB1 supported release | Planned | Backend decision, ownership/recovery evidence, supported launch and reviewed PR |

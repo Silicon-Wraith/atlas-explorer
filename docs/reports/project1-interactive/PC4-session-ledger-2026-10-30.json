@@ -1,0 +1,815 @@
+{
+  "sourceHead": "2d34664bfdfa0eaaaf4f67526bd0ce1b46c4c85e",
+  "sessionControls": [
+    {
+      "scenario": "visible-healthy-owner",
+      "started": 1793374968245,
+      "ended": 1793375028246,
+      "renewals": 13
+    },
+    {
+      "scenario": "silent-owner-loss",
+      "seconds": 34.623,
+      "expiryMs": 30716,
+      "replacementPresentationMs": 9714,
+      "termination": "expiry",
+      "oldQueueAtAdmission": "held result had already completed native work"
+    },
+    {
+      "scenario": "living-page-expiry-retry",
+      "seconds": 32.835,
+      "expiryMs": 30020,
+      "poseRetained": true,
+      "queriesDuringPause": 0
+    }
+  ],
+  "serverEvents": [
+    {
+      "time": 1793374963410,
+      "type": "session-opened",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+    },
+    {
+      "time": 1793374963410,
+      "type": "client-opening",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+    },
+    {
+      "time": 1793374963936,
+      "type": "worker-ready",
+      "pid": 1506812,
+      "producer": {
+        "instanceId": "f4f3f246-1d12-4633-abc5-296a561a0f28",
+        "epoch": 0
+      }
+    },
+    {
+      "time": 1793374963939,
+      "type": "client-opened",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+    },
+    {
+      "time": 1793374963942,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 1
+    },
+    {
+      "time": 1793374964044,
+      "type": "queued",
+      "order": 1,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793374964044,
+      "type": "dispatch",
+      "order": 1,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793374965115,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "260d1268-1875-4c39-a634-a069f8b7f0ed:1",
+        "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:03a17384a7c07d06",
+      "token": "1a82648a-a9b7-433d-b4aa-aba18b3d79e5",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793374964044.9824,
+        "nativeReady": 1793374965111.8655,
+        "structuralMs": 66.954345703125
+      },
+      "fieldCalls": 31,
+      "fieldPoints": 1849375
+    },
+    {
+      "time": 1793374965116,
+      "type": "finished",
+      "order": 1
+    },
+    {
+      "time": 1793374965468,
+      "type": "queued",
+      "order": 2,
+      "kind": "view"
+    },
+    {
+      "time": 1793374965468,
+      "type": "dispatch",
+      "order": 2,
+      "kind": "view"
+    },
+    {
+      "time": 1793374967144,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "260d1268-1875-4c39-a634-a069f8b7f0ed:2",
+        "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+      },
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:ba146a5abc5a5630",
+      "token": "2fbf809d-9afb-4921-be04-295a8b4bf322",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793374965468.743,
+        "nativeReady": 1793374967142.3662,
+        "structuralMs": 317.396484375
+      },
+      "fieldCalls": 47,
+      "fieldPoints": 2906159
+    },
+    {
+      "time": 1793374967145,
+      "type": "finished",
+      "order": 2
+    },
+    {
+      "time": 1793374968110,
+      "type": "http-error",
+      "name": "ApplicationSessionError",
+      "code": "owned",
+      "message": "Landscape is active in another tab. Return there, or retry after its session ends."
+    },
+    {
+      "time": 1793374968307,
+      "type": "queued",
+      "order": 3,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793374968307,
+      "type": "dispatch",
+      "order": 3,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793374968309,
+      "type": "queued",
+      "order": 4,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793374968945,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 2
+    },
+    {
+      "time": 1793374968948,
+      "type": "queued",
+      "order": 5,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793374969171,
+      "type": "cancelled",
+      "order": 4,
+      "active": false
+    },
+    {
+      "time": 1793374969171,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793374969177,
+      "type": "cancelled",
+      "order": 5,
+      "active": false
+    },
+    {
+      "time": 1793374969177,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793374969252,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "260d1268-1875-4c39-a634-a069f8b7f0ed:3",
+        "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        1
+      ],
+      "representationKey": "fnv1a64:4b2f1f5b20858a82",
+      "token": "8bba08cd-0fff-4604-a69b-59973f9c6137",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793374968308.5518,
+        "nativeReady": 1793374969250.2969,
+        "structuralMs": 0.89599609375
+      },
+      "fieldCalls": 16,
+      "fieldPoints": 1056784
+    },
+    {
+      "time": 1793374969252,
+      "type": "finished",
+      "order": 3
+    },
+    {
+      "time": 1793374973948,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 3
+    },
+    {
+      "time": 1793374978952,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 4
+    },
+    {
+      "time": 1793374983955,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 5
+    },
+    {
+      "time": 1793374988958,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 6
+    },
+    {
+      "time": 1793374993961,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 7
+    },
+    {
+      "time": 1793374998963,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 8
+    },
+    {
+      "time": 1793375003966,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 9
+    },
+    {
+      "time": 1793375008970,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 10
+    },
+    {
+      "time": 1793375013972,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 11
+    },
+    {
+      "time": 1793375018975,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 12
+    },
+    {
+      "time": 1793375023977,
+      "type": "session-renewed",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "sequence": 13
+    },
+    {
+      "time": 1793375028313,
+      "type": "queued",
+      "order": 6,
+      "kind": "fine"
+    },
+    {
+      "time": 1793375028313,
+      "type": "dispatch",
+      "order": 6,
+      "kind": "fine"
+    },
+    {
+      "time": 1793375029402,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "260d1268-1875-4c39-a634-a069f8b7f0ed:6",
+        "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+      },
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+      "token": "6a62a329-6745-468d-ac73-3d85e91e5256",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793375028314.1328,
+        "nativeReady": 1793375029400.044,
+        "structuralMs": 85.031494140625
+      },
+      "fieldCalls": 45,
+      "fieldPoints": 2774061
+    },
+    {
+      "time": 1793375029403,
+      "type": "finished",
+      "order": 6
+    },
+    {
+      "time": 1793375054693,
+      "type": "client-retiring",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "reason": "expired"
+    },
+    {
+      "time": 1793375054693,
+      "type": "producer-retired",
+      "token": "1a82648a-a9b7-433d-b4aa-aba18b3d79e5",
+      "identity": {
+        "epoch": 0,
+        "requestId": "260d1268-1875-4c39-a634-a069f8b7f0ed:1",
+        "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+      }
+    },
+    {
+      "time": 1793375054693,
+      "type": "producer-retired",
+      "token": "2fbf809d-9afb-4921-be04-295a8b4bf322",
+      "identity": {
+        "epoch": 0,
+        "requestId": "260d1268-1875-4c39-a634-a069f8b7f0ed:2",
+        "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+      }
+    },
+    {
+      "time": 1793375054693,
+      "type": "producer-retired",
+      "token": "8bba08cd-0fff-4604-a69b-59973f9c6137",
+      "identity": {
+        "epoch": 0,
+        "requestId": "260d1268-1875-4c39-a634-a069f8b7f0ed:3",
+        "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+      }
+    },
+    {
+      "time": 1793375054693,
+      "type": "producer-retired",
+      "token": "6a62a329-6745-468d-ac73-3d85e91e5256",
+      "identity": {
+        "epoch": 0,
+        "requestId": "260d1268-1875-4c39-a634-a069f8b7f0ed:6",
+        "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+      }
+    },
+    {
+      "time": 1793375054693,
+      "type": "client-expired",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "requests": 6,
+      "tokens": 4
+    },
+    {
+      "time": 1793375054693,
+      "type": "session-expired",
+      "id": "260d1268-1875-4c39-a634-a069f8b7f0ed"
+    },
+    {
+      "time": 1793375054789,
+      "type": "session-opened",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c"
+    },
+    {
+      "time": 1793375054789,
+      "type": "client-opening",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c"
+    },
+    {
+      "time": 1793375054790,
+      "type": "client-opened",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c"
+    },
+    {
+      "time": 1793375054807,
+      "type": "session-renewed",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c",
+      "sequence": 1
+    },
+    {
+      "time": 1793375054927,
+      "type": "queued",
+      "order": 7,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793375054927,
+      "type": "dispatch",
+      "order": 7,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793375055441,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "5b083d90-edcc-43d5-a84b-7372172bc31c:1",
+        "runtimeId": "5b083d90-edcc-43d5-a84b-7372172bc31c"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:03a17384a7c07d06",
+      "token": "23094098-3278-40cc-9578-559a304f7d86",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793375054928.203,
+        "nativeReady": 1793375055440.089,
+        "structuralMs": 66.479248046875
+      },
+      "fieldCalls": 0,
+      "fieldPoints": 0
+    },
+    {
+      "time": 1793375055442,
+      "type": "finished",
+      "order": 7
+    },
+    {
+      "time": 1793375055792,
+      "type": "queued",
+      "order": 8,
+      "kind": "view"
+    },
+    {
+      "time": 1793375055792,
+      "type": "dispatch",
+      "order": 8,
+      "kind": "view"
+    },
+    {
+      "time": 1793375057507,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "5b083d90-edcc-43d5-a84b-7372172bc31c:2",
+        "runtimeId": "5b083d90-edcc-43d5-a84b-7372172bc31c"
+      },
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:ba146a5abc5a5630",
+      "token": "d5015ca1-2187-423a-92a9-36201021933d",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793375055793.2507,
+        "nativeReady": 1793375057505.5376,
+        "structuralMs": 327.406982421875
+      },
+      "fieldCalls": 47,
+      "fieldPoints": 2906159
+    },
+    {
+      "time": 1793375057508,
+      "type": "finished",
+      "order": 8
+    },
+    {
+      "time": 1793375057648,
+      "type": "http-error",
+      "name": "ApplicationSessionError",
+      "code": "expired",
+      "message": "The landscape session has ended. Retry Landscape to continue."
+    },
+    {
+      "time": 1793375059811,
+      "type": "session-renewed",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c",
+      "sequence": 2
+    },
+    {
+      "time": 1793375064490,
+      "type": "queued",
+      "order": 9,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793375064490,
+      "type": "dispatch",
+      "order": 9,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793375064492,
+      "type": "queued",
+      "order": 10,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793375064815,
+      "type": "session-renewed",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c",
+      "sequence": 3
+    },
+    {
+      "time": 1793375065051,
+      "type": "cancelled",
+      "order": 9,
+      "active": true
+    },
+    {
+      "time": 1793375065051,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793375065052,
+      "type": "cancelled",
+      "order": 10,
+      "active": false
+    },
+    {
+      "time": 1793375065052,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793375065227,
+      "type": "finished",
+      "order": 9
+    },
+    {
+      "time": 1793375094835,
+      "type": "client-retiring",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c",
+      "reason": "expired"
+    },
+    {
+      "time": 1793375094835,
+      "type": "producer-retired",
+      "token": "23094098-3278-40cc-9578-559a304f7d86",
+      "identity": {
+        "epoch": 0,
+        "requestId": "5b083d90-edcc-43d5-a84b-7372172bc31c:1",
+        "runtimeId": "5b083d90-edcc-43d5-a84b-7372172bc31c"
+      }
+    },
+    {
+      "time": 1793375094835,
+      "type": "producer-retired",
+      "token": "d5015ca1-2187-423a-92a9-36201021933d",
+      "identity": {
+        "epoch": 0,
+        "requestId": "5b083d90-edcc-43d5-a84b-7372172bc31c:2",
+        "runtimeId": "5b083d90-edcc-43d5-a84b-7372172bc31c"
+      }
+    },
+    {
+      "time": 1793375094835,
+      "type": "client-expired",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c",
+      "requests": 4,
+      "tokens": 2
+    },
+    {
+      "time": 1793375094835,
+      "type": "session-expired",
+      "id": "5b083d90-edcc-43d5-a84b-7372172bc31c"
+    },
+    {
+      "time": 1793375094987,
+      "type": "session-opened",
+      "id": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6"
+    },
+    {
+      "time": 1793375094987,
+      "type": "client-opening",
+      "id": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6"
+    },
+    {
+      "time": 1793375094989,
+      "type": "client-opened",
+      "id": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6"
+    },
+    {
+      "time": 1793375095006,
+      "type": "session-renewed",
+      "id": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6",
+      "sequence": 1
+    },
+    {
+      "time": 1793375095113,
+      "type": "queued",
+      "order": 11,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793375095113,
+      "type": "dispatch",
+      "order": 11,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793375095644,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6:1",
+        "runtimeId": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:03a17384a7c07d06",
+      "token": "e68ad1cd-53e7-4b8c-99b7-bbe6da1b0cba",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793375095113.4915,
+        "nativeReady": 1793375095643.206,
+        "structuralMs": 66.110595703125
+      },
+      "fieldCalls": 0,
+      "fieldPoints": 0
+    },
+    {
+      "time": 1793375095645,
+      "type": "finished",
+      "order": 11
+    },
+    {
+      "time": 1793375095837,
+      "type": "queued",
+      "order": 12,
+      "kind": "view"
+    },
+    {
+      "time": 1793375095837,
+      "type": "dispatch",
+      "order": 12,
+      "kind": "view"
+    },
+    {
+      "time": 1793375097545,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6:2",
+        "runtimeId": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6"
+      },
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:ba146a5abc5a5630",
+      "token": "79cd9c86-d672-44ad-9af6-59b96b1db577",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793375095837.447,
+        "nativeReady": 1793375097543.242,
+        "structuralMs": 315.59423828125
+      },
+      "fieldCalls": 47,
+      "fieldPoints": 2906159
+    },
+    {
+      "time": 1793375097545,
+      "type": "finished",
+      "order": 12
+    },
+    {
+      "time": 1793375097797,
+      "type": "producer-retired",
+      "token": "e68ad1cd-53e7-4b8c-99b7-bbe6da1b0cba",
+      "identity": {
+        "epoch": 0,
+        "requestId": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6:1",
+        "runtimeId": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6"
+      }
+    },
+    {
+      "time": 1793375097797,
+      "type": "producer-retired",
+      "token": "79cd9c86-d672-44ad-9af6-59b96b1db577",
+      "identity": {
+        "epoch": 0,
+        "requestId": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6:2",
+        "runtimeId": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6"
+      }
+    },
+    {
+      "time": 1793375097799,
+      "type": "client-retiring",
+      "id": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6",
+      "reason": "closed"
+    },
+    {
+      "time": 1793375097799,
+      "type": "client-closed",
+      "id": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6",
+      "requests": 2,
+      "tokens": 0
+    },
+    {
+      "time": 1793375097799,
+      "type": "session-closed",
+      "id": "fa1743c9-e34c-44ce-9368-c74b5a8e1bc6"
+    },
+    {
+      "time": 1793375098845,
+      "type": "worker-exit",
+      "pid": 1506812,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "browserFaultEvents": [
+    {
+      "type": "session-lost",
+      "time": 1793375028983,
+      "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "reason": "Test delivery withheld"
+    },
+    {
+      "type": "session-stopped",
+      "time": 1793375028984.6,
+      "runtimeId": "260d1268-1875-4c39-a634-a069f8b7f0ed",
+      "reason": "Test delivery withheld"
+    },
+    {
+      "type": "cleanup-error",
+      "time": 1793375028996.8,
+      "message": "preparation resource release failed; Landscape client release failed"
+    },
+    {
+      "type": "workspace-error",
+      "time": 1793374968127.3,
+      "message": "Landscape is active in another tab. Return there, or retry after its session ends."
+    },
+    {
+      "type": "session-lost",
+      "time": 1793375094824.4,
+      "runtimeId": "5b083d90-edcc-43d5-a84b-7372172bc31c",
+      "reason": "The landscape session expired. Retry Landscape to continue."
+    },
+    {
+      "type": "session-stopped",
+      "time": 1793375094829,
+      "runtimeId": "5b083d90-edcc-43d5-a84b-7372172bc31c",
+      "reason": "The landscape session expired. Retry Landscape to continue."
+    },
+    {
+      "type": "session-close-deferred",
+      "time": 1793375094837.5,
+      "runtimeId": "5b083d90-edcc-43d5-a84b-7372172bc31c",
+      "reason": "Failed to fetch"
+    }
+  ],
+  "r1Failure": "AssertionError [ERR_ASSERTION]: The held publication must retire inside expiry cleanup, not an earlier request\n    at file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4/tests/space-preparation-session.mjs:84:9",
+  "externalClosure": {
+    "recordedCleanup": true,
+    "alive": [],
+    "portsClosed": {
+      "5190": true,
+      "5196": true,
+      "5198": true,
+      "5199": true,
+      "5200": true,
+      "44991": true
+    },
+    "lockFree": true,
+    "checkedAt": 1793375182.820223
+  }
+}

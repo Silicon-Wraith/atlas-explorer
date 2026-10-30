@@ -1,0 +1,451 @@
+{
+  "application": {
+    "pass": true,
+    "failure": null,
+    "cleanup": true,
+    "eventCounts": {
+      "session-opened": 8,
+      "client-opening": 8,
+      "worker-ready": 1,
+      "client-opened": 8,
+      "session-renewed": 22,
+      "queued": 28,
+      "dispatch": 22,
+      "producer-prepared": 17,
+      "finished": 22,
+      "cancelled": 12,
+      "http-error": 12,
+      "producer-retired": 17,
+      "client-retiring": 8,
+      "client-closed": 8,
+      "session-closed": 8,
+      "worker-exit": 1
+    },
+    "publications": {
+      "preparedDistinct": 17,
+      "retiredDistinct": 17,
+      "allPreparedRetired": true
+    },
+    "qualification": {
+      "pass": true,
+      "specimens": [
+        {
+          "representationKey": "fnv1a64:03a17384a7c07d06",
+          "kind": "coarse",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 608,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 2.789774079877749e-05,
+          "meshCrossingUpperMaxM": 6.640625e-05,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:ba146a5abc5a5630",
+          "kind": "view",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.0004150390625,
+            "tileWidthM": 0.10625,
+            "rtinToleranceM": 0.00010625,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.0010625,
+          "referenceSamples": 826,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 0.00012510109628894342,
+          "meshCrossingUpperMaxM": 0.00016601562499999993,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:4b2f1f5b20858a82",
+          "kind": "coarse",
+          "origin": [
+            1414.982253306491,
+            79.22229320887675,
+            1040.6419659057447
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 1.0849888795040796e-05,
+          "meshCrossingUpperMaxM": 3.320312500000003e-05,
+          "forwardReferenceGrid": null,
+          "limits": [
+            "Sparse forward reference: one sample; no surface completeness claim."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:5ff3ab10c8a3d225",
+          "kind": "coarse",
+          "origin": [
+            1414.9706697024023,
+            79.2287007908247,
+            1040.643040434229
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:b74f104ca2024264",
+          "kind": "coarse",
+          "origin": [
+            1414.9771667569569,
+            79.24012487412698,
+            1040.6449562119776
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:108f9a2487d58e99",
+          "kind": "coarse",
+          "origin": [
+            1414.9771667569569,
+            79.24232142047191,
+            1040.6318578614814
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+          "kind": "fine",
+          "origin": [
+            1414.969281874518,
+            79.1994849165704,
+            1040.6381410370243
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 2.593994140625e-05,
+            "tileWidthM": 0.006640625,
+            "rtinToleranceM": 6.640625e-06,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 6.640625e-05,
+          "referenceSamples": 655,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 6.856193813217745e-06,
+          "meshCrossingUpperMaxM": 8.300781250000007e-06,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        }
+      ],
+      "elapsedS": 11.225672419182956,
+      "sourceKey": "fnv1a64:3470e8e94420cec7"
+    },
+    "bufferAudit": {
+      "pass": true,
+      "pid": 1491025,
+      "representations": [
+        {
+          "key": "fnv1a64:03a17384a7c07d06",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:ba146a5abc5a5630",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:5ff3ab10c8a3d225",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:b74f104ca2024264",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:108f9a2487d58e99",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:d9d2e86c8fd6a571",
+          "roles": 3,
+          "pass": true
+        }
+      ],
+      "nativeRecords": 22,
+      "outputBytes": 100921960,
+      "cacheBounds": true,
+      "viewInteractionCacheEvictions": 0,
+      "input": {}
+    },
+    "flightAudit": {
+      "pass": true,
+      "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.",
+      "runs": [
+        {
+          "scenario": "application-route",
+          "entries": 11,
+          "contacts": 30,
+          "checkedFrames": 858,
+          "waitingFramesStationary": 54
+        }
+      ]
+    },
+    "nativeRecords": 22,
+    "outputBytes": 100921960,
+    "cachePeaks": {
+      "source": 100394480,
+      "validation": 80,
+      "topology": 54336928
+    },
+    "peakOwnedRssMiB": 2854.625,
+    "browserSeconds": 110.88,
+    "pageErrors": []
+  },
+  "routes": [
+    {
+      "scenario": "application-route",
+      "wallSeconds": 22.562,
+      "frames": 858,
+      "renderedFrames": 858,
+      "renderSubmissionFps": 49.94150208505325,
+      "rafFps": 49.94150208505325,
+      "preparationRenderSubmissionFps": 49.87684729064039,
+      "frameMs": {
+        "n": 858,
+        "p50": 20,
+        "p95": 20.100000000000364,
+        "p99": 20.100000000000364,
+        "max": 40
+      },
+      "navigationMs": {
+        "n": 727,
+        "p50": 0.099853515625,
+        "p95": 2.300048828125,
+        "p99": 4.300048828125,
+        "max": 5.300048828125
+      },
+      "navigationByClass": {
+        "waiting": {
+          "n": 54,
+          "p50": 0,
+          "p95": 0.10009765625,
+          "p99": 0.10009765625,
+          "max": 0.10009765625
+        },
+        "constant": {
+          "n": 128,
+          "p50": 0,
+          "p95": 0.199951171875,
+          "p99": 0.2001953125,
+          "max": 0.300048828125
+        },
+        "firstSurface": {
+          "n": 3,
+          "p50": 0.10009765625,
+          "p95": 0.300048828125,
+          "p99": 0.300048828125,
+          "max": 0.300048828125
+        },
+        "steadySurface": {
+          "n": 542,
+          "p50": 0.10009765625,
+          "p95": 3.89990234375,
+          "p99": 4.39990234375,
+          "max": 5.300048828125
+        }
+      },
+      "interactionReadinessMs": {
+        "n": 7,
+        "p50": 876.699951171875,
+        "p95": 2158.699951171875,
+        "p99": 2158.699951171875,
+        "max": 2158.699951171875
+      },
+      "viewReadinessMs": {
+        "n": 2,
+        "p50": 1718.89990234375,
+        "p95": 1727.60009765625,
+        "p99": 1727.60009765625,
+        "max": 1727.60009765625
+      },
+      "waitingMs": 1079.7999999999993,
+      "waitingFraction": 0.06285178782219168,
+      "sessionPausedMs": 0,
+      "contacts": 30,
+      "maxInteraction": 8,
+      "maxView": 1,
+      "peakGpuBytes": 22573504
+    }
+  ],
+  "session": {
+    "status": "partial; aggregate suite failed",
+    "failure": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert.ok(!allEvents.some(e=>['runtime-error','device-error','cleanup-error'].includes(e.type)))\n\n    at file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4/tests/space-preparation-session.mjs:113:9",
+    "controls": [
+      {
+        "scenario": "visible-healthy-owner",
+        "started": 1793374968245,
+        "ended": 1793375028246,
+        "renewals": 13
+      },
+      {
+        "scenario": "silent-owner-loss",
+        "seconds": 34.623,
+        "expiryMs": 30716,
+        "replacementPresentationMs": 9714,
+        "termination": "expiry",
+        "oldQueueAtAdmission": "held result had already completed native work"
+      },
+      {
+        "scenario": "living-page-expiry-retry",
+        "seconds": 32.835,
+        "expiryMs": 30020,
+        "poseRetained": true,
+        "queriesDuringPause": 0
+      }
+    ],
+    "heldResponse": {
+      "preparedAt": 1793375029405,
+      "tokenSha256": "31926442de613913f15727eaa2470ccd676a4b58482107043efee0c8fe9bfc1c",
+      "retiredByExpiry": true,
+      "delivery": "fulfilled"
+    },
+    "lossSuppression": {
+      "heartbeat": 1,
+      "close": 1,
+      "cancel": 1,
+      "retire": 3
+    },
+    "cleanup": true,
+    "pageErrors": [],
+    "publications": {
+      "preparedDistinct": 8,
+      "retiredDistinct": 8,
+      "allPreparedRetired": true
+    },
+    "sourceDigests": {
+      "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+      "scripts/preparation/application-server.mjs": "b6ff658006a4b106030b3ca3f26c864a95b0357fc90627eb03fe9854a0f73cea",
+      "scripts/world-preview.mjs": "a0d423c10778f0a07ec5c5370547c7bed318d4ff31f1cb6e71800b471c8bdf7f",
+      "scripts/preparation/page-lifetime.mjs": "c5be90cc3dd0192fdc7c8234df98cec12183641a509aa33833944738cb3fffd2",
+      "src/space/preparation/application-client.js": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+      "src/space/preparation/workspace.js": "5e13e549bdeb143e7e29e37fc23e66ac645faf5511fc1afaca3c833675a76a4e",
+      "src/app.js": "48d5fa4f6afaf09a7bfe6644b52424a72804a879eebe4e636f6da805907ffb87",
+      "index.html": "199c1e1e0a1c74aabde9e1581fb26c620ccd79672cd7b4e6487e95f1c299b896",
+      "tests/space-preparation-session.mjs": "c8fa3fb80f73af9057bc35ae5befd329d8285c955f3ce34a1de8359bb955f850",
+      "tests/support/session-loss-proxy.mjs": "44940ca55f1144deca2aaf3906d099ab2d1908911866f1bf438bef77ff149ddf"
+    },
+    "unrun": [
+      "session finite qualification",
+      "headed two-page launcher"
+    ],
+    "externalClosure": {
+      "recordedCleanup": true,
+      "alive": [],
+      "portsClosed": {
+        "5190": true,
+        "5196": true,
+        "5198": true,
+        "5199": true,
+        "5200": true,
+        "44991": true
+      },
+      "lockFree": true,
+      "checkedAt": 1793375182.820223
+    }
+  },
+  "gate": {
+    "commit": "0ddff2536d13d2aad770cb1a705c140e39515c0f",
+    "overall": {
+      "state": "failed",
+      "exitCode": 1,
+      "reason": "a required suite did not pass"
+    },
+    "counts": {
+      "passed": 23,
+      "total": 24
+    },
+    "record": "PC4-product-gate-2026-10-30.json"
+  },
+  "scope": [
+    "Application metrics are measured on0ddff2536d13; the diagnostic2d34664 changes only test/fixture/documentation.",
+    "The diagnostic failed its aggregate error assertion. Individual controls retain their observations. No exact-final-head full-gate pass.",
+    "Finite geometry checks do not prove global completeness. One application surface has only one forward reference sample.",
+    "Total RSS includes browser/native/interpreter overhead;1GiB attributable region ownership remains unverified."
+  ]
+}
