@@ -1,0 +1,891 @@
+{
+  "sourceHead": "f108ec5ab461a440ca974886190d5c64300fbdd6",
+  "controls": [
+    {
+      "scenario": "visible-healthy-owner",
+      "started": 1793378251672,
+      "ended": 1793378311672,
+      "renewals": 13
+    },
+    {
+      "scenario": "silent-owner-loss",
+      "seconds": 34.584,
+      "expiryMs": 30730,
+      "replacementPresentationMs": 2895,
+      "heldResponseSettledAfterExpiryMs": 9694,
+      "termination": "expiry",
+      "oldQueueAtAdmission": "held result had already completed native work"
+    },
+    {
+      "scenario": "living-page-expiry-retry",
+      "seconds": 32.898,
+      "expiryMs": 30019,
+      "poseRetained": true,
+      "queriesDuringPause": 0
+    }
+  ],
+  "heldResponse": {
+    "preparedAt": 1793378312853,
+    "tokenSha256": "48ab710f592ad9c7aa71999f919e2d2bee0d95287177a5c19df3be7ab8bdfbf2",
+    "retiredByExpiry": true,
+    "delivery": "fulfilled"
+  },
+  "faultAt": 1793378311677,
+  "faults": [
+    {
+      "time": 1793378312436,
+      "operation": "heartbeat"
+    },
+    {
+      "time": 1793378312437,
+      "operation": "heartbeat"
+    },
+    {
+      "time": 1793378313286,
+      "operation": "cancel"
+    }
+  ],
+  "suppression": {
+    "heartbeat": 2,
+    "close": 0,
+    "cancel": 1,
+    "retire": 0
+  },
+  "errorChecks": {
+    "livingAndReplacement": 0,
+    "lostOwner": []
+  },
+  "serverEvents": [
+    {
+      "time": 1793378246842,
+      "type": "session-opened",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+    },
+    {
+      "time": 1793378246842,
+      "type": "client-opening",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+    },
+    {
+      "time": 1793378247386,
+      "type": "worker-ready",
+      "pid": 1569264,
+      "producer": {
+        "instanceId": "5aec7bda-5e1c-4bc3-b1f0-73f72e00959a",
+        "epoch": 0
+      }
+    },
+    {
+      "time": 1793378247388,
+      "type": "client-opened",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+    },
+    {
+      "time": 1793378247391,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 1
+    },
+    {
+      "time": 1793378247492,
+      "type": "queued",
+      "order": 1,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378247492,
+      "type": "dispatch",
+      "order": 1,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378248553,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "4a13e169-c18b-4abd-88d0-871e20c9cbce:1",
+        "runtimeId": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:03a17384a7c07d06",
+      "token": "41664ce3-0392-4673-ab8e-dbbfbdfeee88",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793378247492.9802,
+        "nativeReady": 1793378248549.5295,
+        "structuralMs": 66.876953125
+      },
+      "fieldCalls": 31,
+      "fieldPoints": 1849375
+    },
+    {
+      "time": 1793378248553,
+      "type": "finished",
+      "order": 1
+    },
+    {
+      "time": 1793378248909,
+      "type": "queued",
+      "order": 2,
+      "kind": "view"
+    },
+    {
+      "time": 1793378248909,
+      "type": "dispatch",
+      "order": 2,
+      "kind": "view"
+    },
+    {
+      "time": 1793378250578,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "4a13e169-c18b-4abd-88d0-871e20c9cbce:2",
+        "runtimeId": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+      },
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:ba146a5abc5a5630",
+      "token": "0f073373-9dca-4bfa-a1fd-fa16c6eaab6b",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793378248909.4312,
+        "nativeReady": 1793378250576.4622,
+        "structuralMs": 309.36083984375
+      },
+      "fieldCalls": 47,
+      "fieldPoints": 2906159
+    },
+    {
+      "time": 1793378250579,
+      "type": "finished",
+      "order": 2
+    },
+    {
+      "time": 1793378251540,
+      "type": "http-error",
+      "name": "ApplicationSessionError",
+      "code": "owned",
+      "message": "Landscape is active in another tab. Return there, or retry after its session ends."
+    },
+    {
+      "time": 1793378251739,
+      "type": "queued",
+      "order": 3,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378251739,
+      "type": "dispatch",
+      "order": 3,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378251741,
+      "type": "queued",
+      "order": 4,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378252298,
+      "type": "queued",
+      "order": 5,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378252394,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 2
+    },
+    {
+      "time": 1793378252519,
+      "type": "cancelled",
+      "order": 4,
+      "active": false
+    },
+    {
+      "time": 1793378252519,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793378252521,
+      "type": "cancelled",
+      "order": 5,
+      "active": false
+    },
+    {
+      "time": 1793378252521,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793378252600,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "4a13e169-c18b-4abd-88d0-871e20c9cbce:3",
+        "runtimeId": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        1
+      ],
+      "representationKey": "fnv1a64:4b2f1f5b20858a82",
+      "token": "eb39f926-f546-4a6c-88f2-9e5ceecddca1",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793378251739.9612,
+        "nativeReady": 1793378252597.9617,
+        "structuralMs": 0.786376953125
+      },
+      "fieldCalls": 16,
+      "fieldPoints": 1056784
+    },
+    {
+      "time": 1793378252600,
+      "type": "finished",
+      "order": 3
+    },
+    {
+      "time": 1793378257400,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 3
+    },
+    {
+      "time": 1793378262404,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 4
+    },
+    {
+      "time": 1793378267407,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 5
+    },
+    {
+      "time": 1793378272410,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 6
+    },
+    {
+      "time": 1793378277413,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 7
+    },
+    {
+      "time": 1793378282416,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 8
+    },
+    {
+      "time": 1793378287419,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 9
+    },
+    {
+      "time": 1793378292422,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 10
+    },
+    {
+      "time": 1793378297425,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 11
+    },
+    {
+      "time": 1793378302427,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 12
+    },
+    {
+      "time": 1793378307430,
+      "type": "session-renewed",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "sequence": 13
+    },
+    {
+      "time": 1793378311744,
+      "type": "queued",
+      "order": 6,
+      "kind": "fine"
+    },
+    {
+      "time": 1793378311744,
+      "type": "dispatch",
+      "order": 6,
+      "kind": "fine"
+    },
+    {
+      "time": 1793378312850,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "4a13e169-c18b-4abd-88d0-871e20c9cbce:6",
+        "runtimeId": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+      },
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+      "token": "d549761c-bb66-4628-bd43-16f9bb38f6c8",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793378311744.982,
+        "nativeReady": 1793378312847.5684,
+        "structuralMs": 88.81103515625
+      },
+      "fieldCalls": 45,
+      "fieldPoints": 2774061
+    },
+    {
+      "time": 1793378312851,
+      "type": "finished",
+      "order": 6
+    },
+    {
+      "time": 1793378338160,
+      "type": "client-retiring",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "reason": "expired"
+    },
+    {
+      "time": 1793378338160,
+      "type": "producer-retired",
+      "token": "41664ce3-0392-4673-ab8e-dbbfbdfeee88",
+      "identity": {
+        "epoch": 0,
+        "requestId": "4a13e169-c18b-4abd-88d0-871e20c9cbce:1",
+        "runtimeId": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+      }
+    },
+    {
+      "time": 1793378338160,
+      "type": "producer-retired",
+      "token": "0f073373-9dca-4bfa-a1fd-fa16c6eaab6b",
+      "identity": {
+        "epoch": 0,
+        "requestId": "4a13e169-c18b-4abd-88d0-871e20c9cbce:2",
+        "runtimeId": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+      }
+    },
+    {
+      "time": 1793378338160,
+      "type": "producer-retired",
+      "token": "eb39f926-f546-4a6c-88f2-9e5ceecddca1",
+      "identity": {
+        "epoch": 0,
+        "requestId": "4a13e169-c18b-4abd-88d0-871e20c9cbce:3",
+        "runtimeId": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+      }
+    },
+    {
+      "time": 1793378338160,
+      "type": "producer-retired",
+      "token": "d549761c-bb66-4628-bd43-16f9bb38f6c8",
+      "identity": {
+        "epoch": 0,
+        "requestId": "4a13e169-c18b-4abd-88d0-871e20c9cbce:6",
+        "runtimeId": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+      }
+    },
+    {
+      "time": 1793378338160,
+      "type": "client-expired",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce",
+      "requests": 6,
+      "tokens": 4
+    },
+    {
+      "time": 1793378338160,
+      "type": "session-expired",
+      "id": "4a13e169-c18b-4abd-88d0-871e20c9cbce"
+    },
+    {
+      "time": 1793378338281,
+      "type": "session-opened",
+      "id": "58beee74-7b31-4670-9601-338428707bc1"
+    },
+    {
+      "time": 1793378338281,
+      "type": "client-opening",
+      "id": "58beee74-7b31-4670-9601-338428707bc1"
+    },
+    {
+      "time": 1793378338282,
+      "type": "client-opened",
+      "id": "58beee74-7b31-4670-9601-338428707bc1"
+    },
+    {
+      "time": 1793378338298,
+      "type": "session-renewed",
+      "id": "58beee74-7b31-4670-9601-338428707bc1",
+      "sequence": 1
+    },
+    {
+      "time": 1793378338423,
+      "type": "queued",
+      "order": 7,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378338423,
+      "type": "dispatch",
+      "order": 7,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378338956,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "58beee74-7b31-4670-9601-338428707bc1:1",
+        "runtimeId": "58beee74-7b31-4670-9601-338428707bc1"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:03a17384a7c07d06",
+      "token": "7af52397-d65f-4506-801e-498d8f305ead",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793378338424.128,
+        "nativeReady": 1793378338954.1624,
+        "structuralMs": 66.41845703125
+      },
+      "fieldCalls": 0,
+      "fieldPoints": 0
+    },
+    {
+      "time": 1793378338956,
+      "type": "finished",
+      "order": 7
+    },
+    {
+      "time": 1793378339310,
+      "type": "queued",
+      "order": 8,
+      "kind": "view"
+    },
+    {
+      "time": 1793378339310,
+      "type": "dispatch",
+      "order": 8,
+      "kind": "view"
+    },
+    {
+      "time": 1793378340942,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "58beee74-7b31-4670-9601-338428707bc1:2",
+        "runtimeId": "58beee74-7b31-4670-9601-338428707bc1"
+      },
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:ba146a5abc5a5630",
+      "token": "0a0fac59-8363-435a-b055-081686cf618b",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793378339310.563,
+        "nativeReady": 1793378340940.8484,
+        "structuralMs": 304.203125
+      },
+      "fieldCalls": 47,
+      "fieldPoints": 2906159
+    },
+    {
+      "time": 1793378340943,
+      "type": "finished",
+      "order": 8
+    },
+    {
+      "time": 1793378341080,
+      "type": "http-error",
+      "name": "ApplicationSessionError",
+      "code": "expired",
+      "message": "The landscape session has ended. Retry Landscape to continue."
+    },
+    {
+      "time": 1793378343301,
+      "type": "session-renewed",
+      "id": "58beee74-7b31-4670-9601-338428707bc1",
+      "sequence": 2
+    },
+    {
+      "time": 1793378348000,
+      "type": "queued",
+      "order": 9,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378348000,
+      "type": "dispatch",
+      "order": 9,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378348001,
+      "type": "queued",
+      "order": 10,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378348307,
+      "type": "session-renewed",
+      "id": "58beee74-7b31-4670-9601-338428707bc1",
+      "sequence": 3
+    },
+    {
+      "time": 1793378348498,
+      "type": "cancelled",
+      "order": 9,
+      "active": true
+    },
+    {
+      "time": 1793378348498,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793378348499,
+      "type": "cancelled",
+      "order": 10,
+      "active": false
+    },
+    {
+      "time": 1793378348499,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793378348741,
+      "type": "finished",
+      "order": 9
+    },
+    {
+      "time": 1793378378326,
+      "type": "client-retiring",
+      "id": "58beee74-7b31-4670-9601-338428707bc1",
+      "reason": "expired"
+    },
+    {
+      "time": 1793378378326,
+      "type": "producer-retired",
+      "token": "7af52397-d65f-4506-801e-498d8f305ead",
+      "identity": {
+        "epoch": 0,
+        "requestId": "58beee74-7b31-4670-9601-338428707bc1:1",
+        "runtimeId": "58beee74-7b31-4670-9601-338428707bc1"
+      }
+    },
+    {
+      "time": 1793378378326,
+      "type": "producer-retired",
+      "token": "0a0fac59-8363-435a-b055-081686cf618b",
+      "identity": {
+        "epoch": 0,
+        "requestId": "58beee74-7b31-4670-9601-338428707bc1:2",
+        "runtimeId": "58beee74-7b31-4670-9601-338428707bc1"
+      }
+    },
+    {
+      "time": 1793378378326,
+      "type": "client-expired",
+      "id": "58beee74-7b31-4670-9601-338428707bc1",
+      "requests": 4,
+      "tokens": 2
+    },
+    {
+      "time": 1793378378326,
+      "type": "session-expired",
+      "id": "58beee74-7b31-4670-9601-338428707bc1"
+    },
+    {
+      "time": 1793378378499,
+      "type": "session-opened",
+      "id": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052"
+    },
+    {
+      "time": 1793378378499,
+      "type": "client-opening",
+      "id": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052"
+    },
+    {
+      "time": 1793378378501,
+      "type": "client-opened",
+      "id": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052"
+    },
+    {
+      "time": 1793378378517,
+      "type": "session-renewed",
+      "id": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052",
+      "sequence": 1
+    },
+    {
+      "time": 1793378378624,
+      "type": "queued",
+      "order": 11,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378378625,
+      "type": "dispatch",
+      "order": 11,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793378379154,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052:1",
+        "runtimeId": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:03a17384a7c07d06",
+      "token": "61706a34-c54b-4441-8a8a-cab7840861fc",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793378378625.4175,
+        "nativeReady": 1793378379152.603,
+        "structuralMs": 65.23193359375
+      },
+      "fieldCalls": 0,
+      "fieldPoints": 0
+    },
+    {
+      "time": 1793378379154,
+      "type": "finished",
+      "order": 11
+    },
+    {
+      "time": 1793378379349,
+      "type": "queued",
+      "order": 12,
+      "kind": "view"
+    },
+    {
+      "time": 1793378379349,
+      "type": "dispatch",
+      "order": 12,
+      "kind": "view"
+    },
+    {
+      "time": 1793378381037,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052:2",
+        "runtimeId": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052"
+      },
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:ba146a5abc5a5630",
+      "token": "fec943cf-311f-45eb-ac68-3b6741a26858",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793378379349.6265,
+        "nativeReady": 1793378381035.9226,
+        "structuralMs": 307.652099609375
+      },
+      "fieldCalls": 47,
+      "fieldPoints": 2906159
+    },
+    {
+      "time": 1793378381038,
+      "type": "finished",
+      "order": 12
+    },
+    {
+      "time": 1793378381310,
+      "type": "producer-retired",
+      "token": "61706a34-c54b-4441-8a8a-cab7840861fc",
+      "identity": {
+        "epoch": 0,
+        "requestId": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052:1",
+        "runtimeId": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052"
+      }
+    },
+    {
+      "time": 1793378381310,
+      "type": "producer-retired",
+      "token": "fec943cf-311f-45eb-ac68-3b6741a26858",
+      "identity": {
+        "epoch": 0,
+        "requestId": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052:2",
+        "runtimeId": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052"
+      }
+    },
+    {
+      "time": 1793378381313,
+      "type": "client-retiring",
+      "id": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052",
+      "reason": "closed"
+    },
+    {
+      "time": 1793378381313,
+      "type": "client-closed",
+      "id": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052",
+      "requests": 2,
+      "tokens": 0
+    },
+    {
+      "time": 1793378381313,
+      "type": "session-closed",
+      "id": "ca0f7b88-8bcd-4fc4-8fe7-77d8a36ac052"
+    },
+    {
+      "time": 1793378382206,
+      "type": "worker-exit",
+      "pid": 1569264,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "launcher": {
+    "cleanup": true,
+    "cleanupErrors": [],
+    "openedUrl": "http://127.0.0.1:5200/",
+    "processes": {
+      "ownedPids": [
+        1572305,
+        1572315,
+        1572316,
+        1572318,
+        1572343,
+        1572345,
+        1572349,
+        1572378,
+        1572445
+      ],
+      "alive": [],
+      "samples": [
+        {
+          "time": 1793378395946,
+          "tree": [
+            {
+              "pid": 1569001,
+              "ppid": 1534148,
+              "rssKiB": 152708,
+              "comm": "node"
+            },
+            {
+              "pid": 1572305,
+              "ppid": 1569001,
+              "rssKiB": 242996,
+              "comm": "chrome"
+            },
+            {
+              "pid": 1572315,
+              "ppid": 1572305,
+              "rssKiB": 77096,
+              "comm": "chrome"
+            },
+            {
+              "pid": 1572316,
+              "ppid": 1572305,
+              "rssKiB": 77912,
+              "comm": "chrome"
+            },
+            {
+              "pid": 1572318,
+              "ppid": 1572316,
+              "rssKiB": 21632,
+              "comm": "chrome"
+            },
+            {
+              "pid": 1572343,
+              "ppid": 1572315,
+              "rssKiB": 273528,
+              "comm": "chrome"
+            },
+            {
+              "pid": 1572345,
+              "ppid": 1572305,
+              "rssKiB": 128272,
+              "comm": "chrome"
+            },
+            {
+              "pid": 1572349,
+              "ppid": 1572318,
+              "rssKiB": 61224,
+              "comm": "chrome"
+            },
+            {
+              "pid": 1572378,
+              "ppid": 1572318,
+              "rssKiB": 0,
+              "comm": "chrome"
+            },
+            {
+              "pid": 1572445,
+              "ppid": 1572318,
+              "rssKiB": 85444,
+              "comm": "chrome"
+            }
+          ],
+          "rssKiB": 1120812
+        }
+      ],
+      "errors": [],
+      "peakRssKiB": 1120812
+    }
+  },
+  "sources": {
+    "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+    "scripts/preparation/application-server.mjs": "b6ff658006a4b106030b3ca3f26c864a95b0357fc90627eb03fe9854a0f73cea",
+    "scripts/world-preview.mjs": "a0d423c10778f0a07ec5c5370547c7bed318d4ff31f1cb6e71800b471c8bdf7f",
+    "scripts/preparation/page-lifetime.mjs": "c5be90cc3dd0192fdc7c8234df98cec12183641a509aa33833944738cb3fffd2",
+    "src/space/preparation/application-client.js": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+    "src/space/preparation/workspace.js": "5e13e549bdeb143e7e29e37fc23e66ac645faf5511fc1afaca3c833675a76a4e",
+    "src/app.js": "48d5fa4f6afaf09a7bfe6644b52424a72804a879eebe4e636f6da805907ffb87",
+    "index.html": "199c1e1e0a1c74aabde9e1581fb26c620ccd79672cd7b4e6487e95f1c299b896",
+    "tests/space-preparation-session.mjs": "785a9f11b5b443584470c69398516d54da4b6a4f12aa31912f7e5185cf110ca1",
+    "tests/support/session-loss-proxy.mjs": "364256567ea93de6edcafeab377b9b652c66b540898e46566ca01b3cddfc3b31"
+  }
+}

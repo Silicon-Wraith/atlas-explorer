@@ -1,0 +1,69 @@
+{
+  "run_id": "20261030T164255Z-d6d17b",
+  "started_at": "2026-10-30T16:42:55+00:00",
+  "cwd": "/mnt/ml_storage/scratch",
+  "context": [
+    {
+      "path": "atlas-pc4/closure-review-r0/source-manifest.json",
+      "sha256": "647ef555363559a8c5b6ee6cd550e671e9955c8cebbdec62aa62b98ce93ffb88"
+    },
+    {
+      "path": "atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-FINAL-ACCEPTANCE-2026-10-30.md",
+      "sha256": "b03fcf0282c83d91fcf1e5831c2f205748e3b63f803e5eec7f05d3b1dd15c0aa"
+    },
+    {
+      "path": "atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-final-product-gate-2026-10-30.json",
+      "sha256": "22c455063d4a7a0a8710dcdf9a24a4dad942e15ca505e097c94a840db4f8458d"
+    },
+    {
+      "path": "atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-final-evidence-summary-2026-10-30.json",
+      "sha256": "d4c593d3bd258d7e64c2a2244e7c357aacda6e99d4eb1cc8b1ee2445a7dcfda0"
+    },
+    {
+      "path": "atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-final-session-ledger-2026-10-30.json",
+      "sha256": "6649ff40f8dc73623a045dac439eacf3e0115f16950acf4bc7384462c3963612"
+    },
+    {
+      "path": "atlas-pc4/closure-review-r0/docs/reports/project1-interactive/PC4-final-closure-2026-10-30.json",
+      "sha256": "66021fdb6cb9f6db2d1a6b45f004572acbee7237132057dd33d9fcd8aa92f60b"
+    },
+    {
+      "path": "atlas-pc4/closure-review-r0/tests/space-preparation-session.mjs",
+      "sha256": "785a9f11b5b443584470c69398516d54da4b6a4f12aa31912f7e5185cf110ca1"
+    },
+    {
+      "path": "atlas-pc4/closure-review-r0/tests/support/session-loss-proxy.mjs",
+      "sha256": "364256567ea93de6edcafeab377b9b652c66b540898e46566ca01b3cddfc3b31"
+    }
+  ],
+  "model": "claude-opus-5-5",
+  "effort": "medium",
+  "permission_mode": "plan",
+  "tools": [
+    "Read",
+    "Grep",
+    "Glob"
+  ],
+  "max_turns": 24,
+  "timeout_s": 900.0,
+  "idle_timeout_s": 300.0,
+  "resumed_session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+  "finished_at": "2026-10-30T16:43:45+00:00",
+  "result": {
+    "text": "# PC4 / BI1.A2 closure confirmation (closure-review-r0)\n\n**Verdict:** my final conditions are met, and bounded A2 closure is supported. I found no material blocker. The one factual correction below is the owner's own, and I accept it.\n\n## The prescribed corrections are present in the test source\n- **Socket drop instead of 503:** the proxy now calls `response.destroy()` for blocked requests. It records each fault with its time and operation, and records when the block started.\n- **Per-page error checks (test lines 114–118):**\n  - The living and replacement owners must have no runtime, device or cleanup errors.\n  - The lost owner may have only cleanup-errors after the fault time. That condition is fairly permissive, but here it was not needed.\n- **Presentation time:** `replacementPresentedAt` is recorded right after `ready(b)` (line 88). The held task's completion is a separate field, `heldResponseSettledAfterExpiryMs`.\n- **Test digests:** the ledger's digests for the test and proxy match the closure manifest.\n- **Application source is byte-identical:** the eight application source digests in the ledger match the r1 manifest (application-policy, application-server, world-preview, page-lifetime, application-client, workspace, app.js, index.html).\n\n## The final causal ledger checks out\n- **Lost owner A:**\n  - Last renewal was at …307430 (sequence 13); the fault began at …311677.\n  - Two heartbeats were dropped 1 ms apart, at …312436 and …312437. This is probably the browser retrying the POST once after the reset; it is harmless, since neither reached the server.\n  - The teardown `/cancel` at …313286 was dropped. That is the exact leak that broke gate-r1, now suppressed at a boundary that survives page teardown.\n  - A sent no close or retire calls, and A has no errors (`lostOwner: []`).\n- **Held token:** `d549761c` (request :6) was prepared at …312850. It retired at …338160, between `client-retiring(expired)` and `client-expired`. Expiry came 30.730 s after the last renewal, under the 32 s limit, and there was no `client-closed` for A. The `delivery:\"fulfilled\"` field still does not show the old client received the response.\n- **Replacement:** session `58beee74` opened at …338281. The recorded presentation time is 2.895 s after expiry, under 15 s. The old client's heartbeat got a 410 at …341080.\n- **Living page:** last renewal at …348307, server expiry at …378326, so 30.019 s. Both tokens retired at expiry. The retry at the exact retained pose is supported by the assertions at lines 104 and 108, which passed. The whole loss and retry took 32.898 s, under 50 s.\n- **Final session `ca0f7b88`:** two tokens prepared and explicitly retired at …381310, then closed with zero tokens left.\n- **Session publications:** 8 prepared, 8 retired (4 + 2 + 2).\n- **Launcher:** cleanup true, no cleanup errors, all nine owned process IDs gone. The page-lifetime assertions sit inside the suite that passed.\n\n## Gate and closure records\n- The gate on f108ec5 ran from 16:08:14.804 to 16:39:56.296. All 24 of 24 entries passed, including `space-preparation-session` and `cleanup`.\n- The closure check shows cleanup true, no surviving processes, ports 5190/5196/5198/5199/5200/46817 closed, and the GPU lock free.\n\n## Summary figures match the report\n- **Main route:**\n  - 49.970 FPS overall and 49.877 FPS during preparation, against a 30 FPS target.\n  - Navigation p99 is 4.100 ms, which misses the 2 ms target; the maximum of 4.700 ms passes the 8 ms limit.\n  - Interaction readiness (n=9): median 0.871 s, maximum 2.307 s.\n  - View readiness (n=2): 1.683 s and 1.761 s.\n  - Waiting 1.140 s, 6.62% of active intervals.\n- **Resources:** peak GPU 32,426,144 bytes; RSS 2,983 MiB, which includes browser and interpreter overhead; 18 tokens prepared and 18 retired.\n- **Qualification:** nine application specimens and four session specimens pass. The specimen with a single reference sample is flagged in both sets.\n- The report's limits and its \"miss\" wording are accurate. I did not inspect the per-trial records for the three scene-performance groups; I rely on the gate entries passing.\n\n## Factual correction (accepted)\nMy earlier statement that retired tokens are already removed from the tombstone copy was incomplete. In `application-server.mjs`, `/cancel` calls `adapter.cancelRequest` without deleting anything from `client.tokens`, so the tombstone can hold historical token IDs. The request capacity of 4,096 per client bounds them; there is no bound of 16 or fewer. The owner's wording is correct.\n\nAs a result, expiry or close can retire an already-retired token a second time. This run shows no cleanup failure from that. I did not re-read `publications.mjs` to confirm the second retire is idempotent. It is not a blocker.\n\n## Scope\n**Read in `closure-review-r0`:**\n- `source-manifest.json`\n- `PC4-FINAL-ACCEPTANCE-2026-10-30.md`\n- `PC4-final-product-gate-2026-10-30.json`\n- `PC4-final-closure-2026-10-30.json`\n- `PC4-final-session-ledger-2026-10-30.json`: lines 1–60 and 785–891 in full, plus an extract of the server events\n- `PC4-final-evidence-summary-2026-10-30.json`: grep extract of key fields only\n- `tests/space-preparation-session.mjs` and `tests/support/session-loss-proxy.mjs`\n\n**Not read:**\n- the final verification card\n- the peer-review copy\n- the rehearsal and session-r3 artifacts\n- the performance scorer and per-trial records\n- raw application-server ledgers\n- unit tests\n- `publications.mjs`\n- any new screenshots\n\nThe four images from my previous review remain the visual evidence. I executed nothing and edited nothing.",
+    "structured": null,
+    "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+    "observed_model": "claude-opus-5-5",
+    "cli_version": "2.1.314",
+    "usage": {
+      "input_tokens": 87510398,
+      "output_tokens": 364141,
+      "cache_read_tokens": 80378545,
+      "cache_write_tokens": 6166157,
+      "reasoning_tokens": 218149,
+      "total_tokens": 87874539
+    },
+    "cost_usd": 76.53201010000002,
+    "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+  }
+}

@@ -1,6 +1,6 @@
 # PC4 / BI1.A2 — implementation plan
 
-**Status:** Implementation complete; acceptance open after bounded full-gate/diagnostic attempts. See the [full scorecard](../../reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md). Independent card challenge `20261030T050119Z-fbb429`,2026-10-29. Governing [design](../specs/2026-10-29-atlas-pc4-session-recovery.md), preserved [card](../../reports/project1-interactive/PC4-CARD-2026-10-29.md) and [r1 corrections](../../reports/project1-interactive/PC4-CARD-AMENDMENT-2026-10-29.md). Base `e3f7e293ddc96fb90eccf8decbccc59917639f4a`, branch `feat/pc4`, project `.worktrees/pc4`. Baseline1,279 registered guarded CPU units pass. Implementation started only after challenge and adopted corrections.
+**Status:** Bounded A2 implementation/acceptance complete and independently confirmed2026-10-30. See the [final full scorecard](../../reports/project1-interactive/PC4-FINAL-ACCEPTANCE-2026-10-30.md). Card review20261030T050119Z-fbb429, evidence review20261030T160015Z-8e5a4d and final confirmation20261030T164255Z-d6d17b completed. Measured clean sourcef108ec5 on merged PR20 basee3f7e29; project.worktrees/pc4, branchfeat/pc4, PR21 ready for advisor merge. Subsequent commits are documentation only; main remains unchanged.
 
 ## 1. Server lease owner and application transport
 
@@ -44,8 +44,8 @@ Three hours implementation/CPU plus one hour hardware/evidence/review, excluding
 |---|---|
 | Merged-main source/worktree | Complete; project `.worktrees/pc4`, PR20 base |
 | Baseline CPU | Complete;1,279 units,79 files |
-| Design/plan/card | Written for independent challenge |
+| Design/plan/card | Complete; frozen originals, adopted challenge and final-verification follow-up preserved |
 | Peer card review | Complete; explicit PC4 permission received, challenge20261030T050119Z-fbb429 and r1 adopted |
 | Implementation | Lease owner/transport/client/workspace retry and page-lifetime implementation complete;1,298 guarded units/80 files, build and native-free HTTP checks pass |
-| Frozen controls/product gate | Full gate23/24 entries pass on0ddff25; new session fixture fails. Test-only2d34664 diagnostic establishes individual recoveries but fails aggregate error assertion; launcher/audits after it unrun. Stop recorded; acceptance open |
-| Evidence review/report/PR | Full report/evidence preserved; evidence review20261030T160015Z-8e5a4d complete after advisor-requested extension; no inspected implementation blocker. Draft PR21; final verification card open |
+| Frozen controls/product gate | Complete onf108ec5: corrected standalone7/7; final complete gate24/24 with maintained hardware and cleanup. Earlier failed/interrupted attempts preserved. |
+| Evidence review/report/PR | Complete; independent final confirmation supports bounded closure. Full scorecard and source/reading limits published; PR21 ready. |

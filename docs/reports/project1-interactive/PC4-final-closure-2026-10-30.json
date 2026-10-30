@@ -1,0 +1,19 @@
+{
+  "gateRecord": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4/artifacts/gates/2026-10-30T16-08-14-804Z-f108ec5ab461.json",
+  "commit": "f108ec5ab461a440ca974886190d5c64300fbdd6",
+  "required": 24,
+  "passed": 24,
+  "cleanup": true,
+  "alive": [],
+  "portsClosed": {
+    "5190": true,
+    "5196": true,
+    "5198": true,
+    "5199": true,
+    "5200": true,
+    "46817": true
+  },
+  "lockFree": true,
+  "observedIdentities": 99,
+  "checkedAt": 1793378409.911812
+}

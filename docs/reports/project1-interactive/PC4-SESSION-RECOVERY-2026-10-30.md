@@ -1,5 +1,7 @@
 # PC4 / BI1.A2 session recovery: partial acceptance
 
+**Preserved intermediate findings. Superseded for current status by the [final24/24 gate and independently confirmed A2 closure](PC4-FINAL-ACCEPTANCE-2026-10-30.md).** The failed attempts below remain unchanged in verdict.
+
 **2026-10-30. Owner: Codex. Challenger: Claude. Status: implementation complete; formal acceptance open.** The full maintained gate ran on `0ddff2536d13d2aad770cb1a705c140e39515c0f`: **23 of24 required entries passed**, including1,298 guarded units, build, native-free HTTP, every existing Plane/Space suite and the actual Landscape route. The new session suite failed its loss-fixture assertion. A separately recorded single diagnostic on test-only successor `2d34664bfdfa0eaaaf4f67526bd0ce1b46c4c85e` established the recovery controls, then failed an aggregate error assertion. These remain failed runs. They do not constitute a passing full gate or refute the individual observed recoveries.
 
 The experience is closer to the North Star: losing a tab releases ownership through a server lease; another tab cannot take an active session; a living page pauses safely and explicitly retries at its retained position. Geometry and preparation remain the same fixed world. This is application reliability work enabling exploration, rather than another geometry-generation approach.
