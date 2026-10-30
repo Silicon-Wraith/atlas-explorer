@@ -34,17 +34,19 @@ const discoveries = createDiscoveriesController({ sources: [local], sceneCodec }
 
 const plane = createPlaneWorkspace({ shell, discoveries, sourceId: local.id });
 const viewer = createSpaceWorkspace({ shell });
-const landscape = createPreparedWorldWorkspace({ shell, workerUrl: preparationWorkerUrl, loadPhysics: loadPreparedPhysics });
+function landscapeUnavailable(reason) { const element = shell.$('#space-mode-error'); element.textContent = reason; element.hidden = false; shell.$('#landscape-retry').hidden = false; }
+const landscape = createPreparedWorldWorkspace({ shell, workerUrl: preparationWorkerUrl, loadPhysics: loadPreparedPhysics, onUnavailable: landscapeUnavailable });
 const space = createSpaceModeHost({ modes: { viewer, landscape }, onState(state) {
   const mode = state.visible ?? state.selected; document.body.dataset.spaceMode = mode;
   if (state.pending) document.body.dataset.spaceModePending = state.pending; else delete document.body.dataset.spaceModePending;
   for (const id of ['viewer', 'landscape']) shell.$('#space-mode-' + id).setAttribute('aria-pressed', String(mode === id));
   for (const selector of ['#space-canvas', '#space-panel', '.space-navigation']) shell.$(selector).inert = mode !== 'viewer' || !!state.pending || !state.active;
   shell.$('#landscape-canvas').inert = mode !== 'landscape' || !!state.pending || !state.active;
-  if (state.pending === 'landscape') shell.$('#space-mode-error').hidden = true;
+  if (state.pending === 'landscape') { shell.$('#space-mode-error').hidden = true; shell.$('#landscape-retry').hidden = true; }
   if (mode === 'viewer' && state.pending !== 'landscape') shell.$('#landscape-status').hidden = true;
-}, onMessage(reason) { const element = shell.$('#space-mode-error'); element.textContent = reason; element.hidden = false; } });
+}, onMessage: landscapeUnavailable });
 for (const id of ['viewer', 'landscape']) shell.$('#space-mode-' + id).addEventListener('click', () => { space.select(id); });
+shell.$('#landscape-retry').addEventListener('click', () => { space.select('landscape'); });
 const switcher = createWorkspaceSwitcher({ root: document, workspaces: { plane, space }, initial: 'plane', toast: shell.toast });
 // Share links that arrive while Plane is inactive (Space active or preparing) are routed, never lost (spec §14).
 const links = createShareLinkRouter({ plane, switcher, report: shell.toast });

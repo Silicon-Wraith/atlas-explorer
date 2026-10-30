@@ -1,6 +1,6 @@
 # PC4 / BI1.A2 — recover preparation ownership after client loss
 
-**Status:** Owner design for independent card review, 2026-10-29. Codex owns; Claude challenges. Worktree `/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4`, branch `feat/pc4`, merged-main base `e3f7e293ddc96fb90eccf8decbccc59917639f4a` (PR20). Governing [BI1 design](2026-10-29-atlas-bi1-application-integration.md), [North Star](2026-10-23-atlas-north-star-charter.md), [fixed-world clarification](2026-10-29-atlas-multiscale-world-clarification.md) and [roadmap](../plans/2026-10-29-atlas-browser-world-move-forward.md). No PC4 implementation or acceptance claim yet.
+**Status:** Independently challenged (`20261030T050119Z-fbb429`), r1 adopted before implementation,2026-10-29. Implementation and1,296 guarded units/native-free HTTP checks pass; hardware/product acceptance pending. Codex owns; Claude challenges. Worktree `/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4`, branch `feat/pc4`, merged-main base `e3f7e293ddc96fb90eccf8decbccc59917639f4a` (PR20). Governing [BI1 design](2026-10-29-atlas-bi1-application-integration.md), [North Star](2026-10-23-atlas-north-star-charter.md), [fixed-world clarification](2026-10-29-atlas-multiscale-world-clarification.md), [r1](../../reports/project1-interactive/PC4-CARD-AMENDMENT-2026-10-29.md) and [roadmap](../plans/2026-10-29-atlas-browser-world-move-forward.md).
 
 ## Experience and scope
 

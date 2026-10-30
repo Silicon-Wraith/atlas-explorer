@@ -1,4 +1,6 @@
-# PC2 experimental producer
+# Local prepared-world producer
+
+PC4/BI1.A2 adds a server lease around the one application owner:30s expiry,5s renewal and1s expiry sweep plus per-operation checks. Every mutation/transfer carries the runtime/nonce pair; public status reveals no owner capability. Closed-session cleanup stays scoped to its tombstone. Known cancelled native work may finish under launcher ownership but cannot publish to an expired client; failed retirement blocks admission. A lost final close acknowledgement can defer only an empty session record after successful request/payload/local retirement, with fresh server admission still required for retry. Arbitrary renderer crashes, OS sleep and long-session memory behavior are not established by short controlled delivery-loss tests. See the PC4 design/card.
 
 PC3/BI1.A1 also reuses this native control behind the actual application through `application-server.mjs` and `npm run dev:world`. The application binds localhost, guards Host/Origin, owns one client, initializes lazily and retires by full request identity. Its worker/physics composition entry is under `src/`; the application static handler continues to block private/test paths. Close/re-entry is explicit; abrupt-client expiry and multi-tab recovery are deferred. See `docs/superpowers/specs/2026-10-29-atlas-bi1-application-integration.md` and the PC3 card/r1 amendment.
 

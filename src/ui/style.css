@@ -40,3 +40,4 @@ body[data-workspace=space] #fractal-surface,body[data-workspace=space] .intro,bo
 @media(max-width:760px){.workspace-switcher button{padding:6px 7px;font-size:10px}.space-status{top:80px;left:16px;max-width:calc(100vw - 32px)}.space-indicators{left:16px}.space-panel{top:auto;bottom:110px;right:16px}}
 
 .space-diagnostics{color:var(--gold)}.space-diagnostics.space-alert{color:var(--alert-text)}.space-diagnostics[hidden]{display:none}#space-diagnostics-value{font-family:var(--mono)}
+#landscape-retry{align-self:flex-start;padding:8px 12px;border:1px solid var(--line);border-radius:5px;color:var(--gold);font-size:11px;background:var(--alert-bg)}
