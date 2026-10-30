@@ -15,7 +15,16 @@
     <div class="vignette" aria-hidden="true"></div>
     <section id="space-workspace" class="space-workspace" aria-label="Space workspace">
       <canvas id="space-canvas" tabindex="0" aria-label="Three-dimensional fractal viewport. Drag to orbit, right-drag or Shift-drag to pan, scroll to dolly, double-click to focus, F to fly."></canvas>
+      <canvas id="landscape-canvas" tabindex="0" aria-label="Mathematical landscape. W A S D to move, Q and E down and up, drag to look, wheel to change scale."></canvas>
+      <canvas id="landscape-held" aria-hidden="true" hidden></canvas>
+      <div class="space-mode-switch chrome" role="group" aria-label="Space experience">
+        <button id="space-mode-viewer" aria-pressed="true">Fractal viewer</button><button id="space-mode-landscape" aria-pressed="false">Landscape</button>
+      </div>
+      <div class="landscape-controls chrome" aria-label="Landscape controls"><button id="landscape-smaller" class="mini-button">Enter smaller detail</button><button id="landscape-larger" class="mini-button">Grow back</button><p>Explore a fixed mathematical world.<br>Move away from surfaces before growing.</p></div>
+      <p id="landscape-info" class="landscape-info chrome" role="status"></p>
       <div class="space-status chrome" aria-live="polite">
+        <p id="landscape-status" class="space-preparation" role="status" hidden></p>
+        <p id="space-mode-error" class="space-alert" role="alert" hidden></p>
         <p id="space-preparation" class="space-preparation" role="status" hidden></p>
         <p id="space-unavailable" class="space-alert" role="alert" hidden></p>
         <div id="space-recovery-row"><p id="space-recovery" class="space-alert" role="status" hidden></p><button id="space-retry" class="resume-button" hidden>Retry rendering</button></div>

@@ -109,7 +109,27 @@
       "requiredPasses": ["Registered P3 entry points terminate without a circular module wait"] },
     { "id": "acceptance-audit", "gpu": false, "server": false, "timeoutMs": 30000,
       "command": ["tests/audit-acceptance.mjs"], "report": "artifacts/acceptance-audit-report.json", "evidence": "workflow",
-      "requiredPasses": ["The audit wrapper validates a real Git range and large shards with pinned evidence"] }
+      "requiredPasses": ["The audit wrapper validates a real Git range and large shards with pinned evidence"] },
+    {
+      "id": "space-prepared",
+      "gpu": true,
+      "timeoutMs": 300000,
+      "command": [
+        "tests/space-prepared.mjs"
+      ],
+      "report": "artifacts/space-prepared-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "Prepared application uses the maintained headed hardware profile",
+        "Application landscape route demonstrates 3D contact scale and retained return",
+        "Rapid switches suppress stale landscape publication and input",
+        "Leaving during pending native work retires the old client before re-entry",
+        "Missing preparation falls back inside Space and preserves Plane access",
+        "Preparation endpoints reject foreign origins and private paths stay blocked",
+        "Finite delivered-geometry qualification and actual application flight checks pass",
+        "Prepared application has no runtime errors and confirms owned cleanup"
+      ]
+    }
   ],
   "diagnostics": [
     {

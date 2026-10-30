@@ -5,6 +5,9 @@
 import { createShell } from './ui/shell.js';
 import { createPlaneWorkspace } from './plane/workspace.js';
 import { createSpaceWorkspace } from './space/workspace.js';
+import { createPreparedWorldWorkspace } from './space/preparation/workspace.js';
+import { createSpaceModeHost } from './space/mode-host.js';
+import { preparationWorkerUrl, loadPreparedPhysics } from './preparation-bootstrap.js';
 import { createWorkspaceSwitcher } from './ui/workspace-switcher.js';
 import { createShareLinkRouter } from './ui/share-link-router.js';
 import { openPersistence } from './shared/persistence.js';
@@ -30,13 +33,26 @@ const local = createLocalDiscoverySource({ store, sceneCodec });
 const discoveries = createDiscoveriesController({ sources: [local], sceneCodec });
 
 const plane = createPlaneWorkspace({ shell, discoveries, sourceId: local.id });
-const space = createSpaceWorkspace({ shell });
+const viewer = createSpaceWorkspace({ shell });
+const landscape = createPreparedWorldWorkspace({ shell, workerUrl: preparationWorkerUrl, loadPhysics: loadPreparedPhysics });
+const space = createSpaceModeHost({ modes: { viewer, landscape }, onState(state) {
+  const mode = state.visible ?? state.selected; document.body.dataset.spaceMode = mode;
+  if (state.pending) document.body.dataset.spaceModePending = state.pending; else delete document.body.dataset.spaceModePending;
+  for (const id of ['viewer', 'landscape']) shell.$('#space-mode-' + id).setAttribute('aria-pressed', String(mode === id));
+  for (const selector of ['#space-canvas', '#space-panel', '.space-navigation']) shell.$(selector).inert = mode !== 'viewer' || !!state.pending || !state.active;
+  shell.$('#landscape-canvas').inert = mode !== 'landscape' || !!state.pending || !state.active;
+  if (state.pending === 'landscape') shell.$('#space-mode-error').hidden = true;
+  if (mode === 'viewer' && state.pending !== 'landscape') shell.$('#landscape-status').hidden = true;
+}, onMessage(reason) { const element = shell.$('#space-mode-error'); element.textContent = reason; element.hidden = false; } });
+for (const id of ['viewer', 'landscape']) shell.$('#space-mode-' + id).addEventListener('click', () => { space.select(id); });
 const switcher = createWorkspaceSwitcher({ root: document, workspaces: { plane, space }, initial: 'plane', toast: shell.toast });
 // Share links that arrive while Plane is inactive (Space active or preparing) are routed, never lost (spec §14).
 const links = createShareLinkRouter({ plane, switcher, report: shell.toast });
 // window.atlas stays Plane's inspection (the Plane suites read it); Space and the switcher hang off it.
 window.atlas = plane.inspection;
-window.atlas.space = space.inspection;
+window.atlas.space = viewer.inspection;
+window.atlas.landscape = landscape.inspection;
+window.atlas.spaceModes = space.inspection;
 window.atlas.workspaces = Object.freeze({ switchTo: id => switcher.switchTo(id), current: () => switcher.current(), pending: () => switcher.pending(), ready: switcher.ready });
 // Teardown order (plan amendment E(1)): the link router and the switcher, the workspaces (Plane's Discoveries control
 // first, then its renderer; then Space's device), then the controller, then the storage connection.

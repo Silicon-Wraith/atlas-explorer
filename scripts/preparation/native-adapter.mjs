@@ -40,13 +40,14 @@ export function nativeArtifact(raw, { hello, world, certificate, qualification =
   });
 }
 
-export async function createNativeAdapter({ bundle, runRoot, python, onEvent = () => {} }) {
+export async function createNativeAdapter({ bundle, runRoot, python, onEvent = () => {}, onController = () => {} }) {
   bundle = path.resolve(bundle); runRoot = path.resolve(runRoot);
   ensure(runRoot.startsWith('/mnt/ml_storage/scratch/'), 'native outputs must be under scratch');
   const output = path.join(runRoot, 'native');
   const controller = createNativeController({ bundle, output, python, onEvent });
   let hello, world, grid, D, viewGrid, fineOrigin, fineBounds;
   try {
+    onController(controller);
     hello = await controller.ready; world = createWorldRecord(hello.definition); grid = createSpatialGrid(hello.grid); D = grid.config.diameter;
     ensure(world.id === 'H1C-surface-child@ee2564d40bda7ef6', 'canonical world mismatch');
     viewGrid = createSpatialGrid({ ...hello.grid, diameter: 4 * D, domain: [[-1, 3], [-1, 1], [-1, 1]] });

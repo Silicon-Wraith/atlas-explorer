@@ -53,7 +53,7 @@ export async function createPreparedRenderer({ canvas, anchor, diameter, lightDi
       try { await device.queue.onSubmittedWorkDone(); }
       finally { region.buffer?.destroy(); region.uniform?.destroy(); resources.delete(region); }
     }
-    function encodeFrame({ position, forward, bodyScale = 1, view, active, home }, colorView, depthView, width, height) {
+    function encodeFrame({ position, forward, bodyScale = 1, view, active, home, verticalFovDegrees }, colorView, depthView, width, height) {
       const fine = active?.kind === 'fine' ? active : null;
       const visible = [view && [view, 'view'], ...(fine ? [[home, 'coarse'], [active, 'fine']] : [[active, 'coarse']])].filter(item => item?.[0]);
       forward = norm(forward); let right = cross(forward, [0, 1, 0]);
@@ -65,7 +65,8 @@ export async function createPreparedRenderer({ canvas, anchor, diameter, lightDi
       for (const [entry, role] of visible) {
         const p = entry.gpu; if (!p.count) continue; if (p.retired) throw new Error('Rendering retired prepared region');
         const u = new Float32Array(40); u.set(position, 0); u.set(right, 4); u.set(up, 8); u.set(forward, 12); u.set(p.offset, 16); u[19] = p.scale;
-        u.set([1.3 / (width / height), 1.3, .02 * bodyScale, 40], 20);
+        const focalY = verticalFovDegrees == null ? 1.3 : 1 / Math.tan(verticalFovDegrees * Math.PI / 360);
+        u.set([focalY / (width / height), focalY, .02 * bodyScale, 40], 20);
         if (fine) { u.set(fine.gpu.offset, 24); u[27] = fine.gpu.half; }
         u[28] = role === 'coarse' ? 0 : 1; u[29] = role === 'view' ? 1 : 0; u.set(lightDirection, 32);
         if (role === 'view') { const covered = fine ? home : active; u.set(covered.gpu.offset, 36); u[39] = covered.gpu.half; }
@@ -103,6 +104,15 @@ export async function createPreparedRenderer({ canvas, anchor, diameter, lightDi
     return Object.freeze({ upload, retire, controls,
       adapterInfo: { vendor: adapterInfo?.vendor, architecture: adapterInfo?.architecture, device: adapterInfo?.device, description: adapterInfo?.description },
       render(frame) { if (!disposed) device.queue.submit([encodeFrame(frame, context.getCurrentTexture().createView(), depth.createView(), canvas.width, canvas.height).finish()]); },
+      done: () => device.queue.onSubmittedWorkDone(),
+      async resize(width, height) {
+        if (disposed || ![width, height].every(Number.isSafeInteger) || width < 1 || height < 1 || width * height > 2300000) throw new RangeError('Prepared viewport exceeds its pixel budget');
+        if (width === canvas.width && height === canvas.height) return;
+        const replacement = device.createTexture({ size: [width, height], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT });
+        try { await device.queue.onSubmittedWorkDone(); }
+        catch (error) { replacement.destroy(); throw error; }
+        const old = depth; depth = replacement; canvas.width = width; canvas.height = height; old.destroy();
+      },
       bytes: () => [...resources].reduce((sum, p) => sum + p.bytes, canvas.width * canvas.height * 4),
       async dispose() {
         if (disposed) return; disposed = true;

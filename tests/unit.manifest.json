@@ -72,6 +72,12 @@
     "tests/unit/gpu-clock-evidence.test.js",
     "tests/unit/space-mask-worker.test.js",
     "tests/unit/prepared-navigation.test.js",
-    "tests/unit/preparation-publications.test.js"
+    "tests/unit/preparation-publications.test.js",
+    "tests/unit/prepared-pose.test.js",
+    "tests/unit/prepared-runtime.test.js",
+    "tests/unit/application-preparation.test.js",
+    "tests/unit/space-mode-host.test.js",
+    "tests/unit/prepared-workspace.test.js",
+    "tests/unit/prepared-wasm.test.js"
   ]
 }

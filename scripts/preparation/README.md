@@ -1,5 +1,7 @@
 # PC2 experimental producer
 
+PC3/BI1.A1 also reuses this native control behind the actual application through `application-server.mjs` and `npm run dev:world`. The application binds localhost, guards Host/Origin, owns one client, initializes lazily and retires by full request identity. Its worker/physics composition entry is under `src/`; the application static handler continues to block private/test paths. Close/re-entry is explicit; abrupt-client expiry and multi-tab recovery are deferred. See `docs/superpowers/specs/2026-10-29-atlas-bi1-application-integration.md` and the PC3 card/r1 amendment.
+
 This is the local native control for the PC2/WC2 prepared-world experiment. It is not an installed application backend. The spec, workload and acceptance limits live in `docs/superpowers/specs/2026-10-29-atlas-pc2-live-3d-coverage.md` and the PC2 card under `docs/reports/project1-interactive/`.
 
 The wrapper uses the preserved BW1/PR8 mathematical sources, CuPy GPU evaluator, compiled Manifold/PyMartini mesh construction and canonical data under `/mnt/ml_storage/scratch`. It does not copy or modify those mathematical sources. The Python environment is `/mnt/ml_storage/scratch/venvs/gpu/bin/python`; dependency paths and output roots are explicit in the wrapper/controller. Recreating this dependency bundle on another host remains open.
