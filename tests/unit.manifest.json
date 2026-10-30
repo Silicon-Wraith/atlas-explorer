@@ -84,6 +84,7 @@
     "tests/unit/prepared-history.test.js",
     "tests/unit/native-controller.test.js",
     "tests/unit/prepared-execution.test.js",
-    "tests/unit/prepared-run-root.test.js"
+    "tests/unit/prepared-run-root.test.js",
+    "tests/unit/generation-config.test.js"
   ]
 }

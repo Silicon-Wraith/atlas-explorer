@@ -10,18 +10,13 @@ const root = path.resolve(process.argv[2]);
 const reportName = process.argv[3] ?? 'smoke.json';
 const smoke = JSON.parse(await fs.readFile(path.join(root, reportName), 'utf8'));
 const native = JSON.parse(await fs.readFile(path.join(root, 'native-records.json'), 'utf8'));
-const oldSources = JSON.parse(await fs.readFile('/mnt/ml_storage/scratch/atlas-preparation-pc1/canonical-sources-r0.json', 'utf8'));
-const legacy = JSON.parse(await fs.readFile('/mnt/ml_storage/scratch/atlas-preparation-pc1/legacy-provenance-r1.json', 'utf8'));
-const candidates = [...oldSources.map(s => s.path), ...legacy.assets.map(s => s.original_path),
-  fileURLToPath(new URL('../preparation/native-worker.py', import.meta.url)),
-  '/mnt/ml_storage/scratch/atlas-multiscale-pr8/approach-r1.json',
-  '/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-layers-r0/parent-reference-r0.npz',
-  '/mnt/ml_storage/scratch/atlas-prepared-toolchain/py/manifold3d.cpython-313-x86_64-linux-gnu.so',
-  '/mnt/ml_storage/scratch/atlas-prepared-toolchain/py/pymartini/martini.cpython-313-x86_64-linux-gnu.so'];
+const candidates = smoke.hello.sourceFiles;
+if (!Array.isArray(candidates)) throw new Error('This qualifier requires current owned-source records; use the archived qualifier for historical runs');
 const sources = [];
 for (const row of smoke.hello.sources) {
   let verified = null;
-  for (const filename of candidates.filter(filename => path.basename(filename) === row.role)) {
+  for (const candidate of candidates.filter(candidate => candidate.role === row.role)) {
+    const filename = candidate.file;
     if (createHash('sha256').update(await fs.readFile(filename)).digest('hex') === row.sha256) { verified = filename; break; }
   }
   if (!verified) throw new Error('Unverified native source: ' + row.role);

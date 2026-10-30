@@ -1,0 +1,3561 @@
+{
+  "started": 1793399047256,
+  "rows": [
+    {
+      "label": "home",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r1",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:95b935f938e2577f",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399048144.888,
+          "nativeReady": 1793399049136.259,
+          "structuralMs": 65.99267578125
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 1849375,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 23249248,
+            "peak": 23249248,
+            "hits": 0,
+            "misses": 28,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 0,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 13011808,
+            "peak": 13011808,
+            "hits": 25,
+            "misses": 31,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "new-3d",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0037292569568,
+            79.26668737412697,
+            1040.6715187119776
+          ],
+          "min": [
+            1414.950604256957,
+            79.21356237412698,
+            1040.6183937119777
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r2",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:0960ec5f975e1d85",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 0,
+          "role": "solid-indices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "byteLength": 0,
+          "role": "surface-indices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "byteLength": 0,
+          "role": "vertices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399049144.417,
+          "nativeReady": 1793399050087.6199,
+          "structuralMs": 0.950439453125
+        },
+        "fieldCalls": 22,
+        "fieldPoints": 1453078,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 42799752,
+            "peak": 42799752,
+            "hits": 25,
+            "misses": 50,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 3,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 24682392,
+            "peak": 24682392,
+            "hits": 96,
+            "misses": 54,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "domain-corner",
+      "request": {
+        "bounds": {
+          "max": [
+            1414.954573830562,
+            79.25357512191823,
+            1040.5481195034884
+          ],
+          "min": [
+            1414.901448830562,
+            79.20045012191824,
+            1040.4949945034884
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r3",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:9a32387284294068",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 3147816,
+          "role": "solid-indices",
+          "sha256": "242366fb15ac5d777e7de39890149b9f425a24b6aeb5dddb79bd9a827339d0fe"
+        },
+        {
+          "byteLength": 3114096,
+          "role": "surface-indices",
+          "sha256": "92f74c4aaf2723f2f3f1a6d4845adbbdace7bfa4b8096f40a302891fb54f8067"
+        },
+        {
+          "byteLength": 1573932,
+          "role": "vertices",
+          "sha256": "d1ccdeda062475efc87b577237977c65b093528386d3cf17c25aed115a2c2350"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399050092.243,
+          "nativeReady": 1793399051539.6409,
+          "structuralMs": 461.447998046875
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 2047519,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 67634176,
+            "peak": 67634176,
+            "hits": 25,
+            "misses": 81,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 6,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 43482240,
+            "peak": 43482240,
+            "hits": 127,
+            "misses": 85,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "fine-control",
+      "request": {
+        "bounds": {
+          "max": [
+            1414.982563124518,
+            79.2127661665704,
+            1040.6514222870244
+          ],
+          "min": [
+            1414.9560006245179,
+            79.18620366657039,
+            1040.6248597870242
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r4",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.006640625,
+          "maxErrorM": 6.640625e-05
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:88dd1aed58bb1bd8",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 627672,
+          "role": "solid-indices",
+          "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+        },
+        {
+          "byteLength": 615300,
+          "role": "surface-indices",
+          "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6"
+        },
+        {
+          "byteLength": 313860,
+          "role": "vertices",
+          "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399051558.0457,
+          "nativeReady": 1793399052606.8035,
+          "structuralMs": 86.693115234375
+        },
+        "fieldCalls": 45,
+        "fieldPoints": 2774061,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 99866088,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 123,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 6,
+            "misses": 6,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 61866224,
+            "peak": 61866224,
+            "hits": 168,
+            "misses": 128,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 21
+      }
+    },
+    {
+      "label": "view",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0820062519365,
+            79.31711912557448,
+            1040.7463001279962
+          ],
+          "min": [
+            1414.8695062519364,
+            79.10461912557447,
+            1040.533800127996
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r5",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "view",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": null,
+          "maxErrorM": 0.0010625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:79cc0173d46499b9",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 2061864,
+          "role": "surface-indices",
+          "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec"
+        },
+        {
+          "byteLength": 1044864,
+          "role": "vertices",
+          "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399052614.697,
+          "nativeReady": 1793399054235.6184,
+          "structuralMs": 306.252685546875
+        },
+        "fieldCalls": 47,
+        "fieldPoints": 2906159,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 99866088,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 123,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 6,
+            "misses": 6,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 61866224,
+            "peak": 61866224,
+            "hits": 168,
+            "misses": 128,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "fine-control",
+      "request": {
+        "bounds": {
+          "max": [
+            1414.982563124518,
+            79.2127661665704,
+            1040.6514222870244
+          ],
+          "min": [
+            1414.9560006245179,
+            79.18620366657039,
+            1040.6248597870242
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r6",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 1,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.006640625,
+          "maxErrorM": 6.640625e-05
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:88dd1aed58bb1bd8",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 627672,
+          "role": "solid-indices",
+          "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+        },
+        {
+          "byteLength": 615300,
+          "role": "surface-indices",
+          "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6"
+        },
+        {
+          "byteLength": 313860,
+          "role": "vertices",
+          "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399054244.8738,
+          "nativeReady": 1793399055211.72,
+          "structuralMs": 86.31787109375
+        },
+        "fieldCalls": 45,
+        "fieldPoints": 2774061,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 44384928,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 165,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 80,
+            "hits": 6,
+            "misses": 9,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 18383984,
+            "peak": 61866224,
+            "hits": 209,
+            "misses": 171,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "home",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r7",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 1,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:95b935f938e2577f",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399055218.3584,
+          "nativeReady": 1793399055912.404,
+          "structuralMs": 66.583251953125
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 1849375,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 67634176,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 193,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 6,
+            "misses": 12,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 31395792,
+            "peak": 61866224,
+            "hits": 234,
+            "misses": 202,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "home",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r8",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 1,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:95b935f938e2577f",
+      "cacheHit": true,
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399055218.3584,
+          "nativeReady": 1793399055912.404,
+          "structuralMs": 66.583251953125
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 1849375,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 67634176,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 193,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 6,
+            "misses": 12,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 31395792,
+            "peak": 61866224,
+            "hits": 234,
+            "misses": 202,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "home",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r9",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 1,
+          "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:95b935f938e2577f",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793399055923.0574,
+          "nativeReady": 1793399056415.3108,
+          "structuralMs": 66.588623046875
+        },
+        "fieldCalls": 0,
+        "fieldPoints": 0,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 67634176,
+            "peak": 100394480,
+            "hits": 53,
+            "misses": 193,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 9,
+            "misses": 12,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 31395792,
+            "peak": 61866224,
+            "hits": 290,
+            "misses": 202,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    }
+  ],
+  "checks": [
+    "Owned generation uses the recorded native CUDA hardware and frozen legacy world",
+    "Actual first-party modules and registered inputs are repository-owned with distinct mesh modules",
+    "Legacy or mismatched source certificates remain rejected",
+    "Fresh home new3D corner fine and view buffers exactly match preserved same-host controls",
+    "Opposite order resident reuse and actual rebuild preserve current representation and geometry",
+    "Stale producer epochs are rejected and all migration publications retire",
+    "Relocated mathematical references qualify all actual coarse fine and view source policies",
+    "Native ownership control confirms process cleanup and preserves source-qualified evidence"
+  ],
+  "events": [
+    {
+      "type": "worker-ready",
+      "pid": 1970231,
+      "producer": {
+        "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5",
+        "epoch": 0
+      }
+    },
+    {
+      "type": "queued",
+      "order": 1,
+      "kind": "coarse",
+      "time": 1793399048144
+    },
+    {
+      "type": "dispatch",
+      "order": 1,
+      "kind": "coarse",
+      "time": 1793399048144
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399049139,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r1",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:95b935f938e2577f",
+      "token": "8830ab8d-fda8-4507-98f5-4d3e46696898",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793399048144.888,
+        "nativeReady": 1793399049136.259,
+        "structuralMs": 65.99267578125
+      },
+      "fieldCalls": 31,
+      "fieldPoints": 1849375
+    },
+    {
+      "type": "finished",
+      "order": 1,
+      "time": 1793399049140
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399049143,
+      "token": "8830ab8d-fda8-4507-98f5-4d3e46696898",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r1",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "queued",
+      "order": 2,
+      "kind": "coarse",
+      "time": 1793399049144
+    },
+    {
+      "type": "dispatch",
+      "order": 2,
+      "kind": "coarse",
+      "time": 1793399049144
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399050089,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r2",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        1,
+        2
+      ],
+      "representationKey": "fnv1a64:0960ec5f975e1d85",
+      "token": "49e0a75b-a305-44a8-a8c4-87e646129055",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793399049144.417,
+        "nativeReady": 1793399050087.6199,
+        "structuralMs": 0.950439453125
+      },
+      "fieldCalls": 22,
+      "fieldPoints": 1453078
+    },
+    {
+      "type": "finished",
+      "order": 2,
+      "time": 1793399050089
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399050091,
+      "token": "49e0a75b-a305-44a8-a8c4-87e646129055",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r2",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "queued",
+      "order": 3,
+      "kind": "coarse",
+      "time": 1793399050091
+    },
+    {
+      "type": "dispatch",
+      "order": 3,
+      "kind": "coarse",
+      "time": 1793399050091
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399051541,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r3",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "coarse",
+      "address": [
+        9,
+        3,
+        -2
+      ],
+      "representationKey": "fnv1a64:9a32387284294068",
+      "token": "756b2ddb-0ecb-434d-adf1-a7c31037c61b",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793399050092.243,
+        "nativeReady": 1793399051539.6409,
+        "structuralMs": 461.447998046875
+      },
+      "fieldCalls": 31,
+      "fieldPoints": 2047519
+    },
+    {
+      "type": "finished",
+      "order": 3,
+      "time": 1793399051541
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399051557,
+      "token": "756b2ddb-0ecb-434d-adf1-a7c31037c61b",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r3",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "queued",
+      "order": 4,
+      "kind": "fine",
+      "time": 1793399051557
+    },
+    {
+      "type": "dispatch",
+      "order": 4,
+      "kind": "fine",
+      "time": 1793399051557
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399052608,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r4",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:88dd1aed58bb1bd8",
+      "token": "d267ea52-e1f7-46cf-9dd7-afddaf73ebde",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793399051558.0457,
+        "nativeReady": 1793399052606.8035,
+        "structuralMs": 86.693115234375
+      },
+      "fieldCalls": 45,
+      "fieldPoints": 2774061
+    },
+    {
+      "type": "finished",
+      "order": 4,
+      "time": 1793399052609
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399052612,
+      "token": "d267ea52-e1f7-46cf-9dd7-afddaf73ebde",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r4",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "queued",
+      "order": 5,
+      "kind": "view",
+      "time": 1793399052614
+    },
+    {
+      "type": "dispatch",
+      "order": 5,
+      "kind": "view",
+      "time": 1793399052614
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399054237,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r5",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:79cc0173d46499b9",
+      "token": "0c8fe472-7073-4bd3-9bca-fcf181e91500",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793399052614.697,
+        "nativeReady": 1793399054235.6184,
+        "structuralMs": 306.252685546875
+      },
+      "fieldCalls": 47,
+      "fieldPoints": 2906159
+    },
+    {
+      "type": "finished",
+      "order": 5,
+      "time": 1793399054237
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399054242,
+      "token": "0c8fe472-7073-4bd3-9bca-fcf181e91500",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r5",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "queued",
+      "order": 6,
+      "kind": "fine",
+      "time": 1793399054244
+    },
+    {
+      "type": "dispatch",
+      "order": 6,
+      "kind": "fine",
+      "time": 1793399054244
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399055213,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r6",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:88dd1aed58bb1bd8",
+      "token": "3048c862-8401-427c-8bfe-33648ad945e3",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793399054244.8738,
+        "nativeReady": 1793399055211.72,
+        "structuralMs": 86.31787109375
+      },
+      "fieldCalls": 45,
+      "fieldPoints": 2774061
+    },
+    {
+      "type": "finished",
+      "order": 6,
+      "time": 1793399055213
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399055216,
+      "token": "3048c862-8401-427c-8bfe-33648ad945e3",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r6",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "queued",
+      "order": 7,
+      "kind": "coarse",
+      "time": 1793399055217
+    },
+    {
+      "type": "dispatch",
+      "order": 7,
+      "kind": "coarse",
+      "time": 1793399055217
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399055914,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r7",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:95b935f938e2577f",
+      "token": "938a788a-d0e0-46b3-ae6d-6a03e6b9a2f1",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793399055218.3584,
+        "nativeReady": 1793399055912.404,
+        "structuralMs": 66.583251953125
+      },
+      "fieldCalls": 31,
+      "fieldPoints": 1849375
+    },
+    {
+      "type": "finished",
+      "order": 7,
+      "time": 1793399055914
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399055918,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r8",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:95b935f938e2577f",
+      "token": "21cf67df-7936-49ed-88be-ddf5e32c41e2",
+      "cacheHit": true,
+      "timings": {
+        "nativeStart": 1793399055218.3584,
+        "nativeReady": 1793399055912.404,
+        "structuralMs": 66.583251953125
+      },
+      "fieldCalls": 31,
+      "fieldPoints": 1849375
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399055921,
+      "token": "938a788a-d0e0-46b3-ae6d-6a03e6b9a2f1",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r7",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399055921,
+      "token": "21cf67df-7936-49ed-88be-ddf5e32c41e2",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r8",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "queued",
+      "order": 8,
+      "kind": "coarse",
+      "time": 1793399055922
+    },
+    {
+      "type": "dispatch",
+      "order": 8,
+      "kind": "coarse",
+      "time": 1793399055922
+    },
+    {
+      "type": "producer-prepared",
+      "time": 1793399056416,
+      "identity": {
+        "epoch": 0,
+        "requestId": "r9",
+        "runtimeId": "md2a1-migration"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:95b935f938e2577f",
+      "token": "b0ad23a9-4f27-48e1-9ab4-62ca74a5d62a",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793399055923.0574,
+        "nativeReady": 1793399056415.3108,
+        "structuralMs": 66.588623046875
+      },
+      "fieldCalls": 0,
+      "fieldPoints": 0
+    },
+    {
+      "type": "finished",
+      "order": 8,
+      "time": 1793399056417
+    },
+    {
+      "type": "producer-retired",
+      "time": 1793399056419,
+      "token": "b0ad23a9-4f27-48e1-9ab4-62ca74a5d62a",
+      "identity": {
+        "epoch": 0,
+        "requestId": "r9",
+        "runtimeId": "md2a1-migration"
+      }
+    },
+    {
+      "type": "worker-exit",
+      "pid": 1970231,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "cleanup": true,
+  "ownedPids": [
+    1970220,
+    1970231,
+    1970231
+  ],
+  "hello": {
+    "type": "ready",
+    "producer": {
+      "instanceId": "cf1c84a8-ad52-4ef4-ab0d-a49db1f734a5",
+      "epoch": 0
+    },
+    "definition": {
+      "assets": [
+        {
+          "role": "base-field-evaluator",
+          "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+        },
+        {
+          "role": "canonical-parent-frame",
+          "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+        },
+        {
+          "role": "canonical-parent-samples",
+          "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+        },
+        {
+          "role": "construction",
+          "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+        },
+        {
+          "role": "descendant-rule",
+          "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+        },
+        {
+          "role": "parent-field-kernel",
+          "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+        }
+      ],
+      "generator": {
+        "id": "atlas.surface-descendant",
+        "version": "surface-descendant-r1"
+      },
+      "id": "H1C-surface-child@ee2564d40bda7ef6",
+      "lineage": [
+        {
+          "id": "H1C@61bbb572d425d9ee",
+          "parent": null
+        },
+        {
+          "id": "H1C/gchild/surface-descendant-r1",
+          "parent": "H1C@61bbb572d425d9ee"
+        }
+      ],
+      "parameters": {
+        "amplitude_m": 0.0002,
+        "chart_centre": [
+          -0.029882812666932553,
+          -0.11953125059172012
+        ],
+        "half_support_m": 0.0033203125,
+        "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+        "source_scale": 64
+      },
+      "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+    },
+    "grid": {
+      "origin": [
+        1414.9757562519364,
+        79.21086912557448,
+        1040.6400501279961
+      ],
+      "axes": [
+        [
+          0,
+          0.16538701891281857,
+          -0.9862287432310676
+        ],
+        [
+          -0.8721772490151933,
+          0.4824532290228802,
+          0.08090567412540195
+        ],
+        [
+          0.4891899899837377,
+          0.860166272170984,
+          0.14424679517820585
+        ]
+      ],
+      "diameter": 0.0265625
+    },
+    "approach": {
+      "D": 0.0265625,
+      "d": 0.006640625,
+      "coarse_origin": [
+        1414.9757562519364,
+        79.21086912557448,
+        1040.6400501279961
+      ],
+      "target": [
+        1414.9660106701047,
+        79.19373300062107,
+        1040.6371764613734
+      ],
+      "entry": [
+        1414.9725530789312,
+        79.20523683251973,
+        1040.6391056126752
+      ],
+      "inspection_eye": [
+        1414.9678323657242,
+        79.19693617558808,
+        1040.6377136223134
+      ],
+      "fine_origin": [
+        1414.969281874518,
+        79.1994849165704,
+        1040.6381410370243
+      ],
+      "fine_half_extent_m": 0.01328125,
+      "forward": [
+        -0.4891899899869693,
+        -0.8601662721692042,
+        -0.14424679517785982
+      ],
+      "right": [
+        0.282829250264134,
+        0,
+        -0.959170274349152
+      ],
+      "up": [
+        -0.8250459192624229,
+        0.5100137098378185,
+        -0.24328018186011108
+      ],
+      "entry_coarse_clearance_old_body_units": 0.5020509220510811,
+      "inspection_coarse_clearance_new_body_units": 0.5591706906391452,
+      "whole_small_body_coverage": true,
+      "profile_width_pixels": 852.5783364065633,
+      "maximum_attribution_pixels": 25.112642777938557,
+      "profile": [
+        {
+          "i": 0,
+          "baseline": [
+            1414.96324438626,
+            79.19487574090229,
+            1040.6390309605265
+          ],
+          "full": [
+            1414.96324438626,
+            79.19487574090229,
+            1040.6390309605265
+          ],
+          "baselinePixel": [
+            326.7720013877567,
+            64.77501164231774
+          ],
+          "fullPixel": [
+            326.7720013877567,
+            64.77501164231774
+          ],
+          "pixels": 0,
+          "profile_inside": true
+        },
+        {
+          "i": 1,
+          "baseline": [
+            1414.9633319606028,
+            79.19485017942539,
+            1040.6389750109395
+          ],
+          "full": [
+            1414.9633306807248,
+            79.19483866347034,
+            1040.638972737613
+          ],
+          "baselinePixel": [
+            335.34669349692695,
+            72.581067079484
+          ],
+          "fullPixel": [
+            336.43421094600205,
+            73.91891540870131
+          ],
+          "pixels": 1.7241033478397905,
+          "profile_inside": true
+        },
+        {
+          "i": 2,
+          "baseline": [
+            1414.9634194566415,
+            79.1948239133928,
+            1040.6389189222682
+          ],
+          "full": [
+            1414.9634147091683,
+            79.19478119706199,
+            1040.638910489779
+          ],
+          "baselinePixel": [
+            344.04448618994974,
+            80.52059659961861
+          ],
+          "fullPixel": [
+            347.96907393552476,
+            85.37750899995041
+          ],
+          "pixels": 6.244356414972996,
+          "profile_inside": true
+        },
+        {
+          "i": 3,
+          "baseline": [
+            1414.963506874861,
+            79.19479694716509,
+            1040.638862695374
+          ],
+          "full": [
+            1414.963497102715,
+            79.19470902034693,
+            1040.638845338032
+          ],
+          "baselinePixel": [
+            352.8615897211775,
+            88.59021149804863
+          ],
+          "fullPixel": [
+            360.68614401452953,
+            98.33440739803348
+          ],
+          "pixels": 12.496919765562042,
+          "profile_inside": true
+        },
+        {
+          "i": 4,
+          "baseline": [
+            1414.9635942157436,
+            79.19476928508482,
+            1040.6388063311138
+          ],
+          "full": [
+            1414.9635792325687,
+            79.19463447100046,
+            1040.638779717912
+          ],
+          "baselinePixel": [
+            361.7940818082706,
+            96.78638124077247
+          ],
+          "fullPixel": [
+            373.39781384267076,
+            111.33219792963834
+          ],
+          "pixels": 18.607186253494987,
+          "profile_inside": true
+        },
+        {
+          "i": 5,
+          "baseline": [
+            1414.9636814797907,
+            79.19474093166028,
+            1040.6387498303775
+          ],
+          "full": [
+            1414.963662730009,
+            79.19457222678554,
+            1040.638716526907
+          ],
+          "baselinePixel": [
+            370.8378974319154,
+            105.10541858729795
+          ],
+          "fullPixel": [
+            384.91182163454187,
+            122.86994726053453
+          ],
+          "pixels": 22.66393217081978,
+          "profile_inside": true
+        },
+        {
+          "i": 6,
+          "baseline": [
+            1414.9637686675,
+            79.19471189137298,
+            1040.63869319405
+          ],
+          "full": [
+            1414.9637473593073,
+            79.19452016668663,
+            1040.6386553463149
+          ],
+          "baselinePixel": [
+            379.9888533597971,
+            113.54350756099086
+          ],
+          "fullPixel": [
+            395.5137808195908,
+            133.28233869812996
+          ],
+          "pixels": 25.112642777938557,
+          "profile_inside": true
+        },
+        {
+          "i": 7,
+          "baseline": [
+            1414.9638557793987,
+            79.19468216896442,
+            1040.638636423067
+          ],
+          "full": [
+            1414.9638344068119,
+            79.19448986488142,
+            1040.638598460955
+          ],
+          "baselinePixel": [
+            389.24263098889156,
+            122.09667907321818
+          ],
+          "fullPixel": [
+            404.4206455757841,
+            141.5425756861597
+          ],
+          "pixels": 24.66809724889887,
+          "profile_inside": true
+        },
+        {
+          "i": 8,
+          "baseline": [
+            1414.9639428160049,
+            79.1946517690959,
+            1040.6385795183492
+          ],
+          "full": [
+            1414.9639211526608,
+            79.19445684886534,
+            1040.6385410397922
+          ],
+          "baselinePixel": [
+            398.5948137546975,
+            130.76085535935766
+          ],
+          "fullPixel": [
+            413.56406133709515,
+            150.09459126328338
+          ],
+          "pixels": 24.451415443402542,
+          "profile_inside": true
+        },
+        {
+          "i": 9,
+          "baseline": [
+            1414.9640297778517,
+            79.19462069656504,
+            1040.6385224808432
+          ],
+          "full": [
+            1414.9640080992724,
+            79.19442563925313,
+            1040.6384839752257
+          ],
+          "baselinePixel": [
+            408.04087682911313,
+            139.5318340368073
+          ],
+          "fullPixel": [
+            422.605811852918,
+            158.5043208591447
+          ],
+          "pixels": 23.918457067115018,
+          "profile_inside": true
+        },
+        {
+          "i": 10,
+          "baseline": [
+            1414.9641166654912,
+            79.19458895634202,
+            1040.6384653115301
+          ],
+          "full": [
+            1414.9640950114679,
+            79.19439411997651,
+            1040.6384268495287
+          ],
+          "baselinePixel": [
+            417.5761936866526,
+            148.40529308436703
+          ],
+          "fullPixel": [
+            431.70343394420513,
+            166.97424079212098
+          ],
+          "pixels": 23.332053837326757,
+          "profile_inside": true
+        },
+        {
+          "i": 11,
+          "baseline": [
+            1414.9642034794779,
+            79.19455655340883,
+            1040.638408011394
+          ],
+          "full": [
+            1414.9641818014218,
+            79.19436150080428,
+            1040.6383695067057
+          ],
+          "baselinePixel": [
+            427.1960578716734,
+            157.37681604879555
+          ],
+          "fullPixel": [
+            440.9081408648108,
+            175.57304382362946
+          ],
+          "pixels": 22.78429119468771,
+          "profile_inside": true
+        },
+        {
+          "i": 12,
+          "baseline": [
+            1414.9642902203825,
+            79.19452349290778,
+            1040.6383505814492
+          ],
+          "full": [
+            1414.9642686320929,
+            79.1943292479953,
+            1040.6383122362047
+          ],
+          "baselinePixel": [
+            436.89568107980637,
+            166.4418855892608
+          ],
+          "fullPixel": [
+            450.1180082352609,
+            184.1670101872465
+          ],
+          "pixels": 22.11356998360933,
+          "profile_inside": true
+        },
+        {
+          "i": 13,
+          "baseline": [
+            1414.964376888772,
+            79.19448977993672,
+            1040.6382930227028
+          ],
+          "full": [
+            1414.9643552126504,
+            79.19429474473921,
+            1040.6382545214506
+          ],
+          "baselinePixel": [
+            446.67021738413325,
+            175.59591263308172
+          ],
+          "fullPixel": [
+            459.49962362365835,
+            192.98078576705535
+          ],
+          "pixels": 21.606190741153878,
+          "profile_inside": true
+        },
+        {
+          "i": 14,
+          "baseline": [
+            1414.964463485253,
+            79.1944554199555,
+            1040.638235336232
+          ],
+          "full": [
+            1414.9644419495162,
+            79.19426164789755,
+            1040.638197084332
+          ],
+          "baselinePixel": [
+            456.5147444964968,
+            184.83420688160894
+          ],
+          "fullPixel": [
+            468.8171525745069,
+            201.69766651568682
+          ],
+          "pixels": 20.874039267666006,
+          "profile_inside": true
+        },
+        {
+          "i": 15,
+          "baseline": [
+            1414.9645500104116,
+            79.19442041823685,
+            1040.6381775230782
+          ],
+          "full": [
+            1414.9645292850114,
+            79.19423393734392,
+            1040.638140710503
+          ],
+          "baselinePixel": [
+            466.4243118539398,
+            194.15203830466768
+          ],
+          "fullPixel": [
+            477.8473507658384,
+            210.00350942018778
+          ],
+          "pixels": 19.53855047102825,
+          "profile_inside": true
+        },
+        {
+          "i": 16,
+          "baseline": [
+            1414.964636464874,
+            79.19438478041484,
+            1040.638119584353
+          ],
+          "full": [
+            1414.9646176485742,
+            79.19421547702905,
+            1040.6380861627326
+          ],
+          "baselinePixel": [
+            476.39391365873684,
+            203.54459589171148
+          ],
+          "fullPixel": [
+            486.4046282551811,
+            217.61998861655286
+          ],
+          "pixels": 17.27226351958479,
+          "profile_inside": true
+        },
+        {
+          "i": 17,
+          "baseline": [
+            1414.964722849257,
+            79.19434851203883,
+            1040.6380615211526
+          ],
+          "full": [
+            1414.9647043220289,
+            79.1941818096329,
+            1040.638028612983
+          ],
+          "baselinePixel": [
+            486.4185282171445,
+            213.00703818298376
+          ],
+          "fullPixel": [
+            495.87969413316307,
+            226.49870448754885
+          ],
+          "pixels": 16.47843196921868,
+          "profile_inside": true
+        },
+        {
+          "i": 18,
+          "baseline": [
+            1414.9648091641902,
+            79.19431161877637,
+            1040.6380033345952
+          ],
+          "full": [
+            1414.9647893130757,
+            79.1941330044418,
+            1040.6379680749312
+          ],
+          "baselinePixel": [
+            496.4931145885091,
+            222.53448427799498
+          ],
+          "fullPixel": [
+            506.1671055954854,
+            236.54062266022868
+          ],
+          "pixels": 17.02227994086979,
+          "profile_inside": true
+        },
+        {
+          "i": 19,
+          "baseline": [
+            1414.964895410337,
+            79.19427410659272,
+            1040.6379450258587
+          ],
+          "full": [
+            1414.9648740895627,
+            79.19408226870367,
+            1040.6379071557767
+          ],
+          "baselinePixel": [
+            506.61261287032755,
+            232.1220097145144
+          ],
+          "fullPixel": [
+            516.5008804083685,
+            246.67483312510558
+          ],
+          "pixels": 17.59438842710156,
+          "profile_inside": true
+        },
+        {
+          "i": 20,
+          "baseline": [
+            1414.964981588349,
+            79.1942359813538,
+            1040.637886596101
+          ],
+          "full": [
+            1414.964960358947,
+            79.19404496560436,
+            1040.637848888315
+          ],
+          "baselinePixel": [
+            516.7719773720764,
+            241.76468924685054
+          ],
+          "fullPixel": [
+            526.1496363630469,
+            255.8129996376169
+          ],
+          "pixels": 16.890693087799647,
+          "profile_inside": true
+        },
+        {
+          "i": 21,
+          "baseline": [
+            1414.965067698909,
+            79.19419724920265,
+            1040.6378280465347
+          ],
+          "full": [
+            1414.9650460694384,
+            79.19400263375645,
+            1040.6377896281442
+          ],
+          "baselinePixel": [
+            526.9661654545374,
+            251.45757623159733
+          ],
+          "fullPixel": [
+            536.0303136923172,
+            265.30041131635335
+          ],
+          "pixels": 16.546385298916473,
+          "profile_inside": true
+        },
+        {
+          "i": 22,
+          "baseline": [
+            1414.9651537426985,
+            79.19415791626969,
+            1040.63776937837
+          ],
+          "full": [
+            1414.9651324785832,
+            79.19396658818029,
+            1040.6377316089258
+          ],
+          "baselinePixel": [
+            537.1901629558831,
+            261.195735428553
+          ],
+          "fullPixel": [
+            545.6315204794448,
+            274.36120971444666
+          ],
+          "pixels": 15.639252859811384,
+          "profile_inside": true
+        },
+        {
+          "i": 23,
+          "baseline": [
+            1414.9652397204286,
+            79.19411798895281,
+            1040.63771059287
+          ],
+          "full": [
+            1414.9652180418489,
+            79.1939229316369,
+            1040.6376720872515
+          ],
+          "baselinePixel": [
+            547.4389800898218,
+            270.9742316962276
+          ],
+          "fullPixel": [
+            555.5490935214526,
+            283.9175377478332
+          ],
+          "pixels": 15.274263040142005,
+          "profile_inside": true
+        },
+        {
+          "i": 24,
+          "baseline": [
+            1414.9653256328136,
+            79.19407747368223,
+            1040.6376516913042
+          ],
+          "full": [
+            1414.9653043143462,
+            79.19388565654992,
+            1040.6376138253197
+          ],
+          "baselinePixel": [
+            557.7076726071263,
+            280.7881572610256
+          ],
+          "fullPixel": [
+            565.2073018267015,
+            293.0640513408098
+          ],
+          "pixels": 14.385479272140593,
+          "profile_inside": true
+        },
+        {
+          "i": 25,
+          "baseline": [
+            1414.9654114805753,
+            79.19403637695214,
+            1040.6375926749542
+          ],
+          "full": [
+            1414.9653898019956,
+            79.19384131963614,
+            1040.6375541693358
+          ],
+          "baselinePixel": [
+            567.9913488514628,
+            290.63263817734696
+          ],
+          "fullPixel": [
+            575.1204595315745,
+            302.63335379559277
+          ],
+          "pixels": 13.958559898474176,
+          "profile_inside": true
+        },
+        {
+          "i": 26,
+          "baseline": [
+            1414.9654972644723,
+            79.19399470558383,
+            1040.6375335451667
+          ],
+          "full": [
+            1414.9654756141583,
+            79.19379990259448,
+            1040.6374950897539
+          ],
+          "baselinePixel": [
+            578.2851686084889,
+            300.5028265470673
+          ],
+          "fullPixel": [
+            584.9139065597711,
+            312.0141451679696
+          ],
+          "pixels": 13.28347180592115,
+          "profile_inside": true
+        },
+        {
+          "i": 27,
+          "baseline": [
+            1414.9655829852481,
+            79.19395246627172,
+            1040.6374743032634
+          ],
+          "full": [
+            1414.9655613066784,
+            79.19375740904538,
+            1040.6374357976626
+          ],
+          "baselinePixel": [
+            588.5843695529679,
+            310.39393906801405
+          ],
+          "fullPixel": [
+            594.7287288774785,
+            321.4425644244617
+          ],
+          "pixels": 12.642202093616355,
+          "profile_inside": true
+        },
+        {
+          "i": 28,
+          "baseline": [
+            1414.9656686436956,
+            79.19390966614822,
+            1040.6374149506523
+          ],
+          "full": [
+            1414.9656469685217,
+            79.19371463947654,
+            1040.6373764510834
+          ],
+          "baselinePixel": [
+            598.8842553789459,
+            320.30123057761836
+          ],
+          "fullPixel": [
+            604.5350963834717,
+            330.86979302020364
+          ],
+          "pixels": 11.984428069843558,
+          "profile_inside": true
+        },
+        {
+          "i": 29,
+          "baseline": [
+            1414.9657542405855,
+            79.19386631214557,
+            1040.6373554887016
+          ],
+          "full": [
+            1414.9657325620062,
+            79.19367125483456,
+            1040.637316983084
+          ],
+          "baselinePixel": [
+            609.1802257402398,
+            330.22004116225844
+          ],
+          "fullPixel": [
+            614.3396094541185,
+            340.31065527554455
+          ],
+          "pixels": 11.333125495214704,
+          "profile_inside": true
+        },
+        {
+          "i": 30,
+          "baseline": [
+            1414.965839776743,
+            79.19382241169325,
+            1040.637295918878
+          ],
+          "full": [
+            1414.965818101327,
+            79.19362738284268,
+            1040.6372574188788
+          ],
+          "baselinePixel": [
+            619.4677620203404,
+            340.1457639372573
+          ],
+          "fullPixel": [
+            624.1349841430269,
+            349.75489810995816
+          ],
+          "pixels": 10.682622425765233,
+          "profile_inside": true
+        },
+        {
+          "i": 31,
+          "baseline": [
+            1414.9659252529664,
+            79.19377797197151,
+            1040.6372362425993
+          ],
+          "full": [
+            1414.9659036408307,
+            79.19358351249913,
+            1040.6371978549992
+          ],
+          "baselinePixel": [
+            629.7424564296227,
+            350.07389444765585
+          ],
+          "fullPixel": [
+            633.9078101025896,
+            359.17735943434445
+          ],
+          "pixels": 10.011156076336222,
+          "profile_inside": true
+        },
+        {
+          "i": 32,
+          "baseline": [
+            1414.9660106701047,
+            79.19373300062107,
+            1040.6371764613734
+          ],
+          "full": [
+            1414.965988991525,
+            79.19353794330506,
+            1040.637137955755
+          ],
+          "baselinePixel": [
+            640,
+            360.00000000000006
+          ],
+          "fullPixel": [
+            643.6888345870674,
+            368.6500157998538
+          ],
+          "pixels": 9.403737233061339,
+          "profile_inside": true
+        },
+        {
+          "i": 33,
+          "baseline": [
+            1414.9660960290055,
+            79.19368750526642,
+            1040.6371165767055
+          ],
+          "full": [
+            1414.9660743990592,
+            79.19349288553904,
+            1040.63707815747
+          ],
+          "baselinePixel": [
+            650.2362014673882,
+            369.91975205197855
+          ],
+          "fullPixel": [
+            653.4314458241918,
+            378.0728019218703
+          ],
+          "pixels": 8.756814984948942,
+          "profile_inside": true
+        },
+        {
+          "i": 34,
+          "baseline": [
+            1414.966181330523,
+            79.19364149359461,
+            1040.6370565901132
+          ],
+          "full": [
+            1414.9661596632955,
+            79.19344653842202,
+            1040.6370181046584
+          ],
+          "baselinePixel": [
+            660.4469902936713,
+            379.8289275764776
+          ],
+          "fullPixel": [
+            663.1633300251514,
+            387.5171248745481
+          ],
+          "pixels": 8.153948689492415,
+          "profile_inside": true
+        },
+        {
+          "i": 35,
+          "baseline": [
+            1414.9662665755527,
+            79.19359497366126,
+            1040.6369965031865
+          ],
+          "full": [
+            1414.9662450410744,
+            79.19340121292743,
+            1040.6369582535222
+          ],
+          "baselinePixel": [
+            670.6284177880904,
+            389.7234024974423
+          ],
+          "fullPixel": [
+            672.8502541012309,
+            396.89262080249273
+          ],
+          "pixels": 7.505614412415566,
+          "profile_inside": true
+        },
+        {
+          "i": 36,
+          "baseline": [
+            1414.9663517649783,
+            79.19354795342015,
+            1040.636936317496
+          ],
+          "full": [
+            1414.966330179835,
+            79.19335373681866,
+            1040.6368979778404
+          ],
+          "baselinePixel": [
+            680.7766696473816,
+            399.5991775868709
+          ],
+          "fullPixel": [
+            682.5268170102499,
+            406.31109521115667
+          ],
+          "pixels": 6.936342983658825,
+          "profile_inside": true
+        },
+        {
+          "i": 37,
+          "baseline": [
+            1414.9664368997176,
+            79.19350044112745,
+            1040.636876034671
+          ],
+          "full": [
+            1414.9664152876285,
+            79.19330598207401,
+            1040.6368376471537
+          ],
+          "baselinePixel": [
+            690.8880649795685,
+            409.452367089492
+          ],
+          "fullPixel": [
+            692.1664246577167,
+            415.700436765184
+          ],
+          "pixels": 6.377505636141551,
+          "profile_inside": true
+        },
+        {
+          "i": 38,
+          "baseline": [
+            1414.966521980679,
+            79.1934524449606,
+            1040.636815656326
+          ],
+          "full": [
+            1414.9665003021116,
+            79.19325738775663,
+            1040.6367771507296
+          ],
+          "baselinePixel": [
+            700.9590641594978,
+            419.2792176162055
+          ],
+          "fullPixel": [
+            701.7696048629015,
+            425.074845112612
+          ],
+          "pixels": 5.852031639437528,
+          "profile_inside": true
+        },
+        {
+          "i": 39,
+          "baseline": [
+            1414.9666070088203,
+            79.19340397353135,
+            1040.6367551841613
+          ],
+          "full": [
+            1414.966585330941,
+            79.19320892251753,
+            1040.636716679787
+          ],
+          "baselinePixel": [
+            710.9862689874187,
+            429.0760952680845
+          ],
+          "fullPixel": [
+            711.329221772708,
+            434.40357763138445
+          ],
+          "pixels": 5.338509618255816,
+          "profile_inside": true
+        },
+        {
+          "i": 40,
+          "baseline": [
+            1414.9666919850715,
+            79.19335503520998,
+            1040.6366946198289
+          ],
+          "full": [
+            1414.966670451593,
+            79.19316128347167,
+            1040.6366563719403
+          ],
+          "baselinePixel": [
+            720.9664294135061,
+            438.8395108740828
+          ],
+          "fullPixel": [
+            720.846855742831,
+            443.67121587492
+          ],
+          "pixels": 4.833184362077844,
+          "profile_inside": true
+        },
+        {
+          "i": 41,
+          "baseline": [
+            1414.9667769104128,
+            79.19330563881799,
+            1040.6366339650701
+          ],
+          "full": [
+            1414.966755232186,
+            79.19311058467837,
+            1040.6365954600788
+          ],
+          "baselinePixel": [
+            730.8964436641309,
+            448.56610249046093
+          ],
+          "fullPixel": [
+            730.3173436883615,
+            452.9672851577232
+          ],
+          "pixels": 4.439117665994674,
+          "profile_inside": true
+        },
+        {
+          "i": 42,
+          "baseline": [
+            1414.9668617858074,
+            79.19325579302125,
+            1040.6365732215957
+          ],
+          "full": [
+            1414.9668405916264,
+            79.19306509417932,
+            1040.6365355763692
+          ],
+          "baselinePixel": [
+            740.7733612396028,
+            458.25265527647
+          ],
+          "fullPixel": [
+            739.7623159315406,
+            462.11193632776707
+          ],
+          "pixels": 3.9895191248889894,
+          "profile_inside": true
+        },
+        {
+          "i": 43,
+          "baseline": [
+            1414.9669466122377,
+            79.1932055066586,
+            1040.636512391151
+          ],
+          "full": [
+            1414.9669252838685,
+            79.19301360043232,
+            1040.6364745075787
+          ],
+          "baselinePixel": [
+            750.5943837782272,
+            467.89609439813324
+          ],
+          "fullPixel": [
+            749.1351976143114,
+            471.3317982131913
+          ],
+          "pixels": 3.7327315689408556,
+          "profile_inside": true
+        },
+        {
+          "i": 44,
+          "baseline": [
+            1414.9670313907113,
+            79.19315478879402,
+            1040.6364514755248
+          ],
+          "full": [
+            1414.967009720672,
+            79.19295980832138,
+            1040.6364129850758
+          ],
+          "baselinePixel": [
+            760.3568678075667,
+            477.49348677381585
+          ],
+          "fullPixel": [
+            758.4318302538859,
+            480.5321603929326
+          ],
+          "pixels": 3.5971248166553123,
+          "profile_inside": true
+        },
+        {
+          "i": 45,
+          "baseline": [
+            1414.9671161222125,
+            79.19310364828621,
+            1040.636390476466
+          ],
+          "full": [
+            1414.9670944587324,
+            79.19290872683332,
+            1040.6363519976678
+          ],
+          "baselinePixel": [
+            770.0583212107385,
+            487.0420499614428
+          ],
+          "fullPixel": [
+            767.6958537781517,
+            489.6348576360723
+          ],
+          "pixels": 3.507692119849073,
+          "profile_inside": true
+        },
+        {
+          "i": 46,
+          "baseline": [
+            1414.9672008077773,
+            79.19305209445835,
+            1040.6363293958148
+          ],
+          "full": [
+            1414.967181536486,
+            79.19287869719659,
+            1040.6362951660358
+          ],
+          "baselinePixel": [
+            779.6964100872349,
+            496.53914178940045
+          ],
+          "fullPixel": [
+            777.1976219960418,
+            498.46360054928385
+          ],
+          "pixels": 3.153963132818834,
+          "profile_inside": true
+        },
+        {
+          "i": 47,
+          "baseline": [
+            1414.967285448398,
+            79.19300013623567,
+            1040.6362682353335
+          ],
+          "full": [
+            1414.967268107655,
+            79.19284410946645,
+            1040.636237434606
+          ],
+          "baselinePixel": [
+            789.2689478938337,
+            505.982273236467
+          ],
+          "fullPixel": [
+            786.6667480078446,
+            507.36920068783394
+          ],
+          "pixels": 2.9487305746705292,
+          "profile_inside": true
+        },
+        {
+          "i": 48,
+          "baseline": [
+            1414.9673700451153,
+            79.1929477829849,
+            1040.6362069968714
+          ],
+          "full": [
+            1414.9673539376568,
+            79.19280285293615,
+            1040.6361783867108
+          ],
+          "baselinePixel": [
+            798.7739058721901,
+            515.3690969996183
+          ],
+          "fullPixel": [
+            796.0341079893742,
+            516.3368785936517
+          ],
+          "pixels": 2.905700200026201,
+          "profile_inside": true
+        },
+        {
+          "i": 49,
+          "baseline": [
+            1414.96745459895,
+            79.19289504389053,
+            1040.6361456822408
+          ],
+          "full": [
+            1414.9674393525015,
+            79.19275786094983,
+            1040.636118601411
+          ],
+          "baselinePixel": [
+            808.209402536185,
+            524.6974142007695
+          ],
+          "fullPixel": [
+            805.3157245704401,
+            525.3117414929551
+          ],
+          "pixels": 2.958170074786411,
+          "profile_inside": true
+        },
+        {
+          "i": 50,
+          "baseline": [
+            1414.9675391109183,
+            79.19284192809154,
+            1040.636084293246
+          ],
+          "full": [
+            1414.96752464144,
+            79.19271173609252,
+            1040.636058592475
+          ],
+          "baselinePixel": [
+            817.5737027159474,
+            533.9651705946242
+          ],
+          "fullPixel": [
+            814.5462230842734,
+            534.2644030381732
+          ],
+          "pixels": 3.0422315782125464,
+          "profile_inside": true
+        },
+        {
+          "i": 51,
+          "baseline": [
+            1414.9676235820577,
+            79.19278844492744,
+            1040.6360228317312
+          ],
+          "full": [
+            1414.9676099709768,
+            79.19266597653098,
+            1040.6359986556508
+          ],
+          "baselinePixel": [
+            826.8652210810385,
+            543.1704540456545
+          ],
+          "fullPixel": [
+            823.7554541280937,
+            543.1876495236071
+          ],
+          "pixels": 3.1098144938387806,
+          "profile_inside": true
+        },
+        {
+          "i": 52,
+          "baseline": [
+            1414.9677080133763,
+            79.19273460346908,
+            1040.6359612994868
+          ],
+          "full": [
+            1414.9676953892858,
+            79.1926210157147,
+            1040.6359388765045
+          ],
+          "baselinePixel": [
+            836.0825085232489,
+            552.3114938064014
+          ],
+          "fullPixel": [
+            832.9574826168674,
+            552.0847454799386
+          ],
+          "pixels": 3.133241407729186,
+          "profile_inside": true
+        },
+        {
+          "i": 53,
+          "baseline": [
+            1414.9677924059122,
+            79.19268041305446,
+            1040.635899698356
+          ],
+          "full": [
+            1414.9677808484473,
+            79.19257642247487,
+            1040.6358791699204
+          ],
+          "baselinePixel": [
+            845.2242627418743,
+            561.3866576238908
+          ],
+          "fullPixel": [
+            842.1450270034576,
+            560.959044806913
+          ],
+          "pixels": 3.1087852055081857,
+          "profile_inside": true
+        },
+        {
+          "i": 54,
+          "baseline": [
+            1414.9678767606572,
+            79.19262588260833,
+            1040.6358380301006
+          ],
+          "full": [
+            1414.9678662658937,
+            79.1925314538939,
+            1040.6358193892409
+          ],
+          "baselinePixel": [
+            854.2893059615329,
+            570.3944477005599
+          ],
+          "fullPixel": [
+            851.2974808681322,
+            569.8084063625834
+          ],
+          "pixels": 3.048681983959571,
+          "profile_inside": true
+        },
+        {
+          "i": 55,
+          "baseline": [
+            1414.9679610786243,
+            79.19257102124658,
+            1040.6357762965204
+          ],
+          "full": [
+            1414.9679515826795,
+            79.19248557960262,
+            1040.6357594297685
+          ],
+          "baselinePixel": [
+            863.2765982637757,
+            579.3334988385288
+          ],
+          "fullPixel": [
+            860.3950552817523,
+            578.6263095723822
+          ],
+          "pixels": 2.9670535241887785,
+          "profile_inside": true
+        },
+        {
+          "i": 56,
+          "baseline": [
+            1414.9680453607868,
+            79.19251583772554,
+            1040.6357144993437
+          ],
+          "full": [
+            1414.9680367738615,
+            79.19243857516354,
+            1040.6356992471974
+          ],
+          "baselinePixel": [
+            872.1852164615822,
+            588.202571885322
+          ],
+          "fullPixel": [
+            869.4243896545788,
+            587.40506114764
+          ],
+          "pixels": 2.873706323719652,
+          "profile_inside": true
+        },
+        {
+          "i": 57,
+          "baseline": [
+            1414.9681296081262,
+            79.19246034087743,
+            1040.6356526403142
+          ],
+          "full": [
+            1414.9681218366813,
+            79.19239041576321,
+            1040.6356388366291
+          ],
+          "baselinePixel": [
+            881.0143637462553,
+            597.0005525267143
+          ],
+          "fullPixel": [
+            878.3778408796604,
+            596.1376745181558
+          ],
+          "pixels": 2.7741325281484843,
+          "profile_inside": true
+        },
+        {
+          "i": 58,
+          "baseline": [
+            1414.9682138215924,
+            79.19240453924775,
+            1040.6355907211187
+          ],
+          "full": [
+            1414.9682068465388,
+            79.19234177982096,
+            1040.6355783319882
+          ],
+          "baselinePixel": [
+            889.7633525504921,
+            605.7264439295143
+          ],
+          "fullPixel": [
+            887.275212038655,
+            604.8270213294563
+          ],
+          "pixels": 2.645714311890043,
+          "profile_inside": true
+        },
+        {
+          "i": 59,
+          "baseline": [
+            1414.9682980021005,
+            79.19234844107113,
+            1040.6355287433828
+          ],
+          "full": [
+            1414.9682923370924,
+            79.19229746903981,
+            1040.635518681163
+          ],
+          "baselinePixel": [
+            898.4315973211449,
+            614.3793603544459
+          ],
+          "fullPixel": [
+            896.3111206806796,
+            613.547842762751
+          ],
+          "pixels": 2.277683623345701,
+          "profile_inside": true
+        },
+        {
+          "i": 60,
+          "baseline": [
+            1414.9683821505816,
+            79.19229205472463,
+            1040.6354667087603
+          ],
+          "full": [
+            1414.9683781385163,
+            79.19225595537235,
+            1040.6354595825069
+          ],
+          "baselinePixel": [
+            907.0186282037832,
+            622.9585294566871
+          ],
+          "fullPixel": [
+            905.4461195310889,
+            622.2984461793025
+          ],
+          "pixels": 1.7054305787048738,
+          "profile_inside": true
+        },
+        {
+          "i": 61,
+          "baseline": [
+            1414.9684662678806,
+            79.1922353878114,
+            1040.6354046187523
+          ],
+          "full": [
+            1414.9684638902102,
+            79.1922139942502,
+            1040.6354003955203
+          ],
+          "baselinePixel": [
+            915.5240469828906,
+            631.4632718992493
+          ],
+          "fullPixel": [
+            914.5507540156017,
+            631.0303580766008
+          ],
+          "pixels": 1.0652293546528746,
+          "profile_inside": true
+        },
+        {
+          "i": 62,
+          "baseline": [
+            1414.9685503548674,
+            79.1921784481588,
+            1040.6353424749032
+          ],
+          "full": [
+            1414.9685492907897,
+            79.19216887390937,
+            1040.6353405848822
+          ],
+          "baselinePixel": [
+            923.9475643884016,
+            639.8930132062035
+          ],
+          "fullPixel": [
+            923.4940051810784,
+            639.6809412914804
+          ],
+          "pixels": 0.5006899754958007,
+          "profile_inside": true
+        },
+        {
+          "i": 63,
+          "baseline": [
+            1414.968634412328,
+            79.1921212428375,
+            1040.6352802786098
+          ],
+          "full": [
+            1414.968634155743,
+            79.19211893416472,
+            1040.6352798228625
+          ],
+          "baselinePixel": [
+            932.2889501807497,
+            648.2472593064223
+          ],
+          "fullPixel": [
+            932.1754272990966,
+            648.1918154390958
+          ],
+          "pixels": 0.12633869986251195,
+          "profile_inside": true
+        },
+        {
+          "i": 64,
+          "baseline": [
+            1414.9687184410486,
+            79.192063778925,
+            1040.6352180312686
+          ],
+          "full": [
+            1414.9687184410486,
+            79.192063778925,
+            1040.6352180312686
+          ],
+          "baselinePixel": [
+            940.5480627300183,
+            656.5256062621825
+          ],
+          "fullPixel": [
+            940.5480627300183,
+            656.5256062621825
+          ],
+          "pixels": 0,
+          "profile_inside": true
+        }
+      ],
+      "pass": true,
+      "scope": "Fixed coarse-collision-derived approach/inspection, before fine build. Field body/sightline and final fine visibility still required."
+    },
+    "sources": [
+      {
+        "role": "import-manifest.json",
+        "sha256": "e94e943d384a07c3e5c75f92a10c16f4d323809d85010d619b82bfc5238574f6"
+      },
+      {
+        "role": "native/adaptive_graph_pr3.py",
+        "sha256": "83147332869f2cbd660253d38e671f8370b87abe7c5a6ee4b693ba7061578f25"
+      },
+      {
+        "role": "native/builder_bw1.py",
+        "sha256": "50763f620e526ccb6af486c84b0c25a8218598966c3adccef466edffa95047f7"
+      },
+      {
+        "role": "native/builder_view.py",
+        "sha256": "2b14ae570873f00f176bdfb69440c05ae0a713644ef44768f47a4a65de16f0bf"
+      },
+      {
+        "role": "native/cache_bw1.py",
+        "sha256": "73f0e0417124a29e138228623a3cf8658af9c4df72e1ba83d24f516f88282573"
+      },
+      {
+        "role": "native/cache_r0.py",
+        "sha256": "85a42614c61de2d9e783f01d73ae3cfbe7ed367d9223ce13de8b8cc7d04f1e17"
+      },
+      {
+        "role": "native/cache_view.py",
+        "sha256": "8c4cb50e0af6094f521c9ed04fd9c6e66568354ba93c84eac0dc7cd7274eb5da"
+      },
+      {
+        "role": "native/check_collision_r0.py",
+        "sha256": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4"
+      },
+      {
+        "role": "native/dek.py",
+        "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0"
+      },
+      {
+        "role": "native/descendant_world.py",
+        "sha256": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e"
+      },
+      {
+        "role": "native/field_fidelity_r0.py",
+        "sha256": "542bea18cf0a591e644877b5773319ac50d03303336bd32445b7ea21a4bce864"
+      },
+      {
+        "role": "native/fkern.py",
+        "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+      },
+      {
+        "role": "native/generation_paths.py",
+        "sha256": "f6d7acdc002e99be7098d79f54f56fb0efbe01093aeb8142cb26467f71e9fa4a"
+      },
+      {
+        "role": "native/h1lib.py",
+        "sha256": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124"
+      },
+      {
+        "role": "native/pert.py",
+        "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+      },
+      {
+        "role": "native/region_class.py",
+        "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+      },
+      {
+        "role": "native/sampling_r0.py",
+        "sha256": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598"
+      },
+      {
+        "role": "native/streaming_builder_r0.py",
+        "sha256": "554f20376b5424fc89fc7790c9158f9ed6c4e5a1fe930036e42dd9e36db41eb3"
+      },
+      {
+        "role": "native/view_grid.py",
+        "sha256": "8d00ccabaadc5a003ff6e1a5a54e62f77ef6a2697fded51eb1860aeea43fdf4c"
+      },
+      {
+        "role": "native/world_grid.py",
+        "sha256": "24ea3190cce577c03748d0f93f42aef44a4f13646b7a853e33825e53a56a392d"
+      },
+      {
+        "role": "regression-world/approach-r1.json",
+        "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+      },
+      {
+        "role": "regression-world/base.npz",
+        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+      },
+      {
+        "role": "regression-world/construction.json",
+        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+      },
+      {
+        "role": "regression-world/cpu-screen-r0.json",
+        "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+      },
+      {
+        "role": "regression-world/feature-r0.json",
+        "sha256": "87b1a6e303758f7e767e460c6d121d43db9382fa31ec47571be25d8a7b75eca6"
+      },
+      {
+        "role": "regression-world/frame.json",
+        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+      },
+      {
+        "role": "regression-world/gs.json",
+        "sha256": "31f88d35160d4d56bb0937f45e0cfc6568210db0a8f93b7f2fe1340314a1d202"
+      },
+      {
+        "role": "regression-world/legacy-world.json",
+        "sha256": "22f4200e40b0bc5fe36fe5a310bca2b3cdf8a063128742b6ebc1323d6718a879"
+      },
+      {
+        "role": "regression-world/levels.json",
+        "sha256": "1b28cf656f304f20e0b6d46e0177841549223f96a9f498ba5068af6730b326e1"
+      },
+      {
+        "role": "regression-world/prepared-layers-r0/parent-reference-r0.json",
+        "sha256": "e41e0ba46548b4dbe95cd2e3685e98138a255ef51045679614d18a81c8cf28eb"
+      },
+      {
+        "role": "regression-world/prepared-layers-r0/parent-reference-r0.npz",
+        "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+      },
+      {
+        "role": "regression-world/prepared-static-r0/fixtures-r0.json",
+        "sha256": "e91c31daa47989603689179dca4d44a0799d3abbde476fcef29f0c4162b3096f"
+      },
+      {
+        "role": "regression-world/reference/fine-control.npz",
+        "sha256": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877"
+      },
+      {
+        "role": "external-package/manifold3d.cpython-313-x86_64-linux-gnu.so",
+        "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+      },
+      {
+        "role": "external-package/martini.cpython-313-x86_64-linux-gnu.so",
+        "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+      },
+      {
+        "role": "native-worker.py",
+        "sha256": "14f71dda70a8e553e924959f9e0b1d475344c1bc25568920e6f274391a8a7166"
+      }
+    ],
+    "sourceFiles": [
+      {
+        "role": "import-manifest.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/import-manifest.json",
+        "sha256": "e94e943d384a07c3e5c75f92a10c16f4d323809d85010d619b82bfc5238574f6"
+      },
+      {
+        "role": "native/adaptive_graph_pr3.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py",
+        "sha256": "83147332869f2cbd660253d38e671f8370b87abe7c5a6ee4b693ba7061578f25"
+      },
+      {
+        "role": "native/builder_bw1.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_bw1.py",
+        "sha256": "50763f620e526ccb6af486c84b0c25a8218598966c3adccef466edffa95047f7"
+      },
+      {
+        "role": "native/builder_view.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_view.py",
+        "sha256": "2b14ae570873f00f176bdfb69440c05ae0a713644ef44768f47a4a65de16f0bf"
+      },
+      {
+        "role": "native/cache_bw1.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_bw1.py",
+        "sha256": "73f0e0417124a29e138228623a3cf8658af9c4df72e1ba83d24f516f88282573"
+      },
+      {
+        "role": "native/cache_r0.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_r0.py",
+        "sha256": "85a42614c61de2d9e783f01d73ae3cfbe7ed367d9223ce13de8b8cc7d04f1e17"
+      },
+      {
+        "role": "native/cache_view.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_view.py",
+        "sha256": "8c4cb50e0af6094f521c9ed04fd9c6e66568354ba93c84eac0dc7cd7274eb5da"
+      },
+      {
+        "role": "native/check_collision_r0.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/check_collision_r0.py",
+        "sha256": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4"
+      },
+      {
+        "role": "native/dek.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/dek.py",
+        "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0"
+      },
+      {
+        "role": "native/descendant_world.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/descendant_world.py",
+        "sha256": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e"
+      },
+      {
+        "role": "native/field_fidelity_r0.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/field_fidelity_r0.py",
+        "sha256": "542bea18cf0a591e644877b5773319ac50d03303336bd32445b7ea21a4bce864"
+      },
+      {
+        "role": "native/fkern.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/fkern.py",
+        "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+      },
+      {
+        "role": "native/generation_paths.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/generation_paths.py",
+        "sha256": "f6d7acdc002e99be7098d79f54f56fb0efbe01093aeb8142cb26467f71e9fa4a"
+      },
+      {
+        "role": "native/h1lib.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/h1lib.py",
+        "sha256": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124"
+      },
+      {
+        "role": "native/pert.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/pert.py",
+        "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+      },
+      {
+        "role": "native/region_class.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/region_class.py",
+        "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+      },
+      {
+        "role": "native/sampling_r0.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/sampling_r0.py",
+        "sha256": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598"
+      },
+      {
+        "role": "native/streaming_builder_r0.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/streaming_builder_r0.py",
+        "sha256": "554f20376b5424fc89fc7790c9158f9ed6c4e5a1fe930036e42dd9e36db41eb3"
+      },
+      {
+        "role": "native/view_grid.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/view_grid.py",
+        "sha256": "8d00ccabaadc5a003ff6e1a5a54e62f77ef6a2697fded51eb1860aeea43fdf4c"
+      },
+      {
+        "role": "native/world_grid.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/world_grid.py",
+        "sha256": "24ea3190cce577c03748d0f93f42aef44a4f13646b7a853e33825e53a56a392d"
+      },
+      {
+        "role": "regression-world/approach-r1.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/approach-r1.json",
+        "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+      },
+      {
+        "role": "regression-world/base.npz",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/base.npz",
+        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+      },
+      {
+        "role": "regression-world/construction.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/construction.json",
+        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+      },
+      {
+        "role": "regression-world/cpu-screen-r0.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/cpu-screen-r0.json",
+        "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+      },
+      {
+        "role": "regression-world/feature-r0.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/feature-r0.json",
+        "sha256": "87b1a6e303758f7e767e460c6d121d43db9382fa31ec47571be25d8a7b75eca6"
+      },
+      {
+        "role": "regression-world/frame.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/frame.json",
+        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+      },
+      {
+        "role": "regression-world/gs.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/gs.json",
+        "sha256": "31f88d35160d4d56bb0937f45e0cfc6568210db0a8f93b7f2fe1340314a1d202"
+      },
+      {
+        "role": "regression-world/legacy-world.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/legacy-world.json",
+        "sha256": "22f4200e40b0bc5fe36fe5a310bca2b3cdf8a063128742b6ebc1323d6718a879"
+      },
+      {
+        "role": "regression-world/levels.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/levels.json",
+        "sha256": "1b28cf656f304f20e0b6d46e0177841549223f96a9f498ba5068af6730b326e1"
+      },
+      {
+        "role": "regression-world/prepared-layers-r0/parent-reference-r0.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.json",
+        "sha256": "e41e0ba46548b4dbe95cd2e3685e98138a255ef51045679614d18a81c8cf28eb"
+      },
+      {
+        "role": "regression-world/prepared-layers-r0/parent-reference-r0.npz",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.npz",
+        "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+      },
+      {
+        "role": "regression-world/prepared-static-r0/fixtures-r0.json",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-static-r0/fixtures-r0.json",
+        "sha256": "e91c31daa47989603689179dca4d44a0799d3abbde476fcef29f0c4162b3096f"
+      },
+      {
+        "role": "regression-world/reference/fine-control.npz",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/reference/fine-control.npz",
+        "sha256": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877"
+      },
+      {
+        "role": "external-package/manifold3d.cpython-313-x86_64-linux-gnu.so",
+        "file": "/mnt/ml_storage/scratch/atlas-prepared-toolchain/py/manifold3d.cpython-313-x86_64-linux-gnu.so",
+        "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+      },
+      {
+        "role": "external-package/martini.cpython-313-x86_64-linux-gnu.so",
+        "file": "/mnt/ml_storage/scratch/atlas-prepared-toolchain/py/pymartini/martini.cpython-313-x86_64-linux-gnu.so",
+        "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+      },
+      {
+        "role": "native-worker.py",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/preparation/native-worker.py",
+        "sha256": "14f71dda70a8e553e924959f9e0b1d475344c1bc25568920e6f274391a8a7166"
+      }
+    ],
+    "device": {
+      "name": "b'NVIDIA RTX 6000 Ada Generation'",
+      "index": 0
+    },
+    "ownership": {
+      "modules": [
+        {
+          "name": "adaptive_graph_pr3",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py"
+        },
+        {
+          "name": "builder_bw1",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_bw1.py"
+        },
+        {
+          "name": "builder_view",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_view.py"
+        },
+        {
+          "name": "bw1_adaptive_graph",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py"
+        },
+        {
+          "name": "bw1_view_graph",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py"
+        },
+        {
+          "name": "cache_bw1",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_bw1.py"
+        },
+        {
+          "name": "cache_r0",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_r0.py"
+        },
+        {
+          "name": "cache_view",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_view.py"
+        },
+        {
+          "name": "dek",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/dek.py"
+        },
+        {
+          "name": "descendant_world",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/descendant_world.py"
+        },
+        {
+          "name": "field_fidelity_r0",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/field_fidelity_r0.py"
+        },
+        {
+          "name": "fkern",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/fkern.py"
+        },
+        {
+          "name": "generation_paths",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/generation_paths.py"
+        },
+        {
+          "name": "h1lib",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/h1lib.py"
+        },
+        {
+          "name": "pert",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/pert.py"
+        },
+        {
+          "name": "region_class",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/region_class.py"
+        },
+        {
+          "name": "sampling_r0",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/sampling_r0.py"
+        },
+        {
+          "name": "streaming_builder_r0",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/streaming_builder_r0.py"
+        },
+        {
+          "name": "view_grid",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/view_grid.py"
+        },
+        {
+          "name": "world_grid",
+          "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/world_grid.py"
+        }
+      ],
+      "inputs": [
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/approach-r1.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/base.npz",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/construction.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/cpu-screen-r0.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/feature-r0.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/frame.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/gs.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/legacy-world.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/levels.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.npz",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-static-r0/fixtures-r0.json",
+        "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/reference/fine-control.npz"
+      ],
+      "graphsDistinct": true,
+      "sharedInteractionCaches": true,
+      "viewCachesDisabled": true
+    },
+    "cacheLimits": {
+      "source": 100663296,
+      "validation": 33554432,
+      "topology": 67108864
+    },
+    "packages": {
+      "numpy": "2.5.4",
+      "manifold3d": "3.5.4",
+      "pymartini": "0.5.1",
+      "scipy": "1.18.1",
+      "cupy-cuda13x": "14.2.0"
+    },
+    "certificate": null
+  },
+  "nativeCleanup": {
+    "cleanup": true,
+    "pid": 1970231,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "stopped": true,
+    "diagnostics": []
+  },
+  "pass": true,
+  "ended": 1793399066970,
+  "physicalClosure": {
+    "checkedAt": 1793399094.7212107,
+    "pids": [
+      1970220,
+      1970231
+    ],
+    "alive": [],
+    "lockFree": true,
+    "portsClosed": {
+      "5190": true,
+      "5196": true,
+      "5197": true,
+      "5198": true,
+      "5199": true,
+      "5200": true
+    },
+    "cleanup": true
+  },
+  "qualification": {
+    "pass": true,
+    "specimens": [
+      {
+        "representationKey": "fnv1a64:95b935f938e2577f",
+        "kind": "coarse",
+        "origin": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 608,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 2.789774079877749e-05,
+        "meshCrossingUpperMaxM": 6.640625e-05,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:0960ec5f975e1d85",
+        "kind": "coarse",
+        "origin": [
+          1414.9771667569569,
+          79.24012487412698,
+          1040.6449562119776
+        ],
+        "classification": "empty-air",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 1024,
+        "meshSamples": 0,
+        "limits": [
+          "Finite occupancy samples, not proof of complete air/solid."
+        ],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:9a32387284294068",
+        "kind": "coarse",
+        "origin": [
+          1414.928011330562,
+          79.22701262191823,
+          1040.5215570034884
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 229,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 3.591606170039614e-05,
+        "meshCrossingUpperMaxM": 4.150390625000001e-05,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:88dd1aed58bb1bd8",
+        "kind": "fine",
+        "origin": [
+          1414.969281874518,
+          79.1994849165704,
+          1040.6381410370243
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 2.593994140625e-05,
+          "tileWidthM": 0.006640625,
+          "rtinToleranceM": 6.640625e-06,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 6.640625e-05,
+        "referenceSamples": 655,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 6.856193813217745e-06,
+        "meshCrossingUpperMaxM": 8.300781250000007e-06,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:79cc0173d46499b9",
+        "kind": "view",
+        "origin": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.0004150390625,
+          "tileWidthM": 0.10625,
+          "rtinToleranceM": 0.00010625,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.0010625,
+        "referenceSamples": 826,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 0.00012510109628894342,
+        "meshCrossingUpperMaxM": 0.00016601562499999993,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      }
+    ],
+    "error": null,
+    "sourcesKey": "fnv1a64:13ad585ee91d5b57",
+    "elapsedS": 9.53488654596731,
+    "scope": "Finite direct CPU world-reference checks; original geometry, tolerance and world unchanged. Missing forward references remain explicit; not a global enclosure proof."
+  },
+  "scope": [
+    "Native CUDA only; no browser/visual/performance acceptance here.",
+    "Exact same-host binary controls, finite reference checks and current source ownership; not general source-driven world creation.",
+    "First attempt failed before jobs, followed by the one allowed metadata-enumeration repair; original attempt and host closure preserved."
+  ]
+}

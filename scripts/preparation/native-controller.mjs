@@ -10,7 +10,7 @@ export async function deadline(promise, ms, label) {
   finally { clearTimeout(timer); }
 }
 
-export function createNativeController({ bundle, output, python = '/mnt/ml_storage/scratch/venvs/gpu/bin/python', onEvent = () => {}, spawnWorker = spawn, writeRecord = fs.writeFile }) {
+export function createNativeController({ bundle, output, python = process.env.ATLAS_GENERATION_PYTHON ?? '/mnt/ml_storage/scratch/venvs/gpu/bin/python', onEvent = () => {}, spawnWorker = spawn, writeRecord = fs.writeFile }) {
   let resolveReady, rejectReady, resetWaiter, stopped = false, closed = false, didExit = false, closing, exitError, sequence = 0, hello = null;
   const pending = new Map(), diagnostics = [];
   const worker = spawnWorker(python, [fileURLToPath(new URL('./native-worker.py', import.meta.url)), '--bundle', bundle, '--output', output], {

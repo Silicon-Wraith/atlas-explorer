@@ -14,36 +14,34 @@ def main():
     output.relative_to('/mnt/ml_storage/scratch')
     output.mkdir(parents=True, exist_ok=False)
     import numpy as np
-    coarse_root = Path('/mnt/ml_storage/scratch/atlas-world-bw1')
-    fine_root = Path('/mnt/ml_storage/scratch/atlas-multiscale-pr8')
-    sys.path.insert(0, str(coarse_root))
+    code_root = Path(__file__).resolve().parents[1] / 'generation/native'
+    os.environ['ATLAS_GENERATION_BUNDLE'] = str(bundle)
+    os.environ['ATLAS_GENERATION_OUTPUT'] = str(output)
+    sys.path.insert(0, str(code_root))
+    import generation_paths as P
+    P.configure_packages(); P.install_io_guard()
+    definition = P.validate_inputs()
     import cache_bw1 as C
     import world_grid as GRID
     from region_class import classify
-    sys.path.insert(0, str(fine_root))
     import cache_r0 as F
     F.field = C.field; F.validation = C.validation; F.topology = C.topology
-    sys.path.insert(0, str(bundle / 'core'))
     import cache_view as V
     V.field = V.Cache(0); V.validation = V.Cache(0); V.topology = V.Cache(0)
     W = C.B.W
-    assert C.B.CONTENT_ID == F.B.CONTENT_ID == V.B.CONTENT_ID == 'H1C-surface-child@ee2564d40bda7ef6'
-    sources = {Path(__file__), Path(C.__file__), Path(C.B.__file__), Path(F.__file__), Path(F.B.__file__),
-               Path(V.__file__), Path(V.B.__file__), Path(C.B.G.__file__), Path(W.__file__), Path(C.B.S.__file__),
-               Path(C.B.S.H.__file__), Path(C.B.S.pert.__file__), Path(C.B.S.fkern.__file__),
-               coarse_root / 'region_class.py', coarse_root / 'cpu-screen-r0.json', fine_root / 'approach-r1.json',
-               W.ROOT / 'prepared-layers-r0/parent-reference-r0.npz', Path(C.B.G.M.__file__),
-               Path(sys.modules[C.B.G.Martini.__module__].__file__), *W.BASE_INPUTS}
-    source_rows = [{'role': p.name, 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(sources)]
+    assert C.B.CONTENT_ID == F.B.CONTENT_ID == V.B.CONTENT_ID == definition['id']
+    graphs = [('bw1_adaptive_graph', C.B.G), ('adaptive_graph_pr3', F.B.G), ('bw1_view_graph', V.B.G)]
+    assert len({id(module) for _, module in graphs}) == 3
+    assert len({Path(module.__file__).resolve() for _, module in graphs}) == 1
+    assert F.field is C.field and F.validation is C.validation and F.topology is C.topology
+    assert V.field.limit == V.validation.limit == V.topology.limit == 0
+    source_rows, module_rows = P.owned_provenance(graphs)
+    package_files = [Path(C.B.G.M.__file__), Path(sys.modules[C.B.G.Martini.__module__].__file__)]
+    source_rows += [{'role': 'external-package/' + p.name, 'file': str(p), 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in package_files]
+    source_rows.append({'role': 'native-worker.py', 'file': str(Path(__file__).resolve()), 'sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()})
     assert len({r['role'] for r in source_rows}) == len(source_rows)
-    roles = {'construction.json': 'construction', 'sampling_r0.py': 'base-field-evaluator', 'h1lib.py': 'parent-field-kernel',
-             'descendant_world.py': 'descendant-rule', 'base.npz': 'canonical-parent-samples', 'frame.json': 'canonical-parent-frame'}
-    definition = {'id': W.WORLD_ID, 'generator': {'id': 'atlas.surface-descendant', 'version': W.SPEC['version']},
-                  'parameters': {k: v for k, v in W.SPEC.items() if k not in ('version', 'base')},
-                  'assets': sorted([{'role': roles[Path(p).name], 'sha256': h} for p, h in W.SPEC['base'].items()], key=lambda a: a['role']),
-                  'lineage': [{'id': 'H1C@61bbb572d425d9ee', 'parent': None}, {'id': 'H1C/gchild/surface-descendant-r1', 'parent': 'H1C@61bbb572d425d9ee'}]}
-    for filename, digest in W.SPEC['base'].items():
-        assert hashlib.sha256(Path(filename).read_bytes()).hexdigest() == digest
+    source_files = source_rows
+    source_rows = [{k: row[k] for k in ('role', 'sha256')} for row in source_files]
     epoch = 0; instance = str(uuid.uuid4()); jobs = 0
     emit = lambda value: print(json.dumps(value, allow_nan=False), flush=True)
     observed = {}
@@ -54,12 +52,14 @@ def main():
             observed[_name].add(float(tolerance))
             return _original(martini, height, tolerance)
         cache.B.G.tile_mesh = traced
-    approach = json.loads((fine_root / 'approach-r1.json').read_text())
+    approach = json.loads(P.asset('approach-r1.json').read_text())
     emit({'type': 'ready', 'producer': {'instanceId': instance, 'epoch': epoch}, 'definition': definition,
           'grid': {'origin': GRID.ORIGIN.tolist(), 'axes': [GRID.TANGENT.tolist(), GRID.BINORMAL.tolist(), GRID.NORMAL.tolist()], 'diameter': GRID.D},
-          'approach': approach, 'sources': source_rows,
+          'approach': approach, 'sources': source_rows, 'sourceFiles': source_files,
+          'device': {'name': str(C.B.S.cp.cuda.runtime.getDeviceProperties(0)['name']), 'index': C.B.S.cp.cuda.runtime.getDevice()},
+          'ownership': {'modules': module_rows, 'inputs': [str(p) for p in sorted(P.read_inputs)], 'graphsDistinct': True, 'sharedInteractionCaches': True, 'viewCachesDisabled': True},
           'cacheLimits': {'source': C.field.limit, 'validation': C.validation.limit, 'topology': C.topology.limit},
-          'packages': {'numpy': np.__version__, **{name: importlib.metadata.version(name) for name in ['manifold3d', 'pymartini']}}})
+          'packages': {'numpy': np.__version__, **{name: importlib.metadata.version(name) for name in ['manifold3d', 'pymartini', 'scipy', 'cupy-cuda13x']}}})
     try:
         for line in sys.stdin:
             req = None

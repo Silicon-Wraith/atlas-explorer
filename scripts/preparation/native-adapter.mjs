@@ -1,3 +1,4 @@
+import { GENERATION_BUNDLE, verifyGenerationBundle } from '../generation/config.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -26,7 +27,7 @@ export function nativeArtifact(raw, { hello, world, certificate, qualification =
   if (!qualification) {
     ensure(certificate?.sourcesKey === nativeSourcesKey(hello) && policy?.qualifiedSpecimens > 0 && same(policy.sampling, m.sampling), 'unqualified native source/policy');
   }
-  const source = sortedSources(hello), parent = source.find(s => s.role === 'parent-reference-r0.npz');
+  const source = sortedSources(hello), parent = source.find(s => ['parent-reference-r0.npz','regression-world/prepared-layers-r0/parent-reference-r0.npz'].includes(s.role));
   if (kind === 'fine') ensure(parent, 'fine parent dependency missing');
   return createPreparedArtifact({ schema: 'atlas.preparation.artifact', schemaVersion: 1, world: worldReference(world),
     bounds: cubeBounds(m.origin, m.half_extent), transform: { originM: m.origin, metresPerUnit: m.diameter }, intent: kind === 'view' ? 'view' : 'interaction',
@@ -40,8 +41,9 @@ export function nativeArtifact(raw, { hello, world, certificate, qualification =
   });
 }
 
-export async function createNativeAdapter({ bundle, runRoot, python, onEvent = () => {}, onController = () => {} }) {
+export async function createNativeAdapter({ bundle = GENERATION_BUNDLE, runRoot, python, onEvent = () => {}, onController = () => {} }) {
   bundle = path.resolve(bundle); runRoot = path.resolve(runRoot);
+  await verifyGenerationBundle({bundle});
   ensure(runRoot.startsWith('/mnt/ml_storage/scratch/'), 'native outputs must be under scratch');
   const output = path.join(runRoot, 'native');
   let stopped = false, terminal = null;

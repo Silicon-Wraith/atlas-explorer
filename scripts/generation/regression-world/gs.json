@@ -1,0 +1,457 @@
+{
+ "fixtures": {
+  "child": {
+   "tag": "child_recess",
+   "a": -0.07840518358429793,
+   "b": -0.34316229567220974,
+   "g": 0.999999651410664,
+   "floor": -0.2999998954231992,
+   "S": [
+    1415.1161256951148,
+    80.16964889746848,
+    1040.852949764808
+   ],
+   "T": [
+    1415.007136618535,
+    79.31201083315317,
+    1040.6615297422682
+   ],
+   "T2": [
+    1414.9932125547516,
+    79.20244198932656,
+    1040.6370745887161
+   ],
+   "r": 0.053125,
+   "ref_contact_from_T": 0.08037828947367527,
+   "tries": 1
+  },
+  "gchild": {
+   "tag": "gchild_recess",
+   "a": 0.12258110245881937,
+   "b": 0.0328631107234032,
+   "g": 0.4981431076686114,
+   "floor": -0.037360733075145855,
+   "S": [
+    1415.0395184113418,
+    79.34948253966898,
+    1040.4569651599418
+   ],
+   "T": [
+    1415.0306757746712,
+    79.2699191646218,
+    1040.4412588177
+   ],
+   "T2": [
+    1415.027610287996,
+    79.24233684103095,
+    1040.4358138825914
+   ],
+   "r": 0.01328125,
+   "ref_contact_from_T": 0.0019504310344821696,
+   "tries": 1
+  },
+  "edge": {
+   "tag": "child_support_edge",
+   "S": [
+    1415.009598331469,
+    79.33138212045952,
+    1040.6658533053271
+   ],
+   "T": [
+    1415.9032949869065,
+    79.33138212045952,
+    1040.1570080344604
+   ],
+   "r": 0.053125,
+   "ref_contact_from_S": 0.19569652037142038
+  }
+ },
+ "runs": [
+  {
+   "label": "child_entry",
+   "speed": 0.5,
+   "r": 0.053125,
+   "path_len": 0.8854734853203616,
+   "travelled": 0.0,
+   "frac": 0.0,
+   "outcome": "WAIT",
+   "contact_at": null,
+   "requests": 1,
+   "p95_s": 995.3784279823303,
+   "max_s": 995.3784279823303,
+   "total_s": 995.3784279823303,
+   "cold_to_first_in_cutter_s": null,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "WAIT",
+     "secs": 995.3784279823303,
+     "s0": 0.0,
+     "boxes": 48709,
+     "why": {
+      "strategy_box_too_coarse": 18,
+      "bounds_loose_parent": 45999
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 12044,
+      "failed_floor": 355
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 22705,
+    "g_cells": 0
+   }
+  },
+  {
+   "label": "child_contact",
+   "speed": 0.5,
+   "r": 0.053125,
+   "path_len": 0.11312499999998742,
+   "travelled": 0.0,
+   "frac": 0.0,
+   "outcome": "WAIT",
+   "contact_at": null,
+   "requests": 1,
+   "p95_s": 167.3803277015686,
+   "max_s": 167.3803277015686,
+   "total_s": 167.3803277015686,
+   "cold_to_first_in_cutter_s": null,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "WAIT",
+     "secs": 167.3803277015686,
+     "s0": 0.0,
+     "boxes": 133043,
+     "why": {
+      "field_unenclosable_child": 106852,
+      "cutter_straddles_support_edge_or_ceiling": 12793,
+      "strategy_box_too_coarse": 18,
+      "field_unenclosable_gchild": 18451,
+      "bounds_loose_gchild": 505,
+      "bounds_loose_child": 5732
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 0,
+      "failed_floor": 0
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 22717,
+    "g_cells": 1705829
+   }
+  },
+  {
+   "label": "child_entry",
+   "speed": 5.0,
+   "r": 0.053125,
+   "path_len": 0.8854734853203616,
+   "travelled": 0.0,
+   "frac": 0.0,
+   "outcome": "WAIT",
+   "contact_at": null,
+   "requests": 1,
+   "p95_s": 1043.4561042785645,
+   "max_s": 1043.4561042785645,
+   "total_s": 1043.4561042785645,
+   "cold_to_first_in_cutter_s": null,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "WAIT",
+     "secs": 1043.4561042785645,
+     "s0": 0.0,
+     "boxes": 103535,
+     "why": {
+      "cutter_straddles_support_edge_or_ceiling": 2619,
+      "strategy_box_too_coarse": 63,
+      "bounds_loose_parent": 94762
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 13548,
+      "failed_floor": 421
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 39187,
+    "g_cells": 160501
+   }
+  },
+  {
+   "label": "child_contact",
+   "speed": 5.0,
+   "r": 0.053125,
+   "path_len": 0.11312499999998742,
+   "travelled": 0.0,
+   "frac": 0.0,
+   "outcome": "WAIT",
+   "contact_at": null,
+   "requests": 1,
+   "p95_s": 112.14154243469238,
+   "max_s": 112.14154243469238,
+   "total_s": 112.14154243469238,
+   "cold_to_first_in_cutter_s": null,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "WAIT",
+     "secs": 112.14154243469238,
+     "s0": 0.0,
+     "boxes": 58046,
+     "why": {
+      "field_unenclosable_child": 51260,
+      "cutter_straddles_support_edge_or_ceiling": 6456,
+      "strategy_box_too_coarse": 18,
+      "field_unenclosable_gchild": 270,
+      "bounds_loose_child": 2380
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 0,
+      "failed_floor": 0
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 35143,
+    "g_cells": 1375970
+   }
+  },
+  {
+   "label": "gchild_entry",
+   "speed": 0.5,
+   "r": 0.01328125,
+   "path_len": 0.08157948307513005,
+   "travelled": 0.08157948307513005,
+   "frac": 1.0,
+   "outcome": "REACHED",
+   "contact_at": null,
+   "requests": 13,
+   "p95_s": 1.1693979740142821,
+   "max_s": 1.2149910926818848,
+   "total_s": 3.4553589820861816,
+   "cold_to_first_in_cutter_s": 0.5225470066070557,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [],
+   "cache": {
+    "parent_cells": 4028,
+    "g_cells": 77256
+   }
+  },
+  {
+   "label": "gchild_contact",
+   "speed": 0.5,
+   "r": 0.01328125,
+   "path_len": 0.02828124999999146,
+   "travelled": 0.0,
+   "frac": 0.0,
+   "outcome": "CONTACT",
+   "contact_at": 0.0,
+   "requests": 1,
+   "p95_s": 7.220297813415527,
+   "max_s": 7.220297813415527,
+   "total_s": 7.220297813415527,
+   "cold_to_first_in_cutter_s": null,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "CONTACT",
+     "secs": 7.220297813415527,
+     "s0": 0.0,
+     "boxes": 5050,
+     "why": {
+      "field_unenclosable_gchild": 90,
+      "geometry_straddles_floor_gchild": 2918,
+      "bounds_loose_gchild": 62
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 0,
+      "failed_floor": 0
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 1715,
+    "g_cells": 99166
+   },
+   "contact_error_m": -0.0019504310344821696
+  },
+  {
+   "label": "gchild_entry",
+   "speed": 5.0,
+   "r": 0.01328125,
+   "path_len": 0.08157948307513005,
+   "travelled": 0.07968282894075246,
+   "frac": 0.9767508439268868,
+   "outcome": "WAIT",
+   "contact_at": null,
+   "requests": 2,
+   "p95_s": 4.855410802364349,
+   "max_s": 5.057880878448486,
+   "total_s": 6.066360235214233,
+   "cold_to_first_in_cutter_s": 1.0174496173858643,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "WAIT",
+     "secs": 5.057880878448486,
+     "s0": 0.875,
+     "boxes": 3999,
+     "why": {
+      "field_unenclosable_child": 35,
+      "field_unenclosable_gchild": 99,
+      "bounds_loose_child": 122,
+      "geometry_straddles_floor_gchild": 1190,
+      "bounds_loose_gchild": 22
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 0,
+      "failed_floor": 0
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 4380,
+    "g_cells": 115006
+   }
+  },
+  {
+   "label": "gchild_contact",
+   "speed": 5.0,
+   "r": 0.01328125,
+   "path_len": 0.02828124999999146,
+   "travelled": 0.0,
+   "frac": 0.0,
+   "outcome": "CONTACT",
+   "contact_at": 0.0,
+   "requests": 1,
+   "p95_s": 7.485010147094727,
+   "max_s": 7.485010147094727,
+   "total_s": 7.485010147094727,
+   "cold_to_first_in_cutter_s": null,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "CONTACT",
+     "secs": 7.485010147094727,
+     "s0": 0.0,
+     "boxes": 5359,
+     "why": {
+      "field_unenclosable_gchild": 108,
+      "geometry_straddles_floor_gchild": 3084,
+      "bounds_loose_gchild": 62
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 0,
+      "failed_floor": 0
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 2535,
+    "g_cells": 107708
+   },
+   "contact_error_m": -0.0019504310344821696
+  },
+  {
+   "label": "child_edge",
+   "speed": 0.5,
+   "r": 0.053125,
+   "path_len": 1.0284051835845052,
+   "travelled": 0.0,
+   "frac": 0.0,
+   "outcome": "WAIT",
+   "contact_at": null,
+   "requests": 1,
+   "p95_s": 223.66779828071594,
+   "max_s": 223.66779828071594,
+   "total_s": 223.66779828071594,
+   "cold_to_first_in_cutter_s": null,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "WAIT",
+     "secs": 223.66779828071594,
+     "s0": 0.0,
+     "boxes": 219890,
+     "why": {
+      "field_unenclosable_child": 193478,
+      "cutter_straddles_support_edge_or_ceiling": 13533,
+      "strategy_box_too_coarse": 18,
+      "bounds_loose_child": 9128
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 0,
+      "failed_floor": 0
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 21788,
+    "g_cells": 2049337
+   }
+  },
+  {
+   "label": "child_edge",
+   "speed": 5.0,
+   "r": 0.053125,
+   "path_len": 1.0284051835845052,
+   "travelled": 0.0,
+   "frac": 0.0,
+   "outcome": "WAIT",
+   "contact_at": null,
+   "requests": 1,
+   "p95_s": 136.99964952468872,
+   "max_s": 136.99964952468872,
+   "total_s": 136.99964952468872,
+   "cold_to_first_in_cutter_s": null,
+   "falsifications": 0,
+   "uncertain_samples": 0,
+   "blocked": [
+    {
+     "outcome": "WAIT",
+     "secs": 136.99964952468872,
+     "s0": 0.0,
+     "boxes": 102725,
+     "why": {
+      "field_unenclosable_child": 91131,
+      "cutter_straddles_support_edge_or_ceiling": 6467,
+      "strategy_box_too_coarse": 71,
+      "field_unenclosable_gchild": 2,
+      "bounds_loose_child": 4275
+     },
+     "stop_reason": null,
+     "adapt_failed": {
+      "failed_budget": 0,
+      "failed_floor": 0
+     }
+    }
+   ],
+   "cache": {
+    "parent_cells": 64455,
+    "g_cells": 1466364
+   }
+  }
+ ],
+ "qualification_secs": 3.0,
+ "secs": 2706.6
+}

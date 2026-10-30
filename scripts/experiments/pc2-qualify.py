@@ -8,10 +8,13 @@ ROOT=Path(args.root).resolve();data=json.loads((ROOT/'qualification-input.json')
 assert not (ROOT/'qualification.json').exists(),'Preserve evidence'
 (ROOT/'qualification.pid').write_text(str(os.getpid())+'\n')
 for source in data['sources']:assert hashlib.sha256(Path(source['file']).read_bytes()).hexdigest()==source['sha256']
-sys.path.insert(0,'/mnt/ml_storage/scratch/atlas-multiscale-pr8')
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'generation/native'))
+import generation_paths as GP
+GP.configure_packages(); GP.install_io_guard(); GP.validate_inputs()
+
 import descendant_world as W
 assert W.WORLD_ID==data['world']=='H1C-surface-child@ee2564d40bda7ef6'
-sys.path.insert(0,str(W.ROOT/'prepared-r0'))
+# Distance reference resolves from the owned native package.
 from check_collision_r0 import distances
 
 def ref(c,a,b,kind):
@@ -27,7 +30,7 @@ def qualify(job):
     with np.load(stem.with_suffix('.npz')) as z:
         v=(z['vertices']/d).astype(np.float32).astype(float)*d;t=v[z['collision_triangles']]
         if job['kind']=='fine':
-            with np.load('/mnt/ml_storage/scratch/atlas-multiscale-pr8/qualified-r1/mesh-region10-r0.npz') as control:
+            with np.load(GP.asset('reference/fine-control.npz')) as control:
                 assert all(np.array_equal(z[k],control[k]) for k in control.files),'Fine control changed'
     row={'representationKey':job['representationKey'],'kind':job['kind'],'origin':m['origin'],'classification':m['classification'],'sampling':m['sampling'],'toleranceM':tol}
     if not len(t):
