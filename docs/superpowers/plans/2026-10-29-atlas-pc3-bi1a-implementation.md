@@ -1,6 +1,6 @@
 # PC3 / BI1.A — application entry and workspace lifecycle
 
-**Status:** Independently challenged, 2026-10-29; [r1 scope/corrections](../../reports/project1-interactive/PC3-CARD-AMENDMENT-2026-10-29.md) narrow execution to BI1.A1. Governing [BI1 design](../specs/2026-10-29-atlas-bi1-application-integration.md); preserved [r0 card](../../reports/project1-interactive/PC3-CARD-2026-10-29.md). Branch `feat/pc3`, project `.worktrees/pc3`, base `9bd2066a9aaaf935f6740944ec9cdac02790eb03`. This first slice does not close all of BI1.
+**Status:** BI1.A1 implemented and independently reviewed, 2026-10-29; [full scorecard](../../reports/project1-interactive/PC3-APPLICATION-ENTRY-2026-10-29.md). The pre-implementation [r1 scope/corrections](../../reports/project1-interactive/PC3-CARD-AMENDMENT-2026-10-29.md) narrow execution to BI1.A1. Governing [BI1 design](../specs/2026-10-29-atlas-bi1-application-integration.md); preserved [r0 card](../../reports/project1-interactive/PC3-CARD-2026-10-29.md). Branch `feat/pc3`, project `.worktrees/pc3`, base `9bd2066a9aaaf935f6740944ec9cdac02790eb03`. This first slice does not close all of BI1.
 
 ## Task 1 — validated in-memory requested pose
 
@@ -61,5 +61,5 @@ First slice bound: three hours implementation/CPU qualification plus one hour bo
 | Task2 extracted prepared runtime | Implemented; coverage, late publication, physical retirement and first-surface controls pass |
 | Task3 local host/client/launcher | Implemented; HTTP/native development smoke passes Origin/private-path/early-cancel/payload/release checks. Launcher r0 exposed Playwright's default signal exit bypassing the closure report; explicit application signal ownership repairs it. r1 records cleanup and independent host audit confirms all owned PIDs absent, port closed and GPU lock free. |
 | Task4 mode host and workspace | Implemented; focused activation/input/re-entry tests and actual headed app development smoke pass |
-| Task5 application route | Not run |
-| Task6 compatibility/review/report | Not run |
+| Task5 application route | First final-source route passes in22.804s; both30s lifecycle controls, missing helper, finite geometry/flight audits and cleanup pass.49.943FPS; p99 navigation/readiness targets miss individually. |
+| Task6 compatibility/review/report | Full gate passes onbb1d528, clean at start/end with generated report relocation recorded, including1,279 units/build and maintained Plane/Space suites. Full scorecard and independent evidence review20261030T033633Z-411dc5 support bounded closure; source-review/screenshot/sparse-reference limits explicit. |
