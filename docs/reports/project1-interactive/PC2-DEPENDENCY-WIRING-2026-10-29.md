@@ -1,0 +1,9 @@
+# PC2 final dependency wiring
+
+The full registered unit run found one compatibility failure: the maintained Space import scanner rejects dynamic imports, including the experimental `/native/rapier.mjs` loader in two new preparation modules. The remaining 1,257 tests passed. Preserve `units-r0.log` and the exact measured source under `/mnt/ml_storage/scratch/atlas-pc2/measured-source-r1/`.
+
+The final packaging injects a physics loader and worker entry URL from the experimental fixture. Space core contains no native URL or dynamic import. The fixture worker calls the same collision-worker implementation with the same physics module. Geometry generation, numerical policy, collision queries, route, prediction, residency, shaders and resource ownership are unchanged. The four changed existing files and the added fixture worker are identified in `evidence-summary-r0.json` and the run-local source manifests.
+
+All 1,258 registered units pass after this correction, and `npm run build` passes. A separate 20-second headed hardware compatibility smoke at `/mnt/ml_storage/scratch/atlas-pc2/browser-wiring-r0/` reaches new 3D coverage and coarse/fine contact, passes exact-shader clipping controls and confirms all owned cleanup. Its 12 unique representations match already qualified geometry, and its offline NPZ inputs match the delivered binary buffers.
+
+The three 90-second repeats and real-input evidence remain measurements of the preserved pre-packaging source. The final packaging has the separate smoke; three exact-final-source repeats were not performed. This narrows the validation claim. It does not replace the original result, reset the card's mechanical-repair allowance or justify another full run to improve the score. BI1's application integration must qualify its own final behavior under the maintained acceptance policy.

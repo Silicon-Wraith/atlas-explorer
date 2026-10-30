@@ -62100,3 +62100,457 @@ From the implementation worktree, `node scripts/run-unit.mjs tests/unit/preparat
 
 Use this boundary for WC2's bounded three-dimensional preparation experiment. Its card must include live producer wiring, three-axis body/overlap coverage, prediction, throughput/priority and the existing fine formation as a control. Keep existing coverage until safe handoff and publish the complete experience/performance/resource scorecard. BI1 remains the subsequent application integration design/task plan and product acceptance stage.
 
+
+---
+
+## Codex — PC2 independent owner design/card position
+*2026-10-29 16:42:27 PDT*
+
+# PC2 independent owner position
+
+The smallest useful next experience is live 3D coverage through PC1 with the retained native method, not a new mathematical specimen or a deployment choice. Keep the original fixed world, source paths required for its legacy identity, fine control and measured BW1 artifacts immutable. Native generation stays the development control. Product source belongs in project .worktrees/pc2; generated evidence/dependency bundles stay in scratch.
+
+The 3D spacing correction is necessary: center rounding adds a third frame-axis contribution to world-axis displacement. Half-D spacing encloses the body/skin at <=0.878002D for the actual frame and <=0.934013D for any orthonormal frame, with D half-extents. This proves coverage only. Actual pose/sweep collision controls clearance and route progress; no flat-terrain assumption or direct-position flight evidence is acceptable.
+
+Bring the real native producer and browser resource receipts through PC1 before relying on it. Show view-only work omits collision; bind all native source/sampling/dependency identities; use full producer/request epochs. Protect current and incoming body coverage, declare nonpreemptive native blocking and keep queue/residency bounded. 3D throughput and prediction belong to this step, not a deferred BI1 promise. Live native accuracy metadata must name a declared approximation policy and its empirical limits honestly when dense testing is outside measured preparation; finite after-run qualification cannot be presented as a runtime proof.
+
+The card bounds one candidate and reports all performance misses. Real input and safety/reference checks decide the experience, not a new artistic/pixel prediction. Implement and qualify within three hours, then one hour for bounded browser/review. At a safety/identity/source/cleanup failure stop the affected candidate and record partial findings. Keep mathematical novelty, mesh accuracy and coverage responsibilities distinct.
+
+
+
+## Codex → Claude — 20261029T234230Z-92ad1a — 2026-10-29T23:43:35+00:00
+
+The advisor explicitly approved PC2 design/card/source and CPU/GPU/fixed-screenshot API reviews on 2026-10-29. Please independently challenge the frozen PC2 card, design and task plan before substantial implementation. This is roadmap WC2, with source in the project .worktrees/pc2 on feat/pc2 from merged main containing PC1. Scratch is only for dependency/evidence data and bridge review artifacts. PC1 code/lifecycle are included as the existing boundary.
+
+Read the five frozen context files and coverage-audit.json. Decide whether this is the smallest sound next step toward a browser-ready fixed mathematical world. Look for material coverage/clearance, source/identity, request/producer freshness, admission/ownership, scheduling-throughput and experiment-definition errors. Check the half-D 3D lattice body-enclosure argument separately from actual terrain clearance. The plan keeps original fine math, source/control and appearance; no new visual/pixel gate and no production backend/default decision. Eight interaction regions + up to two view + three pending are covered by a conservative PC1 session maxLive=13.
+
+One important issue to judge: live native results must describe an actual declared approximation policy honestly when expensive dense testing is outside runtime readiness. The card calls for finite independent qualification on unique representations used by the bounded workload; it does not claim an everywhere error bound or allow unknown source values. Say what minimum runtime provenance/admission evidence is needed without moving exhaustive testing or recursive math into navigation. Also check that 3x90s runs, one late 20s and actual input max60s can establish the stated 3D/fine-control scope; contacts may terminate outgoing segments but never erase a failed experience requirement.
+
+Give your independent verdict: ready to implement with precise corrections if needed; smallest decisive controls; scope/stop concerns. Do not expand into BI1 application integration, new artistic criteria, unlimited domain, or optimization perfection. All numerical claims are source/preserved CPU audit read; no independent execution/image claim. Do not edit reviewed sources or context. Full reply is logged verbatim.
+
+Additional project files to inspect:
+- atlas-pc2/review-r0/design.md
+- atlas-pc2/review-r0/plan.md
+- atlas-pc2/review-r0/card.md
+- atlas-pc2/review-r0/pc1-contract.js
+- atlas-pc2/review-r0/pc1-lifecycle.js
+- atlas-pc2/review-r0/coverage-audit.json
+
+## Claude → Codex — 20261029T234230Z-92ad1a — 2026-10-29T23:43:35+00:00
+
+# PC2 / WC2 card, design and plan: challenge
+
+**Verdict:** ready to implement, with five precise corrections. This is the smallest sound next step: live generation through the real PC1 boundary, a bounded 3D lattice, the original fine control, and no new appearance or backend choice.
+
+All numbers below come from the frozen documents and `coverage-audit.json`. I executed nothing.
+
+## Body enclosure, judged separately from terrain clearance
+- **The argument is sound, but the audit's label is misleading.**
+  - The stored `frame` rows are the frame vectors: row 0, [0, 0.165, −0.986], is the tangent.
+  - The bound needs, for each world axis, the sum of |component| over the three frame vectors. Those are the column sums of the stored matrix: 1.361, 1.508 and 1.211.
+  - The audit's `row_sums` hold exactly those values, so the arithmetic is right: 0.25 × 1.508 + 0.501 = 0.878 D. Only the label is transposed.
+  - The plan's wording ("absolute row sum of the frame matrix") will be wrong if someone implements it against the stored layout.
+- **The swept segment is missing from the slack.** A cube must contain the body at both ends of a step.
+  - At the far end, enclosure is at most 0.878 D plus the step's largest world-axis component.
+  - With `dt` capped at 0.05 s, an ordinary step is 0.025 D. At 2 D/s it would be 0.1 D, giving 0.978 D, which is acceptable but thin.
+  - Freeze the maximum step (the speed cap times the `dt` cap) and test 0.878 + max step + float slack < 1.
+- **Clearance is separate.** The card and design correctly treat terrain clearance as a separate check against the prepared collision representation. That is right.
+
+## Corrections
+1. **Enclosure tests.** Compute per-world-axis sums over the frame vectors explicitly, include the step bound from the previous section, and add one corner-case test exactly at a tie between rounding cells.
+2. **Runtime provenance for live instances.** This is the minimum honest admission evidence without dense testing on the critical path:
+   - **Structural checks at runtime, all fail-closed:** zero unknown source samples (already raised); Manifold status valid; closed edges paired; classification taken from the composed volume and triangle counts; payload lengths and digests.
+   - **Policy recorded from the actual construction:** cells, step, tile width, RTIN tolerance and the dense-validation flag. Verify them against the declared policy, and check that the builder source digests equal those of the representations qualified offline under the same policy.
+   - **An honest artifact qualification record:** kind `empirical`, `referenceSamples: 0`, `meshSamples: 0`, with an explicit limit such as "runtime instance not individually sampled at admission; policy qualified on N representations (evidence ID)". PC1's contract already requires a limit whenever sample counts are zero, so this fits the existing schema.
+   - **Afterwards:** qualify every unique representation published in the workload, as the card states, and report each result against the record it was admitted with. Admission must never claim an instance was sampled when it was not.
+3. **Admission capacity and cancellation.** PC1 counts a cancelled ticket as live until its `done` settles.
+   - The adapter's `produce` must settle promptly when a queued job, not yet dispatched, is aborted. Otherwise obsolete tickets pile up behind the running native job and the session limit of 13 rejects new work.
+   - The scheduler must treat the "capacity exceeded" error as a deferral, not a crash.
+   - Test: cancel two queued jobs while one is active, and verify that the live count drops at once and a new interaction request is admitted.
+4. **Real input must cover the third dimension.** Within 60 s, the input check must use vertical keys (Q/E) to enter at least one region with k ≠ 0, plus lateral movement, a reversal and a wheel scale change at the fine site. Otherwise the 3D claim rests only on scripted motion. If terrain blocks it, record a partial result.
+5. **Home and fine dependency in the new lattice.** Assert that address (0,0,0) is centred on the PR9/BW1 coarse origin, that it fully contains the fine cube, and that it is the protected home dependency. The lattice spacing changed from 0.75 D to 0.5 D, so this must be checked, not assumed.
+
+## Scope and stop concerns (not corrections)
+- **Throughput risk.** At 0.5 D spacing, a path of D crosses about two addresses per axis. That means roughly one new region per second at 0.5 D/s, against measured preparation of 0.6–2.3 s.
+  - Waits are likely. Report them, and the blocking time on the native worker, honestly.
+  - Purely geometrically, a spacing up to about 0.6 D would still enclose, but it would shrink the sweep slack. Changing it is not required now.
+- **Route.** World-Y ascent maps to about 0.86 D per D along the frame normal, so a 1 D climb should cross k ≠ 0. The return supplies the descent. That is adequate.
+  - Contact may end an outgoing segment, but missing up/down travel, a k ≠ 0 crossing or the fine visit stays a partial result.
+- **Workload.** 3 × 90 s ordinary runs, one 20 s late control and a 60 s input check are sufficient for this finite claim if each ordinary run performs the excursion and the fine-control visit.
+- **Fine sweep cost.** Keep fine-scale query costs separate in the per-scale report (BW1 fine p99 was about 3.5 ms).
+- **Out of scope:** BI1, unlimited domain, artistic criteria, performance perfection.
+
+---
+
+## Codex — PC2 card challenge resolutions before implementation
+*2026-10-29 16:52:35 PDT*
+
+# PC2 card r1 — independent challenge resolutions
+
+**2026-10-29.** This amends the preserved [r0 card](PC2-CARD-2026-10-29.md) before implementation, following Claude challenge `20261029T234230Z-92ad1a`. The experience, mathematical world, finite domain, tolerances, workload counts and performance targets remain as frozen there.
+
+1. **Frame storage and step slack.** Stored frame vectors are `[tangent, binormal, normal]`; compute each world-axis sum across those vectors explicitly, rather than relying on a row/column label. Coarse ordinary speed is `0.5D/s`, maximum speed `1D/s`, and movement `dt` is capped at `0.05s`; maximum step is therefore `0.05D`. With normalized float slack `1e-8`, actual enclosure plus step plus slack is below `0.928002D`; the frame-independent bound is below `0.984013D`. Verify exact rounding ties and both body endpoints. This is enclosure, never terrain clearance.
+2. **Runtime admission provenance.** Fail closed for unknown source values, invalid Manifold status, unpaired edges in the closed composed-solid export, inconsistent volume/classification, invalid binary indices/lengths/digests or a source/policy mismatch. Record actual sampling cells/step/tile width/RTIN tolerance and dense-validation mode. Admit normal flight only under the same builder/source/policy as finite offline preflight qualification. Unsampled live instances carry `kind: empirical`, zero instance sample counts, and an explicit limit naming the policy certificate and its qualified specimen count. Qualify every unique published instance after the workload and report results against its admission record; do not present that later evidence as runtime validation or an everywhere guarantee.
+3. **Cancellation and admission.** Queued aborts must settle the producer promise promptly and release their PC1 live slots without waiting behind active native generation. Test two queued cancellations with one active job and a new interaction admission. Capacity exhaustion defers work rather than crashing flight. Session maximum 13 covers the existing ready/pending caps.
+4. **Actual input.** Within the existing 60-second input bound, use Q/E to cross `k≠0`, lateral keys, reversal and a wheel scale change at the fine site. Scripted vertical travel alone cannot establish the input claim. A blocked requirement remains partial.
+5. **Home/fine dependency.** Assert home address `(0,0,0)` equals the canonical coarse origin, fully contains the fine cube and remains protected while fine interaction depends on it.
+
+The closed-edge check was first exercised on preserved coarse/fine closed-solid exports: both have all undirected edge counts equal to two. The observed check costs (about 60/81ms in this CPU probe) are diagnostics, not a performance promise. Checks apply to closed occupancy triangles, not the intentionally open visible surface after cube closure removal.
+
+The challenger executed nothing and assessed source/documents plus the preserved CPU coverage audit. His throughput concern is retained: waits may rise with 3D demand and must be measured. Scope remains live preparation/3D coverage before BI1, with no new artistic gate or backend decision.
+
+
+---
+
+## Codex — PC2 independent owner evidence position r0
+*2026-10-29 18:10:24 PDT*
+
+PC2 owner position before independent evidence judgement, 2026-10-30 01:10 UTC.
+
+The bounded live experience is supported: three ordinary 90-second flights complete 4/3/3 cycles, each with four coarse and four fine contacts and four fine visits. Actual Q/E, lateral and reversal keys, wheel shrink/growth refusal, retreat and mouse look pass in 26.121 seconds. All published unique geometry is covered by sixteen finite qualified representations including preflight. The offline flight audit checks 201 handoffs and 98 contacts. Region143 now has three forward samples at the original geometry/tolerance, narrowing its earlier omission rather than claiming complete reference coverage.
+
+FPS passes the original target: ordinary overall and preparation stay about 50. Navigation p99 2.1–2.2ms and input maximum9.9ms miss the declared2/8ms targets. Interaction medians1.378–1.473s and maximum2.424s miss1s. Ordinary waits11.86–13.54s per90s are a visible limitation. Complete1GiB region ownership is unverified; wholeownedRSS2.86GiB is separate. New coarse surface has only one forward sample. First-coarse telemetry mixes constantair, so that isolated distribution is unverified.
+
+The cancelledresponse token leak is the single bounded fullworkload repair; original evidence is preserved. Full unit compatibility subsequently required moving the local physics loader from Space core into the fixture. Full/input results use the preserved measured source; final dependencyinjected packaging has 1258 passing units/build and a separate20second hardware smoke with alreadyqualified geometry and fullcleanup. I do not claim three exactfinalpackaging repeats. A separate compatibility control does not replenish the original repair allowance.
+
+Recommend completing PC2 as this bounded demonstrated experience with explicit misses and source limits, then BI1 integration design/taskplan. Preserve the native preparer as control, without selecting a production backend or reopening speculative geometry/artistic gates. BI1 must qualify its final application behavior. Independent peer assessment has not been read for this position.
+
+
+
+## Codex → Claude — 20261030T011025Z-385c2e — 2026-10-30T01:11:27+00:00
+
+The advisor explicitly approved PC2 frozen design/card, source, CPU/GPU results and fixed-screenshot API reviews. Continue the PC2 card session with an independent evidence judgement. Read-only: do not edit the reviewed checkout, packet, branch or HEAD; do not execute shell/browser/native code. Give your own criterion-by-criterion assessment and the smallest justified next step before seeing the owner position.
+
+Read evidence-summary.json, the frozen card/r1, mechanical-repair and dependency-wiring notes, decisive final source and the three corresponding preserved measured source files. Inspect both fixed PNGs; state exactly which images you actually saw. Read any other packet source needed to check a factual claim. The 16 qualified representations include preflight and all unique published full/input/final-smoke geometry; one new coarse surface has only one forward sample. Old region143 is the exact earlier output with three new forward samples, not a global completeness proof. Buffer audits tie NPZ checks to delivered bytes. Scope is empirical and finite.
+
+Please challenge actual coverage/clearance and contact evidence, world/source/policy identity, 0-count live admission versus post-run qualification, constant-air/full handling, render/collision publication and resource retirement. Verify the cancellation-before-response-token gap repair concept. Judge latency/queue/view interference, original >=30FPS criterion, p99/max navigation misses and incomplete1GiB regionownership separately; do not introduce an artistic criterion or a frame-tail FPS gate. No production backend/release decision is in scope.
+
+Important source limit: full3x90s, late20s and actualinput were run on the preserved measured source. The final unit boundary fix injects the same physics loader/worker entry from the fixture; it changes four existing files plus adds a fixture worker and has1258 passing units/build and a separate20second headed smoke. Three exact-final-packaging repeats were not run. Assess whether the retained bounded experience and narrower final-source validation justify advancing to BI1 integration design; do not silently certify exact-final-source full performance. All failed attempts are preserved; no new repair allowance or rerun for a cleaner verdict is sought.
+
+Report established, supported-partial and unresolved findings; material blockers versus optimization/coverage limits; whether the evidence supports the bounded experience; and your recommended next step. Your role is independent source/evidence/image review, not independent execution. The full reply will be appended verbatim to the canonical codesign log.
+
+Additional project files to inspect:
+- atlas-pc2/evidence-review-r0/manifest.json
+- atlas-pc2/evidence-review-r0/evidence-summary.json
+- atlas-pc2/evidence-review-r0/final/docs/reports/project1-interactive/PC2-CARD-2026-10-29.md
+- atlas-pc2/evidence-review-r0/final/docs/reports/project1-interactive/PC2-CARD-AMENDMENT-2026-10-29.md
+- atlas-pc2/evidence-review-r0/final/docs/reports/project1-interactive/PC2-MECHANICAL-REPAIR-2026-10-29.md
+- atlas-pc2/evidence-review-r0/final/docs/reports/project1-interactive/PC2-DEPENDENCY-WIRING-2026-10-29.md
+- atlas-pc2/evidence-review-r0/measured-fine-inspection.png
+- atlas-pc2/evidence-review-r0/final-wiring.png
+
+## Claude → Codex — 20261030T011025Z-385c2e — 2026-10-30T01:11:27+00:00
+
+# PC2 / WC2 decisive evidence review
+
+**Verdict:** PC2 supports the bounded live 3D experience. I found no material safety, identity or ownership blocker. Navigation p99 (and the input run's maximum) and readiness are target misses, ownership of region memory is unverified, and the visible waiting is a real experience limit. Advancing to the BI1 integration design is justified, with two qualifications in the last section.
+
+## What I read and saw
+- **Documents:** `evidence-summary.json` (the first 2,069 lines, which contain every run, qualification, audit and reconstruction record; the remainder is approach and profile data), the r1 card amendment, the mechanical-repair and dependency-wiring notes, `manifest.json`, and `publications.mjs` (the identity-cancellation repair).
+- **Images:** I viewed both PNGs, `measured-fine-inspection.png` and `final-wiring.png`.
+- **Not done:** I executed nothing. I did not read the three preserved measured source files line by line; their hashes are in the manifest.
+
+## Criteria
+- **World identity and reconstruction: established within this finite scope.**
+  - The definition key `fnv1a64:4c29d6f7f61fbb06` is unchanged, and the producer's opening record carries the full asset manifest, lineage and parameters.
+  - **Resident reuse:** reconstruction returns the same home key `fnv1a64:03a17384a7c07d06` from the cache.
+  - **Real rebuild:** a cache-miss rebuild produced the same three buffer SHA-256 digests.
+  - **After a producer epoch change:** the rebuild is identical again.
+  - I did not locate the opposite-request-order row in the part I read, so treat that check as unverified by me.
+- **Live 3D experience: established.**
+  - Each of the three ordinary runs: entered a region with k ≠ 0; ascent of 1.489 D; downward travel; 55–59 entries; 4 coarse and 4 fine contacts; 4 fine visits; 3–4 safe growths; 4 refused unsafe growths; render and collision revisions in agreement; zero scale displacement; no errors.
+  - **Real input:** every check passes (vertical, k ≠ 0, lateral, contact, refused growth, retreat, look change, bounded). The coarse body reversed by −1.5 D. There was one wheel-growth refusal and an ascent of 1.11 D.
+- **Contact and transition integrity: established for the sampled frames.**
+  - The flight audits pass.
+  - Minimum contact distance is about 0.5000002 body units, i.e. no penetration. The mathematical contact bound is 3.1e-4 body units.
+  - Every recorded frame was checked, and frames spent waiting were stationary, so a wait never produced motion.
+  - The maximum step was at most 5.3e-4 m, about 0.02 D, within the 0.05 D allowance in the r1 amendment.
+- **Qualification: supported but finite.** There are 16 unique representations, including preflight: 4 coarse surface, 9 empty-air (1,024 occupancy samples each, with the explicit "not proof" limit), the fine region and 2 view representations. All are within tolerance (fine at most 6.9 µm against 66.4 µm; view at most 0.23 mm against 1.06 mm). Region 143 gets 3 new forward samples and passes.
+  - **Reporting correction:** representation `4b2f1f5b` has only one forward reference sample, yet `limits: []`. That is effectively missing completeness, so it should carry an explicit limit, as region 143 did.
+  - No full-solid region occurred.
+  - Live admission with zero instance samples, then qualification of every unique published representation after the run, is the honest pattern from the r1 amendment. I saw the post-run results; I did not see the runtime admission records themselves.
+- **Frame rate ≥ 30 FPS: pass.** About 50.0 FPS overall and 50.0 during preparation in every run, including late, input and the final smoke. The cadence is 20 ms, with an occasional 40 ms frame.
+- **Navigation p99 ≤ 2 ms: missed.** 2.1–2.2 ms in the ordinary runs, 4.5 ms in the input run. The cause is fine-steady sweeps (p99 3.5–3.7 ms in ordinary runs, 4.7 ms in input).
+- **Navigation max ≤ 8 ms: pass in the ordinary runs** (4.3–4.6 ms). **Missed in the input run:** 9.9 ms, from coarse steady sweeps.
+  - The per-scale and first/steady split is reported, with an honest caveat: the coarse-first bucket includes decisions about constant air, so it is not an un-warmed distribution.
+- **Readiness against the 1 s target: missed.** Interaction p50 is 1.38–1.47 s with a maximum of about 2.4 s; view p50 is about 1.8 s.
+  - **Waits per 90 s run: 11.9, 13.2 and 13.5 s, about 13–15% of the run.** This is visitor-visible stalling, not only a number.
+  - Native preparation is about 0.92 s p50 and 1.79 s maximum, plus browser normal generation and collision (each up to about 100–170 ms) and upload.
+  - Late control: a 4.1 s wait, then recovery.
+- **Resources: bounded, ownership unverified.**
+  - Interaction regions peak at 8 (within cap); peak GPU 37.6 MB.
+  - Main WASM capacity is 41 MB, a large improvement on BW1's 368 MB. Worker WASM capacity is up to 99 MB.
+  - View work caused 0 interaction-cache evictions; cache bounds hold; output was 706 MB against the 4 GiB quota.
+  - RSS is 2.5–2.9 GiB. Region ownership is reported as unverified, which is correct.
+- **Process: supported.** Cleanup was confirmed in every mode.
+  - The repaired attempt (r1) and the failed r0 are both preserved, with r0 rejected for a declared fixture ownership gap.
+  - 1,258 units pass, the build passes, and the final packaging smoke passes.
+
+## Repair concept (identity cancellation): sound
+`publications.mjs` adds a `cancel(identity)` operation that:
+- records a bounded tombstone (an error beyond 4,096, so the limit is observable rather than silent);
+- retires every publication for that identity;
+- makes any later `publish` for it return `false`.
+
+`reset` refuses while publications remain. This closes the gap from cancellation before the response token arrived, keyed by the full request identity across runtime and epoch.
+
+One thing I did not see: the caller's handling of `publish` returning `false`. It must dispose the late native output, both on disk and in memory, not merely skip publishing it. Confirm with the existing focused tests, or name the disposal point.
+
+## Images
+- **`measured-fine-inspection.png`** (inspection hold, scale 0.25, 7 regions, 0 preparing). The PR9 fine relief patch is visible as faceted relief on the slope, with a dark diagonal band and rough parent terrain at the upper right. It is consistent with PR9.
+- **`final-wiring.png`** (fine retreat, scale 0.25, 2 contacts). The view shows the near slope carrying the fine relief, plus the broader surrounding terrain (view context) with ridges and rough fractal detail on both sides and the horizon.
+- Neither image shows corruption or holes. I am making no artistic judgement.
+
+## Final-source scope
+The three 90 s repeats and the input run are measurements of the preserved pre-packaging source. The final change is dependency injection only (physics loader and worker entry), with a 20 s headed smoke that is consistent with the repeats. This supports the claim that the final packaging behaves the same functionally. It does not certify full performance of the exact final source. The dependency-wiring note already says exactly this, and I agree.
+
+## Recommendation
+Proceed to the BI1 integration design. Two qualifications:
+1. **Readiness throughput is now the main experience limit.** About 13–15% of time is spent waiting in ordinary flight. Own it explicitly, either as an early BI1 slice or as a small separate card, using the measured phases: native construction about 0.9 s p50; normals plus collision plus restore about 0.1–0.3 s; prediction horizon.
+   - Fine-sweep cost, which drives the p99 miss, and the input run's 9.9 ms coarse maximum belong to the same backlog.
+   - This is not an optimisation campaign or a new gate.
+2. **BI1 qualifies its own final source under the maintained acceptance policy.** Do not carry PC2's pre-packaging performance figures into BI1 as final-source evidence.
+
+Small reporting fixes before closure:
+- add the explicit completeness limit on representation `4b2f1f5b` (one forward sample);
+- confirm that a cancelled late publication disposes its output.
+
+---
+
+## Codex — PC2 evidence verification and sparse-reference limits
+*2026-10-29 18:13:45 PDT*
+
+PC2 verification follow-up, before closure. Please confirm whether these resolve your two requested reporting/ownership clarifications. No new experiment or source change is proposed. The reviewed packet is immutable.
+
+1. The explicit sparse-reference annotation is now recorded separately: representation4b2f1f5b has one forward sample, which does not establish complete reference coverage. Raw limits:[] stays preserved; the archive summary adds this limit. Region143 has three sparse forward samples, not a global completeness proof. Actual class counts verified from the summary are3 coarse surfaces,10 coarse air,1 fine surface,2 view surfaces; your4/9 split was a counting error. No full-solid hardware specimen.
+
+2. native-adapter.prepare checks signal.aborted or publications.cancelled(q.identity) immediately before publish. There is no await between that check, publications.publish and result return, so an HTTP cancellation cannot interleave to make publish returnfalse on this path. Earlier cancellation throws AbortError. If cancellation arrives after publish, cancelRequest retires that identity's tokens. Browser cancellation before token acquisition awaits /pc2/cancel. Queued native clients settle promptly; active native work remains owned to completion. No browser collision/GPU resources are allocated for a cancelled unpublished result.
+
+Native outputs are deliberately retained as bounded experiment evidence, rather than deleted on cancellation: records owns their metadata and private paths, raw cache has at most4 entries, all bytes count against512jobs/4GiB, reset/close clear cache, and close writes native-records.json. Python temporaries are released after job/worker exit; bounded source/topology caches have explicit limits. This is the preserved-output policy in the frozen card, not an unowned disk leak or a complete allocator proof. All158 full-run publications retire; all owned processes stop.
+
+3. Opposite order: reconstruction-r0 starts fine,thenhome on a fresh producer, comparing every buffer digest and representation key with native-smoke-r0, which built home first and fine fourth. The included sourcepc2-reconstruction.mjs asserts both against the original controls. Resident reuse, retirement rebuild and epoch reset follow separately. You did not verify this in r0; please keep that review limit or inspect the supplied rows/source rather than assume it.
+
+Actual runtime admission record follows (zero instance counts and its explicit preflight-policy limit):
+{
+  "denseValidation": false,
+  "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+  "kind": "empirical",
+  "limits": [
+    "Runtime instance not individually sampled at admission; policy qualified on 3 coarse representations.",
+    "Declared approximation target with finite evidence, not an everywhere error bound."
+  ],
+  "meshSamples": 0,
+  "referenceSamples": 0,
+  "toleranceM": 0.000265625
+}
+
+Reconstruction order/key/cache rows:
+[
+  {
+    "kind": "fine",
+    "cacheHit": false,
+    "key": "fnv1a64:d9d2e86c8fd6a571",
+    "producer": {
+      "epoch": 0,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  },
+  {
+    "kind": "home",
+    "cacheHit": false,
+    "key": "fnv1a64:03a17384a7c07d06",
+    "producer": {
+      "epoch": 0,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  },
+  {
+    "kind": "home",
+    "cacheHit": true,
+    "key": "fnv1a64:03a17384a7c07d06",
+    "producer": {
+      "epoch": 0,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  },
+  {
+    "kind": "home",
+    "cacheHit": false,
+    "key": "fnv1a64:03a17384a7c07d06",
+    "producer": {
+      "epoch": 0,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  },
+  {
+    "kind": "home",
+    "cacheHit": false,
+    "key": "fnv1a64:03a17384a7c07d06",
+    "producer": {
+      "epoch": 1,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  }
+]
+
+Original preflight order/key:
+[
+  {
+    "label": "home",
+    "key": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+  },
+  {
+    "label": "new-3d",
+    "key": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "domain-corner",
+    "key": "242366fb15ac5d777e7de39890149b9f425a24b6aeb5dddb79bd9a827339d0fe"
+  },
+  {
+    "label": "fine-control",
+    "key": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+  },
+  {
+    "label": "view",
+    "key": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec"
+  }
+]
+
+
+## Codex → Claude — 20261030T011346Z-e15ebe — 2026-10-30T01:14:07+00:00
+
+PC2 verification follow-up, before closure. Please confirm whether these resolve your two requested reporting/ownership clarifications. No new experiment or source change is proposed. The reviewed packet is immutable.
+
+1. The explicit sparse-reference annotation is now recorded separately: representation4b2f1f5b has one forward sample, which does not establish complete reference coverage. Raw limits:[] stays preserved; the archive summary adds this limit. Region143 has three sparse forward samples, not a global completeness proof. Actual class counts verified from the summary are3 coarse surfaces,10 coarse air,1 fine surface,2 view surfaces; your4/9 split was a counting error. No full-solid hardware specimen.
+
+2. native-adapter.prepare checks signal.aborted or publications.cancelled(q.identity) immediately before publish. There is no await between that check, publications.publish and result return, so an HTTP cancellation cannot interleave to make publish returnfalse on this path. Earlier cancellation throws AbortError. If cancellation arrives after publish, cancelRequest retires that identity's tokens. Browser cancellation before token acquisition awaits /pc2/cancel. Queued native clients settle promptly; active native work remains owned to completion. No browser collision/GPU resources are allocated for a cancelled unpublished result.
+
+Native outputs are deliberately retained as bounded experiment evidence, rather than deleted on cancellation: records owns their metadata and private paths, raw cache has at most4 entries, all bytes count against512jobs/4GiB, reset/close clear cache, and close writes native-records.json. Python temporaries are released after job/worker exit; bounded source/topology caches have explicit limits. This is the preserved-output policy in the frozen card, not an unowned disk leak or a complete allocator proof. All158 full-run publications retire; all owned processes stop.
+
+3. Opposite order: reconstruction-r0 starts fine,thenhome on a fresh producer, comparing every buffer digest and representation key with native-smoke-r0, which built home first and fine fourth. The included sourcepc2-reconstruction.mjs asserts both against the original controls. Resident reuse, retirement rebuild and epoch reset follow separately. You did not verify this in r0; please keep that review limit or inspect the supplied rows/source rather than assume it.
+
+Actual runtime admission record follows (zero instance counts and its explicit preflight-policy limit):
+{
+  "denseValidation": false,
+  "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+  "kind": "empirical",
+  "limits": [
+    "Runtime instance not individually sampled at admission; policy qualified on 3 coarse representations.",
+    "Declared approximation target with finite evidence, not an everywhere error bound."
+  ],
+  "meshSamples": 0,
+  "referenceSamples": 0,
+  "toleranceM": 0.000265625
+}
+
+Reconstruction order/key/cache rows:
+[
+  {
+    "kind": "fine",
+    "cacheHit": false,
+    "key": "fnv1a64:d9d2e86c8fd6a571",
+    "producer": {
+      "epoch": 0,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  },
+  {
+    "kind": "home",
+    "cacheHit": false,
+    "key": "fnv1a64:03a17384a7c07d06",
+    "producer": {
+      "epoch": 0,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  },
+  {
+    "kind": "home",
+    "cacheHit": true,
+    "key": "fnv1a64:03a17384a7c07d06",
+    "producer": {
+      "epoch": 0,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  },
+  {
+    "kind": "home",
+    "cacheHit": false,
+    "key": "fnv1a64:03a17384a7c07d06",
+    "producer": {
+      "epoch": 0,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  },
+  {
+    "kind": "home",
+    "cacheHit": false,
+    "key": "fnv1a64:03a17384a7c07d06",
+    "producer": {
+      "epoch": 1,
+      "instanceId": "f96c86b4-ee6c-4001-a8bc-d121ff698383"
+    }
+  }
+]
+
+Original preflight order/key:
+[
+  {
+    "label": "home",
+    "key": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+  },
+  {
+    "label": "new-3d",
+    "key": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "domain-corner",
+    "key": "242366fb15ac5d777e7de39890149b9f425a24b6aeb5dddb79bd9a827339d0fe"
+  },
+  {
+    "label": "fine-control",
+    "key": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+  },
+  {
+    "label": "view",
+    "key": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec"
+  }
+]
+
+Additional project files to inspect:
+- atlas-pc2/evidence-review-r0/final/scripts/preparation/native-adapter.mjs
+- atlas-pc2/evidence-review-r0/final/src/space/preparation/browser-producer.js
+- atlas-pc2/evidence-review-r0/final/scripts/experiments/pc2-reconstruction.mjs
+
+## Claude → Codex — 20261030T011346Z-e15ebe — 2026-10-30T01:14:07+00:00
+
+# PC2 follow-up: confirmation
+
+Both clarifications are resolved. I also confirm the opposite-order evidence from the supplied rows and source. One counting correction is owed by me.
+
+I read `native-adapter.mjs` (the publish path), `pc2-reconstruction.mjs`, and the rows and admission record you supplied. I executed nothing, and I did not read `browser-producer.js` in detail.
+
+1. **Sparse-reference annotation: resolved.**
+   - Keeping the raw `limits: []` and adding the limit in the archive summary is the right handling: one forward sample on `4b2f1f5b`, and three sparse samples on region 143, neither a completeness proof.
+   - **Correction to my earlier review:** recounting the summary gives 3 coarse surface (`03a1`, `8ec7`, `4b2f`), 10 coarse empty-air, 1 fine surface and 2 view representations. My 4/9 split was wrong, and there was no full-solid hardware specimen.
+2. **A cancelled late publication: resolved.**
+   - At `native-adapter.mjs:109-110`, the check of `signal.aborted` and `publications.cancelled(q.identity)` is followed synchronously by `publications.publish(…)`. There is no `await` between them; `assertResultForRequest` (line 108) is synchronous too.
+   - So on this path, `publish` cannot return `false` because of an HTTP cancellation interleaving. An earlier cancellation throws `AbortError` (lines 95 and 109). A later one is handled by `cancelRequest` retiring the tokens for that identity (line 126).
+   - Retaining native outputs as bounded evidence (at most 4 raw cache entries, counted against 512 jobs and 4 GiB, cleared on reset or close, recorded in `native-records.json`) is consistent with the frozen card. It is owned data, not a leak. I accept that this is not an allocator proof, as you state.
+3. **Opposite order: now confirmed from source and rows.**
+   - `pc2-reconstruction.mjs:17` asserts that both the representation key and the buffer descriptors equal the `native-smoke-r0` controls.
+   - On a fresh producer it requests fine first, then home (line 21; the preflight built home first and fine fourth).
+   - It then asserts, in order: a resident cache hit; after retirement, a rebuild with `cacheHit` false (line 22); an epoch increment on reset (line 23); and rejection of a stale producer (line 25). The run reports pass.
+   - The supplied rows agree. The preflight solid-buffer digests (home `147bd0…`, fine `0929f7…`) equal the reconstruction's solid-index digests I saw in the evidence summary.
+   - Remaining limit: this is verification by reading the source assertions and the recorded rows. I did not re-run the script.
+4. **The runtime admission record is honest:** `kind: empirical`, zero instance counts, a limit naming the policy qualification (3 coarse representations), and a declared target that is explicitly not an everywhere bound. This matches the r1 amendment.
+
+My earlier review stands with these corrections: I recommend closure and moving on to the BI1 integration design, with readiness throughput owned explicitly and BI1 qualifying its own final source.
+
+---
+
+## Codex — PC2 closure and next owned action
+*2026-10-29 18:18:30 PDT*
+
+PC2 closure, 2026-10-29 local date. Independent card and evidence review plus the focused follow-up support the bounded live 3D experience and BI1 integration design. Report every original criterion: frame rate passes near50FPS; navigation tails and1s readiness miss; complete1GiB region ownership remains unverified. Qualification is finite, with the single-forward-sample and region143 sparse-reference limits explicit. A cancelled-response ownership repair is preserved alongside the original failure. Final dependency injection has all1258 passing units/build and a separate20s headed smoke; the full/input numbers remain measurements of the preserved earlier source. All owned PIDs stopped, port5280 closed and GPU lock free. Publish the cohesive PC2 PR from the project .worktrees/pc2 branch; advisor retains merge ownership. Next is BI1 design/task plan with readiness throughput owned in early slices, without choosing a production backend or repeating an artistic hypothesis.
+
