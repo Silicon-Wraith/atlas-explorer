@@ -1,0 +1,571 @@
+{
+  "base": "af72dbeb9fc0d2ce5bf399bac0cb33bbdaba694c",
+  "scope": "Static runtime closure plus explicitly identified upstream input-creation stages. Runtime assets are intentional regression inputs; upstream creation remains the next slice, not qualified here. No Python module imports/GPU execution.",
+  "modules": {
+    "cache_bw1.py": "atlas-world-bw1/cache_bw1.py",
+    "builder_bw1.py": "atlas-world-bw1/builder_bw1.py",
+    "world_grid.py": "atlas-world-bw1/world_grid.py",
+    "region_class.py": "atlas-world-bw1/region_class.py",
+    "cache_r0.py": "atlas-multiscale-pr8/cache_r0.py",
+    "streaming_builder_r0.py": "atlas-multiscale-pr8/streaming_builder_r0.py",
+    "adaptive_graph_pr3.py": "atlas-multiscale-pr8/adaptive_graph_pr3.py",
+    "descendant_world.py": "atlas-multiscale-pr8/descendant_world.py",
+    "cache_view.py": "atlas-bw1-runtime-r1/core/cache_view.py",
+    "builder_view.py": "atlas-bw1-runtime-r1/core/builder_view.py",
+    "view_grid.py": "atlas-bw1-runtime-r1/core/view_grid.py",
+    "field_fidelity_r0.py": "valley-spike/zoom2d/gpu/ia/rc1/prepared-opt-r0/field_fidelity_r0.py",
+    "sampling_r0.py": "valley-spike/zoom2d/gpu/ia/rc1/prepared-r0/sampling_r0.py",
+    "h1lib.py": "valley-spike/zoom2d/h1/h1lib.py",
+    "pert.py": "valley-spike/zoom2d/gpu/pert.py",
+    "fkern.py": "valley-spike/zoom2d/gpu/r1/code/fkern.py",
+    "dek.py": "valley-spike/pool/pipeline/dek.py",
+    "check_collision_r0.py": "valley-spike/zoom2d/gpu/ia/rc1/prepared-r0/check_collision_r0.py"
+  },
+  "assets": {
+    "base.npz": "valley-spike/zoom2d/z1/base.npz",
+    "frame.json": "valley-spike/surface/frame.json",
+    "levels.json": "valley-spike/zoom2d/z1/levels.json",
+    "construction.json": "valley-spike/zoom2d/gpu/ia/rc1/construction.json",
+    "gs.json": "valley-spike/zoom2d/gpu/ia/rc1/gs.json",
+    "fixtures-r0.json": "valley-spike/zoom2d/gpu/ia/rc1/prepared-static-r0/fixtures-r0.json",
+    "parent-reference-r0.npz": "valley-spike/zoom2d/gpu/ia/rc1/prepared-layers-r0/parent-reference-r0.npz",
+    "parent-reference-r0.json": "valley-spike/zoom2d/gpu/ia/rc1/prepared-layers-r0/parent-reference-r0.json",
+    "cpu-screen-r0.json": "atlas-world-bw1/cpu-screen-r0.json",
+    "approach-r1.json": "atlas-multiscale-pr8/approach-r1.json",
+    "feature-r0.json": "atlas-bw1-runtime-r1/feature-r0.json",
+    "fine-control.npz": "atlas-multiscale-pr8/qualified-r1/mesh-region10-r0.npz"
+  },
+  "upstream": {
+    "base.py": "valley-spike/zoom2d/z1/base.py",
+    "frame.py": "valley-spike/surface/frame.py",
+    "z1-build.py": "valley-spike/zoom2d/z1/build.py",
+    "child-construct.py": "valley-spike/zoom2d/h1/construct.py",
+    "grandchild-construct.py": "valley-spike/zoom2d/gpu/ia/rc1/construct.py",
+    "sweep.py": "valley-spike/scale/sweep.py"
+  },
+  "rows": [
+    {
+      "group": "runtime",
+      "role": "cache_bw1.py",
+      "path": "/mnt/ml_storage/scratch/atlas-world-bw1/cache_bw1.py",
+      "bytes": 3452,
+      "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6",
+      "imports": [
+        "builder_bw1",
+        "collections",
+        "hashlib",
+        "json",
+        "numpy",
+        "pathlib",
+        "time"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "runtime",
+      "role": "builder_bw1.py",
+      "path": "/mnt/ml_storage/scratch/atlas-world-bw1/builder_bw1.py",
+      "bytes": 9655,
+      "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c",
+      "imports": [
+        "descendant_world",
+        "hashlib",
+        "importlib.util",
+        "itertools",
+        "json",
+        "numpy",
+        "pathlib",
+        "region_class",
+        "resource",
+        "sys",
+        "time",
+        "traceback",
+        "types",
+        "world_grid"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/atlas-multiscale-pr8",
+        "/mnt/ml_storage/scratch/atlas-multiscale-pr8/adaptive_graph_pr3.py",
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "world_grid.py",
+      "path": "/mnt/ml_storage/scratch/atlas-world-bw1/world_grid.py",
+      "bytes": 819,
+      "sha256": "a7cc55fce61c52c41e14636434270fe9ec603bde467ca00bfd41f50012f1f43e",
+      "imports": [
+        "json",
+        "numpy",
+        "pathlib"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "runtime",
+      "role": "region_class.py",
+      "path": "/mnt/ml_storage/scratch/atlas-world-bw1/region_class.py",
+      "bytes": 514,
+      "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c",
+      "imports": [
+        "math"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "runtime",
+      "role": "cache_r0.py",
+      "path": "/mnt/ml_storage/scratch/atlas-multiscale-pr8/cache_r0.py",
+      "bytes": 3433,
+      "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c",
+      "imports": [
+        "collections",
+        "hashlib",
+        "json",
+        "numpy",
+        "pathlib",
+        "streaming_builder_r0",
+        "time"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "runtime",
+      "role": "streaming_builder_r0.py",
+      "path": "/mnt/ml_storage/scratch/atlas-multiscale-pr8/streaming_builder_r0.py",
+      "bytes": 9713,
+      "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c",
+      "imports": [
+        "adaptive_graph_pr3",
+        "descendant_world",
+        "hashlib",
+        "json",
+        "numpy",
+        "pathlib",
+        "resource",
+        "sampling_r0",
+        "sys",
+        "time",
+        "traceback"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "adaptive_graph_pr3.py",
+      "path": "/mnt/ml_storage/scratch/atlas-multiscale-pr8/adaptive_graph_pr3.py",
+      "bytes": 8985,
+      "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057",
+      "imports": [
+        "hashlib",
+        "manifold3d",
+        "numpy",
+        "pathlib",
+        "pymartini",
+        "sys",
+        "time"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/atlas-prepared-toolchain/py"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "descendant_world.py",
+      "path": "/mnt/ml_storage/scratch/atlas-multiscale-pr8/descendant_world.py",
+      "bytes": 2825,
+      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e",
+      "imports": [
+        "field_fidelity_r0",
+        "hashlib",
+        "json",
+        "numpy",
+        "pathlib",
+        "sys"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/surface/frame.json",
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1",
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/z1/base.npz"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "cache_view.py",
+      "path": "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1/core/cache_view.py",
+      "bytes": 3453,
+      "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a",
+      "imports": [
+        "builder_view",
+        "collections",
+        "hashlib",
+        "json",
+        "numpy",
+        "pathlib",
+        "time"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "runtime",
+      "role": "builder_view.py",
+      "path": "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1/core/builder_view.py",
+      "bytes": 9662,
+      "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c",
+      "imports": [
+        "descendant_world",
+        "hashlib",
+        "importlib.util",
+        "itertools",
+        "json",
+        "numpy",
+        "pathlib",
+        "region_class",
+        "resource",
+        "sys",
+        "time",
+        "traceback",
+        "types",
+        "view_grid"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/atlas-multiscale-pr8",
+        "/mnt/ml_storage/scratch/atlas-multiscale-pr8/adaptive_graph_pr3.py",
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "view_grid.py",
+      "path": "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1/core/view_grid.py",
+      "bytes": 616,
+      "sha256": "4885fac0724ae9600bee99d5c652b0d51045ba62aa4eaa9fce5d19e4b655c67b",
+      "imports": [
+        "json",
+        "numpy",
+        "pathlib"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/atlas-world-bw1/cpu-screen-r0.json"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "field_fidelity_r0.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-opt-r0/field_fidelity_r0.py",
+      "bytes": 4950,
+      "sha256": "6a938170e4af65778856bff847e3926bec47dd3164a760ec08b7ac8de504ab38",
+      "imports": [
+        "json",
+        "numpy",
+        "pathlib",
+        "sampling_r0",
+        "sys",
+        "time"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "sampling_r0.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-r0/sampling_r0.py",
+      "bytes": 8903,
+      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e",
+      "imports": [
+        "argparse",
+        "cupy",
+        "fkern",
+        "h1lib",
+        "hashlib",
+        "itertools",
+        "json",
+        "numpy",
+        "pathlib",
+        "pert",
+        "resource",
+        "sys",
+        "time"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "h1lib.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/h1/h1lib.py",
+      "bytes": 4779,
+      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d",
+      "imports": [
+        "dek",
+        "json",
+        "multiprocessing",
+        "numpy",
+        "scipy.interpolate",
+        "scipy.spatial",
+        "sys"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/pool/pipeline",
+        "/mnt/ml_storage/scratch/valley-spike/surface/frame.json",
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/z1/"
+      ]
+    },
+    {
+      "group": "runtime",
+      "role": "pert.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/pert.py",
+      "bytes": 4863,
+      "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929",
+      "imports": [
+        "cupy",
+        "hashlib",
+        "numpy"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "runtime",
+      "role": "fkern.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/r1/code/fkern.py",
+      "bytes": 2877,
+      "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+      "imports": [
+        "cupy",
+        "numpy"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "runtime",
+      "role": "dek.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/pool/pipeline/dek.py",
+      "bytes": 3734,
+      "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0",
+      "imports": [
+        "multiprocessing",
+        "numpy",
+        "os"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "runtime",
+      "role": "check_collision_r0.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-r0/check_collision_r0.py",
+      "bytes": 3859,
+      "sha256": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4",
+      "imports": [
+        "json",
+        "numpy",
+        "pathlib",
+        "time"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "canonical-input",
+      "role": "base.npz",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/z1/base.npz",
+      "bytes": 5853700,
+      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+    },
+    {
+      "group": "canonical-input",
+      "role": "frame.json",
+      "path": "/mnt/ml_storage/scratch/valley-spike/surface/frame.json",
+      "bytes": 831,
+      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+    },
+    {
+      "group": "canonical-input",
+      "role": "levels.json",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/z1/levels.json",
+      "bytes": 1200,
+      "sha256": "1b28cf656f304f20e0b6d46e0177841549223f96a9f498ba5068af6730b326e1"
+    },
+    {
+      "group": "canonical-input",
+      "role": "construction.json",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/construction.json",
+      "bytes": 2010,
+      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+    },
+    {
+      "group": "canonical-input",
+      "role": "gs.json",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/gs.json",
+      "bytes": 9940,
+      "sha256": "31f88d35160d4d56bb0937f45e0cfc6568210db0a8f93b7f2fe1340314a1d202"
+    },
+    {
+      "group": "canonical-input",
+      "role": "fixtures-r0.json",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-static-r0/fixtures-r0.json",
+      "bytes": 1410,
+      "sha256": "e91c31daa47989603689179dca4d44a0799d3abbde476fcef29f0c4162b3096f"
+    },
+    {
+      "group": "canonical-input",
+      "role": "parent-reference-r0.npz",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-layers-r0/parent-reference-r0.npz",
+      "bytes": 1268,
+      "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+    },
+    {
+      "group": "canonical-input",
+      "role": "parent-reference-r0.json",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-layers-r0/parent-reference-r0.json",
+      "bytes": 1990,
+      "sha256": "e41e0ba46548b4dbe95cd2e3685e98138a255ef51045679614d18a81c8cf28eb"
+    },
+    {
+      "group": "canonical-input",
+      "role": "cpu-screen-r0.json",
+      "path": "/mnt/ml_storage/scratch/atlas-world-bw1/cpu-screen-r0.json",
+      "bytes": 61548,
+      "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+    },
+    {
+      "group": "canonical-input",
+      "role": "approach-r1.json",
+      "path": "/mnt/ml_storage/scratch/atlas-multiscale-pr8/approach-r1.json",
+      "bytes": 32370,
+      "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+    },
+    {
+      "group": "canonical-input",
+      "role": "feature-r0.json",
+      "path": "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1/feature-r0.json",
+      "bytes": 9813,
+      "sha256": "87b1a6e303758f7e767e460c6d121d43db9382fa31ec47571be25d8a7b75eca6"
+    },
+    {
+      "group": "canonical-input",
+      "role": "fine-control.npz",
+      "path": "/mnt/ml_storage/scratch/atlas-multiscale-pr8/qualified-r1/mesh-region10-r0.npz",
+      "bytes": 1871750,
+      "sha256": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877"
+    },
+    {
+      "group": "upstream-input-creation",
+      "role": "base.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/z1/base.py",
+      "bytes": 2087,
+      "sha256": "71251c2ce8afe874c1abe1fef4f060e294f55f00541ac3d614574af9d429f15b",
+      "imports": [
+        "dek",
+        "json",
+        "numpy",
+        "scipy.interpolate",
+        "sweep",
+        "sys",
+        "time"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/pool/pipeline",
+        "/mnt/ml_storage/scratch/valley-spike/scale",
+        "/mnt/ml_storage/scratch/valley-spike/surface/frame.json"
+      ]
+    },
+    {
+      "group": "upstream-input-creation",
+      "role": "frame.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/surface/frame.py",
+      "bytes": 2721,
+      "sha256": "650c6101660ba71d6dcd9b783a2080781fdc7ab0a1ff26d9341dc0488cdc4eec",
+      "imports": [
+        "json",
+        "numpy",
+        "scipy.ndimage",
+        "sweep",
+        "sys"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/descent/data/seahorse-tail/",
+        "/mnt/ml_storage/scratch/valley-spike/scale"
+      ]
+    },
+    {
+      "group": "upstream-input-creation",
+      "role": "z1-build.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/z1/build.py",
+      "bytes": 4825,
+      "sha256": "38f6811dfc7d98989a97469030b185809b650fa44e91680fad142fc6e8e7662d",
+      "imports": [
+        "dek",
+        "hashlib",
+        "json",
+        "multiprocessing",
+        "numpy",
+        "sys",
+        "time"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/pool/pipeline",
+        "/mnt/ml_storage/scratch/valley-spike/surface/frame.json"
+      ]
+    },
+    {
+      "group": "upstream-input-creation",
+      "role": "child-construct.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/h1/construct.py",
+      "bytes": 6604,
+      "sha256": "f435375093d9684da0cd8154b08c399b64ec6f9b7c3adc15e64213a296f043c1",
+      "imports": [
+        "h1lib",
+        "json",
+        "multiprocessing",
+        "numpy",
+        "scipy",
+        "time"
+      ],
+      "externalPathLiterals": []
+    },
+    {
+      "group": "upstream-input-creation",
+      "role": "grandchild-construct.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/construct.py",
+      "bytes": 6785,
+      "sha256": "44446ad54e3e4f09b2eab311e1ffab25dff654c53cd5f64fbe6918f26cf24d05",
+      "imports": [
+        "h1c",
+        "json",
+        "numpy",
+        "time"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/",
+        "/mnt/ml_storage/scratch/valley-spike/zoom2d/h1/child.json"
+      ]
+    },
+    {
+      "group": "upstream-input-creation",
+      "role": "sweep.py",
+      "path": "/mnt/ml_storage/scratch/valley-spike/scale/sweep.py",
+      "bytes": 11861,
+      "sha256": "7d28eab4e175ebd2450f2e14760eb8f565b8ce8d809322130b8946dc1d3a5c3d",
+      "imports": [
+        "classify",
+        "dek",
+        "hashlib",
+        "json",
+        "mpmath",
+        "numpy",
+        "os",
+        "sys",
+        "time"
+      ],
+      "externalPathLiterals": [
+        "/mnt/ml_storage/scratch/valley-spike/pool/pipeline"
+      ]
+    }
+  ],
+  "legacyBaseUnresolvedSamples": 1,
+  "sourceDrivenCreationCannotAdoptUnknownAsZero": true
+}
