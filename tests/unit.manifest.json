@@ -20,6 +20,8 @@
     "tests/unit/ledger.test.js",
     "tests/unit/space-contract.test.js",
     "tests/unit/preparation.test.js",
+    "tests/unit/preparation-grid.test.js",
+    "tests/unit/native-preparation.test.js",
     "tests/unit/draft-summary.test.js",
     "tests/unit/draft-records.test.js",
     "tests/unit/fake-backend.test.js",
@@ -68,6 +70,8 @@
     "tests/unit/space-diagnostics.test.js",
     "tests/unit/ladder-evidence.test.js",
     "tests/unit/gpu-clock-evidence.test.js",
-    "tests/unit/space-mask-worker.test.js"
+    "tests/unit/space-mask-worker.test.js",
+    "tests/unit/prepared-navigation.test.js",
+    "tests/unit/preparation-publications.test.js"
   ]
 }

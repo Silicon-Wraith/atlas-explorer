@@ -1,0 +1,10 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { createHash } from 'node:crypto';
+const root=path.resolve(process.argv[2]);if(!root.startsWith('/mnt/ml_storage/scratch/atlas-pc2/'))throw Error('Scratch required');await fs.mkdir(root);
+const preflight=JSON.parse(await fs.readFile('/mnt/ml_storage/scratch/atlas-pc2/native-smoke-r0/qualification-input.json','utf8'));
+const stem='/mnt/ml_storage/scratch/atlas-bw1-runtime-r1/demo/jobs-full-r1/job-11/mesh-region143-r0',meta=JSON.parse(await fs.readFile(stem+'.json','utf8'));
+const original=JSON.parse(await fs.readFile('/mnt/ml_storage/scratch/atlas-bw1-runtime-r1/actual-mesh-qualification-r1.json','utf8')).specimens.find(r=>r.index===143);
+const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
+const sources=[...preflight.sources,...await Promise.all(['.json','.npz'].map(async suffix=>({role:'legacy-region143'+suffix,file:stem+suffix,sha256:digest(await fs.readFile(stem+suffix))})))];
+await fs.writeFile(path.join(root,'qualification-input.json'),JSON.stringify({...preflight,sources,jobs:[{kind:'legacy-143',stem,meta:{...meta,classification:meta.region_class,sampling:null},representationKey:'legacy-region143:'+sources.at(-1).sha256}],originalFinding:original,scope:'Forward-reference follow-up on the exact retained BW1 region143; unchanged output and 0.01D tolerance. No runtime policy certificate.'},null,2)+'\n');
