@@ -69,6 +69,9 @@ Promote to `main` only through a reviewed PR. The 1b.1 audit uses pinned `main..
    - **Process accounting:** each closure report notes what the process cost and which parts of it were worth it.
 8. **Advisor contact.** The advisor gets milestone summaries: what ATLAS can do now, the evidence, what we learned, what's next and why, and any decision needed. We escalate material product-intent changes, expensive commitments, consequential licensing, acceptance of important unresolved risks and necessary external permissions, with a recommendation. Disagreements between the peers are not escalated; they get an experiment. The advisor merges PRs to `main`.
 
+### Claude transmission approval
+- On2026-10-30 the advisor gave standing approval: “yes, you may send to Claude. Consider this a standing approval for calling Claude.” This covers ATLAS design, source, experiment results and fixed visual evidence sent through the existing Claude bridge for engineering collaboration and independent review. Do not request routine payload-specific permission again.
+
 ### Channel
 - Claude talks to Codex through the codex-bridge plugin (`/mnt/ml_storage/dev/projects/codex-bridge/bin/codex_bridge.py`). Design discussions start with `consult` (read-only). Implementation uses `run --mode new-worktree`, or `run --mode in-place` from an eligible linked worktree. Continue each session with `resume --run-id <latest run id>`. Resume retains the parent's permissions; moving from a read-only discussion to implementation requires a new writable run with the agreed context supplied.
 - During a read-only review, nobody edits the reviewed checkout. During implementation, only the assigned bridge worker edits its designated target. Keep the primary checkout, protected refs, and target HEAD/branch unchanged while the run is active; permitted content edits within the write target are not tripwire violations.

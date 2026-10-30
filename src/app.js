@@ -35,7 +35,8 @@ const discoveries = createDiscoveriesController({ sources: [local], sceneCodec }
 const plane = createPlaneWorkspace({ shell, discoveries, sourceId: local.id });
 const viewer = createSpaceWorkspace({ shell });
 function landscapeUnavailable(reason) { const element = shell.$('#space-mode-error'); element.textContent = reason; element.hidden = false; shell.$('#landscape-retry').hidden = false; }
-const landscape = createPreparedWorldWorkspace({ shell, workerUrl: preparationWorkerUrl, loadPhysics: loadPreparedPhysics, onUnavailable: landscapeUnavailable });
+const landscape = createPreparedWorldWorkspace({ shell, workerUrl: preparationWorkerUrl, loadPhysics: loadPreparedPhysics, onUnavailable: landscapeUnavailable,
+  onRestoreRequested: () => switcher.current() === 'space' ? space.restart('landscape') : Promise.resolve({ outcome: 'inactive' }) });
 const space = createSpaceModeHost({ modes: { viewer, landscape }, onState(state) {
   const mode = state.visible ?? state.selected; document.body.dataset.spaceMode = mode;
   if (state.pending) document.body.dataset.spaceModePending = state.pending; else delete document.body.dataset.spaceModePending;

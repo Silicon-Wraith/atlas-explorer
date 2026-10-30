@@ -169,6 +169,27 @@
         "Launcher keeps another owned page alive and stops after its final page closes",
         "Session controls preserve source identity and confirm owned process cleanup"
       ]
+    },
+    {
+      "id": "space-prepared-files",
+      "gpu": true,
+      "timeoutMs": 360000,
+      "command": [
+        "tests/space-prepared-files.mjs"
+      ],
+      "report": "artifacts/space-prepared-files-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "Prepared files use the maintained headed hardware profile",
+        "An actual nondefault Landscape file contains complete portable world and camera data",
+        "The existing viewer refuses a prepared file without changing its scene or histories",
+        "The downloaded scene reopens after a new helper and browser with exact promised place and bytes",
+        "Actual navigation makes one camera entry and Back Forward restore it without content edits",
+        "Opening a complete file is one Undo Redo edit with exact scene restoration",
+        "Invalid files preserve history and unsupported requested poses remain explicit through Retry and Undo",
+        "Saved and restored delivered geometry passes finite buffer and recorded-motion audits",
+        "Prepared file workflow confirms source identity and every owned process cleanup"
+      ]
     }
   ],
   "diagnostics": [

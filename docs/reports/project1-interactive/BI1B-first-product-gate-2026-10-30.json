@@ -1,0 +1,128 @@
+{
+  "schema": "atlas.plane-gate",
+  "schemaVersion": 1,
+  "startedAt": "2026-10-30T18:06:22.776Z",
+  "commit": "9ab8ee6c75a7fdf445a8d98cd4f9ee13d882f879",
+  "requiredIds": [
+    "unit",
+    "build",
+    "reference",
+    "browser",
+    "workflow",
+    "browser-hardware",
+    "navigation",
+    "graphics",
+    "space-coexistence",
+    "space-recovery",
+    "space-numerics",
+    "space-rendering",
+    "space-shell",
+    "space-interaction",
+    "space-performance-bulb",
+    "space-performance-quaternion",
+    "space-performance-menger",
+    "space-prewarm",
+    "performance-entry",
+    "acceptance-audit",
+    "space-prepared",
+    "preparation-session-http",
+    "space-preparation-session",
+    "space-prepared-files",
+    "cleanup"
+  ],
+  "handoff": "Codex BI1.B final maintained product verification 2026-10-30",
+  "deferral": null,
+  "results": {
+    "unit": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "build": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "reference": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence",
+      "evidence": [
+        {
+          "name": "P1 complete matrix regeneration",
+          "state": "passed",
+          "checked": {
+            "strata": 1123,
+            "mandatory": 979,
+            "anchors": 18,
+            "shards": 18
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 378626.329376
+        },
+        {
+          "name": "P2 quaternion usability regeneration",
+          "state": "passed",
+          "checked": {
+            "rays": 14400
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 290.2749850000255
+        },
+        {
+          "name": "P3 complete workload and prediction regeneration",
+          "state": "passed",
+          "checked": {
+            "scenes": 3,
+            "orbitPoses": 5625,
+            "interactionPoses": 1200,
+            "checkpoints": 15,
+            "rays": 5529600
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 38204.56202000001
+        }
+      ]
+    },
+    "performance-entry": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "acceptance-audit": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "preparation-session-http": {
+      "state": "failed",
+      "reason": "exit 1",
+      "stdoutTail": "",
+      "stderrTail": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert.ok(root.startsWith('/mnt/ml_storage/scratch/atlas-pc4/'))\n\n    at file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b/scripts/experiments/pc4-http.mjs:9:175\n    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)\n    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '=='\n}\n\nNode.js v20.20.2\n"
+    },
+    "cleanup": {
+      "state": "passed",
+      "reason": "every owned process exited"
+    }
+  },
+  "notes": [],
+  "finishedAt": "2026-10-30T18:13:28.706Z",
+  "overall": {
+    "state": "failed",
+    "exitCode": 1,
+    "reason": "a required suite did not pass"
+  }
+}

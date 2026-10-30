@@ -1,0 +1,21 @@
+{
+  "pass": true,
+  "nativeFree": true,
+  "checks": [
+    "Passive status never constructs the fake or native adapter",
+    "Status discloses no owner capability; second-tab close retire and open cannot mutate the owner",
+    "Reordered renewal does not extend the accepted deadline",
+    "Exact deadline retires silent ownership before the periodic sweep",
+    "Old-session cleanup cannot retire or close replacement resources",
+    "Known cancelled in-flight work may drain but its late result cannot revive the old client",
+    "Failed retirement stays sticky and blocks replacement admission",
+    "All controls use the injected fake adapter; no native controller starts"
+  ],
+  "factoryCalls": 2,
+  "cleanup": true,
+  "outsideRoot": {
+    "path": "/mnt/ml_storage/scratch/atlas-bi1bx-must-not-create-r0",
+    "exit": 1,
+    "created": false
+  }
+}

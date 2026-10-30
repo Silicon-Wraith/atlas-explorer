@@ -1,0 +1,38 @@
+{
+  "head": "71dc60a1c25172853f446f5bea06d3e7d555f3a5",
+  "sourceDigestsChecked": {
+    "src/app.js": "2e0ff1a4bbb6cf9e96ecb1bf6a6eaaa73b46446ce69ce62c11379452ffeacf61",
+    "index.html": "d6f30c3490b3b164d226d61dddd561189d6482c6c267568e3df454f25f1d4fe5",
+    "src/ui/style.css": "f76fac56866dadffde40a44b804d8dcb692de3cb38d19e8a1d6f3ee9c333f755",
+    "src/space/mode-host.js": "c690f1e8f477034faf9626bb287e471ebe23194da391436d22a5e7adc729cbb4",
+    "src/space/preparation/workspace.js": "fb88702747274bc6c47b619f6fd6a924173287f592faad350bde87ac5cfd5443",
+    "src/space/preparation/runtime.js": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+    "src/space/preparation/pose.js": "d52fef63979d5ff41af4716c78c0231b1c6940659e108101e7e8e0aba874c380",
+    "src/space/preparation/application-client.js": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+    "src/space/preparation/browser-producer.js": "04051ea4cb64c3a20c897aa310376ccbded979fd52f7f828851213ad521ed33b",
+    "src/space/preparation/browser-preparer.js": "1ac00d2b313d333a39d3d08ea8a04025be2138b69c6b1d3257bb1d43b11c066d",
+    "src/space/preparation/collision-worker.js": "ee35b2d2af865ec4b82a70b65753634b7041fafa1a28c6ff1fa7377b9b51b0d5",
+    "src/preparation-bootstrap.js": "4b3535a98d6fd08752964ecb4694aed3f1c1bcefc686705df145a4831f3158cd",
+    "src/preparation-worker.js": "eb89dfc4e48edc2dab7d16c25d916f05c314ca6d1a204890c1ab3da949468659",
+    "src/space/render/webgpu/prepared-regions.js": "7d1b7afa1b9552a512e43f449bef32991fa769c3b9621ec92ee365d09e91e053",
+    "scripts/preparation/application-server.mjs": "b6ff658006a4b106030b3ca3f26c864a95b0357fc90627eb03fe9854a0f73cea",
+    "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+    "scripts/preparation/native-adapter.mjs": "a6910405035f87bef4518ac4d1018a468c6ede9babaad89c1185db0bbd11d03c",
+    "scripts/preparation/native-worker.py": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4",
+    "tests/space-prepared.mjs": "a56eee8c0ebbea257bc7a8d9f9bdb477b10b2c3738477b5b07bc910068151a26",
+    "src/space/preparation/scene-adapter.js": "165ae04108aed50d91d7a48aab02f360cae17108fcbc98606d2a5ef86b39b377",
+    "src/space/preparation/scene-history.js": "c57abbe7a6f53190f07cbb7e8c91d9ee86ff86e7acc4ddc4ca7c4b2fc94108c7",
+    "scripts/world-preview.mjs": "a0d423c10778f0a07ec5c5370547c7bed318d4ff31f1cb6e71800b471c8bdf7f",
+    "scripts/preparation/page-lifetime.mjs": "c5be90cc3dd0192fdc7c8234df98cec12183641a509aa33833944738cb3fffd2",
+    "tests/space-preparation-session.mjs": "da554382fd4dd7105e5e73e2db9d5413c5cd07b23d1f9477d95cdfab570f40e2",
+    "tests/support/session-loss-proxy.mjs": "364256567ea93de6edcafeab377b9b652c66b540898e46566ca01b3cddfc3b31",
+    "tests/space-prepared-files.mjs": "fcf388b838827139310cc3d03a71b599851bb3b48bb063c67602897a9b1122b7"
+  },
+  "completedConditionalReviews": [
+    "20261030T181111Z-fa25dc",
+    "20261030T185734Z-7beb48"
+  ],
+  "fullGatePassed": 25,
+  "requiredGateEntries": 25,
+  "physicalCleanup": true
+}

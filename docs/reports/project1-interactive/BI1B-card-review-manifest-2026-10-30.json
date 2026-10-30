@@ -1,0 +1,103 @@
+{
+  "head": "c1d40e0349cc635f8902dce04ae0cc913edd4140",
+  "base": "5013ba6154bf1162e3092c2b1b509377bade2629",
+  "implementation": "not started",
+  "files": {
+    "AGENTS.md": {
+      "sha256": "2ff679955c716da65f5073272478ff50dbd770efd24fb1147e730e69d270a10d",
+      "bytes": 11128
+    },
+    "docs/superpowers/specs/2026-10-23-atlas-north-star-charter.md": {
+      "sha256": "d68101d9792ce736571873a745c710ec35ae67ccba871a4d6a0b94f9ecf2471e",
+      "bytes": 36420
+    },
+    "docs/superpowers/specs/2026-10-29-atlas-bi1-application-integration.md": {
+      "sha256": "0cb7f0c30a2f880d9c4f6b445763afd779fbafb28f8cfa63f3b3894efc9cbbe2",
+      "bytes": 17698
+    },
+    "docs/superpowers/specs/2026-10-30-atlas-bi1b-scenes-history.md": {
+      "sha256": "376bdc0290625e8283bacd6cc119db461a70ba15696180d670e964ad502a9ae5",
+      "bytes": 13479
+    },
+    "docs/superpowers/plans/2026-10-30-atlas-bi1b-implementation.md": {
+      "sha256": "3797e8af80bb9ccb687e3468e403f30c87bdbba9477738434ff2781796bdce2e",
+      "bytes": 8582
+    },
+    "docs/reports/project1-interactive/BI1B-CARD-2026-10-30.md": {
+      "sha256": "0aa77d3cc4da1750290068d84248f1f12b17bea499007c2c864e97256b29c829",
+      "bytes": 7560
+    },
+    "src/shared/scene.js": {
+      "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa",
+      "bytes": 7580
+    },
+    "src/shared/history.js": {
+      "sha256": "f7e5f9b5ebb7cd22cbd5bf0411a62de10ebb260321aedd8cc5a5451436ae9c32",
+      "bytes": 6494
+    },
+    "src/shared/commands.js": {
+      "sha256": "ea1193f0ff97896f14fa56e90743862f5737a0c8a61853b2ecbef3ddb237e4bf",
+      "bytes": 2953
+    },
+    "src/space/preparation/contract.js": {
+      "sha256": "1768d8b06a8f72c2439b774de2496ecfab766a093d8dc6b49a5a5673ca785946",
+      "bytes": 12901
+    },
+    "src/space/preparation/pose.js": {
+      "sha256": "80650e7ba41e4d9ea8098da678f4ae65a2297cd0c0e75ecdc0d7518f4c96fd41",
+      "bytes": 5402
+    },
+    "src/space/preparation/runtime.js": {
+      "sha256": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+      "bytes": 11798
+    },
+    "src/space/preparation/workspace.js": {
+      "sha256": "5e13e549bdeb143e7e29e37fc23e66ac645faf5511fc1afaca3c833675a76a4e",
+      "bytes": 13916
+    },
+    "src/space/preparation/application-client.js": {
+      "sha256": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+      "bytes": 8294
+    },
+    "src/space/mode-host.js": {
+      "sha256": "437a838638416c0e49a6f184811a74a6cdfb3ca5122bfe7f3a72e42965b87d2d",
+      "bytes": 2933
+    },
+    "src/app.js": {
+      "sha256": "48d5fa4f6afaf09a7bfe6644b52424a72804a879eebe4e636f6da805907ffb87",
+      "bytes": 5138
+    },
+    "src/space/scene-adapter.js": {
+      "sha256": "ac2bf8a31d512097b4d2fbd3dc3b71756f4cb091fe2a44e37e1a8cf6f77d007b",
+      "bytes": 9316
+    },
+    "src/space/gestures.js": {
+      "sha256": "a12d51a8b7c281feb6f1389927de41a3189808c1958c251b5df30413810a9e16",
+      "bytes": 5470
+    },
+    "src/ui/workspace-switcher.js": {
+      "sha256": "aa6427e1504d5c8afda796b4012e6c4438808e17909862b0c2c680fa70ebae95",
+      "bytes": 4402
+    },
+    "scripts/preparation/native-adapter.mjs": {
+      "sha256": "a6910405035f87bef4518ac4d1018a468c6ede9babaad89c1185db0bbd11d03c",
+      "bytes": 11496
+    },
+    "scripts/preparation/native-worker.py": {
+      "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4",
+      "bytes": 10292
+    },
+    "tests/unit/prepared-workspace.test.js": {
+      "sha256": "42c2ae7df06be435becfd91e6be690ed347a01e3d6bc3a8fe08071e130c4ad32",
+      "bytes": 7395
+    },
+    "tests/unit/history.test.js": {
+      "sha256": "9fdaa93af141aedf2da32f8c267ee6b0f9170fda77948053388142e57549c436",
+      "bytes": 18373
+    },
+    "tests/support/prepared-fixture.mjs": {
+      "sha256": "7473aa0fd47bd3e56646b1dd28a4d8313235bff302ec086215e7f663e9616537",
+      "bytes": 3668
+    }
+  }
+}

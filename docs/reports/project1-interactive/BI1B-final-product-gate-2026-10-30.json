@@ -1,0 +1,199 @@
+{
+  "schema": "atlas.plane-gate",
+  "schemaVersion": 1,
+  "startedAt": "2026-10-30T18:57:36.826Z",
+  "commit": "71dc60a1c25172853f446f5bea06d3e7d555f3a5",
+  "requiredIds": [
+    "unit",
+    "build",
+    "reference",
+    "browser",
+    "workflow",
+    "browser-hardware",
+    "navigation",
+    "graphics",
+    "space-coexistence",
+    "space-recovery",
+    "space-numerics",
+    "space-rendering",
+    "space-shell",
+    "space-interaction",
+    "space-performance-bulb",
+    "space-performance-quaternion",
+    "space-performance-menger",
+    "space-prewarm",
+    "performance-entry",
+    "acceptance-audit",
+    "space-prepared",
+    "preparation-session-http",
+    "space-preparation-session",
+    "space-prepared-files",
+    "cleanup"
+  ],
+  "handoff": "Codex BI1.B reviewed scale-repair final gate 2026-10-30",
+  "deferral": null,
+  "results": {
+    "unit": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "build": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "reference": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence",
+      "evidence": [
+        {
+          "name": "P1 complete matrix regeneration",
+          "state": "passed",
+          "checked": {
+            "strata": 1123,
+            "mandatory": 979,
+            "anchors": 18,
+            "shards": 18
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 376208.614529
+        },
+        {
+          "name": "P2 quaternion usability regeneration",
+          "state": "passed",
+          "checked": {
+            "rays": 14400
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 285.8147300000419
+        },
+        {
+          "name": "P3 complete workload and prediction regeneration",
+          "state": "passed",
+          "checked": {
+            "scenes": 3,
+            "orbitPoses": 5625,
+            "interactionPoses": 1200,
+            "checkpoints": 15,
+            "rays": 5529600
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 38649.00217699999
+        }
+      ]
+    },
+    "performance-entry": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "acceptance-audit": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "preparation-session-http": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "browser": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "workflow": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "browser-hardware": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "navigation": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "graphics": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-coexistence": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-recovery": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-numerics": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-rendering": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-shell": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-interaction": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-performance-bulb": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-performance-quaternion": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-performance-menger": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-prewarm": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-prepared": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-preparation-session": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-prepared-files": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "cleanup": {
+      "state": "passed",
+      "reason": "every owned process exited"
+    }
+  },
+  "notes": [],
+  "server": "confirmed",
+  "finishedAt": "2026-10-30T19:30:10.243Z",
+  "overall": {
+    "state": "passed",
+    "exitCode": 0,
+    "reason": "every required suite passed"
+  }
+}

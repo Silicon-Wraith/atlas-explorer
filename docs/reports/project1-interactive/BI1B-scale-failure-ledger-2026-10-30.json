@@ -1,0 +1,3585 @@
+{
+  "head": "07775ed6b69d1571e1ef01eb2751697fe3f531cc",
+  "failure": "page.waitForFunction: Timeout 10000ms exceeded.\n    at /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b/tests/space-prepared.mjs:58:13",
+  "errors": [],
+  "cleanup": true,
+  "events": [
+    {
+      "type": "activation-requested",
+      "time": 1793385970846.7,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "generation": 2
+    },
+    {
+      "type": "session-renewed",
+      "time": 1793385971390.4,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 1,
+      "remainingMs": 29998.273118713896,
+      "verified": true
+    },
+    {
+      "type": "configuration",
+      "time": 1793385971390.4,
+      "world": {
+        "assets": [
+          {
+            "role": "base-field-evaluator",
+            "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+          },
+          {
+            "role": "canonical-parent-frame",
+            "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+          },
+          {
+            "role": "canonical-parent-samples",
+            "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+          },
+          {
+            "role": "construction",
+            "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+          },
+          {
+            "role": "descendant-rule",
+            "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+          },
+          {
+            "role": "parent-field-kernel",
+            "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+          }
+        ],
+        "generator": {
+          "id": "atlas.surface-descendant",
+          "version": "surface-descendant-r1"
+        },
+        "id": "H1C-surface-child@ee2564d40bda7ef6",
+        "lineage": [
+          {
+            "id": "H1C@61bbb572d425d9ee",
+            "parent": null
+          },
+          {
+            "id": "H1C/gchild/surface-descendant-r1",
+            "parent": "H1C@61bbb572d425d9ee"
+          }
+        ],
+        "parameters": {
+          "amplitude_m": 0.0002,
+          "chart_centre": [
+            -0.029882812666932553,
+            -0.11953125059172012
+          ],
+          "half_support_m": 0.0033203125,
+          "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+          "source_scale": 64
+        },
+        "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+      },
+      "producer": {
+        "instanceId": "1f157239-ad10-4790-83c1-d0005296f4ec",
+        "epoch": 0
+      }
+    },
+    {
+      "type": "request",
+      "time": 1793385971490.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:1",
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "addressKey": "0,0,0",
+      "started": 1793385971490.0999
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385972568.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:1",
+      "token": "2cef0ef0-8a27-4e24-8bbe-fa6df43fb9d4",
+      "bytes": 1207212,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385971494.9236,
+          "nativeReady": 1793385972555.5593,
+          "structuralMs": 65.8974609375
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 1849375,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 23249248,
+            "peak": 23249248,
+            "hits": 0,
+            "misses": 28,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 0,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 13011808,
+            "peak": 13011808,
+            "hits": 25,
+            "misses": 31,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      },
+      "cacheHit": false
+    },
+    {
+      "type": "consumer-prepared",
+      "time": 1793385972905.0999,
+      "representationKey": "fnv1a64:03a17384a7c07d06",
+      "intent": "interaction",
+      "classification": "surface",
+      "timings": {
+        "workerBegin": 1793385972569.5,
+        "workerEnd": 1793385972816.3,
+        "normalsMs": 17.5,
+        "collisionMs": 162.89999961853027,
+        "restoreMs": 80.2000002861023,
+        "warmupMs": 1.4000000953674316,
+        "uploadMs": 7.199999809265137,
+        "workerWasmCapacity": 26017792,
+        "mainWasmCapacity": 26607616,
+        "gpuBytes": 2818096,
+        "snapshotBytes": 11322122
+      }
+    },
+    {
+      "type": "ready",
+      "time": 1793385972905.8,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:1",
+      "addressKey": "0,0,0",
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "key": "fnv1a64:03a17384a7c07d06",
+      "artifact": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "buffers": [
+          {
+            "byteLength": 491688,
+            "role": "solid-indices",
+            "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+          },
+          {
+            "byteLength": 469656,
+            "role": "surface-indices",
+            "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+          },
+          {
+            "byteLength": 245868,
+            "role": "vertices",
+            "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+          }
+        ],
+        "classification": "surface",
+        "classificationBasis": {
+          "evidenceId": "sha256:5a4f5ec47e33fec19cdfb3ea3b175463a1b53579d7459bdd5243f7949f8e0f71",
+          "kind": "constructed-approximation",
+          "method": "native-composed-volume-and-paired-closed-edges",
+          "volumeM3": 7.1020640876408685e-06
+        },
+        "intent": "interaction",
+        "qualification": {
+          "denseValidation": false,
+          "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+          "kind": "empirical",
+          "limits": [
+            "Runtime instance not individually sampled at admission; policy qualified on 3 coarse representations.",
+            "Declared approximation target with finite evidence, not an everywhere error bound."
+          ],
+          "meshSamples": 0,
+          "referenceSamples": 0,
+          "toleranceM": 0.000265625
+        },
+        "representation": {
+          "builder": {
+            "id": "pc2-native-coarse",
+            "sourceDigests": [
+              {
+                "role": "adaptive_graph_pr3.py",
+                "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+              },
+              {
+                "role": "approach-r1.json",
+                "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+              },
+              {
+                "role": "base.npz",
+                "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+              },
+              {
+                "role": "builder_bw1.py",
+                "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+              },
+              {
+                "role": "builder_view.py",
+                "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+              },
+              {
+                "role": "cache_bw1.py",
+                "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+              },
+              {
+                "role": "cache_r0.py",
+                "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+              },
+              {
+                "role": "cache_view.py",
+                "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+              },
+              {
+                "role": "construction.json",
+                "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+              },
+              {
+                "role": "cpu-screen-r0.json",
+                "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+              },
+              {
+                "role": "descendant_world.py",
+                "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+              },
+              {
+                "role": "fkern.py",
+                "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+              },
+              {
+                "role": "frame.json",
+                "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+              },
+              {
+                "role": "h1lib.py",
+                "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+              },
+              {
+                "role": "manifold3d.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+              },
+              {
+                "role": "martini.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+              },
+              {
+                "role": "native-worker.py",
+                "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4"
+              },
+              {
+                "role": "parent-reference-r0.npz",
+                "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+              },
+              {
+                "role": "pert.py",
+                "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+              },
+              {
+                "role": "region_class.py",
+                "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+              },
+              {
+                "role": "sampling_r0.py",
+                "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+              },
+              {
+                "role": "streaming_builder_r0.py",
+                "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+              }
+            ],
+            "version": "r0/fnv1a64:f93f47585b2e145f"
+          },
+          "dependencies": [],
+          "features": [
+            "H1C/gchild/surface-descendant-r1",
+            "H1C@61bbb572d425d9ee"
+          ],
+          "sampling": {
+            "cells": 256,
+            "coordinateType": "float32-local-metres-per-unit",
+            "rtinToleranceM": 2.65625e-05,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625
+          }
+        },
+        "schema": "atlas.preparation.artifact",
+        "schemaVersion": 1,
+        "transform": {
+          "metresPerUnit": 0.0265625,
+          "originM": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ]
+        },
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "readinessMs": 1415.7001953125
+    },
+    {
+      "type": "entry",
+      "time": 1793385972906,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "0,0,0",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "key": "fnv1a64:03a17384a7c07d06",
+      "renderRevision": "fnv1a64:03a17384a7c07d06",
+      "collisionRevision": "fnv1a64:03a17384a7c07d06",
+      "position": [
+        1414.9757562519364,
+        79.21086912557448,
+        1040.6400501279961
+      ],
+      "bodyD": 0.0265625
+    },
+    {
+      "type": "request",
+      "time": 1793385972906.3,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:2",
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "addressKey": "v:0,0,0",
+      "started": 1793385972906.0999
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385974563.3,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:2",
+      "token": "c3fdb222-4ee9-4c6d-93ec-44675d9a2552",
+      "bytes": 3106728,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385972908.5579,
+          "nativeReady": 1793385974545.032,
+          "structuralMs": 305.749755859375
+        },
+        "fieldCalls": 47,
+        "fieldPoints": 2906159,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 23249248,
+            "peak": 23249248,
+            "hits": 0,
+            "misses": 28,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 0,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 13011808,
+            "peak": 13011808,
+            "hits": 25,
+            "misses": 31,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      },
+      "cacheHit": false
+    },
+    {
+      "type": "consumer-prepared",
+      "time": 1793385974656.0999,
+      "representationKey": "fnv1a64:ba146a5abc5a5630",
+      "intent": "view",
+      "classification": "surface",
+      "timings": {
+        "workerBegin": 1793385974563.8,
+        "workerEnd": 1793385974631,
+        "normalsMs": 67.09999990463257,
+        "collisionMs": 0,
+        "restoreMs": 0,
+        "warmupMs": 0,
+        "uploadMs": 25.199999809265137,
+        "workerWasmCapacity": 26017792,
+        "mainWasmCapacity": 26607616,
+        "gpuBytes": 12371344,
+        "snapshotBytes": 0
+      }
+    },
+    {
+      "type": "ready",
+      "time": 1793385974656.7,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:2",
+      "addressKey": "v:0,0,0",
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "key": "fnv1a64:ba146a5abc5a5630",
+      "artifact": {
+        "bounds": {
+          "max": [
+            1415.0820062519365,
+            79.31711912557448,
+            1040.7463001279962
+          ],
+          "min": [
+            1414.8695062519364,
+            79.10461912557447,
+            1040.533800127996
+          ]
+        },
+        "buffers": [
+          {
+            "byteLength": 2061864,
+            "role": "surface-indices",
+            "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec"
+          },
+          {
+            "byteLength": 1044864,
+            "role": "vertices",
+            "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b"
+          }
+        ],
+        "classification": "surface",
+        "classificationBasis": {
+          "evidenceId": "sha256:5aa378a373f4f5b02ae98ac4ab16fb5a0d3f4b880c5eaf54eb4b56f2b8917f89",
+          "kind": "constructed-approximation",
+          "method": "native-composed-volume-and-paired-closed-edges",
+          "volumeM3": 0.004174245014515507
+        },
+        "intent": "view",
+        "qualification": {
+          "denseValidation": false,
+          "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+          "kind": "empirical",
+          "limits": [
+            "Runtime instance not individually sampled at admission; policy qualified on 1 view representations.",
+            "Declared approximation target with finite evidence, not an everywhere error bound."
+          ],
+          "meshSamples": 0,
+          "referenceSamples": 0,
+          "toleranceM": 0.0010625
+        },
+        "representation": {
+          "builder": {
+            "id": "pc2-native-view",
+            "sourceDigests": [
+              {
+                "role": "adaptive_graph_pr3.py",
+                "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+              },
+              {
+                "role": "approach-r1.json",
+                "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+              },
+              {
+                "role": "base.npz",
+                "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+              },
+              {
+                "role": "builder_bw1.py",
+                "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+              },
+              {
+                "role": "builder_view.py",
+                "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+              },
+              {
+                "role": "cache_bw1.py",
+                "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+              },
+              {
+                "role": "cache_r0.py",
+                "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+              },
+              {
+                "role": "cache_view.py",
+                "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+              },
+              {
+                "role": "construction.json",
+                "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+              },
+              {
+                "role": "cpu-screen-r0.json",
+                "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+              },
+              {
+                "role": "descendant_world.py",
+                "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+              },
+              {
+                "role": "fkern.py",
+                "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+              },
+              {
+                "role": "frame.json",
+                "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+              },
+              {
+                "role": "h1lib.py",
+                "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+              },
+              {
+                "role": "manifold3d.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+              },
+              {
+                "role": "martini.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+              },
+              {
+                "role": "native-worker.py",
+                "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4"
+              },
+              {
+                "role": "parent-reference-r0.npz",
+                "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+              },
+              {
+                "role": "pert.py",
+                "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+              },
+              {
+                "role": "region_class.py",
+                "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+              },
+              {
+                "role": "sampling_r0.py",
+                "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+              },
+              {
+                "role": "streaming_builder_r0.py",
+                "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+              }
+            ],
+            "version": "r0/fnv1a64:f93f47585b2e145f"
+          },
+          "dependencies": [],
+          "features": [
+            "H1C/gchild/surface-descendant-r1",
+            "H1C@61bbb572d425d9ee"
+          ],
+          "sampling": {
+            "cells": 256,
+            "coordinateType": "float32-local-metres-per-unit",
+            "rtinToleranceM": 0.00010625,
+            "stepM": 0.0004150390625,
+            "tileWidthM": 0.10625
+          }
+        },
+        "schema": "atlas.preparation.artifact",
+        "schemaVersion": 1,
+        "transform": {
+          "metresPerUnit": 0.10625,
+          "originM": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ]
+        },
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "readinessMs": 1750.60009765625
+    },
+    {
+      "type": "first-presented",
+      "time": 1793385974658.4,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "key": "fnv1a64:03a17384a7c07d06"
+    },
+    {
+      "type": "request",
+      "time": 1793385974763.2,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:3",
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        1
+      ],
+      "addressKey": "0,0,1",
+      "started": 1793385974762.9
+    },
+    {
+      "type": "request",
+      "time": 1793385974763.3,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:4",
+      "kind": "coarse",
+      "address": [
+        0,
+        1,
+        1
+      ],
+      "addressKey": "0,1,1",
+      "started": 1793385974763.2
+    },
+    {
+      "type": "request",
+      "time": 1793385975263.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:5",
+      "kind": "coarse",
+      "address": [
+        0,
+        1,
+        2
+      ],
+      "addressKey": "0,1,2",
+      "started": 1793385975263.3
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385975626.4,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:3",
+      "token": "1d7605be-dee4-48f1-acd3-64ef268659fb",
+      "bytes": 3000,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385974767.1128,
+          "nativeReady": 1793385975619.3699,
+          "structuralMs": 0.801025390625
+        },
+        "fieldCalls": 16,
+        "fieldPoints": 1056784,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 38044224,
+            "peak": 38044224,
+            "hits": 28,
+            "misses": 44,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 3,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 21806464,
+            "peak": 21806464,
+            "hits": 96,
+            "misses": 48,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      },
+      "cacheHit": false
+    },
+    {
+      "type": "consumer-prepared",
+      "time": 1793385975635,
+      "representationKey": "fnv1a64:4b2f1f5b20858a82",
+      "intent": "interaction",
+      "classification": "surface",
+      "timings": {
+        "workerBegin": 1793385975627,
+        "workerEnd": 1793385975627.6,
+        "normalsMs": 0,
+        "collisionMs": 0.5999999046325684,
+        "restoreMs": 0.3000001907348633,
+        "warmupMs": 0.09999990463256836,
+        "uploadMs": 7.099999904632568,
+        "workerWasmCapacity": 26017792,
+        "mainWasmCapacity": 26607616,
+        "gpuBytes": 5704,
+        "snapshotBytes": 31721
+      }
+    },
+    {
+      "type": "ready",
+      "time": 1793385975635.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:3",
+      "addressKey": "0,0,1",
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        1
+      ],
+      "key": "fnv1a64:4b2f1f5b20858a82",
+      "artifact": {
+        "bounds": {
+          "max": [
+            1415.008815806491,
+            79.24885570887675,
+            1040.6685284057446
+          ],
+          "min": [
+            1414.955690806491,
+            79.19573070887675,
+            1040.6154034057447
+          ]
+        },
+        "buffers": [
+          {
+            "byteLength": 1368,
+            "role": "solid-indices",
+            "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a"
+          },
+          {
+            "byteLength": 924,
+            "role": "surface-indices",
+            "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb"
+          },
+          {
+            "byteLength": 708,
+            "role": "vertices",
+            "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad"
+          }
+        ],
+        "classification": "surface",
+        "classificationBasis": {
+          "evidenceId": "sha256:7203e4b4de0f4caf8bd1da3c6bde816f0253ee355c09647930c410552f7c1dc8",
+          "kind": "constructed-approximation",
+          "method": "native-composed-volume-and-paired-closed-edges",
+          "volumeM3": 7.108950809365712e-09
+        },
+        "intent": "interaction",
+        "qualification": {
+          "denseValidation": false,
+          "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+          "kind": "empirical",
+          "limits": [
+            "Runtime instance not individually sampled at admission; policy qualified on 3 coarse representations.",
+            "Declared approximation target with finite evidence, not an everywhere error bound."
+          ],
+          "meshSamples": 0,
+          "referenceSamples": 0,
+          "toleranceM": 0.000265625
+        },
+        "representation": {
+          "builder": {
+            "id": "pc2-native-coarse",
+            "sourceDigests": [
+              {
+                "role": "adaptive_graph_pr3.py",
+                "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+              },
+              {
+                "role": "approach-r1.json",
+                "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+              },
+              {
+                "role": "base.npz",
+                "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+              },
+              {
+                "role": "builder_bw1.py",
+                "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+              },
+              {
+                "role": "builder_view.py",
+                "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+              },
+              {
+                "role": "cache_bw1.py",
+                "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+              },
+              {
+                "role": "cache_r0.py",
+                "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+              },
+              {
+                "role": "cache_view.py",
+                "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+              },
+              {
+                "role": "construction.json",
+                "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+              },
+              {
+                "role": "cpu-screen-r0.json",
+                "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+              },
+              {
+                "role": "descendant_world.py",
+                "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+              },
+              {
+                "role": "fkern.py",
+                "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+              },
+              {
+                "role": "frame.json",
+                "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+              },
+              {
+                "role": "h1lib.py",
+                "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+              },
+              {
+                "role": "manifold3d.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+              },
+              {
+                "role": "martini.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+              },
+              {
+                "role": "native-worker.py",
+                "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4"
+              },
+              {
+                "role": "parent-reference-r0.npz",
+                "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+              },
+              {
+                "role": "pert.py",
+                "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+              },
+              {
+                "role": "region_class.py",
+                "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+              },
+              {
+                "role": "sampling_r0.py",
+                "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+              },
+              {
+                "role": "streaming_builder_r0.py",
+                "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+              }
+            ],
+            "version": "r0/fnv1a64:f93f47585b2e145f"
+          },
+          "dependencies": [],
+          "features": [
+            "H1C/gchild/surface-descendant-r1",
+            "H1C@61bbb572d425d9ee"
+          ],
+          "sampling": {
+            "cells": 256,
+            "coordinateType": "float32-local-metres-per-unit",
+            "rtinToleranceM": 2.65625e-05,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625
+          }
+        },
+        "schema": "atlas.preparation.artifact",
+        "schemaVersion": 1,
+        "transform": {
+          "metresPerUnit": 0.0265625,
+          "originM": [
+            1414.982253306491,
+            79.22229320887675,
+            1040.6419659057447
+          ]
+        },
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "readinessMs": 872.60009765625
+    },
+    {
+      "type": "entry",
+      "time": 1793385975643.0999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "0,0,1",
+      "address": [
+        0,
+        0,
+        1
+      ],
+      "previous": "0,0,0",
+      "key": "fnv1a64:4b2f1f5b20858a82",
+      "renderRevision": "fnv1a64:4b2f1f5b20858a82",
+      "collisionRevision": "fnv1a64:4b2f1f5b20858a82",
+      "position": [
+        1414.9757562519364,
+        79.22361912557452,
+        1040.6400501279961
+      ],
+      "bodyD": 0.0265625
+    },
+    {
+      "type": "session-renewed",
+      "time": 1793385976392.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 2,
+      "remainingMs": 29997.971185000002,
+      "verified": true
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385976425.9,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:4",
+      "addressKey": "0,1,1",
+      "state": "cancelled",
+      "reason": "obsolete prediction"
+    },
+    {
+      "type": "request",
+      "time": 1793385977182.8,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:6",
+      "kind": "coarse",
+      "address": [
+        1,
+        1,
+        2
+      ],
+      "addressKey": "1,1,2",
+      "started": 1793385977182.5999
+    },
+    {
+      "type": "request",
+      "time": 1793385977182.9,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:7",
+      "kind": "coarse",
+      "address": [
+        2,
+        1,
+        2
+      ],
+      "addressKey": "2,1,2",
+      "started": 1793385977182.8
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385977607.7,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:5",
+      "token": "f8a5fd97-d56e-4c99-9401-85dc51d85990",
+      "bytes": 0,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385976778.9753,
+          "nativeReady": 1793385977601.8105,
+          "structuralMs": 0.43115234375
+        },
+        "fieldCalls": 1,
+        "fieldPoints": 66049,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 52839200,
+            "peak": 52839200,
+            "hits": 111,
+            "misses": 60,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 9,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 32509992,
+            "peak": 32509992,
+            "hits": 278,
+            "misses": 64,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      },
+      "cacheHit": false
+    },
+    {
+      "type": "consumer-prepared",
+      "time": 1793385977608.5,
+      "representationKey": "fnv1a64:b74f104ca2024264",
+      "intent": "interaction",
+      "classification": "empty-air",
+      "timings": {
+        "workerBegin": 1793385977608.2,
+        "workerEnd": 1793385977608.2,
+        "normalsMs": 0,
+        "collisionMs": 0,
+        "restoreMs": 0,
+        "warmupMs": 0,
+        "uploadMs": 0.40000009536743164,
+        "workerWasmCapacity": 26017792,
+        "mainWasmCapacity": 26607616,
+        "gpuBytes": 0,
+        "snapshotBytes": 0
+      }
+    },
+    {
+      "type": "ready",
+      "time": 1793385977609.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:5",
+      "addressKey": "0,1,2",
+      "kind": "coarse",
+      "address": [
+        0,
+        1,
+        2
+      ],
+      "key": "fnv1a64:b74f104ca2024264",
+      "artifact": {
+        "bounds": {
+          "max": [
+            1415.0037292569568,
+            79.26668737412697,
+            1040.6715187119776
+          ],
+          "min": [
+            1414.950604256957,
+            79.21356237412698,
+            1040.6183937119777
+          ]
+        },
+        "buffers": [
+          {
+            "byteLength": 0,
+            "role": "solid-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "surface-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "vertices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "classification": "empty-air",
+        "classificationBasis": {
+          "evidenceId": "sha256:cdfdfed52dac49324c21a8f326a863bfe8a3ba6f91192e5f332c56a2f56aff00",
+          "kind": "constructed-approximation",
+          "method": "native-composed-volume-and-paired-closed-edges",
+          "volumeM3": 0
+        },
+        "intent": "interaction",
+        "qualification": {
+          "denseValidation": false,
+          "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+          "kind": "empirical",
+          "limits": [
+            "Runtime instance not individually sampled at admission; policy qualified on 3 coarse representations.",
+            "Declared approximation target with finite evidence, not an everywhere error bound."
+          ],
+          "meshSamples": 0,
+          "referenceSamples": 0,
+          "toleranceM": 0.000265625
+        },
+        "representation": {
+          "builder": {
+            "id": "pc2-native-coarse",
+            "sourceDigests": [
+              {
+                "role": "adaptive_graph_pr3.py",
+                "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+              },
+              {
+                "role": "approach-r1.json",
+                "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+              },
+              {
+                "role": "base.npz",
+                "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+              },
+              {
+                "role": "builder_bw1.py",
+                "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+              },
+              {
+                "role": "builder_view.py",
+                "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+              },
+              {
+                "role": "cache_bw1.py",
+                "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+              },
+              {
+                "role": "cache_r0.py",
+                "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+              },
+              {
+                "role": "cache_view.py",
+                "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+              },
+              {
+                "role": "construction.json",
+                "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+              },
+              {
+                "role": "cpu-screen-r0.json",
+                "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+              },
+              {
+                "role": "descendant_world.py",
+                "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+              },
+              {
+                "role": "fkern.py",
+                "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+              },
+              {
+                "role": "frame.json",
+                "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+              },
+              {
+                "role": "h1lib.py",
+                "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+              },
+              {
+                "role": "manifold3d.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+              },
+              {
+                "role": "martini.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+              },
+              {
+                "role": "native-worker.py",
+                "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4"
+              },
+              {
+                "role": "parent-reference-r0.npz",
+                "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+              },
+              {
+                "role": "pert.py",
+                "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+              },
+              {
+                "role": "region_class.py",
+                "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+              },
+              {
+                "role": "sampling_r0.py",
+                "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+              },
+              {
+                "role": "streaming_builder_r0.py",
+                "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+              }
+            ],
+            "version": "r0/fnv1a64:f93f47585b2e145f"
+          },
+          "dependencies": [],
+          "features": [
+            "H1C/gchild/surface-descendant-r1",
+            "H1C@61bbb572d425d9ee"
+          ],
+          "sampling": {
+            "cells": 256,
+            "coordinateType": "float32-local-metres-per-unit",
+            "rtinToleranceM": 2.65625e-05,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625
+          }
+        },
+        "schema": "atlas.preparation.artifact",
+        "schemaVersion": 1,
+        "transform": {
+          "metresPerUnit": 0.0265625,
+          "originM": [
+            1414.9771667569569,
+            79.24012487412698,
+            1040.6449562119776
+          ]
+        },
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "readinessMs": 2346.2998046875
+    },
+    {
+      "type": "entry",
+      "time": 1793385977623.2,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "0,1,2",
+      "address": [
+        0,
+        1,
+        2
+      ],
+      "previous": "0,0,1",
+      "key": "fnv1a64:b74f104ca2024264",
+      "renderRevision": "fnv1a64:b74f104ca2024264",
+      "collisionRevision": "fnv1a64:b74f104ca2024264",
+      "position": [
+        1414.9757562519364,
+        79.23552760833404,
+        1040.6387402929465
+      ],
+      "bodyD": 0.0265625
+    },
+    {
+      "type": "request",
+      "time": 1793385977722.9,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:8",
+      "kind": "coarse",
+      "address": [
+        3,
+        1,
+        2
+      ],
+      "addressKey": "3,1,2",
+      "started": 1793385977722.7
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385978364.9,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:7",
+      "addressKey": "2,1,2",
+      "state": "cancelled",
+      "reason": "obsolete prediction"
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385978365.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:8",
+      "addressKey": "3,1,2",
+      "state": "cancelled",
+      "reason": "obsolete prediction"
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385978440.7,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:6",
+      "token": "55162034-8e1c-479b-9f85-1cd98215b11b",
+      "bytes": 0,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385977604.3108,
+          "nativeReady": 1793385978435.5479,
+          "structuralMs": 0.44287109375
+        },
+        "fieldCalls": 0,
+        "fieldPoints": 0,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 52839200,
+            "peak": 52839200,
+            "hits": 154,
+            "misses": 60,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 12,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 32509992,
+            "peak": 32509992,
+            "hits": 364,
+            "misses": 64,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      },
+      "cacheHit": false
+    },
+    {
+      "type": "consumer-prepared",
+      "time": 1793385978441.5,
+      "representationKey": "fnv1a64:108f9a2487d58e99",
+      "intent": "interaction",
+      "classification": "empty-air",
+      "timings": {
+        "workerBegin": 1793385978441.2,
+        "workerEnd": 1793385978441.2,
+        "normalsMs": 0,
+        "collisionMs": 0,
+        "restoreMs": 0,
+        "warmupMs": 0,
+        "uploadMs": 0.5,
+        "workerWasmCapacity": 26017792,
+        "mainWasmCapacity": 26607616,
+        "gpuBytes": 0,
+        "snapshotBytes": 0
+      }
+    },
+    {
+      "type": "ready",
+      "time": 1793385978442,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:6",
+      "addressKey": "1,1,2",
+      "kind": "coarse",
+      "address": [
+        1,
+        1,
+        2
+      ],
+      "key": "fnv1a64:108f9a2487d58e99",
+      "artifact": {
+        "bounds": {
+          "max": [
+            1415.0037292569568,
+            79.26888392047191,
+            1040.6584203614814
+          ],
+          "min": [
+            1414.950604256957,
+            79.21575892047191,
+            1040.6052953614815
+          ]
+        },
+        "buffers": [
+          {
+            "byteLength": 0,
+            "role": "solid-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "surface-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "vertices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "classification": "empty-air",
+        "classificationBasis": {
+          "evidenceId": "sha256:a42ce070144b7181ccb853d82fa09b214c9c64dd8f3063a84a1474042d45bccb",
+          "kind": "constructed-approximation",
+          "method": "native-composed-volume-and-paired-closed-edges",
+          "volumeM3": 0
+        },
+        "intent": "interaction",
+        "qualification": {
+          "denseValidation": false,
+          "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+          "kind": "empirical",
+          "limits": [
+            "Runtime instance not individually sampled at admission; policy qualified on 3 coarse representations.",
+            "Declared approximation target with finite evidence, not an everywhere error bound."
+          ],
+          "meshSamples": 0,
+          "referenceSamples": 0,
+          "toleranceM": 0.000265625
+        },
+        "representation": {
+          "builder": {
+            "id": "pc2-native-coarse",
+            "sourceDigests": [
+              {
+                "role": "adaptive_graph_pr3.py",
+                "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+              },
+              {
+                "role": "approach-r1.json",
+                "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+              },
+              {
+                "role": "base.npz",
+                "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+              },
+              {
+                "role": "builder_bw1.py",
+                "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+              },
+              {
+                "role": "builder_view.py",
+                "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+              },
+              {
+                "role": "cache_bw1.py",
+                "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+              },
+              {
+                "role": "cache_r0.py",
+                "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+              },
+              {
+                "role": "cache_view.py",
+                "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+              },
+              {
+                "role": "construction.json",
+                "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+              },
+              {
+                "role": "cpu-screen-r0.json",
+                "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+              },
+              {
+                "role": "descendant_world.py",
+                "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+              },
+              {
+                "role": "fkern.py",
+                "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+              },
+              {
+                "role": "frame.json",
+                "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+              },
+              {
+                "role": "h1lib.py",
+                "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+              },
+              {
+                "role": "manifold3d.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+              },
+              {
+                "role": "martini.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+              },
+              {
+                "role": "native-worker.py",
+                "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4"
+              },
+              {
+                "role": "parent-reference-r0.npz",
+                "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+              },
+              {
+                "role": "pert.py",
+                "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+              },
+              {
+                "role": "region_class.py",
+                "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+              },
+              {
+                "role": "sampling_r0.py",
+                "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+              },
+              {
+                "role": "streaming_builder_r0.py",
+                "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+              }
+            ],
+            "version": "r0/fnv1a64:f93f47585b2e145f"
+          },
+          "dependencies": [],
+          "features": [
+            "H1C/gchild/surface-descendant-r1",
+            "H1C@61bbb572d425d9ee"
+          ],
+          "sampling": {
+            "cells": 256,
+            "coordinateType": "float32-local-metres-per-unit",
+            "rtinToleranceM": 2.65625e-05,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625
+          }
+        },
+        "schema": "atlas.preparation.artifact",
+        "schemaVersion": 1,
+        "transform": {
+          "metresPerUnit": 0.0265625,
+          "originM": [
+            1414.9771667569569,
+            79.24232142047191,
+            1040.6318578614814
+          ]
+        },
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "readinessMs": 1259.400146484375
+    },
+    {
+      "type": "entry",
+      "time": 1793385978442.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "1,1,2",
+      "address": [
+        1,
+        1,
+        2
+      ],
+      "previous": "0,1,2",
+      "key": "fnv1a64:108f9a2487d58e99",
+      "renderRevision": "fnv1a64:108f9a2487d58e99",
+      "collisionRevision": "fnv1a64:108f9a2487d58e99",
+      "position": [
+        1414.9757562519364,
+        79.23636229594507,
+        1040.633762919758
+      ],
+      "bodyD": 0.0265625
+    },
+    {
+      "type": "request",
+      "time": 1793385978482.9,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:9",
+      "kind": "coarse",
+      "address": [
+        -1,
+        1,
+        2
+      ],
+      "addressKey": "-1,1,2",
+      "started": 1793385978482.8
+    },
+    {
+      "type": "entry",
+      "time": 1793385978722.7,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "0,1,2",
+      "address": [
+        0,
+        1,
+        2
+      ],
+      "previous": "1,1,2",
+      "key": "fnv1a64:b74f104ca2024264",
+      "renderRevision": "fnv1a64:b74f104ca2024264",
+      "collisionRevision": "fnv1a64:b74f104ca2024264",
+      "position": [
+        1414.9757562519364,
+        79.23574748262314,
+        1040.637429148062
+      ],
+      "bodyD": 0.0265625
+    },
+    {
+      "type": "request",
+      "time": 1793385978803,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:10",
+      "kind": "coarse",
+      "address": [
+        -2,
+        1,
+        2
+      ],
+      "addressKey": "-2,1,2",
+      "started": 1793385978802.7
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385979312.2,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:9",
+      "token": "9498ca8f-674b-40ca-99cb-b6ae51ca7308",
+      "bytes": 0,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385978485.427,
+          "nativeReady": 1793385979306.1833,
+          "structuralMs": 0.5107421875
+        },
+        "fieldCalls": 0,
+        "fieldPoints": 0,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 52839200,
+            "peak": 52839200,
+            "hits": 202,
+            "misses": 60,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 15,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 32509992,
+            "peak": 32509992,
+            "hits": 460,
+            "misses": 64,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      },
+      "cacheHit": false
+    },
+    {
+      "type": "consumer-prepared",
+      "time": 1793385979313.0999,
+      "representationKey": "fnv1a64:4918b062378a9c68",
+      "intent": "interaction",
+      "classification": "empty-air",
+      "timings": {
+        "workerBegin": 1793385979312.7,
+        "workerEnd": 1793385979312.7,
+        "normalsMs": 0,
+        "collisionMs": 0,
+        "restoreMs": 0,
+        "warmupMs": 0,
+        "uploadMs": 0.5,
+        "workerWasmCapacity": 26017792,
+        "mainWasmCapacity": 26607616,
+        "gpuBytes": 0,
+        "snapshotBytes": 0
+      }
+    },
+    {
+      "type": "ready",
+      "time": 1793385979313.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:9",
+      "addressKey": "-1,1,2",
+      "kind": "coarse",
+      "address": [
+        -1,
+        1,
+        2
+      ],
+      "key": "fnv1a64:4918b062378a9c68",
+      "artifact": {
+        "bounds": {
+          "max": [
+            1415.0037292569568,
+            79.26449082778204,
+            1040.6846170624735
+          ],
+          "min": [
+            1414.950604256957,
+            79.21136582778205,
+            1040.6314920624736
+          ]
+        },
+        "buffers": [
+          {
+            "byteLength": 0,
+            "role": "solid-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "surface-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "vertices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "classification": "empty-air",
+        "classificationBasis": {
+          "evidenceId": "sha256:598ed3018a99ffb7e9c751f8e4e278ae5fe023e596a18d500fdf79904ea5356a",
+          "kind": "constructed-approximation",
+          "method": "native-composed-volume-and-paired-closed-edges",
+          "volumeM3": 0
+        },
+        "intent": "interaction",
+        "qualification": {
+          "denseValidation": false,
+          "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+          "kind": "empirical",
+          "limits": [
+            "Runtime instance not individually sampled at admission; policy qualified on 3 coarse representations.",
+            "Declared approximation target with finite evidence, not an everywhere error bound."
+          ],
+          "meshSamples": 0,
+          "referenceSamples": 0,
+          "toleranceM": 0.000265625
+        },
+        "representation": {
+          "builder": {
+            "id": "pc2-native-coarse",
+            "sourceDigests": [
+              {
+                "role": "adaptive_graph_pr3.py",
+                "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+              },
+              {
+                "role": "approach-r1.json",
+                "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+              },
+              {
+                "role": "base.npz",
+                "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+              },
+              {
+                "role": "builder_bw1.py",
+                "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+              },
+              {
+                "role": "builder_view.py",
+                "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+              },
+              {
+                "role": "cache_bw1.py",
+                "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+              },
+              {
+                "role": "cache_r0.py",
+                "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+              },
+              {
+                "role": "cache_view.py",
+                "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+              },
+              {
+                "role": "construction.json",
+                "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+              },
+              {
+                "role": "cpu-screen-r0.json",
+                "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+              },
+              {
+                "role": "descendant_world.py",
+                "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+              },
+              {
+                "role": "fkern.py",
+                "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+              },
+              {
+                "role": "frame.json",
+                "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+              },
+              {
+                "role": "h1lib.py",
+                "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+              },
+              {
+                "role": "manifold3d.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+              },
+              {
+                "role": "martini.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+              },
+              {
+                "role": "native-worker.py",
+                "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4"
+              },
+              {
+                "role": "parent-reference-r0.npz",
+                "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+              },
+              {
+                "role": "pert.py",
+                "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+              },
+              {
+                "role": "region_class.py",
+                "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+              },
+              {
+                "role": "sampling_r0.py",
+                "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+              },
+              {
+                "role": "streaming_builder_r0.py",
+                "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+              }
+            ],
+            "version": "r0/fnv1a64:f93f47585b2e145f"
+          },
+          "dependencies": [],
+          "features": [
+            "H1C/gchild/surface-descendant-r1",
+            "H1C@61bbb572d425d9ee"
+          ],
+          "sampling": {
+            "cells": 256,
+            "coordinateType": "float32-local-metres-per-unit",
+            "rtinToleranceM": 2.65625e-05,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625
+          }
+        },
+        "schema": "atlas.preparation.artifact",
+        "schemaVersion": 1,
+        "transform": {
+          "metresPerUnit": 0.0265625,
+          "originM": [
+            1414.9771667569569,
+            79.23792832778204,
+            1040.6580545624736
+          ]
+        },
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "readinessMs": 830.699951171875
+    },
+    {
+      "type": "request",
+      "time": 1793385979543.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:11",
+      "kind": "coarse",
+      "address": [
+        0,
+        1,
+        1
+      ],
+      "addressKey": "0,1,1",
+      "started": 1793385979543.4
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385979550.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:10",
+      "addressKey": "-2,1,2",
+      "state": "cancelled",
+      "reason": "obsolete prediction"
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385979553.2,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:11",
+      "token": "85fc9963-7fad-4720-90d6-216e4c380f58",
+      "bytes": 0,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385975622.4265,
+          "nativeReady": 1793385976778.292,
+          "structuralMs": 0.47705078125
+        },
+        "fieldCalls": 15,
+        "fieldPoints": 990735,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 52310808,
+            "peak": 52310808,
+            "hits": 65,
+            "misses": 59,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 6,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 32422584,
+            "peak": 32422584,
+            "hits": 185,
+            "misses": 63,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      },
+      "cacheHit": true
+    },
+    {
+      "type": "consumer-prepared",
+      "time": 1793385979554.2,
+      "representationKey": "fnv1a64:5ff3ab10c8a3d225",
+      "intent": "interaction",
+      "classification": "empty-air",
+      "timings": {
+        "workerBegin": 1793385979553.8,
+        "workerEnd": 1793385979553.9001,
+        "normalsMs": 0,
+        "collisionMs": 0,
+        "restoreMs": 0,
+        "warmupMs": 0,
+        "uploadMs": 0.39999961853027344,
+        "workerWasmCapacity": 26017792,
+        "mainWasmCapacity": 26607616,
+        "gpuBytes": 0,
+        "snapshotBytes": 0
+      }
+    },
+    {
+      "type": "ready",
+      "time": 1793385979554.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:11",
+      "addressKey": "0,1,1",
+      "kind": "coarse",
+      "address": [
+        0,
+        1,
+        1
+      ],
+      "key": "fnv1a64:5ff3ab10c8a3d225",
+      "artifact": {
+        "bounds": {
+          "max": [
+            1414.9972322024023,
+            79.2552632908247,
+            1040.669602934229
+          ],
+          "min": [
+            1414.9441072024024,
+            79.2021382908247,
+            1040.6164779342291
+          ]
+        },
+        "buffers": [
+          {
+            "byteLength": 0,
+            "role": "solid-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "surface-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "vertices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "classification": "empty-air",
+        "classificationBasis": {
+          "evidenceId": "sha256:23bc51e5b7adc9a2fbbec1e54735c435f14c2c5094d00bdb3fce79710aeb913b",
+          "kind": "constructed-approximation",
+          "method": "native-composed-volume-and-paired-closed-edges",
+          "volumeM3": 0
+        },
+        "intent": "interaction",
+        "qualification": {
+          "denseValidation": false,
+          "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+          "kind": "empirical",
+          "limits": [
+            "Runtime instance not individually sampled at admission; policy qualified on 3 coarse representations.",
+            "Declared approximation target with finite evidence, not an everywhere error bound."
+          ],
+          "meshSamples": 0,
+          "referenceSamples": 0,
+          "toleranceM": 0.000265625
+        },
+        "representation": {
+          "builder": {
+            "id": "pc2-native-coarse",
+            "sourceDigests": [
+              {
+                "role": "adaptive_graph_pr3.py",
+                "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+              },
+              {
+                "role": "approach-r1.json",
+                "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+              },
+              {
+                "role": "base.npz",
+                "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+              },
+              {
+                "role": "builder_bw1.py",
+                "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+              },
+              {
+                "role": "builder_view.py",
+                "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+              },
+              {
+                "role": "cache_bw1.py",
+                "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+              },
+              {
+                "role": "cache_r0.py",
+                "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+              },
+              {
+                "role": "cache_view.py",
+                "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+              },
+              {
+                "role": "construction.json",
+                "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+              },
+              {
+                "role": "cpu-screen-r0.json",
+                "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+              },
+              {
+                "role": "descendant_world.py",
+                "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+              },
+              {
+                "role": "fkern.py",
+                "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+              },
+              {
+                "role": "frame.json",
+                "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+              },
+              {
+                "role": "h1lib.py",
+                "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+              },
+              {
+                "role": "manifold3d.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+              },
+              {
+                "role": "martini.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+              },
+              {
+                "role": "native-worker.py",
+                "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4"
+              },
+              {
+                "role": "parent-reference-r0.npz",
+                "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+              },
+              {
+                "role": "pert.py",
+                "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+              },
+              {
+                "role": "region_class.py",
+                "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+              },
+              {
+                "role": "sampling_r0.py",
+                "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+              },
+              {
+                "role": "streaming_builder_r0.py",
+                "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+              }
+            ],
+            "version": "r0/fnv1a64:f93f47585b2e145f"
+          },
+          "dependencies": [],
+          "features": [
+            "H1C/gchild/surface-descendant-r1",
+            "H1C@61bbb572d425d9ee"
+          ],
+          "sampling": {
+            "cells": 256,
+            "coordinateType": "float32-local-metres-per-unit",
+            "rtinToleranceM": 2.65625e-05,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625
+          }
+        },
+        "schema": "atlas.preparation.artifact",
+        "schemaVersion": 1,
+        "transform": {
+          "metresPerUnit": 0.0265625,
+          "originM": [
+            1414.9706697024023,
+            79.2287007908247,
+            1040.643040434229
+          ]
+        },
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "readinessMs": 11.199951171875
+    },
+    {
+      "type": "entry",
+      "time": 1793385979603.0999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "0,1,1",
+      "address": [
+        0,
+        1,
+        1
+      ],
+      "previous": "0,1,2",
+      "key": "fnv1a64:5ff3ab10c8a3d225",
+      "renderRevision": "fnv1a64:5ff3ab10c8a3d225",
+      "collisionRevision": "fnv1a64:5ff3ab10c8a3d225",
+      "position": [
+        1414.9757562519364,
+        79.23302330376447,
+        1040.6473144000724
+      ],
+      "bodyD": 0.0265625
+    },
+    {
+      "type": "entry",
+      "time": 1793385980362.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "0,0,1",
+      "address": [
+        0,
+        0,
+        1
+      ],
+      "previous": "0,1,1",
+      "key": "fnv1a64:4b2f1f5b20858a82",
+      "renderRevision": "fnv1a64:4b2f1f5b20858a82",
+      "collisionRevision": "fnv1a64:4b2f1f5b20858a82",
+      "position": [
+        1414.9757562519364,
+        79.22393680749661,
+        1040.64433497197
+      ],
+      "bodyD": 0.0265625
+    },
+    {
+      "type": "request",
+      "time": 1793385980443.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:12",
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        -1
+      ],
+      "addressKey": "0,0,-1",
+      "started": 1793385980443.4
+    },
+    {
+      "type": "entry",
+      "time": 1793385980823.3,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "0,0,0",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "previous": "0,0,1",
+      "key": "fnv1a64:03a17384a7c07d06",
+      "renderRevision": "fnv1a64:03a17384a7c07d06",
+      "collisionRevision": "fnv1a64:03a17384a7c07d06",
+      "position": [
+        1414.9757562519364,
+        79.21838394866644,
+        1040.6425142103515
+      ],
+      "bodyD": 0.0265625
+    },
+    {
+      "type": "request",
+      "time": 1793385980863.4,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:13",
+      "kind": "coarse",
+      "address": [
+        0,
+        -1,
+        -1
+      ],
+      "addressKey": "0,-1,-1",
+      "started": 1793385980863.3
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385981398.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:12",
+      "token": "08bde5d1-e7dc-4f1a-b0da-afa92827b570",
+      "bytes": 4145796,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385980446.3823,
+          "nativeReady": 1793385981359.567,
+          "structuralMs": 252.754150390625
+        },
+        "fieldCalls": 0,
+        "fieldPoints": 0,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 54952768,
+            "peak": 54952768,
+            "hits": 278,
+            "misses": 64,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 21,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 32859624,
+            "peak": 32859624,
+            "hits": 616,
+            "misses": 68,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      },
+      "cacheHit": false
+    },
+    {
+      "type": "session-renewed",
+      "time": 1793385981400.4,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 3,
+      "remainingMs": 29998.479851999997,
+      "verified": true
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385981404.3,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:13",
+      "addressKey": "0,-1,-1",
+      "state": "cancelled",
+      "reason": "obsolete prediction"
+    },
+    {
+      "type": "retired",
+      "time": 1793385981405.8,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "addressKey": "1,1,2",
+      "key": "fnv1a64:108f9a2487d58e99"
+    },
+    {
+      "type": "request",
+      "time": 1793385981604,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:14",
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        -2
+      ],
+      "addressKey": "0,0,-2",
+      "started": 1793385981603.8
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385981783.7,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:12",
+      "addressKey": "0,0,-1",
+      "state": "cancelled",
+      "reason": "obsolete prediction"
+    },
+    {
+      "type": "request",
+      "time": 1793385981825.2,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:15",
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        -1
+      ],
+      "addressKey": "0,0,-1",
+      "started": 1793385981824.9
+    },
+    {
+      "type": "request",
+      "time": 1793385981923.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:16",
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "addressKey": "fine",
+      "started": 1793385981923.4
+    },
+    {
+      "type": "scale-deferred",
+      "time": 1793385981923.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "reason": "preparation",
+      "smaller": true
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385981926.0999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:16",
+      "addressKey": "fine",
+      "state": "unsupported",
+      "reason": "Native queue capacity; retry after deferral"
+    },
+    {
+      "type": "request",
+      "time": 1793385981926.3,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:17",
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "addressKey": "fine",
+      "started": 1793385981926.2
+    },
+    {
+      "type": "scale-deferred",
+      "time": 1793385981926.3,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "reason": "preparation",
+      "smaller": true
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385981928,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:17",
+      "addressKey": "fine",
+      "state": "unsupported",
+      "reason": "Native queue capacity; retry after deferral"
+    },
+    {
+      "type": "request",
+      "time": 1793385981942.9,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:18",
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "addressKey": "fine",
+      "started": 1793385981942.8
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385981945.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:18",
+      "addressKey": "fine",
+      "state": "unsupported",
+      "reason": "Native queue capacity; retry after deferral"
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385981946.7,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:14",
+      "addressKey": "0,0,-2",
+      "state": "cancelled",
+      "reason": "obsolete prediction"
+    },
+    {
+      "type": "request-settled",
+      "time": 1793385981947.3,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:15",
+      "addressKey": "0,0,-1",
+      "state": "cancelled",
+      "reason": "obsolete prediction"
+    },
+    {
+      "type": "request",
+      "time": 1793385982042.9,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:19",
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "addressKey": "fine",
+      "started": 1793385982042.7
+    },
+    {
+      "type": "transfer-ready",
+      "time": 1793385983389.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:19",
+      "token": "46582c0c-4638-41c1-a907-c7beab31c0fd",
+      "bytes": 1556832,
+      "native": {
+        "timings": {
+          "nativeStart": 1793385982285.7158,
+          "nativeReady": 1793385983378.615,
+          "structuralMs": 89.3984375
+        },
+        "fieldCalls": 45,
+        "fieldPoints": 2774061,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 100394480,
+            "peak": 100394480,
+            "hits": 310,
+            "misses": 110,
+            "evictions": 1
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 24,
+            "misses": 6,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 51593240,
+            "peak": 51593240,
+            "hits": 725,
+            "misses": 115,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 1
+      },
+      "cacheHit": false
+    },
+    {
+      "type": "consumer-prepared",
+      "time": 1793385983528.8,
+      "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+      "intent": "interaction",
+      "classification": "surface",
+      "timings": {
+        "workerBegin": 1793385983390.1,
+        "workerEnd": 1793385983508.1,
+        "normalsMs": 24.799999713897705,
+        "collisionMs": 93.2000002861023,
+        "restoreMs": 11.099999904632568,
+        "warmupMs": 0.40000009536743164,
+        "uploadMs": 8.800000190734863,
+        "workerWasmCapacity": 80347136,
+        "mainWasmCapacity": 41418752,
+        "gpuBytes": 3691960,
+        "snapshotBytes": 14621615
+      }
+    },
+    {
+      "type": "ready",
+      "time": 1793385983529.5,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:19",
+      "addressKey": "fine",
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "key": "fnv1a64:d9d2e86c8fd6a571",
+      "artifact": {
+        "bounds": {
+          "max": [
+            1414.982563124518,
+            79.2127661665704,
+            1040.6514222870244
+          ],
+          "min": [
+            1414.9560006245179,
+            79.18620366657039,
+            1040.6248597870242
+          ]
+        },
+        "buffers": [
+          {
+            "byteLength": 627672,
+            "role": "solid-indices",
+            "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+          },
+          {
+            "byteLength": 615300,
+            "role": "surface-indices",
+            "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6"
+          },
+          {
+            "byteLength": 313860,
+            "role": "vertices",
+            "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce"
+          }
+        ],
+        "classification": "surface",
+        "classificationBasis": {
+          "evidenceId": "sha256:4a293d045560509d010fec7d11704ba27beb3ae13b15d64c6872302601fc6b78",
+          "kind": "constructed-approximation",
+          "method": "native-composed-volume-and-paired-closed-edges",
+          "volumeM3": 2.4792032195246385e-06
+        },
+        "intent": "interaction",
+        "qualification": {
+          "denseValidation": false,
+          "evidenceId": "sha256:f3e1e563e55eb1369b490410a77f71919186e40b50f83b880c3821d3a4202416",
+          "kind": "empirical",
+          "limits": [
+            "Runtime instance not individually sampled at admission; policy qualified on 1 fine representations.",
+            "Declared approximation target with finite evidence, not an everywhere error bound."
+          ],
+          "meshSamples": 0,
+          "referenceSamples": 0,
+          "toleranceM": 6.640625e-05
+        },
+        "representation": {
+          "builder": {
+            "id": "pc2-native-fine",
+            "sourceDigests": [
+              {
+                "role": "adaptive_graph_pr3.py",
+                "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+              },
+              {
+                "role": "approach-r1.json",
+                "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+              },
+              {
+                "role": "base.npz",
+                "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+              },
+              {
+                "role": "builder_bw1.py",
+                "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+              },
+              {
+                "role": "builder_view.py",
+                "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+              },
+              {
+                "role": "cache_bw1.py",
+                "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+              },
+              {
+                "role": "cache_r0.py",
+                "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+              },
+              {
+                "role": "cache_view.py",
+                "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+              },
+              {
+                "role": "construction.json",
+                "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+              },
+              {
+                "role": "cpu-screen-r0.json",
+                "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+              },
+              {
+                "role": "descendant_world.py",
+                "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+              },
+              {
+                "role": "fkern.py",
+                "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+              },
+              {
+                "role": "frame.json",
+                "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+              },
+              {
+                "role": "h1lib.py",
+                "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+              },
+              {
+                "role": "manifold3d.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+              },
+              {
+                "role": "martini.cpython-313-x86_64-linux-gnu.so",
+                "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+              },
+              {
+                "role": "native-worker.py",
+                "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4"
+              },
+              {
+                "role": "parent-reference-r0.npz",
+                "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+              },
+              {
+                "role": "pert.py",
+                "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+              },
+              {
+                "role": "region_class.py",
+                "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+              },
+              {
+                "role": "sampling_r0.py",
+                "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+              },
+              {
+                "role": "streaming_builder_r0.py",
+                "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+              }
+            ],
+            "version": "r0/fnv1a64:f93f47585b2e145f"
+          },
+          "dependencies": [
+            {
+              "role": "retained-parent-reference",
+              "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+            }
+          ],
+          "features": [
+            "H1C/gchild/surface-descendant-r1",
+            "H1C@61bbb572d425d9ee"
+          ],
+          "sampling": {
+            "cells": 256,
+            "coordinateType": "float32-local-metres-per-unit",
+            "rtinToleranceM": 6.640625e-06,
+            "stepM": 2.593994140625e-05,
+            "tileWidthM": 0.006640625
+          }
+        },
+        "schema": "atlas.preparation.artifact",
+        "schemaVersion": 1,
+        "transform": {
+          "metresPerUnit": 0.006640625,
+          "originM": [
+            1414.969281874518,
+            79.1994849165704,
+            1040.6381410370243
+          ]
+        },
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "readinessMs": 1486.800048828125
+    },
+    {
+      "type": "session-renewed",
+      "time": 1793385986403.2,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 4,
+      "remainingMs": 29997.480622999996,
+      "verified": true
+    },
+    {
+      "type": "session-renewed",
+      "time": 1793385991406.7,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 5,
+      "remainingMs": 29996.773239190734,
+      "verified": true
+    },
+    {
+      "type": "deactivated",
+      "time": 1793385992052.2,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    },
+    {
+      "type": "suspended",
+      "time": 1793385992052.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    },
+    {
+      "type": "resources-released",
+      "time": 1793385992073.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    }
+  ],
+  "observations": [
+    {
+      "label": "up",
+      "pose": {
+        "kind": "prepared-pose-v1",
+        "conventions": "atlas-prepared-yup-metres-v1",
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        },
+        "originM": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "positionLocalM": [
+          0,
+          0.02443882812508491,
+          0
+        ],
+        "orientationWxyz": [
+          0.694988416321868,
+          -0.3381745597100256,
+          0.5705688873447808,
+          0.27763323492962966
+        ],
+        "bodyDiameterM": 0.0265625,
+        "verticalFovDegrees": 75.13718405765499
+      }
+    },
+    {
+      "label": "lateral",
+      "pose": {
+        "kind": "prepared-pose-v1",
+        "conventions": "atlas-prepared-yup-metres-v1",
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        },
+        "originM": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "positionLocalM": [
+          0,
+          0.025800906513495647,
+          -0.008122287142441564
+        ],
+        "orientationWxyz": [
+          0.9965512388309664,
+          0.08297968657729564,
+          -1.2204232848206725e-16,
+          1.016208075611357e-17
+        ],
+        "bodyDiameterM": 0.0265625,
+        "verticalFovDegrees": 75.13718405765499
+      }
+    },
+    {
+      "label": "reverse",
+      "pose": {
+        "kind": "prepared-pose-v1",
+        "conventions": "atlas-prepared-yup-metres-v1",
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        },
+        "originM": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "positionLocalM": [
+          0,
+          0.023165050899791595,
+          0.007595733452717468
+        ],
+        "orientationWxyz": [
+          0.9965512388309664,
+          0.08297968657729564,
+          -1.2204232848206725e-16,
+          1.016208075611357e-17
+        ],
+        "bodyDiameterM": 0.0265625,
+        "verticalFovDegrees": 75.13718405765499
+      }
+    },
+    {
+      "label": "home-after-descent",
+      "pose": {
+        "kind": "prepared-pose-v1",
+        "conventions": "atlas-prepared-yup-metres-v1",
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        },
+        "originM": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "positionLocalM": [
+          0,
+          0.00044881023079312854,
+          0.0001471631944696128
+        ],
+        "orientationWxyz": [
+          0.8098068229747352,
+          -0.5866966076802951,
+          -9.917273336836967e-17,
+          -7.184961226662838e-17
+        ],
+        "bodyDiameterM": 0.0265625,
+        "verticalFovDegrees": 75.13718405765499
+      }
+    }
+  ],
+  "finalFrames": [
+    {
+      "type": "deactivated",
+      "time": 1793385992052.2,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    },
+    {
+      "type": "suspended",
+      "time": 1793385992052.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    },
+    {
+      "type": "resources-released",
+      "time": 1793385992073.5999,
+      "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    }
+  ],
+  "serverEvents": [
+    {
+      "time": 1793385970849,
+      "type": "session-opened",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    },
+    {
+      "time": 1793385970849,
+      "type": "client-opening",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    },
+    {
+      "time": 1793385971385,
+      "type": "worker-ready",
+      "pid": 1707624,
+      "producer": {
+        "instanceId": "1f157239-ad10-4790-83c1-d0005296f4ec",
+        "epoch": 0
+      }
+    },
+    {
+      "time": 1793385971387,
+      "type": "client-opened",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    },
+    {
+      "time": 1793385971389,
+      "type": "session-renewed",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 1
+    },
+    {
+      "time": 1793385971494,
+      "type": "queued",
+      "order": 1,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385971494,
+      "type": "dispatch",
+      "order": 1,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385972559,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:1",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:03a17384a7c07d06",
+      "token": "2cef0ef0-8a27-4e24-8bbe-fa6df43fb9d4",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793385971494.9236,
+        "nativeReady": 1793385972555.5593,
+        "structuralMs": 65.8974609375
+      },
+      "fieldCalls": 31,
+      "fieldPoints": 1849375
+    },
+    {
+      "time": 1793385972559,
+      "type": "finished",
+      "order": 1
+    },
+    {
+      "time": 1793385972908,
+      "type": "queued",
+      "order": 2,
+      "kind": "view"
+    },
+    {
+      "time": 1793385972908,
+      "type": "dispatch",
+      "order": 2,
+      "kind": "view"
+    },
+    {
+      "time": 1793385974546,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:2",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "view",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:ba146a5abc5a5630",
+      "token": "c3fdb222-4ee9-4c6d-93ec-44675d9a2552",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793385972908.5579,
+        "nativeReady": 1793385974545.032,
+        "structuralMs": 305.749755859375
+      },
+      "fieldCalls": 47,
+      "fieldPoints": 2906159
+    },
+    {
+      "time": 1793385974547,
+      "type": "finished",
+      "order": 2
+    },
+    {
+      "time": 1793385974766,
+      "type": "queued",
+      "order": 3,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385974766,
+      "type": "dispatch",
+      "order": 3,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385974768,
+      "type": "queued",
+      "order": 4,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385975266,
+      "type": "queued",
+      "order": 5,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385975621,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:3",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        1
+      ],
+      "representationKey": "fnv1a64:4b2f1f5b20858a82",
+      "token": "1d7605be-dee4-48f1-acd3-64ef268659fb",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793385974767.1128,
+        "nativeReady": 1793385975619.3699,
+        "structuralMs": 0.801025390625
+      },
+      "fieldCalls": 16,
+      "fieldPoints": 1056784
+    },
+    {
+      "time": 1793385975621,
+      "type": "finished",
+      "order": 3
+    },
+    {
+      "time": 1793385975621,
+      "type": "dispatch",
+      "order": 4,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385976391,
+      "type": "session-renewed",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 2
+    },
+    {
+      "time": 1793385976425,
+      "type": "cancelled",
+      "order": 4,
+      "active": true
+    },
+    {
+      "time": 1793385976425,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793385976778,
+      "type": "finished",
+      "order": 4
+    },
+    {
+      "time": 1793385976778,
+      "type": "dispatch",
+      "order": 5,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385977185,
+      "type": "queued",
+      "order": 6,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385977187,
+      "type": "queued",
+      "order": 7,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385977603,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:5",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        1,
+        2
+      ],
+      "representationKey": "fnv1a64:b74f104ca2024264",
+      "token": "f8a5fd97-d56e-4c99-9401-85dc51d85990",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793385976778.9753,
+        "nativeReady": 1793385977601.8105,
+        "structuralMs": 0.43115234375
+      },
+      "fieldCalls": 1,
+      "fieldPoints": 66049
+    },
+    {
+      "time": 1793385977603,
+      "type": "finished",
+      "order": 5
+    },
+    {
+      "time": 1793385977603,
+      "type": "dispatch",
+      "order": 6,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385977725,
+      "type": "queued",
+      "order": 8,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385978364,
+      "type": "cancelled",
+      "order": 7,
+      "active": false
+    },
+    {
+      "time": 1793385978364,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793385978365,
+      "type": "cancelled",
+      "order": 8,
+      "active": false
+    },
+    {
+      "time": 1793385978365,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793385978437,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:6",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "coarse",
+      "address": [
+        1,
+        1,
+        2
+      ],
+      "representationKey": "fnv1a64:108f9a2487d58e99",
+      "token": "55162034-8e1c-479b-9f85-1cd98215b11b",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793385977604.3108,
+        "nativeReady": 1793385978435.5479,
+        "structuralMs": 0.44287109375
+      },
+      "fieldCalls": 0,
+      "fieldPoints": 0
+    },
+    {
+      "time": 1793385978437,
+      "type": "finished",
+      "order": 6
+    },
+    {
+      "time": 1793385978484,
+      "type": "queued",
+      "order": 9,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385978484,
+      "type": "dispatch",
+      "order": 9,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385978805,
+      "type": "queued",
+      "order": 10,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385979307,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:9",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "coarse",
+      "address": [
+        -1,
+        1,
+        2
+      ],
+      "representationKey": "fnv1a64:4918b062378a9c68",
+      "token": "9498ca8f-674b-40ca-99cb-b6ae51ca7308",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793385978485.427,
+        "nativeReady": 1793385979306.1833,
+        "structuralMs": 0.5107421875
+      },
+      "fieldCalls": 0,
+      "fieldPoints": 0
+    },
+    {
+      "time": 1793385979308,
+      "type": "finished",
+      "order": 9
+    },
+    {
+      "time": 1793385979308,
+      "type": "dispatch",
+      "order": 10,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385979548,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:11",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        1,
+        1
+      ],
+      "representationKey": "fnv1a64:5ff3ab10c8a3d225",
+      "token": "85fc9963-7fad-4720-90d6-216e4c380f58",
+      "cacheHit": true,
+      "timings": {
+        "nativeStart": 1793385975622.4265,
+        "nativeReady": 1793385976778.292,
+        "structuralMs": 0.47705078125
+      },
+      "fieldCalls": 15,
+      "fieldPoints": 990735
+    },
+    {
+      "time": 1793385979549,
+      "type": "cancelled",
+      "order": 10,
+      "active": true
+    },
+    {
+      "time": 1793385979549,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793385980109,
+      "type": "finished",
+      "order": 10
+    },
+    {
+      "time": 1793385980445,
+      "type": "queued",
+      "order": 11,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385980445,
+      "type": "dispatch",
+      "order": 11,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385980865,
+      "type": "queued",
+      "order": 12,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385981361,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:12",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "coarse",
+      "address": [
+        0,
+        0,
+        -1
+      ],
+      "representationKey": "fnv1a64:2dea1425132a0dfe",
+      "token": "08bde5d1-e7dc-4f1a-b0da-afa92827b570",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793385980446.3823,
+        "nativeReady": 1793385981359.567,
+        "structuralMs": 252.754150390625
+      },
+      "fieldCalls": 0,
+      "fieldPoints": 0
+    },
+    {
+      "time": 1793385981361,
+      "type": "finished",
+      "order": 11
+    },
+    {
+      "time": 1793385981361,
+      "type": "dispatch",
+      "order": 12,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385981399,
+      "type": "session-renewed",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 3
+    },
+    {
+      "time": 1793385981403,
+      "type": "cancelled",
+      "order": 12,
+      "active": true
+    },
+    {
+      "time": 1793385981404,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793385981405,
+      "type": "producer-retired",
+      "token": "55162034-8e1c-479b-9f85-1cd98215b11b",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:6",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385981606,
+      "type": "queued",
+      "order": 13,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385981781,
+      "type": "producer-retired",
+      "token": "08bde5d1-e7dc-4f1a-b0da-afa92827b570",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:12",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385981830,
+      "type": "queued",
+      "order": 14,
+      "kind": "coarse"
+    },
+    {
+      "time": 1793385981946,
+      "type": "cancelled",
+      "order": 14,
+      "active": false
+    },
+    {
+      "time": 1793385981946,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793385981946,
+      "type": "cancelled",
+      "order": 13,
+      "active": false
+    },
+    {
+      "time": 1793385981946,
+      "type": "http-error",
+      "name": "AbortError",
+      "message": "native request cancelled"
+    },
+    {
+      "time": 1793385982044,
+      "type": "queued",
+      "order": 15,
+      "kind": "fine"
+    },
+    {
+      "time": 1793385982285,
+      "type": "finished",
+      "order": 12
+    },
+    {
+      "time": 1793385982285,
+      "type": "dispatch",
+      "order": 15,
+      "kind": "fine"
+    },
+    {
+      "time": 1793385983380,
+      "type": "producer-prepared",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:19",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      },
+      "kind": "fine",
+      "address": [
+        0,
+        0,
+        0
+      ],
+      "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+      "token": "46582c0c-4638-41c1-a907-c7beab31c0fd",
+      "cacheHit": false,
+      "timings": {
+        "nativeStart": 1793385982285.7158,
+        "nativeReady": 1793385983378.615,
+        "structuralMs": 89.3984375
+      },
+      "fieldCalls": 45,
+      "fieldPoints": 2774061
+    },
+    {
+      "time": 1793385983380,
+      "type": "finished",
+      "order": 15
+    },
+    {
+      "time": 1793385986401,
+      "type": "session-renewed",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 4
+    },
+    {
+      "time": 1793385991406,
+      "type": "session-renewed",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "sequence": 5
+    },
+    {
+      "time": 1793385992067,
+      "type": "producer-retired",
+      "token": "2cef0ef0-8a27-4e24-8bbe-fa6df43fb9d4",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:1",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385992068,
+      "type": "producer-retired",
+      "token": "c3fdb222-4ee9-4c6d-93ec-44675d9a2552",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:2",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385992069,
+      "type": "producer-retired",
+      "token": "46582c0c-4638-41c1-a907-c7beab31c0fd",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:19",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385992069,
+      "type": "producer-retired",
+      "token": "1d7605be-dee4-48f1-acd3-64ef268659fb",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:3",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385992069,
+      "type": "producer-retired",
+      "token": "f8a5fd97-d56e-4c99-9401-85dc51d85990",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:5",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385992070,
+      "type": "producer-retired",
+      "token": "9498ca8f-674b-40ca-99cb-b6ae51ca7308",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:9",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385992070,
+      "type": "producer-retired",
+      "token": "85fc9963-7fad-4720-90d6-216e4c380f58",
+      "identity": {
+        "epoch": 0,
+        "requestId": "d8af585b-0b74-4111-bdbe-df19775a2a33:11",
+        "runtimeId": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+      }
+    },
+    {
+      "time": 1793385992073,
+      "type": "client-retiring",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "reason": "closed"
+    },
+    {
+      "time": 1793385992073,
+      "type": "client-closed",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33",
+      "requests": 19,
+      "tokens": 0
+    },
+    {
+      "time": 1793385992073,
+      "type": "session-closed",
+      "id": "d8af585b-0b74-4111-bdbe-df19775a2a33"
+    },
+    {
+      "time": 1793385992612,
+      "type": "worker-exit",
+      "pid": 1707624,
+      "code": 0,
+      "signal": null
+    }
+  ]
+}

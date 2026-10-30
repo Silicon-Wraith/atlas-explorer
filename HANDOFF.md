@@ -1,5 +1,12 @@
 # ATLAS session handoff
 
+## Current —2026-10-30: BI1.B prepared scenes/history
+
+[Full scorecard](docs/reports/project1-interactive/BI1B-SCENES-HISTORY-2026-10-30.md), [roadmap](docs/superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md), [current restart checkpoint](docs/reports/project1-interactive/CODEX-RESTART-CHECKPOINT-2026-10-28.md). Portable Landscape file cold return, separate navigation/edit histories and safe requested-state restoration are implemented and independently reviewed. Final measured source71dc60a passes1,327 units/82 files, build and25/25 gate; standing performance/memory limits remain explicit. All owned processes/ports/lock are released. Branchfeat/bi1b in project.worktrees/bi1b awaits advisor PR merge; main remains5013ba6. Next is BI1.C, then interleaved AP1/MD2 increments. Standing Claude-call approval is in both agent instruction files.
+
+Earlier handoff sections below preserve historical acceptance state and commands; do not restart their completed promotion work.
+
+
 ## 2026-10-23 — Project 1b.1 B15 evidence and documentation handoff
 
 Plane is in `src/plane/`; Space is in `src/space/` (models, numerics, camera/navigation, workspace, render orchestration and the `render/webgpu/` backend). Shared scenes/history/scheduling stay in `src/shared/`; shell/activation UI stays in `src/ui/`. `src/app.js` composes both workspaces. Fresh startup opens Plane and acquires Space's device on first activation.

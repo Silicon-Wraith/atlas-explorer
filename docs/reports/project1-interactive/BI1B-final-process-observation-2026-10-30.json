@@ -1,0 +1,316 @@
+{
+  "samples": [
+    {
+      "time": 1793386675.1976247,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node tests/reference.mjs"
+      ]
+    },
+    {
+      "time": 1793386837.5589728,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node tests/reference.mjs"
+      ]
+    },
+    {
+      "time": 1793386906.8956664,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node tests/reference.mjs"
+      ]
+    },
+    {
+      "time": 1793386981.288331,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node tests/reference.mjs"
+      ]
+    },
+    {
+      "time": 1793387002.0165708,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node tests/reference.mjs"
+      ]
+    },
+    {
+      "time": 1793387112.7847908,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/browser.mjs"
+      ]
+    },
+    {
+      "time": 1793387228.403122,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/navigation.mjs"
+      ]
+    },
+    {
+      "time": 1793387370.603863,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space.mjs --group rendering"
+      ]
+    },
+    {
+      "time": 1793387456.725727,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-performance.mjs --scene bulb"
+      ]
+    },
+    {
+      "time": 1793387546.2372572,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-performance.mjs --scene bulb"
+      ]
+    },
+    {
+      "time": 1793387658.875928,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-performance.mjs --scene bulb"
+      ]
+    },
+    {
+      "time": 1793387719.7848048,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-performance.mjs --scene quaternion"
+      ]
+    },
+    {
+      "time": 1793387824.1421103,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-performance.mjs --scene quaternion"
+      ]
+    },
+    {
+      "time": 1793387960.574676,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-performance.mjs --scene quaternion"
+      ]
+    },
+    {
+      "time": 1793388076.3804939,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-performance.mjs --scene menger"
+      ]
+    },
+    {
+      "time": 1793388180.1575224,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-performance.mjs --scene menger"
+      ]
+    },
+    {
+      "time": 1793388316.7617757,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-prepared.mjs",
+        "/mnt/ml_storage/scratch/venvs/gpu/bin/python /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b/scripts/preparation/native-worker.py --bundle /mnt/ml_storage/scratch/"
+      ]
+    },
+    {
+      "time": 1793388368.0904799,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-prepared.mjs",
+        "/mnt/ml_storage/scratch/venvs/gpu/bin/python /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b/scripts/preparation/native-worker.py --bundle /mnt/ml_storage/scratch/"
+      ]
+    },
+    {
+      "time": 1793388436.8751285,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-preparation-session.mjs",
+        "/mnt/ml_storage/scratch/venvs/gpu/bin/python /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b/scripts/preparation/native-worker.py --bundle /mnt/ml_storage/scratch/"
+      ]
+    },
+    {
+      "time": 1793388517.3815598,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-preparation-session.mjs",
+        "/mnt/ml_storage/scratch/venvs/gpu/bin/python /mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b/scripts/preparation/native-worker.py --bundle /mnt/ml_storage/scratch/"
+      ]
+    },
+    {
+      "time": 1793388590.6789293,
+      "roots": [
+        1723659
+      ],
+      "phase": [
+        "/usr/bin/node scripts/serve.mjs --port 5190",
+        "/usr/bin/node tests/space-prepared-files.mjs",
+        "/mnt/ml_storage/scratch/venvs/gpu/bin/python scripts/experiments/pc2-qualify.py /mnt/ml_storage/scratch/atlas-bi1b/files-gate-r2/save"
+      ]
+    },
+    {
+      "time": 1793388618.8337924,
+      "roots": [],
+      "phase": []
+    }
+  ],
+  "seen": {
+    "1724658": "342708824",
+    "1723659": "342708036",
+    "1731813": "342750445",
+    "1731845": "342750472",
+    "1731850": "342750472",
+    "1731826": "342750468",
+    "1731828": "342750470",
+    "1731829": "342750470",
+    "1731802": "342750442",
+    "1732446": "342753570",
+    "1734915": "342764610",
+    "1734917": "342764612",
+    "1734918": "342764612",
+    "1735110": "342765185",
+    "1734934": "342764613",
+    "1734904": "342764586",
+    "1734939": "342764614",
+    "1736608": "342767886",
+    "1736609": "342767886",
+    "1736611": "342767888",
+    "1736645": "342767921",
+    "1736810": "342767982",
+    "1736525": "342767843",
+    "1736819": "342767983",
+    "1736756": "342767948",
+    "1736598": "342767883",
+    "1736636": "342767919",
+    "1736638": "342767919",
+    "1740736": "342786448",
+    "1740706": "342786414",
+    "1740707": "342786414",
+    "1740709": "342786417",
+    "1740682": "342786372",
+    "1740747": "342786451",
+    "1740875": "342786515",
+    "1740849": "342786479",
+    "1740884": "342786516",
+    "1740696": "342786411",
+    "1740989": "342786766",
+    "1740734": "342786448",
+    "1742347": "342794498",
+    "1743600": "342802453",
+    "1744992": "342810932",
+    "1745352": "342811443",
+    "1745195": "342811054",
+    "1745166": "342811042",
+    "1745009": "342810971",
+    "1745052": "342811011",
+    "1745204": "342811055",
+    "1745047": "342811008",
+    "1745049": "342811009",
+    "1745019": "342810974",
+    "1745020": "342810974",
+    "1745022": "342810977",
+    "1746886": "342819249",
+    "1749607": "342835616",
+    "1751073": "342844635",
+    "1751140": "342844673",
+    "1751336": "342844752",
+    "1751306": "342844742",
+    "1751571": "342845168",
+    "1751188": "342844710",
+    "1751157": "342844676",
+    "1751158": "342844676",
+    "1751190": "342844710",
+    "1751160": "342844678",
+    "1751197": "342844712",
+    "1751327": "342844751",
+    "1755936": "342870175",
+    "1755937": "342870176",
+    "1755970": "342870187",
+    "1755939": "342870178",
+    "1755913": "342870150",
+    "1756084": "342870242",
+    "1755926": "342870172",
+    "1756216": "342870348",
+    "1756056": "342870209",
+    "1755964": "342870185",
+    "1756093": "342870244",
+    "1755966": "342870185",
+    "1758848": "342883125",
+    "1758849": "342883126",
+    "1759392": "342883689",
+    "1758851": "342883128",
+    "1758885": "342883137",
+    "1759068": "342883303",
+    "1758827": "342883101",
+    "1758994": "342883192",
+    "1758838": "342883123",
+    "1758969": "342883160",
+    "1759003": "342883193",
+    "1758876": "342883134",
+    "1758878": "342883135",
+    "1763622": "342901190",
+    "1762275": "342898216"
+  }
+}

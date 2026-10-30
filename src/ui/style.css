@@ -41,3 +41,6 @@ body[data-workspace=space] #fractal-surface,body[data-workspace=space] .intro,bo
 
 .space-diagnostics{color:var(--gold)}.space-diagnostics.space-alert{color:var(--alert-text)}.space-diagnostics[hidden]{display:none}#space-diagnostics-value{font-family:var(--mono)}
 #landscape-retry{align-self:flex-start;padding:8px 12px;border:1px solid var(--line);border-radius:5px;color:var(--gold);font-size:11px;background:var(--alert-bg)}
+
+/* BI1.B: file/history controls remain reachable when Landscape is unavailable. */
+.space-mode-switch{max-width:calc(100vw - 72px);flex-wrap:wrap}.space-mode-switch .landscape-open{padding:8px 10px;cursor:pointer;font-size:11px;white-space:nowrap}.landscape-history{position:absolute;right:36px;top:108px;display:flex;gap:6px;z-index:10}.landscape-history button{font-size:11px;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:#0b1924dd}.landscape-file-status{position:absolute;right:36px;top:300px;width:260px;font-size:11px;line-height:1.5;z-index:10;background:#0b1924dd;border-radius:4px;padding:8px}.landscape-file-status:empty{display:none}.landscape-history button:disabled{opacity:.4}

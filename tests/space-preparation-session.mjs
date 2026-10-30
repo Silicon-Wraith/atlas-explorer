@@ -17,7 +17,7 @@ import { PROJECT0_LAUNCH_ARGS, checkEffectiveArguments, collectVisibleText, acti
 if(!process.env.ATLAS_GPU_HANDOFF||process.env.ATLAS_GPU_DEFERRED)throw Error('Explicit headed hardware handoff required');
 installSuiteDeadline('space-preparation-session',300000);
 const stamp=new Date().toISOString().replace(/[:.]/g,'-'),root=path.resolve(process.env.ATLAS_SESSION_RUN_ROOT??'/mnt/ml_storage/scratch/atlas-pc4/session-'+stamp);
-assert.ok(root.startsWith('/mnt/ml_storage/scratch/atlas-pc4/'));await fs.mkdir(root);
+assert.ok(root.startsWith('/mnt/ml_storage/scratch/atlas-pc4/')||root.startsWith('/mnt/ml_storage/scratch/atlas-bi1b/'));await fs.mkdir(root);
 const report=[],detail={started:Date.now(),mode:'session',errors:[],runs:[],controls:[],cleanup:false},observer=observeOwnedProcesses(),exec=promisify(execFile);
 let service,lossProxy,browser,context,a,b,aId,bId,aHeaders,heldToken,savedA=[],suppressB=false,holdFine=true,heldReady,heldTask;
 const held=new Promise(resolve=>{heldReady=resolve;}),base='http://127.0.0.1:5198',allEvents=[];
@@ -148,7 +148,7 @@ finally{
  }
  if(detail.cleanup&&!detail.failure)pass('Session controls preserve source identity and confirm owned process cleanup');
  if(!detail.cleanup){report.push({name:'FAIL',error:'CLEANUP-UNCONFIRMED'});process.exitCode=125;}
- detail.sources={};for(const name of ['scripts/preparation/application-policy.mjs','scripts/preparation/application-server.mjs','scripts/world-preview.mjs','scripts/preparation/page-lifetime.mjs','src/space/preparation/application-client.js','src/space/preparation/workspace.js','src/app.js','index.html','tests/space-preparation-session.mjs','tests/support/session-loss-proxy.mjs'])detail.sources[name]=createHash('sha256').update(await fs.readFile(name)).digest('hex');
+ detail.sources={};for(const name of ['src/space/preparation/pose.js','src/space/preparation/scene-adapter.js','src/space/preparation/scene-history.js','src/space/render/webgpu/prepared-regions.js','src/space/mode-host.js','scripts/preparation/application-policy.mjs','scripts/preparation/application-server.mjs','scripts/world-preview.mjs','scripts/preparation/page-lifetime.mjs','src/space/preparation/application-client.js','src/space/preparation/workspace.js','src/app.js','index.html','tests/space-preparation-session.mjs','tests/support/session-loss-proxy.mjs'])detail.sources[name]=createHash('sha256').update(await fs.readFile(name)).digest('hex');
  detail.completed=Date.now();await fs.writeFile(path.join(root,'session.json'),JSON.stringify(detail,null,2)+'\n');await fs.mkdir('artifacts',{recursive:true});await fs.writeFile('artifacts/space-preparation-session-report.json',JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({root,pass:detail.pass&&!detail.failure,cleanup:detail.cleanup,failure:detail.failure}));
 }

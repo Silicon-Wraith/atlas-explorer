@@ -1,0 +1,67 @@
+{
+  "head": "71dc60a1c25172853f446f5bea06d3e7d555f3a5",
+  "scratchRoot": "/mnt/ml_storage/scratch/atlas-bi1b",
+  "files": {
+    "scene-red-r0.log": {
+      "sha256": "6fb5ee5b1bc121fbf998df4080450ea35145879d1abaf4633b923f53b538753f",
+      "bytes": 115
+    },
+    "scale-red-host-r0.log": {
+      "sha256": "ef5a0d43e935bd55e38fde842e3f008f2c705dab0aec32313566913e61566505",
+      "bytes": 137
+    },
+    "scale-green-r0.log": {
+      "sha256": "d0d618a172aee89537d81f1be3842d79cc8672581f179d6028d0fc948cb4ce10",
+      "bytes": 5312
+    },
+    "scale-units-r0.log": {
+      "sha256": "ae06f88a53f1449edd27cde6a81b95496195d9920e9d0299a8e78fde0aa6833d",
+      "bytes": 311522
+    },
+    "scale-build-r0.log": {
+      "sha256": "97f95a27655448b03f7143c71687dbeb3739df8349238da2ec404fb0303b13f1",
+      "bytes": 92
+    },
+    "application-scale-r0.log": {
+      "sha256": "57361a9709c1739d3bf850a44106cd3a928697c36d852a08b9d5d2049a753505",
+      "bytes": 712
+    },
+    "files-r0/files.json": {
+      "sha256": "953cc4de42c6b88094da161ecb81f591fbff07089a4f815bcbca47ed02c02278",
+      "bytes": 757526
+    },
+    "files-r1/files.json": {
+      "sha256": "543c30e8f41a9af8aaec2d4760768ab34c4ea681048a103c7dabc8f803e705f2",
+      "bytes": 755734
+    },
+    "files-gate-r2/files.json": {
+      "sha256": "86d1581ade3ed2617c436dc2fd8f801b6529c503a371ca7560c7f36132c19847",
+      "bytes": 759500
+    },
+    "application-gate-r2/browser.json": {
+      "sha256": "66022a2de79215ffd9303a91837b3fa918dd932a2cbd2b349af7a1c9d6734eb9",
+      "bytes": 8640882
+    },
+    "session-gate-r2/session.json": {
+      "sha256": "597bd0acfb458ee20aeafd923bd12d157ef73178e19128817728598093b551ee",
+      "bytes": 7338859
+    },
+    "gate-r2/performance/1b1-performance-bulb.json": {
+      "sha256": "98315e203c4ad0898053c1d8aaa45cfddeb33aa3b0e30225189773d959158d8b",
+      "bytes": 130913332
+    },
+    "gate-r2/performance/1b1-performance-quaternion.json": {
+      "sha256": "bdb97450bcc3084ea2c1dfaa8e385aaf3e5bac6803df2ee8380a9746bb4f6a8e",
+      "bytes": 183021710
+    },
+    "gate-r2/performance/1b1-performance-menger.json": {
+      "sha256": "c23fc609ffa30140f1f5d59b6ed9df5b05b40fdcb945f80475bb9097aa2f5f22",
+      "bytes": 128889620
+    }
+  },
+  "unitCount": 1327,
+  "unitFiles": 82,
+  "red": "RED confirmed: \"one scale gesture survives capacity deferral until prepared coverage and commits one camera entry\" fails on an assertion\n",
+  "cpuSummary": "UNIT {\"state\":\"passed\",\"reason\":\"1327 tests passed\",\"cleanup\":\"confirmed\",\"files\":82,\"summary\":{\"tests\":1327,\"pass\":1327,\"fail\":0,\"cancelled\":0,\"skipped\":0,\"todo\":0}}",
+  "build": "\n> atlas-mandelbrot@1.0.0 build\n> node scripts/build.mjs\n\nStatic application built in dist/\n"
+}
