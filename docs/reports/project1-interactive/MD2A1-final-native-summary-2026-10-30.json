@@ -1,0 +1,1477 @@
+{
+  "head": "3d95d7978c38760581f9d2b748eeb9573514570b",
+  "pass": true,
+  "cleanup": true,
+  "checks": [
+    "Owned generation uses the recorded native CUDA hardware and frozen legacy world",
+    "Actual first-party modules and registered inputs are repository-owned with distinct mesh modules",
+    "Legacy or mismatched source certificates remain rejected",
+    "Fresh home new3D corner fine and view buffers exactly match preserved same-host controls",
+    "Opposite order resident reuse and actual rebuild preserve current representation and geometry",
+    "Stale producer epochs are rejected and all migration publications retire",
+    "Relocated mathematical references qualify all actual coarse fine and view source policies",
+    "Native ownership control confirms process cleanup and preserves source-qualified evidence"
+  ],
+  "wallSeconds": 19.659,
+  "world": {
+    "assets": [
+      {
+        "role": "base-field-evaluator",
+        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+      },
+      {
+        "role": "canonical-parent-frame",
+        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+      },
+      {
+        "role": "canonical-parent-samples",
+        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+      },
+      {
+        "role": "construction",
+        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+      },
+      {
+        "role": "descendant-rule",
+        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+      },
+      {
+        "role": "parent-field-kernel",
+        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+      }
+    ],
+    "generator": {
+      "id": "atlas.surface-descendant",
+      "version": "surface-descendant-r1"
+    },
+    "id": "H1C-surface-child@ee2564d40bda7ef6",
+    "lineage": [
+      {
+        "id": "H1C@61bbb572d425d9ee",
+        "parent": null
+      },
+      {
+        "id": "H1C/gchild/surface-descendant-r1",
+        "parent": "H1C@61bbb572d425d9ee"
+      }
+    ],
+    "parameters": {
+      "amplitude_m": 0.0002,
+      "chart_centre": [
+        -0.029882812666932553,
+        -0.11953125059172012
+      ],
+      "half_support_m": 0.0033203125,
+      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+      "source_scale": 64
+    },
+    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+  },
+  "device": {
+    "name": "b'NVIDIA RTX 6000 Ada Generation'",
+    "index": 0
+  },
+  "ownership": {
+    "modules": [
+      {
+        "name": "adaptive_graph_pr3",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py"
+      },
+      {
+        "name": "builder_bw1",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_bw1.py"
+      },
+      {
+        "name": "builder_view",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_view.py"
+      },
+      {
+        "name": "bw1_adaptive_graph",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py"
+      },
+      {
+        "name": "bw1_view_graph",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py"
+      },
+      {
+        "name": "cache_bw1",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_bw1.py"
+      },
+      {
+        "name": "cache_r0",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_r0.py"
+      },
+      {
+        "name": "cache_view",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_view.py"
+      },
+      {
+        "name": "dek",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/dek.py"
+      },
+      {
+        "name": "descendant_world",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/descendant_world.py"
+      },
+      {
+        "name": "field_fidelity_r0",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/field_fidelity_r0.py"
+      },
+      {
+        "name": "fkern",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/fkern.py"
+      },
+      {
+        "name": "generation_paths",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/generation_paths.py"
+      },
+      {
+        "name": "h1lib",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/h1lib.py"
+      },
+      {
+        "name": "pert",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/pert.py"
+      },
+      {
+        "name": "region_class",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/region_class.py"
+      },
+      {
+        "name": "sampling_r0",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/sampling_r0.py"
+      },
+      {
+        "name": "streaming_builder_r0",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/streaming_builder_r0.py"
+      },
+      {
+        "name": "view_grid",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/view_grid.py"
+      },
+      {
+        "name": "world_grid",
+        "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/world_grid.py"
+      }
+    ],
+    "inputs": [
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/approach-r1.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/base.npz",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/construction.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/cpu-screen-r0.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/feature-r0.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/frame.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/gs.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/legacy-world.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/levels.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.npz",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-static-r0/fixtures-r0.json",
+      "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/reference/fine-control.npz"
+    ],
+    "graphsDistinct": true,
+    "sharedInteractionCaches": true,
+    "viewCachesDisabled": true
+  },
+  "sourceFiles": [
+    {
+      "role": "import-manifest.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/import-manifest.json",
+      "sha256": "e94e943d384a07c3e5c75f92a10c16f4d323809d85010d619b82bfc5238574f6"
+    },
+    {
+      "role": "native/adaptive_graph_pr3.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py",
+      "sha256": "83147332869f2cbd660253d38e671f8370b87abe7c5a6ee4b693ba7061578f25"
+    },
+    {
+      "role": "native/builder_bw1.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_bw1.py",
+      "sha256": "50763f620e526ccb6af486c84b0c25a8218598966c3adccef466edffa95047f7"
+    },
+    {
+      "role": "native/builder_view.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_view.py",
+      "sha256": "2b14ae570873f00f176bdfb69440c05ae0a713644ef44768f47a4a65de16f0bf"
+    },
+    {
+      "role": "native/cache_bw1.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_bw1.py",
+      "sha256": "73f0e0417124a29e138228623a3cf8658af9c4df72e1ba83d24f516f88282573"
+    },
+    {
+      "role": "native/cache_r0.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_r0.py",
+      "sha256": "85a42614c61de2d9e783f01d73ae3cfbe7ed367d9223ce13de8b8cc7d04f1e17"
+    },
+    {
+      "role": "native/cache_view.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_view.py",
+      "sha256": "8c4cb50e0af6094f521c9ed04fd9c6e66568354ba93c84eac0dc7cd7274eb5da"
+    },
+    {
+      "role": "native/check_collision_r0.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/check_collision_r0.py",
+      "sha256": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4"
+    },
+    {
+      "role": "native/dek.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/dek.py",
+      "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0"
+    },
+    {
+      "role": "native/descendant_world.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/descendant_world.py",
+      "sha256": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e"
+    },
+    {
+      "role": "native/field_fidelity_r0.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/field_fidelity_r0.py",
+      "sha256": "542bea18cf0a591e644877b5773319ac50d03303336bd32445b7ea21a4bce864"
+    },
+    {
+      "role": "native/fkern.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/fkern.py",
+      "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+    },
+    {
+      "role": "native/generation_paths.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/generation_paths.py",
+      "sha256": "f6d7acdc002e99be7098d79f54f56fb0efbe01093aeb8142cb26467f71e9fa4a"
+    },
+    {
+      "role": "native/h1lib.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/h1lib.py",
+      "sha256": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124"
+    },
+    {
+      "role": "native/pert.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/pert.py",
+      "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+    },
+    {
+      "role": "native/region_class.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/region_class.py",
+      "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+    },
+    {
+      "role": "native/sampling_r0.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/sampling_r0.py",
+      "sha256": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598"
+    },
+    {
+      "role": "native/streaming_builder_r0.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/streaming_builder_r0.py",
+      "sha256": "554f20376b5424fc89fc7790c9158f9ed6c4e5a1fe930036e42dd9e36db41eb3"
+    },
+    {
+      "role": "native/view_grid.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/view_grid.py",
+      "sha256": "8d00ccabaadc5a003ff6e1a5a54e62f77ef6a2697fded51eb1860aeea43fdf4c"
+    },
+    {
+      "role": "native/world_grid.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/world_grid.py",
+      "sha256": "24ea3190cce577c03748d0f93f42aef44a4f13646b7a853e33825e53a56a392d"
+    },
+    {
+      "role": "regression-world/approach-r1.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/approach-r1.json",
+      "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+    },
+    {
+      "role": "regression-world/base.npz",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/base.npz",
+      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+    },
+    {
+      "role": "regression-world/construction.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/construction.json",
+      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+    },
+    {
+      "role": "regression-world/cpu-screen-r0.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/cpu-screen-r0.json",
+      "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+    },
+    {
+      "role": "regression-world/feature-r0.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/feature-r0.json",
+      "sha256": "87b1a6e303758f7e767e460c6d121d43db9382fa31ec47571be25d8a7b75eca6"
+    },
+    {
+      "role": "regression-world/frame.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/frame.json",
+      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+    },
+    {
+      "role": "regression-world/gs.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/gs.json",
+      "sha256": "31f88d35160d4d56bb0937f45e0cfc6568210db0a8f93b7f2fe1340314a1d202"
+    },
+    {
+      "role": "regression-world/legacy-world.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/legacy-world.json",
+      "sha256": "22f4200e40b0bc5fe36fe5a310bca2b3cdf8a063128742b6ebc1323d6718a879"
+    },
+    {
+      "role": "regression-world/levels.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/levels.json",
+      "sha256": "1b28cf656f304f20e0b6d46e0177841549223f96a9f498ba5068af6730b326e1"
+    },
+    {
+      "role": "regression-world/prepared-layers-r0/parent-reference-r0.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.json",
+      "sha256": "e41e0ba46548b4dbe95cd2e3685e98138a255ef51045679614d18a81c8cf28eb"
+    },
+    {
+      "role": "regression-world/prepared-layers-r0/parent-reference-r0.npz",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.npz",
+      "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+    },
+    {
+      "role": "regression-world/prepared-static-r0/fixtures-r0.json",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-static-r0/fixtures-r0.json",
+      "sha256": "e91c31daa47989603689179dca4d44a0799d3abbde476fcef29f0c4162b3096f"
+    },
+    {
+      "role": "regression-world/reference/fine-control.npz",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/reference/fine-control.npz",
+      "sha256": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877"
+    },
+    {
+      "role": "external-package/manifold3d.cpython-313-x86_64-linux-gnu.so",
+      "file": "/mnt/ml_storage/scratch/atlas-prepared-toolchain/py/manifold3d.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+    },
+    {
+      "role": "external-package/martini.cpython-313-x86_64-linux-gnu.so",
+      "file": "/mnt/ml_storage/scratch/atlas-prepared-toolchain/py/pymartini/martini.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+    },
+    {
+      "role": "native-worker.py",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/preparation/native-worker.py",
+      "sha256": "14f71dda70a8e553e924959f9e0b1d475344c1bc25568920e6f274391a8a7166"
+    }
+  ],
+  "sources": [
+    {
+      "role": "import-manifest.json",
+      "sha256": "e94e943d384a07c3e5c75f92a10c16f4d323809d85010d619b82bfc5238574f6"
+    },
+    {
+      "role": "native/adaptive_graph_pr3.py",
+      "sha256": "83147332869f2cbd660253d38e671f8370b87abe7c5a6ee4b693ba7061578f25"
+    },
+    {
+      "role": "native/builder_bw1.py",
+      "sha256": "50763f620e526ccb6af486c84b0c25a8218598966c3adccef466edffa95047f7"
+    },
+    {
+      "role": "native/builder_view.py",
+      "sha256": "2b14ae570873f00f176bdfb69440c05ae0a713644ef44768f47a4a65de16f0bf"
+    },
+    {
+      "role": "native/cache_bw1.py",
+      "sha256": "73f0e0417124a29e138228623a3cf8658af9c4df72e1ba83d24f516f88282573"
+    },
+    {
+      "role": "native/cache_r0.py",
+      "sha256": "85a42614c61de2d9e783f01d73ae3cfbe7ed367d9223ce13de8b8cc7d04f1e17"
+    },
+    {
+      "role": "native/cache_view.py",
+      "sha256": "8c4cb50e0af6094f521c9ed04fd9c6e66568354ba93c84eac0dc7cd7274eb5da"
+    },
+    {
+      "role": "native/check_collision_r0.py",
+      "sha256": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4"
+    },
+    {
+      "role": "native/dek.py",
+      "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0"
+    },
+    {
+      "role": "native/descendant_world.py",
+      "sha256": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e"
+    },
+    {
+      "role": "native/field_fidelity_r0.py",
+      "sha256": "542bea18cf0a591e644877b5773319ac50d03303336bd32445b7ea21a4bce864"
+    },
+    {
+      "role": "native/fkern.py",
+      "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+    },
+    {
+      "role": "native/generation_paths.py",
+      "sha256": "f6d7acdc002e99be7098d79f54f56fb0efbe01093aeb8142cb26467f71e9fa4a"
+    },
+    {
+      "role": "native/h1lib.py",
+      "sha256": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124"
+    },
+    {
+      "role": "native/pert.py",
+      "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+    },
+    {
+      "role": "native/region_class.py",
+      "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+    },
+    {
+      "role": "native/sampling_r0.py",
+      "sha256": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598"
+    },
+    {
+      "role": "native/streaming_builder_r0.py",
+      "sha256": "554f20376b5424fc89fc7790c9158f9ed6c4e5a1fe930036e42dd9e36db41eb3"
+    },
+    {
+      "role": "native/view_grid.py",
+      "sha256": "8d00ccabaadc5a003ff6e1a5a54e62f77ef6a2697fded51eb1860aeea43fdf4c"
+    },
+    {
+      "role": "native/world_grid.py",
+      "sha256": "24ea3190cce577c03748d0f93f42aef44a4f13646b7a853e33825e53a56a392d"
+    },
+    {
+      "role": "regression-world/approach-r1.json",
+      "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+    },
+    {
+      "role": "regression-world/base.npz",
+      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+    },
+    {
+      "role": "regression-world/construction.json",
+      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+    },
+    {
+      "role": "regression-world/cpu-screen-r0.json",
+      "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+    },
+    {
+      "role": "regression-world/feature-r0.json",
+      "sha256": "87b1a6e303758f7e767e460c6d121d43db9382fa31ec47571be25d8a7b75eca6"
+    },
+    {
+      "role": "regression-world/frame.json",
+      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+    },
+    {
+      "role": "regression-world/gs.json",
+      "sha256": "31f88d35160d4d56bb0937f45e0cfc6568210db0a8f93b7f2fe1340314a1d202"
+    },
+    {
+      "role": "regression-world/legacy-world.json",
+      "sha256": "22f4200e40b0bc5fe36fe5a310bca2b3cdf8a063128742b6ebc1323d6718a879"
+    },
+    {
+      "role": "regression-world/levels.json",
+      "sha256": "1b28cf656f304f20e0b6d46e0177841549223f96a9f498ba5068af6730b326e1"
+    },
+    {
+      "role": "regression-world/prepared-layers-r0/parent-reference-r0.json",
+      "sha256": "e41e0ba46548b4dbe95cd2e3685e98138a255ef51045679614d18a81c8cf28eb"
+    },
+    {
+      "role": "regression-world/prepared-layers-r0/parent-reference-r0.npz",
+      "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+    },
+    {
+      "role": "regression-world/prepared-static-r0/fixtures-r0.json",
+      "sha256": "e91c31daa47989603689179dca4d44a0799d3abbde476fcef29f0c4162b3096f"
+    },
+    {
+      "role": "regression-world/reference/fine-control.npz",
+      "sha256": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877"
+    },
+    {
+      "role": "external-package/manifold3d.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc"
+    },
+    {
+      "role": "external-package/martini.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a"
+    },
+    {
+      "role": "native-worker.py",
+      "sha256": "14f71dda70a8e553e924959f9e0b1d475344c1bc25568920e6f274391a8a7166"
+    }
+  ],
+  "packages": {
+    "numpy": "2.5.4",
+    "manifold3d": "3.5.4",
+    "pymartini": "0.5.1",
+    "scipy": "1.18.1",
+    "cupy-cuda13x": "14.2.0"
+  },
+  "rows": [
+    {
+      "label": "home",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r1",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:95b935f938e2577f",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404369195.1223,
+          "nativeReady": 1793404370179.814,
+          "structuralMs": 65.847412109375
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 1849375,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 23249248,
+            "peak": 23249248,
+            "hits": 0,
+            "misses": 28,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 0,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 13011808,
+            "peak": 13011808,
+            "hits": 25,
+            "misses": 31,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "new-3d",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0037292569568,
+            79.26668737412697,
+            1040.6715187119776
+          ],
+          "min": [
+            1414.950604256957,
+            79.21356237412698,
+            1040.6183937119777
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r2",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:0960ec5f975e1d85",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 0,
+          "role": "solid-indices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "byteLength": 0,
+          "role": "surface-indices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "byteLength": 0,
+          "role": "vertices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404370188.5383,
+          "nativeReady": 1793404371140.4841,
+          "structuralMs": 0.93310546875
+        },
+        "fieldCalls": 22,
+        "fieldPoints": 1453078,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 42799752,
+            "peak": 42799752,
+            "hits": 25,
+            "misses": 50,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 3,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 24682392,
+            "peak": 24682392,
+            "hits": 96,
+            "misses": 54,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "domain-corner",
+      "request": {
+        "bounds": {
+          "max": [
+            1414.954573830562,
+            79.25357512191823,
+            1040.5481195034884
+          ],
+          "min": [
+            1414.901448830562,
+            79.20045012191824,
+            1040.4949945034884
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r3",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:9a32387284294068",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 3147816,
+          "role": "solid-indices",
+          "sha256": "242366fb15ac5d777e7de39890149b9f425a24b6aeb5dddb79bd9a827339d0fe"
+        },
+        {
+          "byteLength": 3114096,
+          "role": "surface-indices",
+          "sha256": "92f74c4aaf2723f2f3f1a6d4845adbbdace7bfa4b8096f40a302891fb54f8067"
+        },
+        {
+          "byteLength": 1573932,
+          "role": "vertices",
+          "sha256": "d1ccdeda062475efc87b577237977c65b093528386d3cf17c25aed115a2c2350"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404371146.0154,
+          "nativeReady": 1793404372670.896,
+          "structuralMs": 479.466552734375
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 2047519,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 67634176,
+            "peak": 67634176,
+            "hits": 25,
+            "misses": 81,
+            "evictions": 0
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 40,
+            "hits": 6,
+            "misses": 3,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 43482240,
+            "peak": 43482240,
+            "hits": 127,
+            "misses": 85,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "fine-control",
+      "request": {
+        "bounds": {
+          "max": [
+            1414.982563124518,
+            79.2127661665704,
+            1040.6514222870244
+          ],
+          "min": [
+            1414.9560006245179,
+            79.18620366657039,
+            1040.6248597870242
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r4",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.006640625,
+          "maxErrorM": 6.640625e-05
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:88dd1aed58bb1bd8",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 627672,
+          "role": "solid-indices",
+          "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+        },
+        {
+          "byteLength": 615300,
+          "role": "surface-indices",
+          "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6"
+        },
+        {
+          "byteLength": 313860,
+          "role": "vertices",
+          "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404372690.2556,
+          "nativeReady": 1793404373698.9934,
+          "structuralMs": 85.215087890625
+        },
+        "fieldCalls": 45,
+        "fieldPoints": 2774061,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 99866088,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 123,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 6,
+            "misses": 6,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 61866224,
+            "peak": 61866224,
+            "hits": 168,
+            "misses": 128,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 21
+      }
+    },
+    {
+      "label": "view",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0820062519365,
+            79.31711912557448,
+            1040.7463001279962
+          ],
+          "min": [
+            1414.8695062519364,
+            79.10461912557447,
+            1040.533800127996
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r5",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "view",
+        "producer": {
+          "epoch": 0,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": null,
+          "maxErrorM": 0.0010625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:79cc0173d46499b9",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 2061864,
+          "role": "surface-indices",
+          "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec"
+        },
+        {
+          "byteLength": 1044864,
+          "role": "vertices",
+          "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404373705.3284,
+          "nativeReady": 1793404375316.274,
+          "structuralMs": 307.588623046875
+        },
+        "fieldCalls": 47,
+        "fieldPoints": 2906159,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 99866088,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 123,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 6,
+            "misses": 6,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 61866224,
+            "peak": 61866224,
+            "hits": 168,
+            "misses": 128,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "fine-control",
+      "request": {
+        "bounds": {
+          "max": [
+            1414.982563124518,
+            79.2127661665704,
+            1040.6514222870244
+          ],
+          "min": [
+            1414.9560006245179,
+            79.18620366657039,
+            1040.6248597870242
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r6",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 1,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.006640625,
+          "maxErrorM": 6.640625e-05
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:88dd1aed58bb1bd8",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 627672,
+          "role": "solid-indices",
+          "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+        },
+        {
+          "byteLength": 615300,
+          "role": "surface-indices",
+          "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6"
+        },
+        {
+          "byteLength": 313860,
+          "role": "vertices",
+          "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404375325.3596,
+          "nativeReady": 1793404376284.126,
+          "structuralMs": 89.40087890625
+        },
+        "fieldCalls": 45,
+        "fieldPoints": 2774061,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 44384928,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 165,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 40,
+            "peak": 80,
+            "hits": 6,
+            "misses": 9,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 18383984,
+            "peak": 61866224,
+            "hits": 209,
+            "misses": 171,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "home",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r7",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 1,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:95b935f938e2577f",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404376290.7095,
+          "nativeReady": 1793404377016.3362,
+          "structuralMs": 69.4560546875
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 1849375,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 67634176,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 193,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 6,
+            "misses": 12,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 31395792,
+            "peak": 61866224,
+            "hits": 234,
+            "misses": 202,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "home",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r8",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 1,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:95b935f938e2577f",
+      "cacheHit": true,
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404376290.7095,
+          "nativeReady": 1793404377016.3362,
+          "structuralMs": 69.4560546875
+        },
+        "fieldCalls": 31,
+        "fieldPoints": 1849375,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 67634176,
+            "peak": 100394480,
+            "hits": 25,
+            "misses": 193,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 6,
+            "misses": 12,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 31395792,
+            "peak": 61866224,
+            "hits": 234,
+            "misses": 202,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    },
+    {
+      "label": "home",
+      "request": {
+        "bounds": {
+          "max": [
+            1415.0023187519364,
+            79.23743162557447,
+            1040.666612627996
+          ],
+          "min": [
+            1414.9491937519365,
+            79.18430662557448,
+            1040.6134876279962
+          ]
+        },
+        "identity": {
+          "epoch": 0,
+          "requestId": "r9",
+          "runtimeId": "md2a1-migration"
+        },
+        "intent": "interaction",
+        "producer": {
+          "epoch": 1,
+          "instanceId": "9c2d8622-aed0-45f4-a47a-c17d652cca1f"
+        },
+        "requirements": {
+          "bodyDiameterM": 0.0265625,
+          "maxErrorM": 0.000265625
+        },
+        "schema": "atlas.preparation.request",
+        "schemaVersion": 1,
+        "world": {
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "id": "H1C-surface-child@ee2564d40bda7ef6"
+        }
+      },
+      "key": "fnv1a64:95b935f938e2577f",
+      "cacheHit": false,
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "native": {
+        "timings": {
+          "nativeStart": 1793404377030.668,
+          "nativeReady": 1793404377501.4373,
+          "structuralMs": 65.89794921875
+        },
+        "fieldCalls": 0,
+        "fieldPoints": 0,
+        "caches": {
+          "source": {
+            "limit": 100663296,
+            "bytes": 67634176,
+            "peak": 100394480,
+            "hits": 53,
+            "misses": 193,
+            "evictions": 21
+          },
+          "validation": {
+            "limit": 33554432,
+            "bytes": 80,
+            "peak": 80,
+            "hits": 9,
+            "misses": 12,
+            "evictions": 0
+          },
+          "topology": {
+            "limit": 67108864,
+            "bytes": 31395792,
+            "peak": 61866224,
+            "hits": 290,
+            "misses": 202,
+            "evictions": 0
+          }
+        },
+        "interactionCacheEvictions": 0
+      }
+    }
+  ],
+  "prepared": 9,
+  "retired": 9,
+  "qualification": {
+    "pass": true,
+    "specimens": [
+      {
+        "representationKey": "fnv1a64:95b935f938e2577f",
+        "kind": "coarse",
+        "origin": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 608,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 2.789774079877749e-05,
+        "meshCrossingUpperMaxM": 6.640625e-05,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:0960ec5f975e1d85",
+        "kind": "coarse",
+        "origin": [
+          1414.9771667569569,
+          79.24012487412698,
+          1040.6449562119776
+        ],
+        "classification": "empty-air",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 1024,
+        "meshSamples": 0,
+        "limits": [
+          "Finite occupancy samples, not proof of complete air/solid."
+        ],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:9a32387284294068",
+        "kind": "coarse",
+        "origin": [
+          1414.928011330562,
+          79.22701262191823,
+          1040.5215570034884
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 229,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 3.591606170039614e-05,
+        "meshCrossingUpperMaxM": 4.150390625000001e-05,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:88dd1aed58bb1bd8",
+        "kind": "fine",
+        "origin": [
+          1414.969281874518,
+          79.1994849165704,
+          1040.6381410370243
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 2.593994140625e-05,
+          "tileWidthM": 0.006640625,
+          "rtinToleranceM": 6.640625e-06,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 6.640625e-05,
+        "referenceSamples": 655,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 6.856193813217745e-06,
+        "meshCrossingUpperMaxM": 8.300781250000007e-06,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:79cc0173d46499b9",
+        "kind": "view",
+        "origin": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.0004150390625,
+          "tileWidthM": 0.10625,
+          "rtinToleranceM": 0.00010625,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.0010625,
+        "referenceSamples": 826,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 0.00012510109628894342,
+        "meshCrossingUpperMaxM": 0.00016601562499999993,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      }
+    ],
+    "error": null,
+    "sourcesKey": "fnv1a64:13ad585ee91d5b57",
+    "elapsedS": 9.415761407930404,
+    "scope": "Finite direct CPU world-reference checks; original geometry, tolerance and world unchanged. Missing forward references remain explicit; not a global enclosure proof."
+  },
+  "ownedPids": [
+    2078454,
+    2078465,
+    2078465
+  ],
+  "scope": "Fresh same-host regression generation/finite qualification and owned source paths; no generalized input creation or multiple-world claim."
+}

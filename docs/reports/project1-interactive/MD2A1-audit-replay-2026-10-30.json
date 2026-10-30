@@ -1,0 +1,665 @@
+{
+  "scope": "Exact copies of unchanged real browser/qualification records; original geometry stems and binary payloads remain preserved. No new browser, altered motion or changed assertions.",
+  "inputCopies": [
+    {
+      "file": "browser.json",
+      "source": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/browser.json",
+      "replay": "/mnt/ml_storage/scratch/atlas-md2a/audit-replay-r0/browser.json",
+      "sha256": "49ebc8b1d7d945e949458352cf4e8b936f7a39045c8ccfaaeab3ba027812ad15"
+    },
+    {
+      "file": "qualification-input.json",
+      "source": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/qualification-input.json",
+      "replay": "/mnt/ml_storage/scratch/atlas-md2a/audit-replay-r0/qualification-input.json",
+      "sha256": "e62d6986765d51e66972134043b51d85a1534268101adc7051e2238593d3521f"
+    }
+  ],
+  "verifiedNativeSources": [
+    {
+      "role": "import-manifest.json",
+      "sha256": "e94e943d384a07c3e5c75f92a10c16f4d323809d85010d619b82bfc5238574f6",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/import-manifest.json"
+    },
+    {
+      "role": "native/adaptive_graph_pr3.py",
+      "sha256": "83147332869f2cbd660253d38e671f8370b87abe7c5a6ee4b693ba7061578f25",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/adaptive_graph_pr3.py"
+    },
+    {
+      "role": "native/builder_bw1.py",
+      "sha256": "50763f620e526ccb6af486c84b0c25a8218598966c3adccef466edffa95047f7",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_bw1.py"
+    },
+    {
+      "role": "native/builder_view.py",
+      "sha256": "2b14ae570873f00f176bdfb69440c05ae0a713644ef44768f47a4a65de16f0bf",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/builder_view.py"
+    },
+    {
+      "role": "native/cache_bw1.py",
+      "sha256": "73f0e0417124a29e138228623a3cf8658af9c4df72e1ba83d24f516f88282573",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_bw1.py"
+    },
+    {
+      "role": "native/cache_r0.py",
+      "sha256": "85a42614c61de2d9e783f01d73ae3cfbe7ed367d9223ce13de8b8cc7d04f1e17",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_r0.py"
+    },
+    {
+      "role": "native/cache_view.py",
+      "sha256": "8c4cb50e0af6094f521c9ed04fd9c6e66568354ba93c84eac0dc7cd7274eb5da",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/cache_view.py"
+    },
+    {
+      "role": "native/check_collision_r0.py",
+      "sha256": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/check_collision_r0.py"
+    },
+    {
+      "role": "native/dek.py",
+      "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/dek.py"
+    },
+    {
+      "role": "native/descendant_world.py",
+      "sha256": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/descendant_world.py"
+    },
+    {
+      "role": "native/field_fidelity_r0.py",
+      "sha256": "542bea18cf0a591e644877b5773319ac50d03303336bd32445b7ea21a4bce864",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/field_fidelity_r0.py"
+    },
+    {
+      "role": "native/fkern.py",
+      "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/fkern.py"
+    },
+    {
+      "role": "native/generation_paths.py",
+      "sha256": "f6d7acdc002e99be7098d79f54f56fb0efbe01093aeb8142cb26467f71e9fa4a",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/generation_paths.py"
+    },
+    {
+      "role": "native/h1lib.py",
+      "sha256": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/h1lib.py"
+    },
+    {
+      "role": "native/pert.py",
+      "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/pert.py"
+    },
+    {
+      "role": "native/region_class.py",
+      "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/region_class.py"
+    },
+    {
+      "role": "native/sampling_r0.py",
+      "sha256": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/sampling_r0.py"
+    },
+    {
+      "role": "native/streaming_builder_r0.py",
+      "sha256": "554f20376b5424fc89fc7790c9158f9ed6c4e5a1fe930036e42dd9e36db41eb3",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/streaming_builder_r0.py"
+    },
+    {
+      "role": "native/view_grid.py",
+      "sha256": "8d00ccabaadc5a003ff6e1a5a54e62f77ef6a2697fded51eb1860aeea43fdf4c",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/view_grid.py"
+    },
+    {
+      "role": "native/world_grid.py",
+      "sha256": "24ea3190cce577c03748d0f93f42aef44a4f13646b7a853e33825e53a56a392d",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/world_grid.py"
+    },
+    {
+      "role": "regression-world/approach-r1.json",
+      "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/approach-r1.json"
+    },
+    {
+      "role": "regression-world/base.npz",
+      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/base.npz"
+    },
+    {
+      "role": "regression-world/construction.json",
+      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/construction.json"
+    },
+    {
+      "role": "regression-world/cpu-screen-r0.json",
+      "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/cpu-screen-r0.json"
+    },
+    {
+      "role": "regression-world/feature-r0.json",
+      "sha256": "87b1a6e303758f7e767e460c6d121d43db9382fa31ec47571be25d8a7b75eca6",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/feature-r0.json"
+    },
+    {
+      "role": "regression-world/frame.json",
+      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/frame.json"
+    },
+    {
+      "role": "regression-world/gs.json",
+      "sha256": "31f88d35160d4d56bb0937f45e0cfc6568210db0a8f93b7f2fe1340314a1d202",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/gs.json"
+    },
+    {
+      "role": "regression-world/legacy-world.json",
+      "sha256": "22f4200e40b0bc5fe36fe5a310bca2b3cdf8a063128742b6ebc1323d6718a879",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/legacy-world.json"
+    },
+    {
+      "role": "regression-world/levels.json",
+      "sha256": "1b28cf656f304f20e0b6d46e0177841549223f96a9f498ba5068af6730b326e1",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/levels.json"
+    },
+    {
+      "role": "regression-world/prepared-layers-r0/parent-reference-r0.json",
+      "sha256": "e41e0ba46548b4dbe95cd2e3685e98138a255ef51045679614d18a81c8cf28eb",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.json"
+    },
+    {
+      "role": "regression-world/prepared-layers-r0/parent-reference-r0.npz",
+      "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.npz"
+    },
+    {
+      "role": "regression-world/prepared-static-r0/fixtures-r0.json",
+      "sha256": "e91c31daa47989603689179dca4d44a0799d3abbde476fcef29f0c4162b3096f",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/prepared-static-r0/fixtures-r0.json"
+    },
+    {
+      "role": "regression-world/reference/fine-control.npz",
+      "sha256": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/regression-world/reference/fine-control.npz"
+    },
+    {
+      "role": "external-package/manifold3d.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "bca3bd8ba6c1c6823153cab11d446ead93ab2ba857e3dcdb533ba906e926f8dc",
+      "file": "/mnt/ml_storage/scratch/atlas-prepared-toolchain/py/manifold3d.cpython-313-x86_64-linux-gnu.so"
+    },
+    {
+      "role": "external-package/martini.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "f573d27a5f3f12006eba42d7bcf70395534900d727f1676f4422df2aa6b6fd0a",
+      "file": "/mnt/ml_storage/scratch/atlas-prepared-toolchain/py/pymartini/martini.cpython-313-x86_64-linux-gnu.so"
+    },
+    {
+      "role": "native-worker.py",
+      "sha256": "14f71dda70a8e553e924959f9e0b1d475344c1bc25568920e6f274391a8a7166",
+      "file": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/preparation/native-worker.py"
+    }
+  ],
+  "verifiedPayloads": [
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-0/mesh-region1-r0.normalized.vertices.bin",
+      "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-0/mesh-region1-r0.indices.bin",
+      "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-0/mesh-region1-r0.solid.bin",
+      "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-1/mesh-region2-r0.normalized.vertices.bin",
+      "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-1/mesh-region2-r0.indices.bin",
+      "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-1/mesh-region2-r0.solid.bin",
+      "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-2/mesh-region3-r0.normalized.vertices.bin",
+      "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-2/mesh-region3-r0.indices.bin",
+      "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-2/mesh-region3-r0.solid.bin",
+      "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-3/mesh-region4-r0.normalized.vertices.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-3/mesh-region4-r0.indices.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-3/mesh-region4-r0.solid.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-4/mesh-region5-r0.normalized.vertices.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-4/mesh-region5-r0.indices.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-4/mesh-region5-r0.solid.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-5/mesh-region6-r0.normalized.vertices.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-5/mesh-region6-r0.indices.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-5/mesh-region6-r0.solid.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-8/mesh-region9-r0.normalized.vertices.bin",
+      "sha256": "af11ae9de968a9950277d6583616ea8d1227dd447a2c8e3b61069251e8ecb2bb"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-8/mesh-region9-r0.indices.bin",
+      "sha256": "a3bab9f85e049c5870178ec128ae8e9fdad881c14879842db848f8b766c08d8b"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-8/mesh-region9-r0.solid.bin",
+      "sha256": "0a130b084e4e47c445d7c5dd0160f7fa51c8c974eb4b421d8e48ee8cf766ca18"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-10/mesh-region10-r0.normalized.vertices.bin",
+      "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-10/mesh-region10-r0.indices.bin",
+      "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-10/mesh-region10-r0.solid.bin",
+      "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+    }
+  ],
+  "recordedContacts": 30,
+  "originalFailedAudit": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/flight-audit.json",
+  "correctedAuditSha256": "279b285f9655c235b9bf4e92d04b6091ce37efafcd4351ad793210b60a766990",
+  "originalAuditSha256": "d4fbf67bf18065c8f7bfdae6237c11e484b3cb9b76f34a98edd45eb5b3fbc9db",
+  "geometryStemHashes": [
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-0/mesh-region1-r0.npz",
+      "sha256": "75144bb8c86e57f96b3c5017d6ba85d0c466cd4a94732904950b5b2a91b073fc"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-0/mesh-region1-r0.json",
+      "sha256": "d639d22a20ee684a8e982ae11eaa5698af99fb07472ee82f291e327bec0bdcc7"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-1/mesh-region2-r0.npz",
+      "sha256": "017242296e9669616c45af74156f64802ab6459d3a32f08cefe8954a502b18fa"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-1/mesh-region2-r0.json",
+      "sha256": "a65f2ad4a3799152786bce36161a80580080d308532654dcf9d869f8ddfa821d"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-2/mesh-region3-r0.npz",
+      "sha256": "6014c4ba43ce87c712f48b455d009c237856813a4d793889acc0e2827c58c33d"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-2/mesh-region3-r0.json",
+      "sha256": "338e3cf9ed1743e75c50bb6e61356ad15f3c157b0f1f7c217f2583b291efa88d"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-3/mesh-region4-r0.npz",
+      "sha256": "de771012893e25c7f9fbb42640be485ee9eae7e7ebcd3680c11421bd54d9bd28"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-3/mesh-region4-r0.json",
+      "sha256": "63f6425350d56d5dc981d77ceddc2574feaa41c053784cafc4e76f0c8880aed0"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-4/mesh-region5-r0.npz",
+      "sha256": "e73a1cb8c761cac7d5be1985722a1d1e877baa01c85ea2c31a93f5c66f4e0a92"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-4/mesh-region5-r0.json",
+      "sha256": "799d187c4ebdd9a482291d6db6fd505ad79d3454c2117ea484272ddc38ffa407"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-5/mesh-region6-r0.npz",
+      "sha256": "5020b00fc612eefaf32e399e449807db9c9f666979ff907051609d4b30f1f77c"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-5/mesh-region6-r0.json",
+      "sha256": "ebf55ce4282d0b3a6bd3c7989622e0932c3fd94c5cc1d8e2991b9533c8c4551b"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-8/mesh-region9-r0.npz",
+      "sha256": "44ab6783c1cd0a5cf143969995647de6cec9f53149ea25f75adf9b2a8cdaed5c"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-8/mesh-region9-r0.json",
+      "sha256": "6a2c23a7bd42b7cb1ec37cac0ae8796d3106778bdd7e483136c83f17893d6174"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-10/mesh-region10-r0.npz",
+      "sha256": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877"
+    },
+    {
+      "file": "/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0/native/job-10/mesh-region10-r0.json",
+      "sha256": "2269e25ed906245ade0c15e2af62e802b1a40c7f6f5dd57070a35430b1925cd6"
+    }
+  ],
+  "postAuditBrowserFlagsPreserved": {
+    "pass": true,
+    "failure": "",
+    "scope": "Old reporting defect; these flags do not establish flight correctness. Replay checks exact preserved events and payloads."
+  },
+  "verifiedReplayCounts": [
+    {
+      "scenario": "application-route",
+      "entries": 11,
+      "contacts": 30,
+      "checkedFrames": 857
+    }
+  ],
+  "replayAudit": {
+    "pass": true,
+    "pid": 2029436,
+    "error": null,
+    "runs": [
+      {
+        "scenario": "application-route",
+        "entries": [
+          {
+            "address": "0,0,1",
+            "clearanceBodyUnits": 0.7,
+            "airSamples": 27
+          },
+          {
+            "address": "0,1,2",
+            "clearanceBodyUnits": null,
+            "airSamples": 27
+          },
+          {
+            "address": "1,1,2",
+            "clearanceBodyUnits": null,
+            "airSamples": 27
+          },
+          {
+            "address": "0,1,2",
+            "clearanceBodyUnits": null,
+            "airSamples": 27
+          },
+          {
+            "address": "0,1,1",
+            "clearanceBodyUnits": null,
+            "airSamples": 27
+          },
+          {
+            "address": "0,0,1",
+            "clearanceBodyUnits": 0.7,
+            "airSamples": 27
+          },
+          {
+            "address": "0,0,0",
+            "clearanceBodyUnits": 0.7,
+            "airSamples": 27
+          },
+          {
+            "address": "fine",
+            "clearanceBodyUnits": 0.7,
+            "airSamples": 27
+          },
+          {
+            "address": "0,0,0",
+            "clearanceBodyUnits": 0.5291354997498802,
+            "airSamples": 27
+          },
+          {
+            "address": "0,0,0",
+            "clearanceBodyUnits": 0.7,
+            "airSamples": 27
+          },
+          {
+            "address": "0,0,0",
+            "clearanceBodyUnits": 0.7,
+            "airSamples": 27
+          }
+        ],
+        "contacts": [
+          {
+            "address": "fine",
+            "minimumPrefix": 0.500000620296226,
+            "stopClearance": 0.500996713027745,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000001691548525,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          },
+          {
+            "address": "fine",
+            "minimumPrefix": 0.5000002224551263,
+            "stopClearance": 0.5009962621278443,
+            "mathCrossingBodyUnits": 0.0003125000000000003,
+            "motionErrorM": 0.0
+          }
+        ],
+        "checkedFrames": 857,
+        "waitingFramesStationary": 53,
+        "maxStepM": 0.0005312500000243224,
+        "pass": true
+      }
+    ],
+    "elapsedS": 1.7834373163059354,
+    "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof."
+  }
+}

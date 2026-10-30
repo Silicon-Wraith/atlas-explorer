@@ -9,3 +9,7 @@
 5. Freeze the source for completed Claude source/evidence review. Run one final maintained headed full gate on that source with fresh scratch roots and cold/performance paths, ≤45 minutes. Independently confirm physical closure. Report every criterion and standing pass/miss/unverified result, reading omissions and process cost. Archive compact decisive evidence, reviews and raw hashes. Update current docs and open a reviewed PR; advisor merges.
 
 A1 does not claim regenerated canonical parent inputs, arbitrary Plane source support, multiple worlds, new mathematical detail or a production preparation backend. Those remain the next explicit source-creation/recipe/Plane slices in the foundation sequence.
+
+## Completion
+
+The five ownership tasks are complete; corrected functional verification follows separately adopted r2. The original one-gate/process plan was missed. [Full scorecard](../../reports/project1-interactive/MD2A1-GENERATION-OWNERSHIP-2026-10-30.md) records exact source edits/legacy binding, actual module/input paths, same-host binary compatibility/order/rebuild, source-qualified policies, preserved failed preflight/repair, failed first gate and separately reviewed r2 audit correction/replay, completed peer judgement, 1,357 guarded units/86 files/build, 28/28 final gate and physical closure. Measured source/test/certificate head is `3d95d79`; later changes are documentation/evidence only. Advisor merge precedes the separately designed A2 input-creation/recipe slice.

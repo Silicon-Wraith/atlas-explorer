@@ -1,6 +1,6 @@
 # MD2.A — bring world generation into ATLAS
 
-2026-10-30. Owner Codex; challenger Claude. **Sequence approved by the advisor; MD2.A1 design/card pending independent challenge.** Base merged PR23 `af72dbeb9fc0d2ce5bf399bac0cb33bbdaba694c`. Worktree `/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a`, branch `feat/md2a`. Appearance implementation has not begun and is deferred behind this foundation following the advisor's world-generation correction.
+2026-10-30. Owner Codex; challenger Claude. **Sequence approved by the advisor; MD2.A1 ownership slice implemented, independently reviewed and qualified.** [Full scorecard](../../reports/project1-interactive/MD2A1-GENERATION-OWNERSHIP-2026-10-30.md), 1,357 units/86 files/build and 28/28 final gate on `3d95d79`. Advisor merge precedes MD2.A2. The full foundation remains open. Base merged PR23 `af72dbeb9fc0d2ce5bf399bac0cb33bbdaba694c`. Worktree `/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a`, branch `feat/md2a`. Appearance implementation has not begun and is deferred behind this foundation following the advisor's world-generation correction.
 
 Governing intent: [North Star](../specs/2026-10-23-atlas-north-star-charter.md), [fixed-world interpretation](../specs/2026-10-29-atlas-multiscale-world-clarification.md), [preparation boundary](../specs/2026-10-29-atlas-preparation-boundary.md) and [roadmap](2026-10-29-atlas-browser-world-move-forward.md).
 
@@ -10,13 +10,13 @@ Find a location in Plane, choose a supported mathematical-to-spatial interpretat
 
 A source location/window and interpretation define mathematical content. A 3D viewpoint, observer body size, tessellation and cache state do not redefine it. Smaller-scale mathematical formations may use a new representation/topology, with compatible prepared collision. Appearance stays a separate domain. Whether a selected source window is an entry into a larger shared mathematical world or a distinct authored world definition must be explicit in the generator's construction; do not silently reseed while navigating.
 
-## Verified starting gaps
+## Starting gaps before MD2.A1
 
 The repository owns the application, preparation contracts and a Python request wrapper. `scripts/preparation/native-worker.py` imports coarse/fine builders from `atlas-world-bw1` and `atlas-multiscale-pr8` under scratch, plus view construction from the external runtime bundle. It enforces a single content ID. `native-adapter.mjs` separately enforces that world ID. `application-server.mjs` obtains feature/entry metadata and a policy certificate from scratch files.
 
 The scratch descendant rule has a fixed chart centre, support, amplitude and source ratio. Grid axes/origin and entry data come from experiment JSON. Canonical parent samples/frame and the upstream field evaluator are further dependencies. These are tested construction choices, not a general user-facing world-creation pipeline. Copying their files alone would retain a single fixture.
 
-An initial static trace of seven entry modules is preserved at `/mnt/ml_storage/scratch/atlas-md2a/initial-source-audit.json`. It reads/hashes source without importing GPU modules. It is not a complete dependency/asset closure. No GPU work or implementation has run for MD2.A.
+An initial static trace of seven entry modules is preserved at `/mnt/ml_storage/scratch/atlas-md2a/initial-source-audit.json`. It reads/hashes source without importing GPU modules. It is not a complete dependency/asset closure. That initial trace preceded implementation. MD2.A1 now owns the runtime and fixtures, with actual native and headed application evidence in its full scorecard; upstream canonical-input creation remains next.
 
 ## Execution sequence
 
@@ -28,8 +28,14 @@ An initial static trace of seven entry modules is preserved at `/mnt/ml_storage/
 
 ## Gates and immediate next action
 
-The immediate action is the bounded dependency/design audit, followed by completed Claude challenge and a frozen migration card. Subsequent slices get their own measurable criteria before implementation. Do not combine source relocation, a new world rule, a new default appearance and a new backend into one uncontrolled comparison. Existing acceptance requirements remain; report all standing performance/memory limits separately from functional qualification.
+The A1 dependency audit, reviewed card, migration and bounded qualification are complete. The immediate next action after advisor merge is the A2 canonical-input/recipe design and card. Subsequent slices get their own measurable criteria before implementation. Do not combine source relocation, a new world rule, a new default appearance and a new backend into one uncontrolled comparison. Existing acceptance requirements remain; report all standing performance/memory limits separately from functional qualification.
 
 Stop and record the gap if a required source/input cannot be traced, a licence cannot be established, a promised world changes unintentionally, required geometry remains unresolved, ownership is lost or cleanup is unconfirmed. Do not silently replace the existing world, use a camera-dependent seed or declare empty space from missing generation. No approval request is pending; the owner proceeds within the advisor's standing implementation/review authorization.
 
 The first implementation slice is [MD2.A1 generation ownership](../specs/2026-10-30-atlas-md2a1-generation-ownership.md), with [task plan](2026-10-30-atlas-md2a1-implementation.md) and [frozen card](../../reports/project1-interactive/MD2A1-CARD-2026-10-30.md). Source-driven input creation and the Plane workflow remain separately qualified subsequent slices.
+
+## Current definition and hosting questions
+
+Today the native helper supplies a fixed definition from code, numeric parameters and input assets; the browser receives it and requests regions. The merged pre-migration path assembled it from scratch, while A1 loads an owned bundle and preserves the legacy definition literally. This is not yet a self-contained user-editable recipe or a Plane-to-world creation operation.
+
+The advisor clarified that multi-user means a centrally hosted application serving independent users who can access/create worlds, not live multiplayer. Creation of the canonical definition, durable storage and geometry computation are separate choices. Central storage does not require central geometry generation. Client-side, service and hybrid preparation remain RB1 candidates; the owner discussed server registration/canonicalization as a possible future design, not an implemented or advisor-selected workflow. A2 must keep complete recipes and exact source coordinates independent of sessions, generated meshes and machine paths. RB1 must address user/world isolation, independent generation jobs and the current local helper's global one-tab limitation. No accounts, database, multiplayer or central service is added by A1.

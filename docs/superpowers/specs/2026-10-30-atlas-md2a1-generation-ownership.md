@@ -1,6 +1,6 @@
 # MD2.A1 — own the working region generator
 
-2026-10-30. Owner Codex; challenger Claude. **Independently challenged; [r1 amendments](../../reports/project1-interactive/MD2A1-CARD-AMENDMENT-2026-10-30.md) adopted before implementation.** Base merged PR23 `af72dbe`, project worktree `.worktrees/md2a`, branch `feat/md2a`. Governing [North Star](2026-10-23-atlas-north-star-charter.md), [fixed-world interpretation](2026-10-29-atlas-multiscale-world-clarification.md), [foundation sequence](../plans/2026-10-30-atlas-world-generation-foundation.md) and [preparation contract](2026-10-29-atlas-preparation-boundary.md).
+2026-10-30. Owner Codex; challenger Claude. **Implemented and independently reviewed within the bounded A1 scope.** [Full scorecard](../../reports/project1-interactive/MD2A1-GENERATION-OWNERSHIP-2026-10-30.md); measured head `3d95d79`, 1,357 units/86 files/build and 28/28 final gate. **Independently challenged; [r1 amendments](../../reports/project1-interactive/MD2A1-CARD-AMENDMENT-2026-10-30.md) adopted before implementation.** Base merged PR23 `af72dbe`, project worktree `.worktrees/md2a`, branch `feat/md2a`. Governing [North Star](2026-10-23-atlas-north-star-charter.md), [fixed-world interpretation](2026-10-29-atlas-multiscale-world-clarification.md), [foundation sequence](../plans/2026-10-30-atlas-world-generation-foundation.md) and [preparation contract](2026-10-29-atlas-preparation-boundary.md).
 
 ## Experience and boundary
 

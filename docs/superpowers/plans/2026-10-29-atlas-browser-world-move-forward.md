@@ -4,7 +4,7 @@
 **Owner:** Codex
 **Challenger:** Claude
 **Status:** Current owner roadmap. PC1, PC2/WC2 and BI1.A1/A2/B/C are implemented and independently reviewed within their declared bounded local scopes. The tested local BI1 integration route is complete; the broader browser-world release and production backend remain open.
-**Immediate next item:** [MD2.A world-generation foundation](2026-10-30-atlas-world-generation-foundation.md), following the advisor's correction: own the complete generation mechanism, separate it from the single test fixture, then establish source-driven world creation from Plane. AP1 appearance implementation is deferred behind that foundation. PR23/BI1.C merged at `af72dbe`; local `main` is updated. The current worktree is project `.worktrees/md2a`, branch `feat/md2a`. The new sequence is an owner proposal awaiting source audit and independent design/card challenge; no new generation capability is claimed.
+**Immediate next item:** advisor merge of [MD2.A1 generator ownership](../../reports/project1-interactive/MD2A1-GENERATION-OWNERSHIP-2026-10-30.md), then MD2.A2 canonical-input creation and complete portable world recipes, followed by the Plane creation workflow and genuine multi-source evidence. A1 passes 1,357 units/86 files/build and 28/28 final gate on `3d95d79`, with completed reviews and owned cleanup. Project `.worktrees/md2a`, branch `feat/md2a`, base merged PR23/main `af72dbe`. The [foundation sequence](2026-10-30-atlas-world-generation-foundation.md) remains open; AP1 follows it.
 
 Governing intent: [ATLAS North Star](../specs/2026-10-23-atlas-north-star-charter.md) and the [fixed-world engineering interpretation](../specs/2026-10-29-atlas-multiscale-world-clarification.md). This plan continues after the [local multiscale plan](2026-10-29-multiscale-feature-experience.md), [PR9 lifecycle](../../reports/project1-interactive/PR9-LIFECYCLE-2026-10-29.md) and [BW1 wider-world result](../../reports/project1-interactive/BW1-OBSERVER-REGIONS-2026-10-29.md). Their original evidence and criteria remain preserved.
 
@@ -16,7 +16,7 @@ The mathematical world is fixed. Mathematical detail generation, mesh representa
 
 | Capability | Current evidence | Remaining limitation |
 |---|---|---|
-| Prepared rendering and collision | Local navigation consumes prepared triangles and spatial queries. | Native preparation is packaged behind PC1 and the local development helper; production deployment remains unselected. |
+| Prepared rendering and collision | Local navigation consumes prepared triangles and spatial queries. | Native source and regression inputs are now repository-owned under MD2.A1; canonical-input creation and production deployment remain open. |
 | Local multiscale discovery | PR9 shows additional mathematical relief, contact and stable return in one fixed construction. | Finer interaction is available near one starting formation; arbitrary recursion is unproved. |
 | Wider spatial preparation | PC2 prepares fresh parent/cutter regions in a bounded three-dimensional domain with fixed mathematical lineage. | Finite domain and two body scales; general detail placement and unlimited coverage remain unproved. |
 | Surrounding view | A coarser representation keeps distant terrain visible through local empty air. | No general watertight seam or continuous horizon guarantee. |
@@ -72,9 +72,9 @@ PC2 now demonstrates the bounded 3D experience at about50FPS, with request-readi
 
 **Completion evidence:** a documented supported launch path opens one application URL; the visitor does not coordinate separate experiment scripts; workspace switching and shutdown release resources correctly; state survives the promised recovery cases; existing workflows still pass. Keep the required local native helper explicit until the production preparation location is decided.
 
-### 4. AP1 and MD2 — improve appearance and broaden mathematical discovery
+### 4. MD2 generation foundation, then interleaved AP1/MD2 experiences
 
-These are interleaved workstreams after the initial application slice, likely several releases/subplans each and much of the remaining user-facing V1 work. Schedule their increments around complete exploration experiences. Neither needs to wait for a general optimization campaign. Coarse triangles remaining coarse relative to zoom is one end-to-end case: distinguish mathematical feature generation, mesh approximation, lighting/material cues and safe navigation rather than assume subdivision alone supplies missing mathematical detail.
+The advisor placed generator ownership and source-driven world creation before appearance: see the [foundation sequence](2026-10-30-atlas-world-generation-foundation.md). A1 owns the existing runtime/fixtures; A2/A3 complete input creation, recipes and Plane entry. AP1 and MD2 then remain interleaved workstreams, likely several releases/subplans each and much of the remaining user-facing V1 work. Schedule their increments around complete exploration experiences. Neither needs to wait for a general optimization campaign. Coarse triangles remaining coarse relative to zoom is one end-to-end case: distinguish mathematical feature generation, mesh approximation, lighting/material cues and safe navigation rather than assume subdivision alone supplies missing mathematical detail.
 
 **AP1: lighting and materials.** Add a bounded first appearance pass to the working terrain: readable lighting, a material treatment and usable exploration controls. Appearance parameters remain separate from mathematical generation. Check that shading and materials preserve geometric cues, contact consistency, motion and the declared frame-rate target. Do not invent a required wall shape, artistic feature or pixel pattern as a product success gate.
 
