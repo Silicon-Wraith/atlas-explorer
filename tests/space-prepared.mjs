@@ -106,7 +106,7 @@ finally{
    await exec('/mnt/ml_storage/scratch/venvs/gpu/bin/python',['scripts/experiments/pc2-buffer-audit.py',root],options);
    await exec('/mnt/ml_storage/scratch/venvs/gpu/bin/python',['scripts/experiments/pc2-audit.py',root],options);
    pass('Finite delivered-geometry qualification and actual application flight checks pass');
-  }catch(error){detail.failure=error.stderr??error.message;report.push({name:'FAIL',error:detail.failure});process.exitCode=1;}
+  }catch(error){detail.pass=false;detail.failure=error.stderr||error.stdout||error.stack||String(error);report.push({name:'FAIL',error:detail.failure});process.exitCode=1;}
  }
  if(detail.cleanup&&!detail.failure)pass('Prepared application has no runtime errors and confirms owned cleanup');
  else if(!detail.cleanup){report.push({name:'FAIL',error:'CLEANUP-UNCONFIRMED'});process.exitCode=125;}

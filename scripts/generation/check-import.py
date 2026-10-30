@@ -41,3 +41,19 @@ try:P.owned_provenance()
 finally:
     sys.modules.pop(probe.__name__,None);sys.modules.pop('md2a_metadata_late',None)
 print(json.dumps({'lazyModuleMutationControl':True}))
+
+# Audit imports must remain executable when import-path relocation changes formatting.
+import re
+def check_audit_imports(source):
+    tree=ast.parse(source)
+    imports={alias.asname or alias.name for node in tree.body if isinstance(node,ast.ImportFrom) and node.module=='check_collision_r0' for alias in node.names}
+    assert 'distances' in imports, 'Distance helper is not bound at module level'
+    assert not re.search(r'^\s*#.*;\s*(?:from\s+\S+\s+import\b|import\s+\w+)',source,re.M), 'Comment swallowed an import statement'
+for name in ['pc2-audit.py','pc2-qualify.py']:
+    check_audit_imports((ROOT.parent/'experiments'/name).read_text())
+# The actual failed source must be rejected without importing any GPU package.
+failed=(ROOT.parent/'experiments/pc2-audit.py').read_text().replace('\nfrom check_collision_r0 import distances',';from check_collision_r0 import distances')
+try:check_audit_imports(failed)
+except AssertionError:pass
+else:raise AssertionError('Swallowed-import negative control was not rejected')
+print(json.dumps({'auditImportBindings':True,'swallowedImportNegativeControlRejected':True,'gpuImports':False}))

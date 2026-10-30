@@ -10,7 +10,8 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'generation/native'))
 import generation_paths as GP
 GP.configure_packages(); GP.install_io_guard(); GP.validate_inputs()
 import descendant_world as W
-# Distance reference resolves from the owned native package.;from check_collision_r0 import distances
+# Distance reference resolves from the owned native package.
+from check_collision_r0 import distances
 started=time.monotonic();meshes={};rows=[];failure=None
 def near(mesh,point):
     if not len(mesh['t']):return float('inf')
