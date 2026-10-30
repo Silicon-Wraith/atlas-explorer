@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "dev:gpu": "node scripts/gpu-preview.mjs",
+    "dev:world": "node scripts/world-preview.mjs",
     "start": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
     "test": "node scripts/run-unit.mjs",

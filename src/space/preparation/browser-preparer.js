@@ -1,6 +1,6 @@
 import { createResourceLease } from './lifecycle.js';
 import { representationKey } from './contract.js';
-import { observeWasmInitialization } from './wasm-memory.js';
+import { initializeObservedWasm, observedWasmCapacity } from './wasm-memory.js';
 
 const vec = a => ({ x: a[0], y: a[1], z: a[2] });
 const rotation = { x: 0, y: 0, z: 0, w: 1 };
@@ -8,7 +8,7 @@ export async function createBrowserPreparer({ renderer, workerUrl, loadPhysics, 
   if (!workerUrl || typeof loadPhysics !== 'function') throw new TypeError('Explicit collision worker and physics loader required');
   let engine, capacity, initialization;
   async function rapier() {
-    initialization ??= (async () => { engine = await loadPhysics(); capacity = await observeWasmInitialization(() => engine.init()); })();
+    initialization ??= (async () => { engine = await loadPhysics(); capacity = await initializeObservedWasm(engine); })();
     await initialization; return engine;
   }
   const worker = new Worker(workerUrl, { type: 'module' });
@@ -56,7 +56,7 @@ export async function createBrowserPreparer({ renderer, workerUrl, loadPhysics, 
       const uploadBegin = performance.now(); gpu = await renderer.upload(artifact, new Float32Array(built.expanded));
       const key = representationKey(artifact), value = { artifact, gpu, surface, solid, collider, key, shape: surface ? new engine.Ball(.5) : null, castQueries: 0 };
       const timings = { workerBegin: built.begin, workerEnd: built.end, normalsMs: built.normalsMs, collisionMs: built.collisionMs, restoreMs, warmupMs, uploadMs: performance.now() - uploadBegin,
-        workerWasmCapacity: workerCapacity, mainWasmCapacity: capacity?.bytes() ?? 0, gpuBytes: gpu.bytes,
+        workerWasmCapacity: workerCapacity, mainWasmCapacity: observedWasmCapacity(), gpuBytes: gpu.bytes,
         snapshotBytes: (built.surfaceSnapshot?.byteLength ?? 0) + (built.solidSnapshot?.byteLength ?? 0) };
       onEvent({ type: 'consumer-prepared', time: performance.timeOrigin + performance.now(), representationKey: key, intent: artifact.intent, classification: artifact.classification, timings });
       return { renderRevision: key, collisionRevision: artifact.intent === 'view' ? null : key, collisionKind: artifact.intent === 'view' ? null : artifact.classification,
@@ -72,7 +72,7 @@ export async function createBrowserPreparer({ renderer, workerUrl, loadPhysics, 
     }
   }
   return Object.freeze({ prepare,
-    capacity: () => ({ workerWasmCapacity: workerCapacity, mainWasmCapacity: capacity?.bytes() ?? 0, workerJobs: pending.size }),
+    capacity: () => ({ workerWasmCapacity: workerCapacity, mainWasmCapacity: observedWasmCapacity(), workerJobs: pending.size }),
     close() {
       if (closed) return; closed = true;
       for (const job of pending.values()) { clearTimeout(job.timer); job.reject(new Error('Browser preparer terminated')); }

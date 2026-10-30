@@ -6,6 +6,8 @@ A local fractal workbench: an adaptive-precision Mandelbrot Plane and a WebGPU S
 
 The [current move-forward plan](docs/superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md) tracks the prepared-world prototype and its planned integration into this application.
 
+The first application integration adds an optional **Landscape** experience inside Space. It uses the retained local native preparer as a development control; the ordinary Plane and fractal-viewer launch paths remain available.
+
 ![Seahorse valley, calculated by ATLAS](assets/seahorse.png)
 
 ## Run
@@ -37,6 +39,18 @@ This starts the server if necessary and opens installed Google Chrome using a se
 Click the engine status at the bottom of ATLAS, or open **Help → Graphics details**, to see the actual renderer and any initialization failure. `GPU` means a disclosed hardware renderer, `SOFTWARE WEBGL` means a recognized CPU graphics implementation, and `CPU` means ATLAS's worker fallback. `WEBGL` alone means the device identity is unknown. The verified device here is **ANGLE / NVIDIA RTX 6000 Ada / Vulkan**, not llvmpipe or SwiftShader. A static view does not continuously redraw, so idle GPU power alone cannot identify the renderer. Chromium documents the [Vulkan backend option](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/gpu/using-gpu-hardware-in-headless-chrome.md); the visible-window configuration above was also tested locally.
 
 ## Space
+
+For the prepared landscape on this configured Linux/NVIDIA workstation, with the project development dependencies installed:
+
+```sh
+npm run dev:world
+```
+
+This owns one application server, installed headed Chrome, the GPU lock and a lazily started native preparer. It opens **http://127.0.0.1:5196**. Select **Space → Landscape**. Use WASD to move, Q/E down/up, drag to look, and the wheel or detail buttons to shrink/grow near the original formation. Unprepared coverage pauses movement visibly; move away from surfaces before growing. Return to the viewer or Plane and re-enter to retain the same supported pose during the page session.
+
+Close the owned Chrome window or press Ctrl+C to stop the launcher and its processes. Generated data and the browser's temporary files stay under `/mnt/ml_storage/scratch`. The native Python/Manifold/PyMartini/CuPy bundle and physics module are producer-side configuration described in [the preparation tooling](scripts/preparation/README.md); installation on another host is not yet a supported promise. `-- --port N` selects a private port. `-- --no-browser` is available for an externally managed browser/test, with shutdown still owned by the terminal.
+
+The ordinary `npm run dev` server has no native helper. Selecting Landscape there reports how to enable it and restores the viewer within Space. This first slice retains pose in memory; landscape save/reopen/history UI, abrupt-tab expiry, multi-tab recovery and full device-loss parity are subsequent BI1 work. It does not change the mathematical world when body size changes.
 
 A fresh page opens Plane. Select **Space** to prepare its WebGPU pipelines and open the bulb overview. Space preserves its scene and camera history when switching workspaces. Use the family and parameter controls, orbit, dolly, double-click focus, overview and flight; save/open a scene JSON file to carry the investigation between sessions. A pending draft keeps its own camera/quality identity and is visibly marked pending until current work publishes. Settled images and picking require current geometry.
 

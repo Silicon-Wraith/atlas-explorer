@@ -1,5 +1,5 @@
 import { expandTriangles } from './mesh-normals.js';
-import { observeWasmInitialization } from './wasm-memory.js';
+import { initializeObservedWasm } from './wasm-memory.js';
 
 export function installCollisionWorker({ loadPhysics }) {
   if (typeof loadPhysics !== 'function') throw new TypeError('Explicit physics loader required');
@@ -7,7 +7,7 @@ export function installCollisionWorker({ loadPhysics }) {
   async function rapier() {
     initialization ??= (async () => {
       engine = await loadPhysics();
-      capacity = await observeWasmInitialization(() => engine.init());
+      capacity = await initializeObservedWasm(engine);
     })();
     await initialization; return engine;
   }

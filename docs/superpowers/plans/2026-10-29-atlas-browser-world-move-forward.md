@@ -3,8 +3,8 @@
 **Date:** 2026-10-29
 **Owner:** Codex
 **Challenger:** Claude
-**Status:** Current owner roadmap. PC1's CPU boundary and PC2/WC2's bounded live 3D experience are implemented and independently reviewed within their declared scopes. This is not a claim that all listed work has shipped.
-**Immediate next item:** BI1 integration design and task plan, using the prepared-world boundary and preserving PC2's explicit performance, ownership and final-source validation limits.
+**Status:** Current owner roadmap. PC1's CPU boundary, PC2/WC2's bounded live 3D experience and PC3/BI1.A1's application entry/retained pose are implemented and independently reviewed within their declared scopes. This is not a claim that all listed work has shipped.
+**Immediate next item:** BI1.A2 abrupt-client recovery and multi-tab policy, following advisor merge of PC3. Preserve the measured native control, readiness/navigation/memory obligations and final-source evidence limits.
 
 Governing intent: [ATLAS North Star](../specs/2026-10-23-atlas-north-star-charter.md) and the [fixed-world engineering interpretation](../specs/2026-10-29-atlas-multiscale-world-clarification.md). This plan continues after the [local multiscale plan](2026-10-29-multiscale-feature-experience.md), [PR9 lifecycle](../../reports/project1-interactive/PR9-LIFECYCLE-2026-10-29.md) and [BW1 wider-world result](../../reports/project1-interactive/BW1-OBSERVER-REGIONS-2026-10-29.md). Their original evidence and criteria remain preserved.
 
@@ -142,7 +142,7 @@ The first supported browser-world milestone is reached when a visitor can enter 
 | BW1 wider-world foundation | Demonstrated, with reported gaps | Native prototype and launcher retained |
 | PC1 preparation boundary | **First CPU slice complete, independently reviewed** | [Contract, lifecycle and native replay report](../../reports/project1-interactive/PC1-PREPARATION-BOUNDARY-2026-10-29.md); live producer wiring remains for WC2 |
 | WC2 three-dimensional coverage | **Bounded experience complete, independently reviewed** | [PC2 source/evidence and full scorecard](../../reports/project1-interactive/PC2-LIVE-3D-COVERAGE-2026-10-29.md); latency/navigation misses, ownership and final-source limits explicit |
-| BI1 application integration | **Next: design and task plan** | One end-to-end application slice; own readiness throughput early and qualify final application behavior |
+| BI1 application integration | **A1 bounded slice implemented and reviewed; A2 next** | [PC3 full scorecard](../../reports/project1-interactive/PC3-APPLICATION-ENTRY-2026-10-29.md): actual app route/retained return and full product gate pass; navigation/readiness misses and memory limits explicit. A2 abrupt-client recovery, B persistence/history, C device-loss parity remain. |
 | AP1 appearance | Planned | First lighting/material increment on integrated geometry |
 | MD2 broader mathematical discovery | Planned | Bounded additional locations/scales with fixed lineage |
 | RB1 supported release | Planned | Backend decision, ownership/recovery evidence, supported launch and reviewed PR |

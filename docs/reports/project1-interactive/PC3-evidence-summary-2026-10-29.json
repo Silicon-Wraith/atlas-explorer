@@ -1,0 +1,436 @@
+{
+  "pass": true,
+  "cleanup": true,
+  "failure": null,
+  "route": [
+    {
+      "scenario": "application-route",
+      "seconds": 22.804,
+      "frames": 867,
+      "fps": 49.94325938784869,
+      "preparationFps": 49.877419900245165,
+      "frameMs": {
+        "n": 867,
+        "p50": 20,
+        "p95": 20.100000000000364,
+        "p99": 20.100000000000364,
+        "max": 40
+      },
+      "navigationMs": {
+        "n": 730,
+        "p50": 0.10009765625,
+        "p95": 2.5,
+        "p99": 4.199951171875,
+        "max": 4.800048828125
+      },
+      "navigationByClass": {
+        "constant": {
+          "n": 125,
+          "p50": 0.099853515625,
+          "p95": 0.199951171875,
+          "p99": 0.2001953125,
+          "max": 0.300048828125
+        },
+        "first-surface": {
+          "n": 3,
+          "p50": 0.300048828125,
+          "p95": 0.300048828125,
+          "p99": 0.300048828125,
+          "max": 0.300048828125
+        },
+        "steady-surface": {
+          "n": 543,
+          "p50": 0.10009765625,
+          "p95": 3.7998046875,
+          "p99": 4.2001953125,
+          "max": 4.800048828125
+        }
+      },
+      "readinessMs": {
+        "interaction": {
+          "n": 9,
+          "p50": 1102.10009765625,
+          "p95": 2452.89990234375,
+          "p99": 2452.89990234375,
+          "max": 2452.89990234375
+        },
+        "view": {
+          "n": 2,
+          "p50": 1727.800048828125,
+          "p95": 1775.5,
+          "p99": 1775.5,
+          "max": 1775.5
+        }
+      },
+      "waitMs": 1180.2000000000007,
+      "waitFraction": 0.06798504582415116,
+      "contacts": 30,
+      "fineEntries": 1,
+      "growths": 1,
+      "revisionAgreement": true,
+      "maxInteraction": 8,
+      "maxView": 1,
+      "peakGpuBytes": 32426144
+    }
+  ],
+  "controls": [
+    {
+      "scenario": "rapid-switch",
+      "seconds": 30.347,
+      "firstPresentations": 1,
+      "cancellations": 2
+    },
+    {
+      "scenario": "leave-pending",
+      "seconds": 30.001,
+      "firstPresentations": 1,
+      "cancellations": 1
+    }
+  ],
+  "qualification": {
+    "pass": true,
+    "specimens": [
+      {
+        "representationKey": "fnv1a64:03a17384a7c07d06",
+        "kind": "coarse",
+        "origin": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 608,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 2.789774079877749e-05,
+        "meshCrossingUpperMaxM": 6.640625e-05,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:ba146a5abc5a5630",
+        "kind": "view",
+        "origin": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.0004150390625,
+          "tileWidthM": 0.10625,
+          "rtinToleranceM": 0.00010625,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.0010625,
+        "referenceSamples": 826,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 0.00012510109628894342,
+        "meshCrossingUpperMaxM": 0.00016601562499999993,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:4b2f1f5b20858a82",
+        "kind": "coarse",
+        "origin": [
+          1414.982253306491,
+          79.22229320887675,
+          1040.6419659057447
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 1,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 1.0849888795040796e-05,
+        "meshCrossingUpperMaxM": 3.320312500000003e-05,
+        "forwardReferenceGrid": null,
+        "limits": [
+          "Only one forward-reference sample; 512 reverse samples do not establish complete surface coverage."
+        ],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:5ff3ab10c8a3d225",
+        "kind": "coarse",
+        "origin": [
+          1414.9706697024023,
+          79.2287007908247,
+          1040.643040434229
+        ],
+        "classification": "empty-air",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 1024,
+        "meshSamples": 0,
+        "limits": [
+          "Finite occupancy samples, not proof of complete air/solid."
+        ],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:b74f104ca2024264",
+        "kind": "coarse",
+        "origin": [
+          1414.9771667569569,
+          79.24012487412698,
+          1040.6449562119776
+        ],
+        "classification": "empty-air",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 1024,
+        "meshSamples": 0,
+        "limits": [
+          "Finite occupancy samples, not proof of complete air/solid."
+        ],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:108f9a2487d58e99",
+        "kind": "coarse",
+        "origin": [
+          1414.9771667569569,
+          79.24232142047191,
+          1040.6318578614814
+        ],
+        "classification": "empty-air",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 1024,
+        "meshSamples": 0,
+        "limits": [
+          "Finite occupancy samples, not proof of complete air/solid."
+        ],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:4918b062378a9c68",
+        "kind": "coarse",
+        "origin": [
+          1414.9771667569569,
+          79.23792832778204,
+          1040.6580545624736
+        ],
+        "classification": "empty-air",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 1024,
+        "meshSamples": 0,
+        "limits": [
+          "Finite occupancy samples, not proof of complete air/solid."
+        ],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:2dea1425132a0dfe",
+        "kind": "coarse",
+        "origin": [
+          1414.969259197382,
+          79.1994450422722,
+          1040.6381343502476
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 0.000265625,
+        "referenceSamples": 760,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 3.0231962211664583e-05,
+        "meshCrossingUpperMaxM": 4.150390625000001e-05,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      },
+      {
+        "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+        "kind": "fine",
+        "origin": [
+          1414.969281874518,
+          79.1994849165704,
+          1040.6381410370243
+        ],
+        "classification": "surface",
+        "sampling": {
+          "cells": 256,
+          "stepM": 2.593994140625e-05,
+          "tileWidthM": 0.006640625,
+          "rtinToleranceM": 6.640625e-06,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "toleranceM": 6.640625e-05,
+        "referenceSamples": 655,
+        "meshSamples": 512,
+        "referenceToMeshMaxM": 6.856193813217745e-06,
+        "meshCrossingUpperMaxM": 8.300781250000007e-06,
+        "forwardReferenceGrid": null,
+        "limits": [],
+        "pass": true
+      }
+    ],
+    "elapsedS": 14.443063240963966
+  },
+  "flightAudit": {
+    "pass": true,
+    "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.",
+    "runs": [
+      {
+        "scenario": "application-route",
+        "entries": 11,
+        "contacts": 30,
+        "waitingFramesStationary": 59,
+        "checkedFrames": 867
+      }
+    ]
+  },
+  "bufferAudit": {
+    "pass": true,
+    "pid": 755663,
+    "representations": [
+      {
+        "key": "fnv1a64:03a17384a7c07d06",
+        "roles": 3,
+        "pass": true
+      },
+      {
+        "key": "fnv1a64:ba146a5abc5a5630",
+        "roles": 3,
+        "pass": true
+      },
+      {
+        "key": "fnv1a64:4b2f1f5b20858a82",
+        "roles": 3,
+        "pass": true
+      },
+      {
+        "key": "fnv1a64:5ff3ab10c8a3d225",
+        "roles": 3,
+        "pass": true
+      },
+      {
+        "key": "fnv1a64:b74f104ca2024264",
+        "roles": 3,
+        "pass": true
+      },
+      {
+        "key": "fnv1a64:108f9a2487d58e99",
+        "roles": 3,
+        "pass": true
+      },
+      {
+        "key": "fnv1a64:4918b062378a9c68",
+        "roles": 3,
+        "pass": true
+      },
+      {
+        "key": "fnv1a64:2dea1425132a0dfe",
+        "roles": 3,
+        "pass": true
+      },
+      {
+        "key": "fnv1a64:d9d2e86c8fd6a571",
+        "roles": 3,
+        "pass": true
+      }
+    ],
+    "nativeRecords": 22,
+    "outputBytes": 100935965,
+    "cacheBounds": true,
+    "viewInteractionCacheEvictions": 0,
+    "input": {}
+  },
+  "phases": {
+    "normalsMs": {
+      "n": 17,
+      "p50": 16.299999713897705,
+      "p95": 67.2999997138977,
+      "p99": 67.2999997138977,
+      "max": 67.2999997138977
+    },
+    "collisionMs": {
+      "n": 17,
+      "p50": 0,
+      "p95": 330.09999990463257,
+      "p99": 330.09999990463257,
+      "max": 330.09999990463257
+    },
+    "restoreMs": {
+      "n": 17,
+      "p50": 0,
+      "p95": 81.19999980926514,
+      "p99": 81.19999980926514,
+      "max": 81.19999980926514
+    },
+    "warmupMs": {
+      "n": 17,
+      "p50": 0,
+      "p95": 1.5,
+      "p99": 1.5,
+      "max": 1.5
+    },
+    "uploadMs": {
+      "n": 17,
+      "p50": 6.099999904632568,
+      "p95": 20.899999618530273,
+      "p99": 20.899999618530273,
+      "max": 20.899999618530273
+    }
+  },
+  "resources": {
+    "peakOwnedRssMiB": 2912.2421875,
+    "mainWasmCapacity": 107741184,
+    "workerWasmCapacity": 80347136,
+    "attributableRegionMemory": "unverified; allocator/driver attribution incomplete"
+  },
+  "scope": "BI1.A1 application entry, prepared movement and in-memory retained pose. Active-world frame statistics exclude initial activation; startup/readiness are separate. No saved scene/history UI, abrupt-client expiry, device-loss parity or production backend claim.",
+  "rawQualificationSha256": "49ecac524a2cbd0ff8d592897d2b4f8772a44f67820f74cf0a82303777ce59e0",
+  "annotations": [
+    "Derived archive of score.json. Raw run outputs remain unchanged. Explicit sparse-reference annotations added after independent review; no measurements or outcomes changed."
+  ]
+}

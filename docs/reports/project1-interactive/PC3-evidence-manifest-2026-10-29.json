@@ -1,0 +1,110 @@
+{
+  "implementation": "bb1d52814a7b15bbbd797276bbc376d3a6ed6440",
+  "base": "9bd2066a9aaaf935f6740944ec9cdac02790eb03",
+  "gate": "2026-10-30T02-59-56-774Z-bb1d52814a7b",
+  "cardReview": "20261030T014341Z-f372da",
+  "evidenceReview": "20261030T033633Z-411dc5",
+  "artifacts": {
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/browser.json": {
+      "sha256": "8a029b078c38ae979e673f8dfed367e07648de0d05ab1dae84fee31be874d830",
+      "bytes": 7945180
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/score.json": {
+      "sha256": "443dbabaa0606c5b4c76f5d3a8ed70e9b1496d950f61208f3be5c09d51d9e422",
+      "bytes": 11693
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/qualification-input.json": {
+      "sha256": "9996174f4441cb7c580b51aea230ad836c5206de22cd2e42108f7191b8d8bc6e",
+      "bytes": 31186
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/qualification.json": {
+      "sha256": "49ecac524a2cbd0ff8d592897d2b4f8772a44f67820f74cf0a82303777ce59e0",
+      "bytes": 6551
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/buffer-audit.json": {
+      "sha256": "1073c090cbd2dd712f9a3e22d8829d86b5637439b727b44804179d9ae44baffd",
+      "bytes": 1009
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/flight-audit.json": {
+      "sha256": "0cfeaab45599f6015f36b6db3b19e01eb8c2ed77862800cc98306ac4ebaf5cc5",
+      "bytes": 8765
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/native-records.json": {
+      "sha256": "68e3f60c710a8ab3eb524258e4f98bbe5b198d4dfeac4f07b0a3de32645b6ed9",
+      "bytes": 63555
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/application-server.json": {
+      "sha256": "3e439544255eeaf8a843177483017b2d77675021dbf94361259bdfab8cb78617",
+      "bytes": 76001
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/native-controller.json": {
+      "sha256": "f3d1d95b39b2b9da158329b28fbb3085804a586d0b1c4e473d066e24963f8de1",
+      "bytes": 130
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/external-closure.json": {
+      "sha256": "01b4d99d6a017d683860a4d85fb81c1790e6f04694e5e23fc1f7c8740a0397f0",
+      "bytes": 350
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/fine-inspection.png": {
+      "sha256": "16a9e6185b1469103ef59060307abf9d4ec65b145d5b37adaaf705360ea46967",
+      "bytes": 187554
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/application-r0/application.png": {
+      "sha256": "b72a3caabbdb68acc9c4a1b0b246c6eedda917aaeca783bb83d4d1eb31ad382d",
+      "bytes": 27819
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/compatibility-r0/output-relocations.jsonl": {
+      "sha256": "23e9e1f30e00538b3bb673fa554a831b6ffc057ff37e0c9b67a0ac6942cd658d",
+      "bytes": 2238
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/compatibility-r0/1b1-performance-bulb.json": {
+      "sha256": "54e451b8f882cba36950a48c9c2bf30e2a4bd626b1278b873311944030c59e38",
+      "bytes": 174789235
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/compatibility-r0/1b1-performance-quaternion.json": {
+      "sha256": "88eba962fd4028767a9b59128ab32e3cd87495e3ba5256d9309b8594cd6b96c2",
+      "bytes": 137556767
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/compatibility-r0/1b1-performance-menger.json": {
+      "sha256": "56bd1666b35313b60d4a7b6a988de87e6083e91f447ae1e543544ff070f104bb",
+      "bytes": 171663491
+    },
+    "/mnt/ml_storage/scratch/atlas-pc3/compatibility-r0/1b1-cold-prewarm.json": {
+      "sha256": "76f28108a9091971eaca27922857954c783c07cb324fa4a74495cac111ff1e53",
+      "bytes": 12131
+    },
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3/docs/reports/project1-interactive/PC3-evidence-summary-2026-10-29.json": {
+      "sha256": "bd4020b0095242367dea1f9b80c8f6798bd7670e40dc646dd3ca84bead02ff08",
+      "bytes": 12090
+    },
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3/docs/reports/project1-interactive/PC3-QUALIFICATION-LIMITS-2026-10-29.md": {
+      "sha256": "64e2c3fb9b7a9f236a0c649f3d8ea1f9c30d9d0d9b48fd3cc29d0cdabe98ddc8",
+      "bytes": 1556
+    },
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3/docs/reports/project1-interactive/PC3-PEER-REVIEW-2026-10-29.md": {
+      "sha256": "70258e09dbcc8d234188cb09059f604ea040e4583495e72cabffb2e5256b5ef8",
+      "bytes": 6125
+    },
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3/docs/reports/project1-interactive/PC3-fine-inspection-2026-10-29.png": {
+      "sha256": "16a9e6185b1469103ef59060307abf9d4ec65b145d5b37adaaf705360ea46967",
+      "bytes": 187554
+    },
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3/docs/reports/project1-interactive/PC3-application-2026-10-29.png": {
+      "sha256": "b72a3caabbdb68acc9c4a1b0b246c6eedda917aaeca783bb83d4d1eb31ad382d",
+      "bytes": 27819
+    },
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3/docs/reports/project1-interactive/PC3-product-gate-2026-10-29.json": {
+      "sha256": "60c4d8e626683e5798a0f908f821d34cbd67ac6fdeb3c4f9d76ab8f1b8723637",
+      "bytes": 5620
+    },
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3/docs/reports/project1-interactive/PC3-output-relocations-2026-10-29.jsonl": {
+      "sha256": "23e9e1f30e00538b3bb673fa554a831b6ffc057ff37e0c9b67a0ac6942cd658d",
+      "bytes": 2238
+    }
+  },
+  "reviewPacketManifest": {
+    "path": "/mnt/ml_storage/scratch/atlas-pc3/evidence-review-r0/packet-manifest.json",
+    "sha256": "3e07345654e47d06ccacb56ed0efbd40318757ba7c3620fa9d75d0250e697319",
+    "note": "Authoritative reviewed packet inventory. Nested source-manifest is the earlier implementation freeze; packet-manifest also pins later documentation-only review drafts."
+  }
+}
