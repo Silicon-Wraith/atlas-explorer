@@ -1,0 +1,57 @@
+{
+  "run_id": "20261030T195226Z-a5e2ca",
+  "artifacts": "/mnt/ml_storage/scratch/codex-bridge/claude-runs/20261030T195226Z-a5e2ca",
+  "log_error": null,
+  "result": {
+    "structured": null,
+    "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+    "observed_model": "claude-opus-5-5",
+    "cli_version": "2.1.314",
+    "usage": {
+      "input_tokens": 95707356,
+      "output_tokens": 414462,
+      "cache_read_tokens": 88364741,
+      "cache_write_tokens": 6376845,
+      "reasoning_tokens": 245685,
+      "total_tokens": 96121818
+    },
+    "cost_usd": 80.82146930000003,
+    "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+  },
+  "sourceManifest": {
+    "base": "57ba3b9cb0146724fdfc7ced5e991b4bee61b64d",
+    "head": "6ae51a67843431cb4d049075946c5b95c684d05f",
+    "files": {
+      "AGENTS.md": "1123e0ea3c893a5060c0693897308e5928fb51297b56e565696ccba87ab56151",
+      "docs/superpowers/specs/2026-10-30-atlas-bi1c-recovery.md": "94c219531fac5ded585580495094bf6b48be6056171afef23797c370999fe309",
+      "docs/superpowers/plans/2026-10-30-atlas-bi1c-implementation.md": "79febf72180ec033127b2d962cc546e9111727b1f6591de9f1ec4a32dd1971f5",
+      "docs/reports/project1-interactive/BI1C-CARD-2026-10-30.md": "20f5dcce483e522c0200bfd3f8870ed9d20a798a13c858ca7892197d0317a3ca",
+      "docs/superpowers/specs/2026-10-29-atlas-bi1-application-integration.md": "b9b09a9117cd778ab9f175e2c5b0513307264e835009a2391cf373993c507145",
+      "docs/superpowers/specs/2026-10-19-project1-design.md": "e6168834579b96f8ec27575c5c1ef83cbf48a2219875e00706a8ce06c0b88a63",
+      "src/space/preparation/workspace.js": "fb88702747274bc6c47b619f6fd6a924173287f592faad350bde87ac5cfd5443",
+      "src/space/preparation/browser-preparer.js": "1ac00d2b313d333a39d3d08ea8a04025be2138b69c6b1d3257bb1d43b11c066d",
+      "src/space/preparation/collision-worker.js": "ee35b2d2af865ec4b82a70b65753634b7041fafa1a28c6ff1fa7377b9b51b0d5",
+      "src/space/preparation/application-client.js": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+      "src/space/preparation/browser-producer.js": "04051ea4cb64c3a20c897aa310376ccbded979fd52f7f828851213ad521ed33b",
+      "src/space/preparation/runtime.js": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+      "src/space/preparation/lifecycle.js": "83e476e92a1d52727e25270aff56e25b499341e6548c46ba3e4be2108787dfba",
+      "src/space/preparation/scene-history.js": "c57abbe7a6f53190f07cbb7e8c91d9ee86ff86e7acc4ddc4ca7c4b2fc94108c7",
+      "src/space/render/webgpu/prepared-regions.js": "7d1b7afa1b9552a512e43f449bef32991fa769c3b9621ec92ee365d09e91e053",
+      "src/space/mode-host.js": "c690f1e8f477034faf9626bb287e471ebe23194da391436d22a5e7adc729cbb4",
+      "src/ui/workspace-switcher.js": "aa6427e1504d5c8afda796b4012e6c4438808e17909862b0c2c680fa70ebae95",
+      "src/space/recovery.js": "6d2b52afcd31bce25a15596ef4450c5a26cdac2f73a742eee2914d8f545c96d8",
+      "src/app.js": "2e0ff1a4bbb6cf9e96ecb1bf6a6eaaa73b46446ce69ce62c11379452ffeacf61",
+      "scripts/preparation/native-controller.mjs": "e8713153f70a44d65005c5e86b1aff048a00630b26c3efb7968d0f7c97cc7ea9",
+      "scripts/preparation/native-adapter.mjs": "a6910405035f87bef4518ac4d1018a468c6ede9babaad89c1185db0bbd11d03c",
+      "scripts/preparation/native-queue.mjs": "293b8d33431ba010974d518472fc82d4668773ef17056f9c536bd8e3312d97ce",
+      "scripts/preparation/application-server.mjs": "b6ff658006a4b106030b3ca3f26c864a95b0357fc90627eb03fe9854a0f73cea",
+      "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+      "tests/unit/prepared-workspace.test.js": "66b7eb41750feb9414298dc185124d04c59006a4db654a3dde84f09ce58ba45a",
+      "tests/support/prepared-fixture.mjs": "7473aa0fd47bd3e56646b1dd28a4d8313235bff302ec086215e7f663e9616537",
+      "tests/space-prepared.mjs": "a56eee8c0ebbea257bc7a8d9f9bdb477b10b2c3738477b5b07bc910068151a26",
+      "tests/space-preparation-session.mjs": "da554382fd4dd7105e5e73e2db9d5413c5cd07b23d1f9477d95cdfab570f40e2",
+      "tests/space-prepared-files.mjs": "fcf388b838827139310cc3d03a71b599851bb3b48bb063c67602897a9b1122b7",
+      "tests/suites.manifest.json": "bc36d05813a924b48df133f1c39c5f71b2f39478fd636d7d6e8b8a2e28f031f6"
+    }
+  }
+}
