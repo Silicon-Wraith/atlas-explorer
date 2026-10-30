@@ -19,8 +19,15 @@
       <canvas id="landscape-held" aria-hidden="true" hidden></canvas>
       <div class="space-mode-switch chrome" role="group" aria-label="Space experience">
         <button id="space-mode-viewer" aria-pressed="true">Fractal viewer</button><button id="space-mode-landscape" aria-pressed="false">Landscape</button>
+        <button id="landscape-save-scene" disabled>Save Landscape scene</button>
+        <label class="landscape-open" for="landscape-open-scene">Open Landscape scene</label><input id="landscape-open-scene" type="file" accept="application/json,.json" hidden>
       </div>
       <div class="landscape-controls chrome" aria-label="Landscape controls"><button id="landscape-smaller" class="mini-button">Enter smaller detail</button><button id="landscape-larger" class="mini-button">Grow back</button><p>Explore a fixed mathematical world.<br>Move away from surfaces before growing.</p></div>
+      <div class="landscape-history chrome" role="group" aria-label="Landscape history">
+        <button id="landscape-back" disabled>Back</button><button id="landscape-forward" disabled>Forward</button>
+        <button id="landscape-undo" disabled>Undo</button><button id="landscape-redo" disabled>Redo</button>
+      </div>
+      <p id="landscape-file-status" class="landscape-file-status chrome" role="status"></p>
       <p id="landscape-info" class="landscape-info chrome" role="status"></p>
       <div class="space-status chrome" aria-live="polite">
         <p id="landscape-status" class="space-preparation" role="status" hidden></p>

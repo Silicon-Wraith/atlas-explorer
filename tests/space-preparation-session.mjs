@@ -17,7 +17,7 @@ import { PROJECT0_LAUNCH_ARGS, checkEffectiveArguments, collectVisibleText, acti
 if(!process.env.ATLAS_GPU_HANDOFF||process.env.ATLAS_GPU_DEFERRED)throw Error('Explicit headed hardware handoff required');
 installSuiteDeadline('space-preparation-session',300000);
 const stamp=new Date().toISOString().replace(/[:.]/g,'-'),root=path.resolve(process.env.ATLAS_SESSION_RUN_ROOT??'/mnt/ml_storage/scratch/atlas-pc4/session-'+stamp);
-assert.ok(root.startsWith('/mnt/ml_storage/scratch/atlas-pc4/'));await fs.mkdir(root);
+assert.ok(root.startsWith('/mnt/ml_storage/scratch/atlas-pc4/')||root.startsWith('/mnt/ml_storage/scratch/atlas-bi1b/'));await fs.mkdir(root);
 const report=[],detail={started:Date.now(),mode:'session',errors:[],runs:[],controls:[],cleanup:false},observer=observeOwnedProcesses(),exec=promisify(execFile);
 let service,lossProxy,browser,context,a,b,aId,bId,aHeaders,heldToken,savedA=[],suppressB=false,holdFine=true,heldReady,heldTask;
 const held=new Promise(resolve=>{heldReady=resolve;}),base='http://127.0.0.1:5198',allEvents=[];

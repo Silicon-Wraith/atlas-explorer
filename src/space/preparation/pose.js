@@ -1,4 +1,4 @@
-// A1 in-memory pose only. This is not a registered/persistent scene format.
+// GPU-independent live pose/admission. scene-adapter.js owns portable scene files.
 import { canonicalJson, deepFreeze, isPlainObject, requireObject } from '../../shared/scene.js';
 import { worldReference } from './contract.js';
 

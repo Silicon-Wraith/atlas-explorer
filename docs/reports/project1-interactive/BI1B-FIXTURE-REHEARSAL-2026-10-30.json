@@ -1,0 +1,11 @@
+{
+  "pass": true,
+  "nativeFree": true,
+  "source": "/mnt/ml_storage/scratch/atlas-pc4/application-r2/browser.json",
+  "checks": [
+    "Real retained-world portable bytes and exact canonical roundtrip",
+    "Actual metadata admits normal requested pose",
+    "Headed unsupported fixture parses structurally but rejects producer domain admission"
+  ],
+  "at": "2026-10-30T17:55:16.406Z"
+}

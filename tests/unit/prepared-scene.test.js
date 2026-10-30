@@ -1,0 +1,72 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createPreparedSceneAdapter } from '../../src/space/preparation/scene-adapter.js';
+import { preparedFixture } from '../support/prepared-fixture.mjs';
+
+test('prepared scene preserves portable world and camera through a canonical file', () => {
+  const f = preparedFixture(), adapter = createPreparedSceneAdapter();
+  const scene = adapter.createPreparedScene({ world: f.world, pose: f.poseModel.create(), lightDirection: [1, 0, 0] });
+  assert.deepEqual(scene?.model, { id: 'prepared-world', version: 1 });
+  const encoded = adapter.encodeSceneFile(scene);
+  assert.deepEqual(adapter.decodeSceneFile(encoded), scene);
+  assert.equal(adapter.encodeSceneFile(adapter.decodeSceneFile(encoded)), encoded);
+});
+
+test('prepared parsing rejects malformed complete records without defaults or caller mutation', () => {
+  const f = preparedFixture(), a = createPreparedSceneAdapter();
+  const source = a.createPreparedScene({ world: f.world, pose: f.poseModel.create(), lightDirection: [1, 0, 0] });
+  for (const mutate of [s => delete s.appearance, s => s.camera.positionLocalM.push(2), s => s.camera.orientationWxyz = [2, 0, 0, 0],
+    s => s.camera.bodyDiameterM = 0, s => s.camera.verticalFovDegrees = 130, s => s.parameters.world.definitionKey = 'bad',
+    s => s.schemaVersion = 2, s => s.model.version = 2, s => s.sampling.profile = 'other', s => s.camera.runtimeId = 'private', s => s.iteration = {}]) {
+    const input = structuredClone(source); mutate(input); assert.throws(() => a.sceneCodec.validate(input));
+  }
+  assert.throws(() => a.decodeSceneFile('{'));
+  const input = structuredClone(source), accepted = a.sceneCodec.validate(input);
+  input.camera.positionLocalM[0] = 99; input.parameters.world.parameters.changed = 1;
+  assert.equal(accepted.camera.positionLocalM[0], 0); assert.equal(accepted.parameters.world.parameters.changed, undefined);
+  assert.equal(Object.isFrozen(accepted.camera.positionLocalM), true); assert.equal(Object.isFrozen(input), false);
+  assert.throws(() => a.sceneCodec.validate({ ...source, camera: { ...source.camera, positionLocalM: [NaN, 0, 0] } }));
+  assert.throws(() => createPreparedSceneAdapter({ maxSceneBytes: 100 }).decodeSceneFile(a.encodeSceneFile(source)), error => error.code === 'too-large');
+});
+
+test('prepared orientation sign equivalence never rewrites file identity or makes a camera step', async () => {
+  const { equalPreparedCameras, admitPreparedScene } = await import('../../src/space/preparation/scene-adapter.js');
+  const f = preparedFixture(), a = createPreparedSceneAdapter(), pose = f.poseModel.create();
+  const scene = a.createPreparedScene({ world: f.world, pose, lightDirection: [1, 0, 0] });
+  const negative = a.sceneCodec.validate({ ...scene, camera: { ...scene.camera, orientationWxyz: scene.camera.orientationWxyz.map(x => -x) } });
+  assert.equal(equalPreparedCameras(scene.camera, negative.camera), true);
+  assert.notEqual(a.encodeSceneFile(scene), a.encodeSceneFile(negative));
+  assert.deepEqual(a.decodeSceneFile(a.encodeSceneFile(negative)).camera, { ...negative.camera, orientationWxyz: negative.camera.orientationWxyz.map(x => x === 0 ? 0 : x) });
+  const actual = admitPreparedScene(negative, { world: f.world, grid: f.grid.config, fineBounds: f.fineBounds, feature: { light: [1, 0, 0] } });
+  assert.equal(equalPreparedCameras(actual, negative.camera), true);
+});
+
+test('prepared structural parsing grants no producer world scale domain or clearance eligibility', async () => {
+  const { admitPreparedScene } = await import('../../src/space/preparation/scene-adapter.js');
+  const { createWorldRecord } = await import('../../src/space/preparation/contract.js');
+  const f = preparedFixture(), a = createPreparedSceneAdapter();
+  const scene = a.createPreparedScene({ world: f.world, pose: f.poseModel.create(), lightDirection: [1, 0, 0] });
+  const setup = { world: f.world, grid: f.grid.config, fineBounds: f.fineBounds, feature: { light: [1, 0, 0] } };
+  for (const camera of [{ ...scene.camera, originM: [1, 0, 0] }, { ...scene.camera, positionLocalM: [99, 0, 0] },
+    { ...scene.camera, bodyDiameterM: .125 }, { ...scene.camera, bodyDiameterM: .25, positionLocalM: [.49, 0, 0] }]) {
+    const parsed = a.sceneCodec.validate({ ...scene, camera }); assert.throws(() => admitPreparedScene(parsed, setup));
+  }
+  const { definitionKey, ...definition } = scene.parameters.world;
+  const other = createWorldRecord({ ...definition, parameters: { changed: true } });
+  const rekeyed = a.sceneCodec.validate({ ...scene, parameters: { world: other } });
+  assert.throws(() => admitPreparedScene(rekeyed, setup), error => error.code === 'unsupported-world');
+  assert.deepEqual(admitPreparedScene(scene, setup), f.poseModel.create());
+});
+
+test('the actual retained-world record exports portable mathematical identity without native capabilities', async () => {
+  // Frozen from PC4f108ec5's qualified native metadata, not generated by this test.
+  const { readFile } = await import('node:fs/promises');
+  const { createSpatialGrid } = await import('../../src/space/preparation/spatial-grid.js');
+  const { createPreparedPoseModel } = await import('../../src/space/preparation/pose.js');
+  const world = JSON.parse(await readFile(new URL('../support/retained-world.json', import.meta.url), 'utf8'));
+  const grid = createSpatialGrid({ origin: [0, 0, 0], axes: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], diameter: 1 });
+  const model = createPreparedPoseModel({ world, grid, fineBounds: { min: [-.5, -.5, -.5], max: [.5, .5, .5] } });
+  const a = createPreparedSceneAdapter(), scene = a.createPreparedScene({ world, pose: model.create(), lightDirection: [1, 0, 0] }), bytes = a.encodeSceneFile(scene);
+  assert.doesNotMatch(bytes, /\/mnt\/|\/root\/|scratch|bundle|\.npz|runtimeId|nonce|token|epoch|producer/);
+  assert.equal(a.decodeSceneFile(bytes).parameters.world.definitionKey, 'fnv1a64:4c29d6f7f61fbb06');
+});

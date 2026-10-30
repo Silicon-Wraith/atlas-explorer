@@ -54,6 +54,6 @@ Three hours implementation/native-free checks plus one hour hardware/evidence; i
 | Baseline | Complete;1,298 registered units/80 files |
 | Source/design/plan/card | Audited and written; frozen for challenge |
 | Independent card challenge | Complete;20261030T173343Z-2ee11b, r1 adopted; advisor gave standing Claude approval |
-| Implementation | Not started |
-| Headed/full-gate evidence | Not started |
+| Implementation | Scene codec/history/controller, restart seam, workspace/UI and19 new focused unit controls implemented;1,317 units/82 files and build pass. Meaningful assertion RED/GREEN preserved. |
+| Headed/full-gate evidence | Native-free actual-record/unsupported-fixture rehearsal passes; actual file/restart suite written and registered; hardware next. |
 | Final review/report/PR | Not started |

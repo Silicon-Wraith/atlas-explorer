@@ -11,13 +11,16 @@ export function createSpaceModeHost({ modes, initial = 'viewer', onState = () =>
     const mine = ++generation;
     let task = pending;
     if (!task || task.mode !== mode) {
+      task?.cancel();
       for (const [id, owner] of Object.entries(modes)) if (id !== mode) owner.deactivate();
-      const token = ++childSequence; let timer;
+      const token = ++childSequence; let timer, cancel;
+      task = { mode, cancel: () => { clearTimer(timer); cancel?.({ outcome: 'superseded' }); } };
       const promise = Promise.race([
         Promise.resolve().then(() => modes[mode].activate(token)),
-        new Promise(resolve => { timer = setTimer(() => { modes[mode].deactivate(); resolve({ outcome: 'unavailable', reason: 'Space preparation did not finish within its activation deadline' }); }, activationMs); }),
+        new Promise(resolve => { timer = setTimer(() => { if (pending === task) modes[mode].deactivate(); resolve({ outcome: 'unavailable', reason: 'Space preparation did not finish within its activation deadline' }); }, activationMs); }),
+        new Promise(resolve => { cancel = resolve; }),
       ]).catch(error => ({ outcome: 'unavailable', reason: error.message })).finally(() => clearTimer(timer));
-      task = pending = { mode, promise }; notify();
+      task.promise = promise; pending = task; notify();
     }
     const result = await task.promise;
     if (mine !== generation || !active || destroyed) return { outcome: 'superseded' };
@@ -28,11 +31,17 @@ export function createSpaceModeHost({ modes, initial = 'viewer', onState = () =>
     notify(); return result;
   }
   function deactivate() {
-    generation++; active = false; pending = null;
+    generation++; active = false; pending?.cancel(); pending = null;
     for (const owner of Object.values(modes)) owner.deactivate(); notify();
   }
+  function restart(mode) {
+    if (!modes[mode]) throw new RangeError('Unknown Space mode');
+    if (!active || destroyed) return Promise.resolve({ outcome: 'inactive' });
+    generation++; pending?.cancel(); pending = null; modes[mode].deactivate();
+    return select(mode);
+  }
   const inspection = Object.freeze({ get state() { return state(); }, select });
-  return Object.freeze({ inspection, select,
+  return Object.freeze({ inspection, select, restart,
     async activate() {
       if (destroyed) return { outcome: 'unavailable', reason: 'Space mode host was destroyed' };
       active = true;
