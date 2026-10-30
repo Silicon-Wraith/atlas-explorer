@@ -18,7 +18,7 @@ installSuiteDeadline('space-preparation-session',300000);
 const stamp=new Date().toISOString().replace(/[:.]/g,'-'),root=path.resolve(process.env.ATLAS_SESSION_RUN_ROOT??'/mnt/ml_storage/scratch/atlas-pc4/session-'+stamp);
 assert.ok(root.startsWith('/mnt/ml_storage/scratch/atlas-pc4/'));await fs.mkdir(root);
 const report=[],detail={started:Date.now(),mode:'session',errors:[],runs:[],controls:[],cleanup:false},observer=observeOwnedProcesses(),exec=promisify(execFile);
-let service,browser,context,a,b,aId,bId,aHeaders,savedA=[],suppressA=false,suppressB=false,holdFine=true,heldReady,heldTask;
+let service,browser,context,a,b,aId,bId,aHeaders,heldToken,savedA=[],suppressA=false,suppressB=false,holdFine=true,heldReady,heldTask;
 const held=new Promise(resolve=>{heldReady=resolve;}),base='http://127.0.0.1:5198',allEvents=[];
 const pass=(name,extra={})=>{report.push({name,...extra});console.log('PASS '+name);};
 const delay=ms=>within(new Promise(resolve=>setTimeout(resolve,Math.max(0,ms))),Math.max(1,ms)+2000,'fixed session interval');
@@ -54,17 +54,21 @@ try{
  detail.controls.push({scenario:'visible-healthy-owner',started:healthyStart,ended:Date.now(),renewals:renewals.length});
  pass('A visible healthy owner survives production renewals and a second tab cannot take over');
 
- // Context-level routing also covers close delivery during page teardown.
- await context.route(/\/api\/preparation\/(?:heartbeat|close)$/,async route=>{
+ // The lost page delivers no cleanup; the living page can still confirm its
+ // per-request retirement while final close/heartbeat delivery is suppressed.
+ detail.lossSuppression={heartbeat:0,close:0,cancel:0,retire:0};
+ await context.route(/\/api\/preparation\/(?:heartbeat|close|cancel|retire\/[^/?]+)(?:\?.*)?$/,async route=>{
   const id=route.request().headers()['x-atlas-client'];
-  if(suppressA&&id===aId||suppressB&&id===bId)await route.abort('failed');else await route.continue();
+  const operation=new URL(route.request().url()).pathname.split('/')[3];
+  if(suppressA&&id===aId){detail.lossSuppression[operation]++;await route.abort('failed');}
+  else if(suppressB&&id===bId&&['heartbeat','close'].includes(operation))await route.abort('failed');else await route.continue();
  });
  await context.route('**/api/preparation/prepare',route=>{
   const headers=route.request().headers(),input=route.request().postDataJSON();
   if(headers['x-atlas-client']!==aId||input.requirements.bodyDiameterM!==initial.metadata.grid.diameter/4||!holdFine)return route.continue();
   holdFine=false;aHeaders=apiHeaders(headers);
   heldTask=(async()=>{const response=await route.fetch({timeout:15000});assert.equal(response.status(),200);const output=await response.json();assert.equal(output.result.status,'prepared');
-   detail.heldResponse={preparedAt:Date.now()};heldReady();await delay(35000);
+   heldToken=output.token;detail.heldResponse={preparedAt:Date.now(),tokenSha256:createHash('sha256').update(heldToken).digest('hex')};heldReady();await delay(35000);
    try{await route.fulfill({response});detail.heldResponse.delivery='fulfilled';}catch{detail.heldResponse.delivery='closed-target';}
   })();heldTask.catch(error=>{detail.heldResponseError=error.message;heldReady();});return heldTask;
  });
@@ -75,6 +79,10 @@ try{
  const lastRenewal=service.events.filter(e=>e.type==='session-renewed'&&e.id===aId).at(-1).time,lossStart=Date.now();await closeWithin(a,'lost owner page');a=null;
  const expiredA=await until(()=>service.events.find(e=>e.type==='client-expired'&&e.id===aId),33000,'silent owner expiry');
  assert.ok(expiredA.time-lastRenewal<=32000);assert.ok(!service.events.some(e=>e.type==='client-closed'&&e.id===aId));assert.equal(service.snapshot().native.publications,0);
+ const expiryBegin=service.events.findIndex(e=>e.type==='client-retiring'&&e.id===aId&&e.reason==='expired');
+ const heldRetirement=service.events.findIndex(e=>e.type==='producer-retired'&&e.token===heldToken),expiryEnd=service.events.indexOf(expiredA);
+ assert.ok(expiryBegin>=0&&heldRetirement>expiryBegin&&heldRetirement<expiryEnd,'The held publication must retire inside expiry cleanup, not an earlier request');
+ detail.heldResponse.retiredByExpiry=true;
  await b.bringToFront();await b.click('#landscape-retry');await ready(b,15000);assert.ok(Date.now()-expiredA.time<=15000);bId=service.snapshot().client;assert.notEqual(bId,aId);
  const pubs=service.snapshot().native.publications,foreignToken=service.events.filter(e=>e.type==='producer-prepared'&&e.identity.runtimeId===bId).at(-1).token;
  const oldRetire=await fetch(base+'/api/preparation/retire/'+foreignToken,{method:'POST',headers:aHeaders,body:'{}'});assert.equal(oldRetire.status,410);

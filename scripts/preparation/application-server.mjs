@@ -18,6 +18,7 @@ export async function createApplicationServer({ runRoot, port = 5196, root = pro
   const events = []; let adapter, initialization, startupController, closing = false, shutdown;
   const event = e => events.push({ time: Date.now(), ...e });
   const clients = createApplicationClientOwner({ now, leaseMs: sessionPolicy.leaseMs, onEvent: e => event({ ...e, type: 'session-' + e.type }), onClose(client) {
+    event({ type: 'client-retiring', id: client.id, reason: client.reason });
     for (const controller of client.controllers.values()) controller.abort();
     for (const identity of client.requests.values()) adapter?.cancelRequest(identity);
     for (const token of client.tokens) adapter?.retire(token);
