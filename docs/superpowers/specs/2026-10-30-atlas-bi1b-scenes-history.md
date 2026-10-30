@@ -70,6 +70,8 @@ Track `requestedScene`/pending import separately from `publishedPose`/last accep
 
 Rapid B→C requests and leaving while B prepares invalidate B before awaiting cleanup. B may finish native work but cannot change C's desired state, published pose, history cursor, input or visibility. Old-runtime deactivation must never overwrite a newer requested scene. File/history jumps are explicit restores, not flight evidence. Reload still starts in Plane under the existing product contract; returning to the saved place is an explicit file open.
 
+The existing mode host can return `outcome:activated` for a failed Landscape request because it successfully activated the viewer fallback. That is a successful Space fallback, not a successful scene restoration. File/history success must be tied to the requested Landscape generation and its own first-presentation/scene identity; never infer it from the host outcome alone. Preserve the outer host's established fallback semantics.
+
 Add a narrow restoration-request callback to existing composition/mode activation, so successful first presentation and fallback remain owned by the mode host. Do not let a workspace's internal restore bypass a superseding mode/workspace token or create a second simultaneous Landscape owner.
 
 ## User controls
