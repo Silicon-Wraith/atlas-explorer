@@ -1,0 +1,32 @@
+{
+  "run_id": "20261030T184858Z-620182",
+  "artifacts": "/mnt/ml_storage/scratch/codex-bridge/claude-runs/20261030T184858Z-620182",
+  "result": {
+    "structured": null,
+    "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+    "observed_model": "claude-opus-5-5",
+    "cli_version": "2.1.314",
+    "usage": {
+      "input_tokens": 92021649,
+      "output_tokens": 397330,
+      "cache_read_tokens": 84733623,
+      "cache_write_tokens": 6322282,
+      "reasoning_tokens": 236397,
+      "total_tokens": 92418979
+    },
+    "cost_usd": 79.31599770000005,
+    "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+  },
+  "log_error": null,
+  "packetHashes": {
+    "src/space/preparation/runtime.js": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+    "src/space/preparation/workspace.js": "2f706dd6a0d7a993f121713af3f96892ba3068924ae459228783468c1ba0f3f5",
+    "src/space/preparation/application-client.js": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+    "scripts/preparation/native-adapter.mjs": "a6910405035f87bef4518ac4d1018a468c6ede9babaad89c1185db0bbd11d03c",
+    "scripts/preparation/native-queue.mjs": "293b8d33431ba010974d518472fc82d4668773ef17056f9c536bd8e3312d97ce",
+    "tests/space-prepared.mjs": "a56eee8c0ebbea257bc7a8d9f9bdb477b10b2c3738477b5b07bc910068151a26",
+    "tests/unit/prepared-runtime.test.js": "e8f76916786a05991f616f399379174eb7c4254c21baec509742cf7b2f7f43a6",
+    "tests/unit/prepared-workspace.test.js": "327818ee05d646d9388f18237de64d0dabd500cf55b69312e3d274f442eba8cc",
+    "docs/reports/project1-interactive/BI1B-FINAL-GATE-FOLLOWUP-2026-10-30.md": "f40b2db3ef482c1aaae6b75cf5832bd03414850b4d66b7159609b5b075cd4cc6"
+  }
+}

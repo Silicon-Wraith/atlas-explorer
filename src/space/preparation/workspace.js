@@ -16,6 +16,7 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
   const keys=new Set(),listeners=[],events=[];let generation=0,current=null,active=false,destroyed=false,cleaning=Promise.resolve(),cleanupError=null,retained=null,metadata=null,phase='idle',frameId=null,dragging=false,windowFocused=true;
   let yaw=0,pitch=0,last=0,lastPrediction=0,resizing=false,scaleSequence=0,pointer=null;
   let navigationDirty=false,quietTimer=null,fileSequence=0,pendingRead=null;
+  let scaleIntent=null,scaleMessage='';
   const permanent=[],setTimer=env.setTimer??setTimeout,clearTimer=env.clearTimer??clearTimeout;
   const scenes=createPreparedSceneHistory({onChange:syncSceneControls});
   const now=()=>performance.timeOrigin+performance.now();
@@ -23,7 +24,7 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
   function status(text){if(message){message.textContent=text;message.hidden=!text;}}
   function eligible(){const focused=doc.activeElement;return active&&!destroyed&&!resizing&&!doc.hidden&&windowFocused&&focused===canvas&&!doc.querySelector?.('dialog[open]');}
   function listen(target,type,handler,options){target?.addEventListener(type,handler,options);listeners.push(()=>target?.removeEventListener(type,handler,options));}
-  function clearInput(){settleNavigation();keys.clear();dragging=false;try{if(pointer!=null&&canvas?.hasPointerCapture?.(pointer))canvas.releasePointerCapture(pointer);}catch{}pointer=null; }
+  function clearInput(){cancelScale();settleNavigation();keys.clear();dragging=false;try{if(pointer!=null&&canvas?.hasPointerCapture?.(pointer))canvas.releasePointerCapture(pointer);}catch{}pointer=null; }
   function detach(){for(const remove of listeners.splice(0))remove();clearInput();}
   function check(state){if(state.cancelled||state.generation!==generation||state.sceneRequest!==scenes.request||destroyed)throw Object.assign(new Error('Landscape activation superseded'),{name:'AbortError'});}
   function sessionLost(state,reason){
@@ -76,7 +77,7 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
     invalidateReads();clearInput();const request=scenes.step(action);return request==null?{ok:false,unchanged:true}:requestRestoration(request);
   }
   function saveScene(){
-    settleNavigation();const scene=scenes.scene();if(!scene){fileStatus('Enter Landscape or open a scene before saving.');return null;}
+    cancelScale();settleNavigation();const scene=scenes.scene();if(!scene){fileStatus('Enter Landscape or open a scene before saving.');return null;}
     const value=encodeSceneFile(scene),blob=new Blob([value],{type:'application/json'});
     if(env.download)env.download(blob,'atlas-landscape-scene.json');
     else{const url=URL.createObjectURL(blob),link=doc.createElement('a');link.href=url;link.download='atlas-landscape-scene.json';link.click();setTimer(()=>URL.revokeObjectURL(url),30000);}
@@ -110,9 +111,10 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
         if(Math.hypot(...velocity)){velocity=mul(norm(velocity),.5*state.runtime.pose().bodyDiameterM);if(state.client.check())waiting=state.runtime.move(mul(velocity,dt)).waiting;}
       }else clearInput();
       if(permitted&&state.client.check()&&time-lastPrediction>=100){lastPrediction=time;state.runtime.predict(velocity);}
+      advanceScale(state,time,permitted);
       if(!active||state.cancelled)return;storePose(state);if(permitted&&!resizing)draw(state);
       const snapshot=state.runtime.snapshot();if(snapshot.error)throw new Error(snapshot.error);
-      status(!permitted?(state.client.snapshot().session?.message||'Checking the landscape session…'):waiting?'Preparing nearby terrain…':snapshot.pending.length?'Preparing the landscape ahead…':'');
+      status(!permitted?(state.client.snapshot().session?.message||'Checking the landscape session…'):scaleIntent?'Preparing smaller formations…':scaleMessage|| (waiting?'Preparing nearby terrain…':snapshot.pending.length?'Preparing the landscape ahead…':''));
       if(indicator)indicator.textContent=`Landscape · scale ${retained.bodyDiameterM/state.poseModel.D} · WASD move · Q/E down/up · drag to look · wheel to change scale`;
       event('frame',{ms:interval,pending:snapshot.pending.length>0,waiting,rendered:permitted&&!resizing,sessionVerified:permitted,position:state.poseModel.positionM(retained),bodyD:retained.bodyDiameterM,key:snapshot.key,renderRevision:snapshot.key,collisionRevision:snapshot.key,gpuBytes:state.renderer.bytes(),ownedInteraction:snapshot.ownedInteraction,ownedView:snapshot.ownedView});
     }catch(error){phase='unavailable';status(error.message);event('workspace-error',{message:error.message});deactivate();return;}
@@ -124,11 +126,34 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
     const factor=Math.min(1,Math.sqrt(2300000/(width*height)));width=Math.max(1,Math.floor(width*factor));height=Math.max(1,Math.floor(height*factor));
     resizing=true;clearInput();try{await state.renderer.resize(width,height);}finally{resizing=false;}
   }
+  function finishScale(intent,success,message=''){
+    if(scaleIntent!==intent)return;scaleIntent=null;clearTimer(intent.timer);scaleMessage=message;
+    if(success){storePose(intent.state);if(intent.discrete)settleNavigation();else quietNavigation();}
+    if(message)status(message);intent.resolve(success);
+  }
+  function cancelScale(){if(scaleIntent)finishScale(scaleIntent,false);}
+  function fineResident(state){const resident=state.runtime.snapshot().resident;return resident.includes('fine')&&resident.includes('0,0,0');}
+  function advanceScale(state,time,permitted){
+    const intent=scaleIntent;if(!intent)return;
+    if(!permitted||!eligible()||current!==intent.state||state!==intent.state||state.cancelled||intent.sequence!==scaleSequence){cancelScale();return;}
+    if(time>=intent.deadline){finishScale(intent,false,'Smaller formations are not ready yet; try again.');return;}
+    // Prediction owns preparation retries. A scale attempt must not flood that queue.
+    if(fineResident(state)&&state.client.check()){
+      const success=state.runtime.scale(true);
+      finishScale(intent,success,success?'':'Smaller scale needs clear prepared detail coverage at your current position.');
+    }
+  }
   async function scale(smaller,{discrete=false}={}){
+    cancelScale();scaleMessage='';
     const state=current;if(!eligible()||!state?.runtime||!state.client.check())return false;const mine=++scaleSequence;
     if(state.runtime.scale(smaller)){storePose(state);if(discrete)settleNavigation();else quietNavigation();return true;}
-    if(smaller){status('Preparing smaller formations…');await state.runtime.requestFine();if(active&&state===current&&mine===scaleSequence&&state.client.check()){const success=state.runtime.scale(true);storePose(state);if(discrete)settleNavigation();else quietNavigation();if(!success)status('Move into the prepared detail area to change scale.');return success;}}
-    else status('Move away from the surface before growing.');return false;
+    if(!smaller){scaleMessage='Move away from the surface before growing.';status(scaleMessage);return false;}
+    if(fineResident(state)){scaleMessage='Smaller scale needs clear prepared detail coverage at your current position.';status(scaleMessage);return false;}
+    status('Preparing smaller formations…');
+    return new Promise(resolve=>{
+      const bound=env.scaleIntentMs??8000,intent={state,sequence:mine,discrete,resolve,deadline:performance.now()+bound,timer:null};
+      scaleIntent=intent;intent.timer=setTimer(()=>finishScale(intent,false,'Smaller formations are not ready yet; try again.'),bound);
+    });
   }
   function orient(y,p){const state=current;if(!active||!state?.runtime||!state.client.check())return;yaw=y;pitch=Math.max(-1.5,Math.min(1.5,p));state.runtime.orient(preparedOrientation(yaw,pitch));storePose(state);if(!keys.size&&!dragging)quietNavigation();}
   function attach(state){
