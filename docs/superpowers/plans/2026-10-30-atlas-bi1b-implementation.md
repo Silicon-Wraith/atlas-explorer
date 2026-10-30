@@ -1,6 +1,6 @@
 # BI1.B implementation plan — prepared scenes, history and files
 
-**Status:** implementing after completed independent card challenge20261030T173343Z-2ee11b and [r1 amendment](../../reports/project1-interactive/BI1B-CARD-AMENDMENT-2026-10-30.md),2026-10-30. Governing [design](../specs/2026-10-30-atlas-bi1b-scenes-history.md), [card](../../reports/project1-interactive/BI1B-CARD-2026-10-30.md), [upstream BI1](../specs/2026-10-29-atlas-bi1-application-integration.md). Base `5013ba6154bf1162e3092c2b1b509377bade2629`, branch `feat/bi1b`, worktree `/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b`. Baseline1,298 units/80 files pass; runtime/evidence under `/mnt/ml_storage/scratch/atlas-bi1b`.
+**Status:** all bounded tasks complete, independently reviewed; ready for advisor PR review/merge,2026-10-30. [Full scorecard](../../reports/project1-interactive/BI1B-SCENES-HISTORY-2026-10-30.md), [design](../specs/2026-10-30-atlas-bi1b-scenes-history.md). Final measured source71dc60a,1,327 units/82 files, build and25/25 gate. Original failed attempts remain preserved; [the independently reviewed source repair](../../reports/project1-interactive/BI1B-SCALE-REPAIR-CARD-2026-10-30.md) closes the inherited capacity/scale-intent defect. Runtime/evidence under `/mnt/ml_storage/scratch/atlas-bi1b`; worktree project `.worktrees/bi1b`, branchfeat/bi1b, base5013ba6. BI1.C next after merge.
 
 ## 1. Challenge the frozen boundary
 
@@ -52,8 +52,8 @@ Three hours implementation/native-free checks plus one hour hardware/evidence; i
 |---|---|
 | Merged-main/worktree | Complete;5013ba6, feat/bi1b under project.worktrees |
 | Baseline | Complete;1,298 registered units/80 files |
-| Source/design/plan/card | Audited and written; frozen for challenge |
+| Source/design/plan/card | Complete; reviewed before implementation; source-repair card frozen before repair |
 | Independent card challenge | Complete;20261030T173343Z-2ee11b, r1 adopted; advisor gave standing Claude approval |
-| Implementation | Scene codec/history/controller, restart seam, workspace/UI and19 new focused unit controls implemented;1,317 units/82 files and build pass. Meaningful assertion RED/GREEN preserved. |
-| Headed/full-gate evidence | Native-free actual-record/unsupported-fixture rehearsal passes; actual file/restart suite written and registered; hardware next. |
-| Final review/report/PR | Not started |
+| Implementation | Complete; codec/history/request fences/UI plus full quaternion render basis and bounded scale-intent handling;1,327 units/82 files and build pass |
+| Headed/full-gate evidence | Complete; actual-file/restart9/9, maintained normal route and finite audits, PC4 controls,25/25 final product gate; all failed attempts preserved |
+| Final review/report/PR | Completed card/evidence/repair judgements; full scorecard/evidence archived; advisor PR merge remains |

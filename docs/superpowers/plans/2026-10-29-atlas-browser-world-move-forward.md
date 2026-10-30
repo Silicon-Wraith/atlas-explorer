@@ -3,8 +3,8 @@
 **Date:** 2026-10-29
 **Owner:** Codex
 **Challenger:** Claude
-**Status:** Current owner roadmap. PC1's CPU boundary, PC2/WC2's bounded live 3D experience and PC3/BI1.A1's application entry/retained pose and PC4/BI1.A2's session recovery are implemented and independently reviewed within their declared scopes. This is not a claim that all listed work has shipped.
-**Immediate next item:** BI1.B scene codec/history/files, now on its own project worktree/branch `feat/bi1b` from merged PC4 main5013ba6. [Design](../specs/2026-10-30-atlas-bi1b-scenes-history.md), [task plan](2026-10-30-atlas-bi1b-implementation.md), and [frozen card](../../reports/project1-interactive/BI1B-CARD-2026-10-30.md) are written for independent challenge before implementation. BI1.C device/preparer recovery follows. PC4/A2 remains independently confirmed with24/24 final gate; preserve its readiness/navigation/memory limits.
+**Status:** Current owner roadmap. PC1, PC2/WC2, PC3/BI1.A1, PC4/BI1.A2 and BI1.B are implemented and independently reviewed within their declared bounded scopes. Full BI1 and the browser-world release remain open.
+**Immediate next item:** BI1.C device/preparer recovery after advisor merge of BI1.B. [BI1.B full scorecard](../../reports/project1-interactive/BI1B-SCENES-HISTORY-2026-10-30.md): portable files, cold return, camera/edit histories and capacity-safe scale requests implemented/reviewed;1,327 units/build and25/25 gate pass on71dc60a. Branchfeat/bi1b in project.worktrees/bi1b remains isolated from main5013ba6. Performance/readiness/restore-latency and memory limits are explicit. AP1/MD2 stay interleaved multirelease workstreams.
 
 Governing intent: [ATLAS North Star](../specs/2026-10-23-atlas-north-star-charter.md) and the [fixed-world engineering interpretation](../specs/2026-10-29-atlas-multiscale-world-clarification.md). This plan continues after the [local multiscale plan](2026-10-29-multiscale-feature-experience.md), [PR9 lifecycle](../../reports/project1-interactive/PR9-LIFECYCLE-2026-10-29.md) and [BW1 wider-world result](../../reports/project1-interactive/BW1-OBSERVER-REGIONS-2026-10-29.md). Their original evidence and criteria remain preserved.
 
@@ -18,10 +18,10 @@ The mathematical world is fixed. Mathematical detail generation, mesh representa
 |---|---|---|
 | Prepared rendering and collision | Local navigation consumes prepared triangles and spatial queries. | Native preparation is packaged behind PC1 and the local development helper; production deployment remains unselected. |
 | Local multiscale discovery | PR9 shows additional mathematical relief, contact and stable return in one fixed construction. | Finer interaction is available near one starting formation; arbitrary recursion is unproved. |
-| Wider spatial preparation | BW1 generates fresh parent/cutter regions from observer coordinates and preserves reconstruction. | Interaction coverage is a bounded lateral lattice with limited vertical extent. |
+| Wider spatial preparation | PC2 prepares fresh parent/cutter regions in a bounded three-dimensional domain with fixed mathematical lineage. | Finite domain and two body scales; general detail placement and unlimited coverage remain unproved. |
 | Surrounding view | A coarser representation keeps distant terrain visible through local empty air. | No general watertight seam or continuous horizon guarantee. |
-| Interactive performance | PC4 final application route:49.97 FPS overall, navigation maximum4.7ms. | Navigationp994.1ms and interaction-readinessmax2.307s miss targets; full memory ownership remains unverified. No optimization claim against the earlier BW1 workload. |
-| Application experience | A tested local launcher opens the prototype in Chrome. | Application entry/retained pose/session recovery are integrated; persistence/history, full device/preparer recovery and supported deployment remain. |
+| Interactive performance | BI1.B final application route:49.99FPS; navigation max4.600ms. | See the full BI1.B scorecard for individual p99/readiness targets and restore latency. Complete region-memory attribution remains unverified. |
+| Application experience | Application entry, session recovery and explicit portable scene/history workflows are integrated and independently reviewed within their bounded scopes. | Device/preparer recovery, supported deployment and broader world/detail experience remain. |
 
 **We are moving from a successful bounded research prototype into application engineering.** The prototype establishes enough to build on; it does not establish a finished browser-ready world.
 
@@ -127,7 +127,7 @@ Performance gaps do not become reasons to invent a new mathematical specimen. A 
 
 Codex owns execution, measurements, corrections and keeping this roadmap current. Claude challenges substantial cards and independently judges decisive evidence. A peer's numerical claim is checked against preserved source or data before being relied upon. Review omissions are declared and narrow the claim. Consequential architecture choices get independent positions and a bounded test, rather than repeated discussion or transferring an engineering disagreement to the advisor.
 
-The advisor steers product intent and merges reviewed PRs. Routine reversible implementation does not wait for another implementation approval. External transmission, material deployment commitments and other consequential permissions are handled when needed, with concrete reviewable scope.
+The advisor steers product intent and merges reviewed PRs. Routine reversible implementation does not wait for another implementation approval. External transmission, material deployment commitments and other consequential permissions are handled when needed, with concrete reviewable scope. Standing approval from2026-10-30 covers calling Claude through the existing bridge with ATLAS design/source/results/fixed images; no routine payload-specific permission prompts.
 
 Every milestone report contains: the newly observable capability, the full criteria scorecard, established/partial/unresolved findings, representative evidence, process cost and the next owned action. Keep progress visible during active work, including review/reporting periods. Link the latest milestone and this plan from the project status index and restart checkpoint.
 
@@ -142,7 +142,7 @@ The first supported browser-world milestone is reached when a visitor can enter 
 | BW1 wider-world foundation | Demonstrated, with reported gaps | Native prototype and launcher retained |
 | PC1 preparation boundary | **First CPU slice complete, independently reviewed** | [Contract, lifecycle and native replay report](../../reports/project1-interactive/PC1-PREPARATION-BOUNDARY-2026-10-29.md); live producer wiring remains for WC2 |
 | WC2 three-dimensional coverage | **Bounded experience complete, independently reviewed** | [PC2 source/evidence and full scorecard](../../reports/project1-interactive/PC2-LIVE-3D-COVERAGE-2026-10-29.md); latency/navigation misses, ownership and final-source limits explicit |
-| BI1 application integration | **A1/A2 bounded slices independently confirmed** | [PC3 full scorecard](../../reports/project1-interactive/PC3-APPLICATION-ENTRY-2026-10-29.md): actual app route/retained return and full product gate pass; navigation/readiness misses and memory limits explicit. [A2/PC4 final scorecard](../../reports/project1-interactive/PC4-FINAL-ACCEPTANCE-2026-10-30.md): protected ownership, expiry/retry, launcher and24/24 gate pass; independent closure confirmed. PR21 awaits merge. B persistence/history and C device/preparer recovery follow. |
+| BI1 application integration | **A1/A2/B bounded slices independently reviewed** | PC3/PC4 reports remain preserved. [BI1.B full scorecard](../../reports/project1-interactive/BI1B-SCENES-HISTORY-2026-10-30.md): actual file return, histories, truthful restore and fixed dropped scale intent;1,327 units/25-entry gate pass. Advisor merge then C device/preparer recovery; full BI1 still open. |
 | AP1 appearance | Planned | First lighting/material increment on integrated geometry |
 | MD2 broader mathematical discovery | Planned | Bounded additional locations/scales with fixed lineage |
 | RB1 supported release | Planned | Backend decision, ownership/recovery evidence, supported launch and reviewed PR |

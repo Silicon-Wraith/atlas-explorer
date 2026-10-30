@@ -1,0 +1,723 @@
+{
+  "pass": true,
+  "cleanup": true,
+  "head": "71dc60a1c25172853f446f5bea06d3e7d555f3a5",
+  "interactionMs": 25280,
+  "wallSeconds": 51.295,
+  "checks": [
+    "Prepared files use the maintained headed hardware profile",
+    "An actual nondefault Landscape file contains complete portable world and camera data",
+    "The existing viewer refuses a prepared file without changing its scene or histories",
+    "The downloaded scene reopens after a new helper and browser with exact promised place and bytes",
+    "Actual navigation makes one camera entry and Back Forward restore it without content edits",
+    "Opening a complete file is one Undo Redo edit with exact scene restoration",
+    "Invalid files preserve history and unsupported requested poses remain explicit through Retry and Undo",
+    "Saved and restored delivered geometry passes finite buffer and recorded-motion audits",
+    "Prepared file workflow confirms source identity and every owned process cleanup"
+  ],
+  "download": {
+    "sha256": "1e768303de00a42b8904dc6a6119e9cf58da2a90ea7e779e012a2a3bef1bcd08",
+    "bytes": 2851,
+    "scene": {
+      "appearance": {
+        "lightDirection": [
+          0.6516696944239625,
+          0.141721981586483,
+          0.7451452806698703
+        ],
+        "lighting": "pc2-lambert-v1",
+        "material": "neutral"
+      },
+      "application": "ATLAS",
+      "applicationVersion": "1.0.0",
+      "camera": {
+        "bodyDiameterM": 0.0265625,
+        "kind": "prepared-pose-v1",
+        "orientationWxyz": [
+          0.694988416321868,
+          -0.3381745597100256,
+          0.5705688873447808,
+          0.27763323492962966
+        ],
+        "originM": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "positionLocalM": [
+          0,
+          0.010624999999919282,
+          0
+        ],
+        "verticalFovDegrees": 75.13718405765499
+      },
+      "conventions": "atlas-prepared-yup-metres-v1",
+      "iteration": null,
+      "model": {
+        "id": "prepared-world",
+        "version": 1
+      },
+      "parameters": {
+        "world": {
+          "assets": [
+            {
+              "role": "base-field-evaluator",
+              "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+            },
+            {
+              "role": "canonical-parent-frame",
+              "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+            },
+            {
+              "role": "canonical-parent-samples",
+              "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+            },
+            {
+              "role": "construction",
+              "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+            },
+            {
+              "role": "descendant-rule",
+              "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+            },
+            {
+              "role": "parent-field-kernel",
+              "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+            }
+          ],
+          "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+          "generator": {
+            "id": "atlas.surface-descendant",
+            "version": "surface-descendant-r1"
+          },
+          "id": "H1C-surface-child@ee2564d40bda7ef6",
+          "lineage": [
+            {
+              "id": "H1C@61bbb572d425d9ee",
+              "parent": null
+            },
+            {
+              "id": "H1C/gchild/surface-descendant-r1",
+              "parent": "H1C@61bbb572d425d9ee"
+            }
+          ],
+          "parameters": {
+            "amplitude_m": 0.0002,
+            "chart_centre": [
+              -0.029882812666932553,
+              -0.11953125059172012
+            ],
+            "half_support_m": 0.0033203125,
+            "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+            "source_scale": 64
+          }
+        }
+      },
+      "provenance": {
+        "createdBy": "atlas"
+      },
+      "sampling": {
+        "profile": "retained-native-r1"
+      },
+      "schema": "atlas.scene",
+      "schemaVersion": 1,
+      "slices": [],
+      "tracing": {
+        "coverageProfile": "pc2-half-d-r1",
+        "maxErrorFraction": 0.01,
+        "profile": "prepared-triangles-v1"
+      },
+      "workspace": "space"
+    },
+    "pose": {
+      "kind": "prepared-pose-v1",
+      "conventions": "atlas-prepared-yup-metres-v1",
+      "world": {
+        "definitionKey": "fnv1a64:4c29d6f7f61fbb06",
+        "id": "H1C-surface-child@ee2564d40bda7ef6"
+      },
+      "originM": [
+        1414.9757562519364,
+        79.21086912557448,
+        1040.6400501279961
+      ],
+      "positionLocalM": [
+        0,
+        0.010624999999919282,
+        0
+      ],
+      "orientationWxyz": [
+        0.694988416321868,
+        -0.3381745597100256,
+        0.5705688873447808,
+        0.27763323492962966
+      ],
+      "bodyDiameterM": 0.0265625,
+      "verticalFovDegrees": 75.13718405765499
+    },
+    "actualFile": "/mnt/ml_storage/scratch/atlas-bi1b/files-gate-r2/actual-saved-scene.json"
+  },
+  "reopen": {
+    "producer": "aa682625-4236-407f-a715-f5a0122121c9",
+    "exactReexport": true,
+    "history": {
+      "revision": 1,
+      "canUndo": true,
+      "canRedo": false,
+      "canBack": true,
+      "canForward": false,
+      "undoDepth": 1,
+      "redoDepth": 0,
+      "camera": {
+        "index": 1,
+        "length": 2
+      },
+      "gesture": null
+    }
+  },
+  "phases": [
+    {
+      "label": "save",
+      "producer": {
+        "instanceId": "969577fa-bb8e-4aca-9e6a-4473c7b9c885",
+        "epoch": 0
+      },
+      "prepared": 3,
+      "retired": 3,
+      "allRetired": true,
+      "finalPublications": 0,
+      "entryRegions": [
+        {
+          "time": 1793388562653,
+          "runtimeId": "85d6dda4-041e-4162-95b1-29a64d1a784d",
+          "addressKey": "0,0,0",
+          "key": "fnv1a64:03a17384a7c07d06",
+          "position": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "bodyD": 0.0265625
+        }
+      ],
+      "browserEventCounts": {
+        "activation-requested": 1,
+        "session-renewed": 1,
+        "configuration": 1,
+        "request": 5,
+        "transfer-ready": 3,
+        "consumer-prepared": 3,
+        "ready": 3,
+        "entry": 1,
+        "first-presented": 1,
+        "frame": 62,
+        "navigation": 40,
+        "request-settled": 2,
+        "deactivated": 1,
+        "suspended": 1,
+        "resources-released": 1
+      },
+      "serverEventCounts": {
+        "session-opened": 1,
+        "client-opening": 1,
+        "worker-ready": 1,
+        "client-opened": 1,
+        "session-renewed": 1,
+        "queued": 5,
+        "dispatch": 3,
+        "producer-prepared": 3,
+        "finished": 3,
+        "cancelled": 2,
+        "http-error": 2,
+        "producer-retired": 3,
+        "client-retiring": 1,
+        "client-closed": 1,
+        "session-closed": 1,
+        "worker-exit": 1
+      },
+      "cleanup": true,
+      "ownedPids": [
+        1762286,
+        1762296,
+        1762297,
+        1762299,
+        1762322,
+        1762324,
+        1762334,
+        1762364,
+        1762420,
+        1762444,
+        1762453,
+        1762529
+      ],
+      "alive": [],
+      "cleanupErrors": [],
+      "pageErrors": [],
+      "peakOwnedRssMiB": 2348.81640625,
+      "qualification": {
+        "pass": true,
+        "specimens": [
+          {
+            "representationKey": "fnv1a64:03a17384a7c07d06",
+            "kind": "coarse",
+            "origin": [
+              1414.9757562519364,
+              79.21086912557448,
+              1040.6400501279961
+            ],
+            "classification": "surface",
+            "sampling": {
+              "cells": 256,
+              "stepM": 0.000103759765625,
+              "tileWidthM": 0.0265625,
+              "rtinToleranceM": 2.65625e-05,
+              "coordinateType": "float32-local-metres-per-unit"
+            },
+            "toleranceM": 0.000265625,
+            "referenceSamples": 608,
+            "meshSamples": 512,
+            "referenceToMeshMaxM": 2.789774079877749e-05,
+            "meshCrossingUpperMaxM": 6.640625e-05,
+            "forwardReferenceGrid": null,
+            "limits": [],
+            "pass": true
+          },
+          {
+            "representationKey": "fnv1a64:ba146a5abc5a5630",
+            "kind": "view",
+            "origin": [
+              1414.9757562519364,
+              79.21086912557448,
+              1040.6400501279961
+            ],
+            "classification": "surface",
+            "sampling": {
+              "cells": 256,
+              "stepM": 0.0004150390625,
+              "tileWidthM": 0.10625,
+              "rtinToleranceM": 0.00010625,
+              "coordinateType": "float32-local-metres-per-unit"
+            },
+            "toleranceM": 0.0010625,
+            "referenceSamples": 826,
+            "meshSamples": 512,
+            "referenceToMeshMaxM": 0.00012510109628894342,
+            "meshCrossingUpperMaxM": 0.00016601562499999993,
+            "forwardReferenceGrid": null,
+            "limits": [],
+            "pass": true
+          },
+          {
+            "representationKey": "fnv1a64:4b2f1f5b20858a82",
+            "kind": "coarse",
+            "origin": [
+              1414.982253306491,
+              79.22229320887675,
+              1040.6419659057447
+            ],
+            "classification": "surface",
+            "sampling": {
+              "cells": 256,
+              "stepM": 0.000103759765625,
+              "tileWidthM": 0.0265625,
+              "rtinToleranceM": 2.65625e-05,
+              "coordinateType": "float32-local-metres-per-unit"
+            },
+            "toleranceM": 0.000265625,
+            "referenceSamples": 1,
+            "meshSamples": 512,
+            "referenceToMeshMaxM": 1.0849888795040796e-05,
+            "meshCrossingUpperMaxM": 3.320312500000003e-05,
+            "forwardReferenceGrid": null,
+            "limits": [
+              "Single forward sample does not establish reference-to-mesh fidelity; reverse mesh sampling remains finite."
+            ],
+            "pass": true
+          }
+        ],
+        "error": null,
+        "sourcesKey": "fnv1a64:3470e8e94420cec7",
+        "elapsedS": 10.10112940100953,
+        "scope": "Finite direct CPU world-reference checks; original geometry, tolerance and world unchanged. Missing forward references remain explicit; not a global enclosure proof."
+      },
+      "bufferAudit": {
+        "pass": true,
+        "pid": 1763916,
+        "representations": [
+          {
+            "key": "fnv1a64:03a17384a7c07d06",
+            "roles": 3,
+            "pass": true
+          },
+          {
+            "key": "fnv1a64:ba146a5abc5a5630",
+            "roles": 3,
+            "pass": true
+          },
+          {
+            "key": "fnv1a64:4b2f1f5b20858a82",
+            "roles": 3,
+            "pass": true
+          }
+        ],
+        "nativeRecords": 3,
+        "outputBytes": 14352141,
+        "cacheBounds": true,
+        "viewInteractionCacheEvictions": 0,
+        "input": {}
+      },
+      "flightAudit": {
+        "pass": true,
+        "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.",
+        "runs": [
+          {
+            "scenario": "saved-place-navigation",
+            "entries": 0,
+            "contacts": 0,
+            "checkedFrames": 40
+          }
+        ]
+      }
+    },
+    {
+      "label": "reopen",
+      "producer": {
+        "instanceId": "aa682625-4236-407f-a715-f5a0122121c9",
+        "epoch": 0
+      },
+      "prepared": 14,
+      "retired": 14,
+      "allRetired": true,
+      "finalPublications": 0,
+      "entryRegions": [
+        {
+          "time": 1793388569669.1,
+          "runtimeId": "db605234-d9e5-4fdc-a65f-f568e5135b7b",
+          "addressKey": "0,0,1",
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "position": [
+            1414.9757562519364,
+            79.2214941255744,
+            1040.6400501279961
+          ],
+          "bodyD": 0.0265625
+        },
+        {
+          "time": 1793388573381,
+          "runtimeId": "0210646d-4efd-4907-9430-d83e1d3af8f9",
+          "addressKey": "0,0,1",
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "position": [
+            1414.9757562519364,
+            79.2214941255744,
+            1040.6400501279961
+          ],
+          "bodyD": 0.0265625
+        },
+        {
+          "time": 1793388575271.7,
+          "runtimeId": "78945ba5-c2b8-4611-b3c2-55c2ac804d03",
+          "addressKey": "0,1,1",
+          "key": "fnv1a64:5ff3ab10c8a3d225",
+          "position": [
+            1414.9757562519364,
+            79.22494592244941,
+            1040.6400501279961
+          ],
+          "bodyD": 0.0265625
+        },
+        {
+          "time": 1793388577798.5,
+          "runtimeId": "bd24bab7-5166-439f-8530-f08262926e59",
+          "addressKey": "0,0,1",
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "position": [
+            1414.9757562519364,
+            79.2214941255744,
+            1040.6400501279961
+          ],
+          "bodyD": 0.0265625
+        },
+        {
+          "time": 1793388580615.8,
+          "runtimeId": "59560d42-096b-435f-a2fb-e98ab7222bf0",
+          "addressKey": "0,1,1",
+          "key": "fnv1a64:5ff3ab10c8a3d225",
+          "position": [
+            1414.9757562519364,
+            79.22494592244941,
+            1040.6400501279961
+          ],
+          "bodyD": 0.0265625
+        },
+        {
+          "time": 1793388583177.6,
+          "runtimeId": "60244ae0-4184-4cd9-886a-bb4ccaf5dcfd",
+          "addressKey": "0,0,1",
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "position": [
+            1414.9757562519364,
+            79.2214941255744,
+            1040.6400501279961
+          ],
+          "bodyD": 0.0265625
+        },
+        {
+          "time": 1793388585831.6,
+          "runtimeId": "9bbdbe2e-c7ec-4669-933f-9d3a7c1f3e3d",
+          "addressKey": "0,0,1",
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "position": [
+            1414.9757562519364,
+            79.2214941255744,
+            1040.6400501279961
+          ],
+          "bodyD": 0.0265625
+        }
+      ],
+      "browserEventCounts": {
+        "restore-requested": 8,
+        "activation-requested": 9,
+        "session-renewed": 9,
+        "configuration": 9,
+        "request": 16,
+        "transfer-ready": 14,
+        "consumer-prepared": 14,
+        "ready": 14,
+        "entry": 7,
+        "first-presented": 7,
+        "restore-presented": 7,
+        "frame": 41,
+        "navigation": 13,
+        "request-settled": 2,
+        "deactivated": 7,
+        "suspended": 7,
+        "resources-released": 9,
+        "restore-unavailable": 2
+      },
+      "serverEventCounts": {
+        "session-opened": 9,
+        "client-opening": 9,
+        "worker-ready": 1,
+        "client-opened": 9,
+        "session-renewed": 9,
+        "queued": 15,
+        "dispatch": 14,
+        "producer-prepared": 14,
+        "finished": 14,
+        "cancelled": 2,
+        "http-error": 2,
+        "producer-retired": 14,
+        "client-retiring": 9,
+        "client-closed": 9,
+        "session-closed": 9,
+        "worker-exit": 1
+      },
+      "cleanup": true,
+      "ownedPids": [
+        1762927,
+        1762937,
+        1762938,
+        1762940,
+        1762965,
+        1762967,
+        1762969,
+        1763000,
+        1763033,
+        1763056,
+        1763137
+      ],
+      "alive": [],
+      "cleanupErrors": [],
+      "pageErrors": [],
+      "peakOwnedRssMiB": 2529.109375,
+      "qualification": {
+        "pass": true,
+        "specimens": [
+          {
+            "representationKey": "fnv1a64:4b2f1f5b20858a82",
+            "kind": "coarse",
+            "origin": [
+              1414.982253306491,
+              79.22229320887675,
+              1040.6419659057447
+            ],
+            "classification": "surface",
+            "sampling": {
+              "cells": 256,
+              "stepM": 0.000103759765625,
+              "tileWidthM": 0.0265625,
+              "rtinToleranceM": 2.65625e-05,
+              "coordinateType": "float32-local-metres-per-unit"
+            },
+            "toleranceM": 0.000265625,
+            "referenceSamples": 1,
+            "meshSamples": 512,
+            "referenceToMeshMaxM": 1.0849888795040796e-05,
+            "meshCrossingUpperMaxM": 3.320312500000003e-05,
+            "forwardReferenceGrid": null,
+            "limits": [
+              "Single forward sample does not establish reference-to-mesh fidelity; reverse mesh sampling remains finite."
+            ],
+            "pass": true
+          },
+          {
+            "representationKey": "fnv1a64:ba146a5abc5a5630",
+            "kind": "view",
+            "origin": [
+              1414.9757562519364,
+              79.21086912557448,
+              1040.6400501279961
+            ],
+            "classification": "surface",
+            "sampling": {
+              "cells": 256,
+              "stepM": 0.0004150390625,
+              "tileWidthM": 0.10625,
+              "rtinToleranceM": 0.00010625,
+              "coordinateType": "float32-local-metres-per-unit"
+            },
+            "toleranceM": 0.0010625,
+            "referenceSamples": 826,
+            "meshSamples": 512,
+            "referenceToMeshMaxM": 0.00012510109628894342,
+            "meshCrossingUpperMaxM": 0.00016601562499999993,
+            "forwardReferenceGrid": null,
+            "limits": [],
+            "pass": true
+          },
+          {
+            "representationKey": "fnv1a64:5ff3ab10c8a3d225",
+            "kind": "coarse",
+            "origin": [
+              1414.9706697024023,
+              79.2287007908247,
+              1040.643040434229
+            ],
+            "classification": "empty-air",
+            "sampling": {
+              "cells": 256,
+              "stepM": 0.000103759765625,
+              "tileWidthM": 0.0265625,
+              "rtinToleranceM": 2.65625e-05,
+              "coordinateType": "float32-local-metres-per-unit"
+            },
+            "toleranceM": 0.000265625,
+            "referenceSamples": 1024,
+            "meshSamples": 0,
+            "limits": [
+              "Finite occupancy samples, not proof of complete air/solid."
+            ],
+            "pass": true
+          }
+        ],
+        "error": null,
+        "sourcesKey": "fnv1a64:3470e8e94420cec7",
+        "elapsedS": 8.977111267857254,
+        "scope": "Finite direct CPU world-reference checks; original geometry, tolerance and world unchanged. Missing forward references remain explicit; not a global enclosure proof."
+      },
+      "bufferAudit": {
+        "pass": true,
+        "pid": 1764313,
+        "representations": [
+          {
+            "key": "fnv1a64:4b2f1f5b20858a82",
+            "roles": 3,
+            "pass": true
+          },
+          {
+            "key": "fnv1a64:ba146a5abc5a5630",
+            "roles": 3,
+            "pass": true
+          },
+          {
+            "key": "fnv1a64:5ff3ab10c8a3d225",
+            "roles": 3,
+            "pass": true
+          }
+        ],
+        "nativeRecords": 14,
+        "outputBytes": 81421462,
+        "cacheBounds": true,
+        "viewInteractionCacheEvictions": 0,
+        "input": {}
+      },
+      "flightAudit": {
+        "pass": true,
+        "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.",
+        "runs": [
+          {
+            "scenario": "history-navigation",
+            "entries": 0,
+            "contacts": 0,
+            "checkedFrames": 13
+          }
+        ]
+      }
+    }
+  ],
+  "restoreLatencies": [
+    {
+      "phase": "reopen",
+      "request": 1,
+      "ms": 3885.2998046875
+    },
+    {
+      "phase": "reopen",
+      "request": 2,
+      "ms": 3232.199951171875
+    },
+    {
+      "phase": "reopen",
+      "request": 3,
+      "ms": 1856.0
+    },
+    {
+      "phase": "reopen",
+      "request": 4,
+      "ms": 2456.400146484375
+    },
+    {
+      "phase": "reopen",
+      "request": 5,
+      "ms": 2777.89990234375
+    },
+    {
+      "phase": "reopen",
+      "request": 6,
+      "ms": 2529.0
+    },
+    {
+      "phase": "reopen",
+      "request": 8,
+      "ms": 2491.099853515625
+    }
+  ],
+  "restoreLatencySummaryMs": {
+    "n": 7,
+    "min": 1856.0,
+    "p50": 2529.0,
+    "max": 3885.2998046875
+  },
+  "sources": {
+    "src/space/preparation/pose.js": "d52fef63979d5ff41af4716c78c0231b1c6940659e108101e7e8e0aba874c380",
+    "src/space/render/webgpu/prepared-regions.js": "7d1b7afa1b9552a512e43f449bef32991fa769c3b9621ec92ee365d09e91e053",
+    "src/space/preparation/scene-adapter.js": "165ae04108aed50d91d7a48aab02f360cae17108fcbc98606d2a5ef86b39b377",
+    "src/space/preparation/scene-history.js": "c57abbe7a6f53190f07cbb7e8c91d9ee86ff86e7acc4ddc4ca7c4b2fc94108c7",
+    "src/space/preparation/workspace.js": "fb88702747274bc6c47b619f6fd6a924173287f592faad350bde87ac5cfd5443",
+    "src/space/mode-host.js": "c690f1e8f477034faf9626bb287e471ebe23194da391436d22a5e7adc729cbb4",
+    "src/app.js": "2e0ff1a4bbb6cf9e96ecb1bf6a6eaaa73b46446ce69ce62c11379452ffeacf61",
+    "index.html": "d6f30c3490b3b164d226d61dddd561189d6482c6c267568e3df454f25f1d4fe5",
+    "src/ui/style.css": "f76fac56866dadffde40a44b804d8dcb692de3cb38d19e8a1d6f3ee9c333f755",
+    "tests/space-prepared-files.mjs": "fcf388b838827139310cc3d03a71b599851bb3b48bb063c67602897a9b1122b7"
+  },
+  "scope": [
+    "Same-host retained native configuration; no production backend or cross-platform asset/reproducibility claim.",
+    "Actual file return is coarse nondefault; fine file roundtrip and arbitrary roll are not separate headed observations.",
+    "History/file restores are explicit jumps; only actual key-pulse intervals enter recorded-motion audits.",
+    "Restore latencies start at restore-requested event and end at current presentation confirmation; file picker/read time excluded.",
+    "Each restore rebuilds client/runtime/GPU/collision; native helper persists within a phase.",
+    "A different supported region can be selected after restart; no pixel-identical image promise. Sparse restored coarse specimen is explicit.",
+    "No full region-memory attribution, OS sleep/device/native-restart recovery parity or global fidelity proof."
+  ]
+}

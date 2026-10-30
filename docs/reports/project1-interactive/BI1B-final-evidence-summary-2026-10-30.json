@@ -1,0 +1,697 @@
+{
+  "application": {
+    "pass": true,
+    "failure": null,
+    "cleanup": true,
+    "eventCounts": {
+      "session-opened": 8,
+      "client-opening": 8,
+      "worker-ready": 1,
+      "client-opened": 8,
+      "session-renewed": 22,
+      "queued": 26,
+      "dispatch": 22,
+      "producer-prepared": 18,
+      "finished": 22,
+      "cancelled": 9,
+      "http-error": 9,
+      "producer-retired": 18,
+      "client-retiring": 8,
+      "client-closed": 8,
+      "session-closed": 8,
+      "worker-exit": 1
+    },
+    "publications": {
+      "preparedDistinct": 18,
+      "retiredDistinct": 18,
+      "allPreparedRetired": true
+    },
+    "qualification": {
+      "pass": true,
+      "specimens": [
+        {
+          "representationKey": "fnv1a64:03a17384a7c07d06",
+          "kind": "coarse",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 608,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 2.789774079877749e-05,
+          "meshCrossingUpperMaxM": 6.640625e-05,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:ba146a5abc5a5630",
+          "kind": "view",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.0004150390625,
+            "tileWidthM": 0.10625,
+            "rtinToleranceM": 0.00010625,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.0010625,
+          "referenceSamples": 826,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 0.00012510109628894342,
+          "meshCrossingUpperMaxM": 0.00016601562499999993,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:4b2f1f5b20858a82",
+          "kind": "coarse",
+          "origin": [
+            1414.982253306491,
+            79.22229320887675,
+            1040.6419659057447
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 1.0849888795040796e-05,
+          "meshCrossingUpperMaxM": 3.320312500000003e-05,
+          "forwardReferenceGrid": null,
+          "limits": [
+            "Sparse forward reference: one sample. Reverse checks do not establish complete surface coverage."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:5ff3ab10c8a3d225",
+          "kind": "coarse",
+          "origin": [
+            1414.9706697024023,
+            79.2287007908247,
+            1040.643040434229
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:b74f104ca2024264",
+          "kind": "coarse",
+          "origin": [
+            1414.9771667569569,
+            79.24012487412698,
+            1040.6449562119776
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:108f9a2487d58e99",
+          "kind": "coarse",
+          "origin": [
+            1414.9771667569569,
+            79.24232142047191,
+            1040.6318578614814
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:4918b062378a9c68",
+          "kind": "coarse",
+          "origin": [
+            1414.9771667569569,
+            79.23792832778204,
+            1040.6580545624736
+          ],
+          "classification": "empty-air",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1024,
+          "meshSamples": 0,
+          "limits": [
+            "Finite occupancy samples, not proof of complete air/solid."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:2dea1425132a0dfe",
+          "kind": "coarse",
+          "origin": [
+            1414.969259197382,
+            79.1994450422722,
+            1040.6381343502476
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 760,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 3.0231962211664583e-05,
+          "meshCrossingUpperMaxM": 4.150390625000001e-05,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+          "kind": "fine",
+          "origin": [
+            1414.969281874518,
+            79.1994849165704,
+            1040.6381410370243
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 2.593994140625e-05,
+            "tileWidthM": 0.006640625,
+            "rtinToleranceM": 6.640625e-06,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 6.640625e-05,
+          "referenceSamples": 655,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 6.856193813217745e-06,
+          "meshCrossingUpperMaxM": 8.300781250000007e-06,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        }
+      ],
+      "elapsedS": 14.653006054926664,
+      "sourceKey": "fnv1a64:3470e8e94420cec7"
+    },
+    "bufferAudit": {
+      "pass": true,
+      "pid": 1758717,
+      "representations": [
+        {
+          "key": "fnv1a64:03a17384a7c07d06",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:ba146a5abc5a5630",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:5ff3ab10c8a3d225",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:b74f104ca2024264",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:108f9a2487d58e99",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:4918b062378a9c68",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:2dea1425132a0dfe",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:d9d2e86c8fd6a571",
+          "roles": 3,
+          "pass": true
+        }
+      ],
+      "nativeRecords": 22,
+      "outputBytes": 100935958,
+      "cacheBounds": true,
+      "viewInteractionCacheEvictions": 0,
+      "input": {}
+    },
+    "flightAudit": {
+      "pass": true,
+      "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.",
+      "runs": [
+        {
+          "scenario": "application-route",
+          "entries": 11,
+          "contacts": 30,
+          "checkedFrames": 862,
+          "waitingFramesStationary": 57
+        }
+      ]
+    },
+    "nativeRecords": 22,
+    "outputBytes": 100935958,
+    "cachePeaks": {
+      "source": 100394480,
+      "validation": 80,
+      "topology": 53848752
+    },
+    "peakOwnedRssMiB": 2888.875,
+    "browserSeconds": 111.121,
+    "pageErrors": []
+  },
+  "session": {
+    "pass": true,
+    "failure": null,
+    "cleanup": true,
+    "eventCounts": {
+      "session-opened": 3,
+      "client-opening": 3,
+      "worker-ready": 1,
+      "client-opened": 3,
+      "session-renewed": 17,
+      "queued": 12,
+      "dispatch": 9,
+      "producer-prepared": 8,
+      "finished": 9,
+      "http-error": 6,
+      "cancelled": 4,
+      "client-retiring": 3,
+      "producer-retired": 8,
+      "client-expired": 2,
+      "session-expired": 2,
+      "client-closed": 1,
+      "session-closed": 1,
+      "worker-exit": 1
+    },
+    "publications": {
+      "preparedDistinct": 8,
+      "retiredDistinct": 8,
+      "allPreparedRetired": true
+    },
+    "qualification": {
+      "pass": true,
+      "specimens": [
+        {
+          "representationKey": "fnv1a64:03a17384a7c07d06",
+          "kind": "coarse",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 608,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 2.789774079877749e-05,
+          "meshCrossingUpperMaxM": 6.640625e-05,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:ba146a5abc5a5630",
+          "kind": "view",
+          "origin": [
+            1414.9757562519364,
+            79.21086912557448,
+            1040.6400501279961
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.0004150390625,
+            "tileWidthM": 0.10625,
+            "rtinToleranceM": 0.00010625,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.0010625,
+          "referenceSamples": 826,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 0.00012510109628894342,
+          "meshCrossingUpperMaxM": 0.00016601562499999993,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:4b2f1f5b20858a82",
+          "kind": "coarse",
+          "origin": [
+            1414.982253306491,
+            79.22229320887675,
+            1040.6419659057447
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 0.000103759765625,
+            "tileWidthM": 0.0265625,
+            "rtinToleranceM": 2.65625e-05,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 0.000265625,
+          "referenceSamples": 1,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 1.0849888795040796e-05,
+          "meshCrossingUpperMaxM": 3.320312500000003e-05,
+          "forwardReferenceGrid": null,
+          "limits": [
+            "Sparse forward reference: one sample. Reverse checks do not establish complete surface coverage."
+          ],
+          "pass": true
+        },
+        {
+          "representationKey": "fnv1a64:d9d2e86c8fd6a571",
+          "kind": "fine",
+          "origin": [
+            1414.969281874518,
+            79.1994849165704,
+            1040.6381410370243
+          ],
+          "classification": "surface",
+          "sampling": {
+            "cells": 256,
+            "stepM": 2.593994140625e-05,
+            "tileWidthM": 0.006640625,
+            "rtinToleranceM": 6.640625e-06,
+            "coordinateType": "float32-local-metres-per-unit"
+          },
+          "toleranceM": 6.640625e-05,
+          "referenceSamples": 655,
+          "meshSamples": 512,
+          "referenceToMeshMaxM": 6.856193813217745e-06,
+          "meshCrossingUpperMaxM": 8.300781250000007e-06,
+          "forwardReferenceGrid": null,
+          "limits": [],
+          "pass": true
+        }
+      ],
+      "elapsedS": 11.172871072776616,
+      "sourceKey": "fnv1a64:3470e8e94420cec7"
+    },
+    "bufferAudit": {
+      "pass": true,
+      "pid": 1762013,
+      "representations": [
+        {
+          "key": "fnv1a64:03a17384a7c07d06",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:ba146a5abc5a5630",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:4b2f1f5b20858a82",
+          "roles": 3,
+          "pass": true
+        },
+        {
+          "key": "fnv1a64:d9d2e86c8fd6a571",
+          "roles": 3,
+          "pass": true
+        }
+      ],
+      "nativeRecords": 9,
+      "outputBytes": 46471317,
+      "cacheBounds": true,
+      "viewInteractionCacheEvictions": 0,
+      "input": {}
+    },
+    "flightAudit": {
+      "pass": true,
+      "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof.",
+      "runs": [
+        {
+          "scenario": "visible-healthy-owner",
+          "entries": 0,
+          "contacts": 0,
+          "checkedFrames": 3059,
+          "waitingFramesStationary": 0
+        }
+      ]
+    },
+    "nativeRecords": 9,
+    "outputBytes": 46471317,
+    "cachePeaks": {
+      "source": 82429152,
+      "validation": 80,
+      "topology": 40190448
+    },
+    "peakOwnedRssMiB": 2831.8203125,
+    "browserSeconds": 137.034,
+    "pageErrors": []
+  },
+  "routes": [
+    {
+      "scenario": "application-route",
+      "wallSeconds": 22.664,
+      "frames": 862,
+      "renderedFrames": 862,
+      "renderSubmissionFps": 49.988401764037874,
+      "rafFps": 49.988401764037874,
+      "preparationRenderSubmissionFps": 49.87980769230769,
+      "frameMs": {
+        "n": 862,
+        "p50": 20,
+        "p95": 20.100000000000364,
+        "p99": 20.100000000002183,
+        "max": 40
+      },
+      "navigationMs": {
+        "n": 728,
+        "p50": 0.10009765625,
+        "p95": 2.5,
+        "p99": 3.900146484375,
+        "max": 4.60009765625
+      },
+      "navigationByClass": {
+        "waiting": {
+          "n": 57,
+          "p50": 0,
+          "p95": 0.10009765625,
+          "p99": 0.10009765625,
+          "max": 0.10009765625
+        },
+        "constant": {
+          "n": 126,
+          "p50": 0.099853515625,
+          "p95": 0.199951171875,
+          "p99": 0.199951171875,
+          "max": 0.2001953125
+        },
+        "firstSurface": {
+          "n": 3,
+          "p50": 0.199951171875,
+          "p95": 0.199951171875,
+          "p99": 0.199951171875,
+          "max": 0.199951171875
+        },
+        "steadySurface": {
+          "n": 542,
+          "p50": 0.10009765625,
+          "p95": 3.699951171875,
+          "p99": 4.099853515625,
+          "max": 4.60009765625
+        }
+      },
+      "interactionReadinessMs": {
+        "n": 9,
+        "p50": 947.5,
+        "p95": 2430.300048828125,
+        "p99": 2430.300048828125,
+        "max": 2430.300048828125
+      },
+      "viewReadinessMs": {
+        "n": 2,
+        "p50": 1745.199951171875,
+        "p95": 1765.699951171875,
+        "p99": 1765.699951171875,
+        "max": 1765.699951171875
+      },
+      "waitingMs": 1139.8000000000002,
+      "waitingFraction": 0.06609835305179859,
+      "sessionPausedMs": 0,
+      "contacts": 30,
+      "maxInteraction": 8,
+      "maxView": 1,
+      "peakGpuBytes": 32426144
+    }
+  ],
+  "sessionControls": [
+    {
+      "scenario": "visible-healthy-owner",
+      "started": 1793388414349,
+      "ended": 1793388474349,
+      "renewals": 13
+    },
+    {
+      "scenario": "silent-owner-loss",
+      "seconds": 34.583,
+      "expiryMs": 30753,
+      "replacementPresentationMs": 2848,
+      "heldResponseSettledAfterExpiryMs": 9693,
+      "termination": "expiry",
+      "oldQueueAtAdmission": "held result had already completed native work"
+    },
+    {
+      "scenario": "living-page-expiry-retry",
+      "seconds": 32.732,
+      "expiryMs": 30014,
+      "poseRetained": true,
+      "queriesDuringPause": 0
+    }
+  ],
+  "heldResponse": {
+    "preparedAt": 1793388475513,
+    "tokenSha256": "a48d8a50e4205b9f5b9f7047c29f663f11d91f1bdbd33ecf2f899c0cbb786654",
+    "retiredByExpiry": true,
+    "delivery": "fulfilled"
+  },
+  "lossSuppression": {
+    "heartbeat": 2,
+    "close": 0,
+    "cancel": 1,
+    "retire": 0
+  },
+  "launcher": {
+    "cleanup": true,
+    "cleanupErrors": [],
+    "openedUrl": "http://127.0.0.1:5200/",
+    "browser": "155.0.8059.84"
+  },
+  "scope": [
+    "One bounded actual-input application route; active-Landscape frame intervals exclude initial activation and mode waits.",
+    "Rendered=false intervals are excluded from render-submission count but their time remains in its denominator; RAF cadence is separate.",
+    "Production-duration controlled loss of close/heartbeat and lost-page cleanup delivery; not OS sleep, renderer-crash or complete-network-outage acceptance.",
+    "Finite sampling/recorded-motion evidence, not global geometry completeness; current two scales/domain unchanged.",
+    "Attributable region memory and long-session WASM bounds remain unverified."
+  ],
+  "sourceDigests": {
+    "application": {
+      "src/app.js": "2e0ff1a4bbb6cf9e96ecb1bf6a6eaaa73b46446ce69ce62c11379452ffeacf61",
+      "index.html": "d6f30c3490b3b164d226d61dddd561189d6482c6c267568e3df454f25f1d4fe5",
+      "src/ui/style.css": "f76fac56866dadffde40a44b804d8dcb692de3cb38d19e8a1d6f3ee9c333f755",
+      "src/space/mode-host.js": "c690f1e8f477034faf9626bb287e471ebe23194da391436d22a5e7adc729cbb4",
+      "src/space/preparation/workspace.js": "fb88702747274bc6c47b619f6fd6a924173287f592faad350bde87ac5cfd5443",
+      "src/space/preparation/runtime.js": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+      "src/space/preparation/pose.js": "d52fef63979d5ff41af4716c78c0231b1c6940659e108101e7e8e0aba874c380",
+      "src/space/preparation/application-client.js": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+      "src/space/preparation/browser-producer.js": "04051ea4cb64c3a20c897aa310376ccbded979fd52f7f828851213ad521ed33b",
+      "src/space/preparation/browser-preparer.js": "1ac00d2b313d333a39d3d08ea8a04025be2138b69c6b1d3257bb1d43b11c066d",
+      "src/space/preparation/collision-worker.js": "ee35b2d2af865ec4b82a70b65753634b7041fafa1a28c6ff1fa7377b9b51b0d5",
+      "src/preparation-bootstrap.js": "4b3535a98d6fd08752964ecb4694aed3f1c1bcefc686705df145a4831f3158cd",
+      "src/preparation-worker.js": "eb89dfc4e48edc2dab7d16c25d916f05c314ca6d1a204890c1ab3da949468659",
+      "src/space/render/webgpu/prepared-regions.js": "7d1b7afa1b9552a512e43f449bef32991fa769c3b9621ec92ee365d09e91e053",
+      "scripts/preparation/application-server.mjs": "b6ff658006a4b106030b3ca3f26c864a95b0357fc90627eb03fe9854a0f73cea",
+      "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+      "scripts/preparation/native-adapter.mjs": "a6910405035f87bef4518ac4d1018a468c6ede9babaad89c1185db0bbd11d03c",
+      "scripts/preparation/native-worker.py": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4",
+      "tests/space-prepared.mjs": "a56eee8c0ebbea257bc7a8d9f9bdb477b10b2c3738477b5b07bc910068151a26"
+    },
+    "session": {
+      "src/space/preparation/pose.js": "d52fef63979d5ff41af4716c78c0231b1c6940659e108101e7e8e0aba874c380",
+      "src/space/preparation/scene-adapter.js": "165ae04108aed50d91d7a48aab02f360cae17108fcbc98606d2a5ef86b39b377",
+      "src/space/preparation/scene-history.js": "c57abbe7a6f53190f07cbb7e8c91d9ee86ff86e7acc4ddc4ca7c4b2fc94108c7",
+      "src/space/render/webgpu/prepared-regions.js": "7d1b7afa1b9552a512e43f449bef32991fa769c3b9621ec92ee365d09e91e053",
+      "src/space/mode-host.js": "c690f1e8f477034faf9626bb287e471ebe23194da391436d22a5e7adc729cbb4",
+      "scripts/preparation/application-policy.mjs": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+      "scripts/preparation/application-server.mjs": "b6ff658006a4b106030b3ca3f26c864a95b0357fc90627eb03fe9854a0f73cea",
+      "scripts/world-preview.mjs": "a0d423c10778f0a07ec5c5370547c7bed318d4ff31f1cb6e71800b471c8bdf7f",
+      "scripts/preparation/page-lifetime.mjs": "c5be90cc3dd0192fdc7c8234df98cec12183641a509aa33833944738cb3fffd2",
+      "src/space/preparation/application-client.js": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+      "src/space/preparation/workspace.js": "fb88702747274bc6c47b619f6fd6a924173287f592faad350bde87ac5cfd5443",
+      "src/app.js": "2e0ff1a4bbb6cf9e96ecb1bf6a6eaaa73b46446ce69ce62c11379452ffeacf61",
+      "index.html": "d6f30c3490b3b164d226d61dddd561189d6482c6c267568e3df454f25f1d4fe5",
+      "tests/space-preparation-session.mjs": "da554382fd4dd7105e5e73e2db9d5413c5cd07b23d1f9477d95cdfab570f40e2",
+      "tests/support/session-loss-proxy.mjs": "364256567ea93de6edcafeab377b9b652c66b540898e46566ca01b3cddfc3b31"
+    }
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "evidence-review": {
+    "run_id": "20261030T181111Z-fa25dc",
+    "artifacts": "/mnt/ml_storage/scratch/codex-bridge/claude-runs/20261030T181111Z-fa25dc",
+    "result": {
+      "structured": null,
+      "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+      "observed_model": "claude-opus-5-5",
+      "cli_version": "2.1.314",
+      "usage": {
+        "input_tokens": 90359798,
+        "output_tokens": 386731,
+        "cache_read_tokens": 83131480,
+        "cache_write_tokens": 6262590,
+        "reasoning_tokens": 231118,
+        "total_tokens": 90746529
+      },
+      "cost_usd": 78.30598910000005,
+      "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+    },
+    "log_error": null,
+    "responseSha256": "6103e2c0c2a5b799d6e237e7ee09e780a7c7ce9c5f27789cfe80606439100d60",
+    "packetFiles": {
+      "source-manifest.json": "c3dcac41d9645b265064c0bcbcb2e18ff485509a340e271e30d0b26b4e4267e3",
+      "AGENTS.md": "2ff679955c716da65f5073272478ff50dbd770efd24fb1147e730e69d270a10d",
+      "summary.json": "cc2801cfe1aa9f50da76208869bfa02211023193a04227e37f4ece633a3e3107",
+      "index.html": "d6f30c3490b3b164d226d61dddd561189d6482c6c267568e3df454f25f1d4fe5",
+      "ledger.json": "7e0ca9de4cbae12519dedf046cc398c456e23b4c4046b2743baeebf9153a5a10",
+      "restored-place.png": "667590cdbf288d7c9b9fd72af1f82291cfc4a06c21374f3823ddaab4ebafb7cd",
+      "owner-report.md": "761ae8743a30245fa61b0bdba95361dcbf0381b2b8a8b65847190f9233a006a2",
+      "saved-place.png": "75dbd0869cef2700caa60db01c4ed1814f978dfb0254a5fa013b659b0ca52b97",
+      "tests/suites.manifest.json": "bc36d05813a924b48df133f1c39c5f71b2f39478fd636d7d6e8b8a2e28f031f6",
+      "tests/space-prepared-files.mjs": "fcf388b838827139310cc3d03a71b599851bb3b48bb063c67602897a9b1122b7",
+      "src/app.js": "2e0ff1a4bbb6cf9e96ecb1bf6a6eaaa73b46446ce69ce62c11379452ffeacf61",
+      "src/shared/commands.js": "ea1193f0ff97896f14fa56e90743862f5737a0c8a61853b2ecbef3ddb237e4bf",
+      "src/shared/history.js": "f7e5f9b5ebb7cd22cbd5bf0411a62de10ebb260321aedd8cc5a5451436ae9c32",
+      "src/shared/scene.js": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa",
+      "src/ui/style.css": "f76fac56866dadffde40a44b804d8dcb692de3cb38d19e8a1d6f3ee9c333f755",
+      "src/space/mode-host.js": "c690f1e8f477034faf9626bb287e471ebe23194da391436d22a5e7adc729cbb4",
+      "src/space/preparation/runtime.js": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+      "src/space/preparation/pose.js": "d52fef63979d5ff41af4716c78c0231b1c6940659e108101e7e8e0aba874c380",
+      "src/space/preparation/scene-adapter.js": "165ae04108aed50d91d7a48aab02f360cae17108fcbc98606d2a5ef86b39b377",
+      "src/space/preparation/workspace.js": "2f706dd6a0d7a993f121713af3f96892ba3068924ae459228783468c1ba0f3f5",
+      "src/space/preparation/lifecycle.js": "83e476e92a1d52727e25270aff56e25b499341e6548c46ba3e4be2108787dfba",
+      "src/space/preparation/scene-history.js": "c57abbe7a6f53190f07cbb7e8c91d9ee86ff86e7acc4ddc4ca7c4b2fc94108c7",
+      "src/space/preparation/application-client.js": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+      "src/space/preparation/browser-producer.js": "04051ea4cb64c3a20c897aa310376ccbded979fd52f7f828851213ad521ed33b",
+      "src/space/render/webgpu/prepared-regions.js": "7d1b7afa1b9552a512e43f449bef32991fa769c3b9621ec92ee365d09e91e053",
+      "tests/unit/prepared-workspace.test.js": "327818ee05d646d9388f18237de64d0dabd500cf55b69312e3d274f442eba8cc",
+      "tests/unit/prepared-scene.test.js": "58f9a2ca8cc364c4d5e2f8bd5fe581c61bc63ccae9febc88b72b9a1524140233",
+      "tests/unit/prepared-pose.test.js": "34d503582bd859dd40236cf9aaaa1ab3e8ea7b39277ed86497db41033b5a0fd7",
+      "tests/unit/space-mode-host.test.js": "97ee779eb219d78e8e317d9bf8dd19953ffa2a7a79f1d3288843ba3aa6de1090",
+      "tests/unit/prepared-history.test.js": "44721a34253c83ef9bebe3f3e66df51ee0e9f47194e93f4f807987cd2b5b3698",
+      "docs/superpowers/plans/2026-10-30-atlas-bi1b-implementation.md": "f84ef8a25ac049e781ec85d36808b84c51949b171a2bbd9c1714f696d5157bc2",
+      "docs/superpowers/specs/2026-10-30-atlas-bi1b-scenes-history.md": "6ae8a5411919255f5c6f7867628afa441fc1748a3dd17ef1466103a48b2532f6",
+      "docs/reports/project1-interactive/BI1B-CARD-2026-10-30.md": "0aa77d3cc4da1750290068d84248f1f12b17bea499007c2c864e97256b29c829",
+      "docs/reports/project1-interactive/BI1B-CARD-AMENDMENT-2026-10-30.md": "7a0602cec92720ad326f66cb14317acfd61d337874895e99eee1182f9ae1749d",
+      "docs/reports/project1-interactive/BI1B-MECHANICAL-REPAIR-2026-10-30.md": "ce230510474e478da531d396bd025802ac7b72c22b2af6c282aa07419f536dce"
+    }
+  },
+  "gate-root-review": {
+    "run_id": "20261030T181754Z-a3f42a",
+    "artifacts": "/mnt/ml_storage/scratch/codex-bridge/claude-runs/20261030T181754Z-a3f42a",
+    "result": {
+      "structured": null,
+      "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+      "observed_model": "claude-opus-5-5",
+      "cli_version": "2.1.314",
+      "usage": {
+        "input_tokens": 90869847,
+        "output_tokens": 389318,
+        "cache_read_tokens": 83628590,
+        "cache_write_tokens": 6275523,
+        "reasoning_tokens": 232086,
+        "total_tokens": 91259165
+      },
+      "cost_usd": 78.56063910000005,
+      "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+    },
+    "log_error": null,
+    "responseSha256": "5103c127de6f48bd20979b7c30cfbf864013c58407b40d90e84748b24fe56355",
+    "packetFiles": {
+      "closure.json": "e5a44056dfcbb000e1e871c60561931867cc6697a5c3360104731a51ea642804",
+      "failed-gate.json": "ba88c9d25ed4341c0b54b5f14aad3bcc02277576b954e8dfd134ed5c6d523399",
+      "tests/space-preparation-session.mjs": "da554382fd4dd7105e5e73e2db9d5413c5cd07b23d1f9477d95cdfab570f40e2",
+      "tests/space-prepared-files.mjs": "fcf388b838827139310cc3d03a71b599851bb3b48bb063c67602897a9b1122b7",
+      "tests/space-prepared.mjs": "a56eee8c0ebbea257bc7a8d9f9bdb477b10b2c3738477b5b07bc910068151a26",
+      "scripts/experiments/pc4-http.mjs": "70babd0785d9afff78de0dae5caacf96256b9fe4a27b7a9a078ef11f4e8eb4d0",
+      "docs/reports/project1-interactive/BI1B-MECHANICAL-REPAIR-2026-10-30.md": "ce230510474e478da531d396bd025802ac7b72c22b2af6c282aa07419f536dce",
+      "docs/reports/project1-interactive/BI1B-CARD-2026-10-30.md": "0aa77d3cc4da1750290068d84248f1f12b17bea499007c2c864e97256b29c829"
+    }
+  },
+  "scale-evidence-review": {
+    "run_id": "20261030T185734Z-7beb48",
+    "artifacts": "/mnt/ml_storage/scratch/codex-bridge/claude-runs/20261030T185734Z-7beb48",
+    "result": {
+      "structured": null,
+      "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+      "observed_model": "claude-opus-5-5",
+      "cli_version": "2.1.314",
+      "usage": {
+        "input_tokens": 94308835,
+        "output_tokens": 403197,
+        "cache_read_tokens": 86990800,
+        "cache_write_tokens": 6352275,
+        "reasoning_tokens": 238993,
+        "total_tokens": 94712032
+      },
+      "cost_usd": 80.12478110000004,
+      "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+    },
+    "log_error": null,
+    "responseSha256": "7ea5559ae99acafaf61e3de65560d634c26462c531ade773f4b9484781e32386",
+    "packetFiles": {
+      "flight-audit.json": "5c7cfa4c13b26f5a4acbae976bdee2160ea5175c64f8fa2ab736b58ae2136777",
+      "scale-build-r0.log": "97f95a27655448b03f7143c71687dbeb3739df8349238da2ec404fb0303b13f1",
+      "scale-units-r0.log": "ae06f88a53f1449edd27cde6a81b95496195d9920e9d0299a8e78fde0aa6833d",
+      "source-manifest.json": "f45a14b20d8b7203ed89416386452031268da96ffe1e3d9daa23ad6f8da2a1d1",
+      "scale-red-host-r0.log": "ef5a0d43e935bd55e38fde842e3f008f2c705dab0aec32313566913e61566505",
+      "scale-green-r0.log": "d0d618a172aee89537d81f1be3842d79cc8672581f179d6028d0fc948cb4ce10",
+      "application.json": "a571f97f515176932b6e456907d5a40e17700b6717f0bf0efc682a24930bc898",
+      "buffer-audit.json": "c95b4e6fe4fadee1eb13bcf192d12c4ef1829274403aaead1897326fcfad665b",
+      "qualification.json": "6936401eb6ffaea1870457f379d8b3580195dd65ded186d3493ab205193d6946",
+      "fine-inspection.png": "f86871accd94a70d44d38642c54018bb02d8166efe81f819f0624e27bd0c0301",
+      "summary.json": "b32793d153dbb323d9bb0efa7bdff53a4033ee7e78f970b0a85a8e464ff9dffd",
+      "external-closure.json": "44533f8709674a7b25d21e9252d77c113787fb1b2d418e1099dd951d9b9aa515",
+      "tests/space-prepared.mjs": "a56eee8c0ebbea257bc7a8d9f9bdb477b10b2c3738477b5b07bc910068151a26",
+      "docs/reports/project1-interactive/BI1B-SCALE-REPAIR-CARD-2026-10-30.md": "d31828c07889bb20b0bbdd1d837aecdacd11855c982e2328023683883c44c5e4",
+      "tests/unit/prepared-workspace.test.js": "66b7eb41750feb9414298dc185124d04c59006a4db654a3dde84f09ce58ba45a",
+      "scripts/preparation/native-adapter.mjs": "a6910405035f87bef4518ac4d1018a468c6ede9babaad89c1185db0bbd11d03c",
+      "scripts/preparation/native-queue.mjs": "293b8d33431ba010974d518472fc82d4668773ef17056f9c536bd8e3312d97ce",
+      "src/space/preparation/runtime.js": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+      "src/space/preparation/workspace.js": "fb88702747274bc6c47b619f6fd6a924173287f592faad350bde87ac5cfd5443"
+    }
+  }
+}

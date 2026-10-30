@@ -1,0 +1,40 @@
+{
+  "rows": [
+    {
+      "phase": "reopen",
+      "request": 1,
+      "ms": 3945.699951171875
+    },
+    {
+      "phase": "reopen",
+      "request": 2,
+      "ms": 3358.5
+    },
+    {
+      "phase": "reopen",
+      "request": 3,
+      "ms": 1874.5
+    },
+    {
+      "phase": "reopen",
+      "request": 4,
+      "ms": 2600.89990234375
+    },
+    {
+      "phase": "reopen",
+      "request": 5,
+      "ms": 2794.0
+    },
+    {
+      "phase": "reopen",
+      "request": 6,
+      "ms": 2613.199951171875
+    },
+    {
+      "phase": "reopen",
+      "request": 8,
+      "ms": 2595.0
+    }
+  ],
+  "scope": "Requested restoration event to current first-presentation confirmation; includes session/runtime/render/collision rebuild. The native helper persists within a phase."
+}

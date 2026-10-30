@@ -1,0 +1,91 @@
+{
+  "head": "71dc60a1c25172853f446f5bea06d3e7d555f3a5",
+  "pass": true,
+  "cleanup": true,
+  "failure": null,
+  "routeSeconds": 22.742,
+  "renderedFps": 50.04554836747888,
+  "navigationMs": {
+    "p99": 4.300048828125,
+    "max": 4.599853515625
+  },
+  "scaleEvents": [
+    {
+      "type": "scale",
+      "time": 1793386487208.9001,
+      "runtimeId": "dcb77a6e-36c0-46a3-a0bb-6420a321d229",
+      "bodyD": 0.006640625,
+      "position": [
+        1414.9728210102023,
+        79.20574540462098,
+        1040.639196901722
+      ],
+      "displacement": 0
+    },
+    {
+      "type": "scale",
+      "time": 1793386495191.7002,
+      "runtimeId": "dcb77a6e-36c0-46a3-a0bb-6420a321d229",
+      "bodyD": 0.0265625,
+      "position": [
+        1414.9728179890167,
+        79.20570264128636,
+        1040.639183727875
+      ],
+      "displacement": 0
+    }
+  ],
+  "checks": [
+    {
+      "name": "Prepared application uses the maintained headed hardware profile",
+      "arguments": {
+        "present": [
+          "--enable-gpu",
+          "--use-angle=vulkan",
+          "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan",
+          "--enable-webgpu-developer-features"
+        ],
+        "missing": [],
+        "noSandbox": false,
+        "headless": false,
+        "gpuWatchdogDisabled": false,
+        "developerFeatures": true
+      },
+      "gpu": {
+        "record": "VENDOR= 0x10de [Google Inc. (NVIDIA)], DEVICE=0x26b1 [ANGLE (NVIDIA, Vulkan 1.4.312 (NVIDIA NVIDIA RTX 6000 Ada Generation (0x000026B1)), NVIDIA-580.173.2.0)], DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=580.173.2.0 *ACTIVE*",
+        "vendorId": 4318,
+        "deviceId": 9905,
+        "driverVendor": "NVIDIA",
+        "driverVersion": "580.173.2.0"
+      }
+    },
+    {
+      "name": "Application landscape route demonstrates 3D contact scale and retained return",
+      "seconds": 22.742
+    },
+    {
+      "name": "Rapid switches suppress stale landscape publication and input"
+    },
+    {
+      "name": "Leaving during pending native work retires the old client before re-entry"
+    },
+    {
+      "name": "Missing preparation falls back inside Space and preserves Plane access"
+    },
+    {
+      "name": "Preparation endpoints reject foreign origins and private paths stay blocked"
+    },
+    {
+      "name": "Finite delivered-geometry qualification and actual application flight checks pass"
+    },
+    {
+      "name": "Prepared application has no runtime errors and confirms owned cleanup"
+    }
+  ],
+  "audit": {
+    "qualification.json": true,
+    "buffer-audit.json": true,
+    "flight-audit.json": true,
+    "external-closure.json": true
+  }
+}
