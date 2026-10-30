@@ -10,6 +10,7 @@ import { chromium } from 'playwright';
 import { createApplicationServer } from '../scripts/preparation/application-server.mjs';
 import { observeOwnedProcesses } from '../scripts/preparation/process-observer.mjs';
 import { runOwnedPreview } from '../scripts/world-preview.mjs';
+import { createSessionLossProxy } from './support/session-loss-proxy.mjs';
 import { within, ev, boundContext, closeWithin, chromeLaunchEnv, installSuiteDeadline } from './support/bounded.mjs';
 import { PROJECT0_LAUNCH_ARGS, checkEffectiveArguments, collectVisibleText, activeGpuIdentity } from './support/space-suite.mjs';
 
@@ -18,7 +19,7 @@ installSuiteDeadline('space-preparation-session',300000);
 const stamp=new Date().toISOString().replace(/[:.]/g,'-'),root=path.resolve(process.env.ATLAS_SESSION_RUN_ROOT??'/mnt/ml_storage/scratch/atlas-pc4/session-'+stamp);
 assert.ok(root.startsWith('/mnt/ml_storage/scratch/atlas-pc4/'));await fs.mkdir(root);
 const report=[],detail={started:Date.now(),mode:'session',errors:[],runs:[],controls:[],cleanup:false},observer=observeOwnedProcesses(),exec=promisify(execFile);
-let service,browser,context,a,b,aId,bId,aHeaders,heldToken,savedA=[],suppressA=false,suppressB=false,holdFine=true,heldReady,heldTask;
+let service,lossProxy,browser,context,a,b,aId,bId,aHeaders,heldToken,savedA=[],suppressB=false,holdFine=true,heldReady,heldTask;
 const held=new Promise(resolve=>{heldReady=resolve;}),base='http://127.0.0.1:5198',allEvents=[];
 const pass=(name,extra={})=>{report.push({name,...extra});console.log('PASS '+name);};
 const delay=ms=>within(new Promise(resolve=>setTimeout(resolve,Math.max(0,ms))),Math.max(1,ms)+2000,'fixed session interval');
@@ -31,6 +32,7 @@ async function press(page,key,ms){await page.keyboard.down(key);try{await delay(
 const apiHeaders=raw=>({'Content-Type':'application/json',Origin:base,'X-Atlas-Client':raw['x-atlas-client'],'X-Atlas-Session':raw['x-atlas-session']});
 try{
  service=await createApplicationServer({runRoot:root,port:5198});
+ lossProxy=await createSessionLossProxy(base);detail.lossProxyOrigin=lossProxy.origin;
  browser=await chromium.launch({channel:'chrome',headless:false,chromiumSandbox:true,timeout:30000,env:chromeLaunchEnv(),args:['--disable-dev-shm-usage',...PROJECT0_LAUNCH_ARGS]});
  context=boundContext(await browser.newContext({viewport:{width:1280,height:720}}));
  const identity=await context.newPage();await identity.goto('chrome://version');
@@ -40,7 +42,7 @@ try{
  for(let i=0;i<20;i++){gpuText=await ev(identity,collectVisibleText);if(/NVIDIA.*RTX|RTX.*NVIDIA/.test(gpuText))break;await delay(250);}
  detail.gpu=activeGpuIdentity(gpuText);assert.equal(detail.gpu.vendorId,0x10de);await closeWithin(identity,'session identity page');
  pass('Session recovery uses the maintained headed hardware profile');
- a=await context.newPage();a.on('pageerror',error=>detail.errors.push(error.message));await a.goto(base);await a.waitForFunction(()=>window.atlas?.workspaces);
+ a=await context.newPage();a.on('pageerror',error=>detail.errors.push(error.message));await a.goto(lossProxy.origin);await a.waitForFunction(()=>window.atlas?.workspaces);
  await enter(a);aId=service.snapshot().client;const initial=await state(a);detail.setup={fixture:initial.metadata,adapter:initial.adapter};
  assert.equal(initial.metadata.session.leaseMs,30000);assert.equal(initial.metadata.session.heartbeatMs,5000);
  b=await context.newPage();b.on('pageerror',error=>detail.errors.push(error.message));await b.goto(base);await b.waitForFunction(()=>window.atlas?.workspaces);
@@ -56,12 +58,11 @@ try{
 
  // The lost page delivers no cleanup; the living page can still confirm its
  // per-request retirement while final close/heartbeat delivery is suppressed.
- detail.lossSuppression={heartbeat:0,close:0,cancel:0,retire:0};
+ detail.lossSuppression=lossProxy.suppressed;
  await context.route(/\/api\/preparation\/(?:heartbeat|close|cancel|retire\/[^/?]+)(?:\?.*)?$/,async route=>{
   const id=route.request().headers()['x-atlas-client'];
   const operation=new URL(route.request().url()).pathname.split('/')[3];
-  if(suppressA&&id===aId){detail.lossSuppression[operation]++;await route.abort('failed');}
-  else if(suppressB&&id===bId&&['heartbeat','close'].includes(operation))await route.abort('failed');else await route.continue();
+  if(suppressB&&id===bId&&['heartbeat','close'].includes(operation))await route.abort('failed');else await route.continue();
  });
  await context.route('**/api/preparation/prepare',route=>{
   const headers=route.request().headers(),input=route.request().postDataJSON();
@@ -72,7 +73,7 @@ try{
    try{await route.fulfill({response});detail.heldResponse.delivery='fulfilled';}catch{detail.heldResponse.delivery='closed-target';}
   })();heldTask.catch(error=>{detail.heldResponseError=error.message;heldReady();});return heldTask;
  });
- suppressA=true;await a.mouse.move(600,400);await a.mouse.wheel(0,-120);await within(held,20000,'native response held before token delivery');
+ lossProxy.block(aId);await a.mouse.move(600,400);await a.mouse.wheel(0,-120);await within(held,20000,'native response held before token delivery');
  assert.ok(!detail.heldResponseError,detail.heldResponseError);assert.ok(service.snapshot().native.publications>0);
  const aEvents=savedA=await events(a),healthyEvents=aEvents.filter(e=>e.time>=healthyStart);
  detail.runs.push({scenario:'visible-healthy-owner',started:healthyStart,ended:Date.now(),seconds:(Date.now()-healthyStart)/1000,events:healthyEvents,frames:healthyEvents.filter(e=>e.type==='frame')});allEvents.push(...aEvents);
@@ -117,6 +118,7 @@ finally{
  const errors=[];
  try{if(b&&!b.isClosed()){await ev(b,async()=>{await atlas.workspaces.switchTo('plane');await atlas.landscape.whenReleased();},null,'session cleanup drain',30000);const be=await events(b);allEvents.length=0;allEvents.push(...savedA,...be);}}catch(error){errors.push(error.message);}
  try{await observer.sample();await closeWithin(context,'session context');await closeWithin(browser,'session browser');}catch(error){errors.push(error.message);}
+ try{await lossProxy?.close();}catch(error){errors.push(error.message);}
  try{if(service)detail.serverCleanup=await service.close();}catch(error){errors.push(error.message);}
  detail.processes=await observer.stop();detail.cleanupErrors=errors;detail.cleanup=!errors.length&&!detail.processes.alive.length&&!detail.processes.errors.length&&detail.serverCleanup?.cleanup===true;
  detail.hello=detail.serverCleanup?.hello;detail.browserCleanup={events:allEvents};detail.ended=Date.now();
@@ -141,7 +143,7 @@ finally{
  }
  if(detail.cleanup&&!detail.failure)pass('Session controls preserve source identity and confirm owned process cleanup');
  if(!detail.cleanup){report.push({name:'FAIL',error:'CLEANUP-UNCONFIRMED'});process.exitCode=125;}
- detail.sources={};for(const name of ['scripts/preparation/application-policy.mjs','scripts/preparation/application-server.mjs','scripts/world-preview.mjs','scripts/preparation/page-lifetime.mjs','src/space/preparation/application-client.js','src/space/preparation/workspace.js','src/app.js','index.html','tests/space-preparation-session.mjs'])detail.sources[name]=createHash('sha256').update(await fs.readFile(name)).digest('hex');
+ detail.sources={};for(const name of ['scripts/preparation/application-policy.mjs','scripts/preparation/application-server.mjs','scripts/world-preview.mjs','scripts/preparation/page-lifetime.mjs','src/space/preparation/application-client.js','src/space/preparation/workspace.js','src/app.js','index.html','tests/space-preparation-session.mjs','tests/support/session-loss-proxy.mjs'])detail.sources[name]=createHash('sha256').update(await fs.readFile(name)).digest('hex');
  detail.completed=Date.now();await fs.writeFile(path.join(root,'session.json'),JSON.stringify(detail,null,2)+'\n');await fs.mkdir('artifacts',{recursive:true});await fs.writeFile('artifacts/space-preparation-session-report.json',JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({root,pass:detail.pass&&!detail.failure,cleanup:detail.cleanup,failure:detail.failure}));
 }
