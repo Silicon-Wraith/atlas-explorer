@@ -2,6 +2,8 @@
 
 **Owner result, 2026-10-29.** PC2 demonstrates the bounded experience: live preparation through PC1, ascent/descent into new 3D coverage, lateral travel and reversal, prepared terrain contact, and repeated visits to the original smaller mathematical formation. The three 90-second ordinary runs achieve **49.97–50.01 FPS**, exceeding the frozen 30 FPS target overall and during preparation. Preparation latency, navigation tails and complete memory ownership remain gaps. This is progress toward the North Star's inhabitable mathematical world; BI1 application integration is the next step.
 
+Implementation, design, plan and evidence are published together in [PR #19](https://github.com/Silicon-Wraith/atlas-explorer/pull/19), open for advisor review/merge.
+
 The [design](../../superpowers/specs/2026-10-29-atlas-pc2-live-3d-coverage.md), [implementation plan](../../superpowers/plans/2026-10-29-atlas-pc2-implementation.md), [frozen card](PC2-CARD-2026-10-29.md) and [card r1 corrections](PC2-CARD-AMENDMENT-2026-10-29.md) govern the result. Claude card challenge `20261029T234230Z-92ad1a` preceded implementation. Independent evidence reviews `20261030T011025Z-385c2e` and `20261030T011346Z-e15ebe` support the bounded result and proceeding to BI1 design.
 
 ## Full frozen scorecard
