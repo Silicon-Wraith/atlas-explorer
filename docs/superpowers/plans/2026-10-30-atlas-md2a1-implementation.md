@@ -1,6 +1,6 @@
 # MD2.A1 implementation plan
 
-2026-10-30. Proposed for independent review. [Design](../specs/2026-10-30-atlas-md2a1-generation-ownership.md); [card](../../reports/project1-interactive/MD2A1-CARD-2026-10-30.md). Work only in project `.worktrees/md2a` on `feat/md2a` from merged PR23 `af72dbe`.
+2026-10-30. Independently challenged; [r1 amendments](../../reports/project1-interactive/MD2A1-CARD-AMENDMENT-2026-10-30.md) adopted before implementation. [Design](../specs/2026-10-30-atlas-md2a1-generation-ownership.md); [card](../../reports/project1-interactive/MD2A1-CARD-2026-10-30.md). Work only in project `.worktrees/md2a` on `feat/md2a` from merged PR23 `af72dbe`.
 
 1. Complete the static runtime/input/creation-stage map, licences and explicit legacy-base limitation. Clarify Regression World's validation-driven role. Freeze design/plan/card, source map and owner position. Obtain completed independent challenge before moving code.
 2. Import the 18 project-authored runtime/helper modules and identified input/reference fixtures. Add original-source provenance and a byte-exact legacy world binding. Rebase import/input/output paths with explicit configuration; preserve mathematical function bodies, CUDA, module load/cache relationships and quotas. Add repository-owned qualification/reference paths. Keep generated data outside the checkout.
