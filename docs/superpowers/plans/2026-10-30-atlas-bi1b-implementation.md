@@ -1,6 +1,6 @@
 # BI1.B implementation plan — prepared scenes, history and files
 
-**Status:** written for independent challenge before implementation,2026-10-30. Governing [design](../specs/2026-10-30-atlas-bi1b-scenes-history.md), [card](../../reports/project1-interactive/BI1B-CARD-2026-10-30.md), [upstream BI1](../specs/2026-10-29-atlas-bi1-application-integration.md). Base `5013ba6154bf1162e3092c2b1b509377bade2629`, branch `feat/bi1b`, worktree `/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b`. Baseline1,298 units/80 files pass; runtime/evidence under `/mnt/ml_storage/scratch/atlas-bi1b`.
+**Status:** implementing after completed independent card challenge20261030T173343Z-2ee11b and [r1 amendment](../../reports/project1-interactive/BI1B-CARD-AMENDMENT-2026-10-30.md),2026-10-30. Governing [design](../specs/2026-10-30-atlas-bi1b-scenes-history.md), [card](../../reports/project1-interactive/BI1B-CARD-2026-10-30.md), [upstream BI1](../specs/2026-10-29-atlas-bi1-application-integration.md). Base `5013ba6154bf1162e3092c2b1b509377bade2629`, branch `feat/bi1b`, worktree `/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b`. Baseline1,298 units/80 files pass; runtime/evidence under `/mnt/ml_storage/scratch/atlas-bi1b`.
 
 ## 1. Challenge the frozen boundary
 
@@ -53,7 +53,7 @@ Three hours implementation/native-free checks plus one hour hardware/evidence; i
 | Merged-main/worktree | Complete;5013ba6, feat/bi1b under project.worktrees |
 | Baseline | Complete;1,298 registered units/80 files |
 | Source/design/plan/card | Audited and written; frozen for challenge |
-| Independent card challenge | Pending new BI1.B review transmission scope |
+| Independent card challenge | Complete;20261030T173343Z-2ee11b, r1 adopted; advisor gave standing Claude approval |
 | Implementation | Not started |
 | Headed/full-gate evidence | Not started |
 | Final review/report/PR | Not started |

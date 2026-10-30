@@ -1,6 +1,6 @@
 # BI1.B — save and return to a prepared-world place
 
-**Status:** owner design for independent challenge,2026-10-30. Owner Codex; challenger Claude. Base merged PC4 `5013ba6154bf1162e3092c2b1b509377bade2629`, branch `feat/bi1b`, project `.worktrees/bi1b`. No implementation yet. The merged baseline passes1,298 guarded CPU tests/80 files.
+**Status:** independently challenged; precise corrections adopted before implementation,2026-10-30. See [r1 amendment](../../reports/project1-interactive/BI1B-CARD-AMENDMENT-2026-10-30.md). Owner Codex; challenger Claude. Base merged PC4 `5013ba6154bf1162e3092c2b1b509377bade2629`, branch `feat/bi1b`, project `.worktrees/bi1b`. No implementation yet. The merged baseline passes1,298 guarded CPU tests/80 files.
 
 Governing [North Star](2026-10-23-atlas-north-star-charter.md), [fixed-world interpretation](2026-10-29-atlas-multiscale-world-clarification.md), [BI1 integration](2026-10-29-atlas-bi1-application-integration.md), [Project1 scene/history contracts](2026-10-19-project1-design.md), and [roadmap](../plans/2026-10-29-atlas-browser-world-move-forward.md). This specifies the previously deferred BI1.B scene codec, history and file workflow. PC4's ownership/retry fence remains authoritative. BI1.C still owns complete device/preparer interruption parity.
 
