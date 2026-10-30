@@ -48,4 +48,4 @@ Three hours implementation/CPU plus one hour hardware/evidence/review, excluding
 | Peer card review | Complete; explicit PC4 permission received, challenge20261030T050119Z-fbb429 and r1 adopted |
 | Implementation | Lease owner/transport/client/workspace retry and page-lifetime implementation complete;1,298 guarded units/80 files, build and native-free HTTP checks pass |
 | Frozen controls/product gate | Full gate23/24 entries pass on0ddff25; new session fixture fails. Test-only2d34664 diagnostic establishes individual recoveries but fails aggregate error assertion; launcher/audits after it unrun. Stop recorded; acceptance open |
-| Evidence review/report/PR | Full report/evidence preserved; independent evidence review pending; draft PR next |
+| Evidence review/report/PR | Full report/evidence preserved; evidence bridge20261030T155039Z-99e0fd timed out without judgement; draft PR, acceptance/review open |

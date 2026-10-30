@@ -1,0 +1,204 @@
+{
+  "reportHead": "6030f3968031757afdd5f1c71a8af62f6d7114e4",
+  "applicationHead": "0ddff2536d13d2aad770cb1a705c140e39515c0f",
+  "diagnosticHead": "2d34664bfdfa0eaaaf4f67526bd0ce1b46c4c85e",
+  "base": "e3f7e293ddc96fb90eccf8decbccc59917639f4a",
+  "files": {
+    "AGENTS.md": {
+      "sha256": "2ff679955c716da65f5073272478ff50dbd770efd24fb1147e730e69d270a10d",
+      "bytes": 11128
+    },
+    "README.md": {
+      "sha256": "86f355bc53fb1154924545137f7cf626c485fb475dcc1eec7273d22bd0fddc8f",
+      "bytes": 22380
+    },
+    "docs/reports/project1-interactive/PC4-CARD-2026-10-29.md": {
+      "sha256": "470bd2eee0e64acfe52756733658a48c74bb513fab755130ce7366db5c5fe02d",
+      "bytes": 7109
+    },
+    "docs/reports/project1-interactive/PC4-CARD-AMENDMENT-2026-10-29.md": {
+      "sha256": "cf6ad12256340fcf1e128e5329631b1604ebe950c7cc8c2827267eb9851a0817",
+      "bytes": 4221
+    },
+    "docs/reports/project1-interactive/PC4-FIXTURE-REPLACEMENT-2026-10-30.md": {
+      "sha256": "b7705b8d3aae7764f9c26a6fdc48efc288c7dae7d6326637bf1e9f292bb15975",
+      "bytes": 1751
+    },
+    "docs/reports/project1-interactive/PC4-MECHANICAL-PREFLIGHT-2026-10-30.md": {
+      "sha256": "d287735067862893c0c5a1b4798d87fc64deb5631edec7c194ae112642dc0645",
+      "bytes": 1540
+    },
+    "docs/reports/project1-interactive/PC4-SESSION-RECOVERY-2026-10-30.md": {
+      "sha256": "eec329a6d7438f4ec5e98203bbb258b8e1879bfe346ee1a7cfebe3a6cd70820e",
+      "bytes": 11361
+    },
+    "docs/reports/project1-interactive/PC4-evidence-summary-2026-10-30.json": {
+      "sha256": "19ea2de7eb32d89245f5fdff7f829ed073e65d701c48f6dcf2376dc069290eee",
+      "bytes": 13959
+    },
+    "docs/reports/project1-interactive/PC4-product-gate-2026-10-30.json": {
+      "sha256": "4d8a09d236de8f089a331ac9bed27bbca3f50467b823f5885ecb6c769f5e3943",
+      "bytes": 6660
+    },
+    "docs/reports/project1-interactive/PC4-session-ledger-2026-10-30.json": {
+      "sha256": "81542efbaa7e25ce932ac4130ef24001e292a4b773fd0e2542593284cb196f29",
+      "bytes": 20070
+    },
+    "docs/superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md": {
+      "sha256": "dc87a369a6bfb2cee852698948f5b5712fdada33c6ea15555c3025bdefc39108",
+      "bytes": 22111
+    },
+    "docs/superpowers/plans/2026-10-29-atlas-pc4-implementation.md": {
+      "sha256": "0bb7160f0a56f2b2f6c92b4606fd73bbd2ac37df9e101a18792175371f341be4",
+      "bytes": 6821
+    },
+    "docs/superpowers/specs/2026-10-29-atlas-bi1-application-integration.md": {
+      "sha256": "37293759ebe6f0e9eb442933b7f26a3d7f83317c15b8da7860a795a76ef53251",
+      "bytes": 16861
+    },
+    "docs/superpowers/specs/2026-10-29-atlas-pc4-session-recovery.md": {
+      "sha256": "3c57b975261805e12c7091eb26d45f543ebbf5570fa2609c89a942bfa67a08a1",
+      "bytes": 9762
+    },
+    "index.html": {
+      "sha256": "199c1e1e0a1c74aabde9e1581fb26c620ccd79672cd7b4e6487e95f1c299b896",
+      "bytes": 20629
+    },
+    "scripts/experiments/pc3-http-smoke.mjs": {
+      "sha256": "5ab900d1e0396095c9b5d0000351b9a6d5a1bf646f1ddc3984f1a11544bc6ed0",
+      "bytes": 3811
+    },
+    "scripts/experiments/pc4-http.mjs": {
+      "sha256": "5acc3b2cbe6f876dbc22fe46d7512abd8f2477aae07898569f68b600d6bca1b6",
+      "bytes": 7843
+    },
+    "scripts/preparation/README.md": {
+      "sha256": "3bf67adf04d5f8ece0baf59af544533983f942eadb015bd5326c4f6dcfbdedea",
+      "bytes": 4467
+    },
+    "scripts/preparation/application-policy.mjs": {
+      "sha256": "1a7a29f713e637e65cc8f7a6329f0e000208894ac451b2b9ecc18e81c03ad0cc",
+      "bytes": 6016
+    },
+    "scripts/preparation/application-server.mjs": {
+      "sha256": "b6ff658006a4b106030b3ca3f26c864a95b0357fc90627eb03fe9854a0f73cea",
+      "bytes": 10844
+    },
+    "scripts/preparation/native-adapter.mjs": {
+      "sha256": "a6910405035f87bef4518ac4d1018a468c6ede9babaad89c1185db0bbd11d03c",
+      "bytes": 11496
+    },
+    "scripts/preparation/native-controller.mjs": {
+      "sha256": "e8713153f70a44d65005c5e86b1aff048a00630b26c3efb7968d0f7c97cc7ea9",
+      "bytes": 4689
+    },
+    "scripts/preparation/native-queue.mjs": {
+      "sha256": "293b8d33431ba010974d518472fc82d4668773ef17056f9c536bd8e3312d97ce",
+      "bytes": 2767
+    },
+    "scripts/preparation/native-worker.py": {
+      "sha256": "7ba131bec82ad573c64f2be6ca3f8d9bdcf24a48800d8f55cafbde3ef9fd15b4",
+      "bytes": 10292
+    },
+    "scripts/preparation/page-lifetime.mjs": {
+      "sha256": "c5be90cc3dd0192fdc7c8234df98cec12183641a509aa33833944738cb3fffd2",
+      "bytes": 942
+    },
+    "scripts/preparation/publications.mjs": {
+      "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9",
+      "bytes": 1182
+    },
+    "scripts/world-preview.mjs": {
+      "sha256": "a0d423c10778f0a07ec5c5370547c7bed318d4ff31f1cb6e71800b471c8bdf7f",
+      "bytes": 5209
+    },
+    "src/app.js": {
+      "sha256": "48d5fa4f6afaf09a7bfe6644b52424a72804a879eebe4e636f6da805907ffb87",
+      "bytes": 5138
+    },
+    "src/space/mode-host.js": {
+      "sha256": "437a838638416c0e49a6f184811a74a6cdfb3ca5122bfe7f3a72e42965b87d2d",
+      "bytes": 2933
+    },
+    "src/space/preparation/application-client.js": {
+      "sha256": "62a164637f509e84f0437d2fb049648ccd0122fd2dc25f1e1f9a798b4279ba2e",
+      "bytes": 8294
+    },
+    "src/space/preparation/browser-preparer.js": {
+      "sha256": "1ac00d2b313d333a39d3d08ea8a04025be2138b69c6b1d3257bb1d43b11c066d",
+      "bytes": 5766
+    },
+    "src/space/preparation/browser-producer.js": {
+      "sha256": "04051ea4cb64c3a20c897aa310376ccbded979fd52f7f828851213ad521ed33b",
+      "bytes": 4262
+    },
+    "src/space/preparation/lifecycle.js": {
+      "sha256": "83e476e92a1d52727e25270aff56e25b499341e6548c46ba3e4be2108787dfba",
+      "bytes": 6584
+    },
+    "src/space/preparation/runtime.js": {
+      "sha256": "81d711dabce7007450afe44a8ac667c60c41a6a7379c38d3985f66248642ff1d",
+      "bytes": 11798
+    },
+    "src/space/preparation/wasm-memory.js": {
+      "sha256": "85cff7357470131ce08e6c91580f0ad52a60106c4848c9a343cce57fd0bb20a6",
+      "bytes": 1983
+    },
+    "src/space/preparation/workspace.js": {
+      "sha256": "5e13e549bdeb143e7e29e37fc23e66ac645faf5511fc1afaca3c833675a76a4e",
+      "bytes": 13916
+    },
+    "src/ui/style.css": {
+      "sha256": "29ceb859112a8dab4f5db2976f43e205048efa03fa65c8314f142d344f58a04e",
+      "bytes": 27114
+    },
+    "tests/space-preparation-session.mjs": {
+      "sha256": "c8fa3fb80f73af9057bc35ae5befd329d8285c955f3ce34a1de8359bb955f850",
+      "bytes": 17304
+    },
+    "tests/space-prepared.mjs": {
+      "sha256": "af28b5c7902322fd9ecdbaf6a83f9345540055d9ccbac5f66383bd53e0c52375",
+      "bytes": 16471
+    },
+    "tests/suites.manifest.json": {
+      "sha256": "3c5ed85216ec596bd01b2677c7a55f87e141d09a2c4c435b7053192f9e9a8f28",
+      "bytes": 17374
+    },
+    "tests/support/session-loss-proxy.mjs": {
+      "sha256": "44940ca55f1144deca2aaf3906d099ab2d1908911866f1bf438bef77ff149ddf",
+      "bytes": 1881
+    },
+    "tests/unit.manifest.json": {
+      "sha256": "3d1bb35ddf98c2f91b9b88bca1c3f0a95d2bee8be90d3308f55c1b9bc1f8f33b",
+      "bytes": 3309
+    },
+    "tests/unit/application-preparation.test.js": {
+      "sha256": "7b792dbf1516d2014f7540fe3deb2cda0511608c7ab0aa54d3cdfcf3f0ad071f",
+      "bytes": 11555
+    },
+    "tests/unit/prepared-page-lifetime.test.js": {
+      "sha256": "3cc7abe7783431feeceecd1f6506cb6be94cf5872c2542267d0e6ad0ffea32ea",
+      "bytes": 1419
+    },
+    "tests/unit/prepared-workspace.test.js": {
+      "sha256": "42c2ae7df06be435becfd91e6be690ed347a01e3d6bc3a8fe08071e130c4ad32",
+      "bytes": 7395
+    },
+    "docs/reports/project1-interactive/PC4-second-tab-refused-2026-10-30.png": {
+      "sha256": "21e46495c77a076a8a908247019b6967fe8e43f24116401c7639b412f27e14e0",
+      "bytes": 140354
+    },
+    "docs/reports/project1-interactive/PC4-session-expired-2026-10-30.png": {
+      "sha256": "dcf0b26fdada429db41c462feddccbf74b14b735c1d0f2821b6631fcd85c0573",
+      "bytes": 148282
+    },
+    "docs/reports/project1-interactive/PC4-session-retried-2026-10-30.png": {
+      "sha256": "30d9696a8301b59c62d588cfb612df93506202d50bab89da4e008c7963f6193a",
+      "bytes": 457846
+    },
+    "docs/reports/project1-interactive/PC4-fine-inspection-2026-10-30.png": {
+      "sha256": "cdc1e57f56d1cfc0aad5f71a8e28e27e3ebecd04fa705177728456505291c221",
+      "bytes": 188692
+    }
+  }
+}
