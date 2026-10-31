@@ -87,6 +87,8 @@
     "tests/unit/prepared-run-root.test.js",
     "tests/unit/generation-config.test.js",
     "tests/unit/source-recipe.test.js",
-    "tests/unit/source-parent.test.js"
+    "tests/unit/source-parent.test.js",
+    "tests/unit/recursive-recipe.test.js",
+    "tests/unit/generation-corpus.test.js"
   ]
 }

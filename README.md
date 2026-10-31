@@ -202,3 +202,5 @@ The Project 1a gate audit distinguishes commits with their own passing gate (`ac
 Licensed under MIT; see [LICENSE](LICENSE).
 
 The inspection API `atlas.space.requestCamera(pose, {phase})` defaults to a settled `commit`; `preview` follows the drag path and the final commit records one history entry. `onRequest` covers requests created by the workspace submission path, before handing them to recovery. Workspace resize submissions are included; direct renderer calls and internal recovery replays are excluded; their results remain visible through `onReport`. These are developer inspection APIs, not user controls.
+
+The maintained gate also runs a native-free generation contract. Set `ATLAS_REFERENCE_PYTHON` to an installed CPU Python with NumPy before `npm run gate` (configured workstation: `/home/john-sheppard/miniconda3_fresh/bin/python3`). A missing interpreter/dependency fails or remains incomplete. The standalone [generation contract](scripts/generation/SOURCE-RECIPES.md#imported-recursive-recipe-b1) needs no browser or GPU.
