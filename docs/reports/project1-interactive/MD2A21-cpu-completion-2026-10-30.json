@@ -1,0 +1,991 @@
+{
+  "started": 1793411374108,
+  "pass": true,
+  "ownedPids": [
+    2193041,
+    2193052,
+    2193084,
+    2193116,
+    2193150,
+    2193151,
+    2193183
+  ],
+  "processes": [
+    {
+      "args": [
+        "-c",
+        "import json,sys,importlib.util\nfrom pathlib import Path\nsys.path.insert(0,'/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation')\nimport numpy,mpmath,source_recipe\nprint(json.dumps(dict(executable=sys.executable,python=sys.version.split()[0],numpy=numpy.__version__,numpyFile=numpy.__file__,mpmath=mpmath.__version__,mpmathFile=mpmath.__file__,sourceRecipeFile=source_recipe.__file__,gmpyPresent=bool(importlib.util.find_spec('gmpy2') or importlib.util.find_spec('gmpy')),mpmathBackend=mpmath.libmp.BACKEND,cudaImported='cupy' in sys.modules)))\n"
+      ],
+      "stdout": "{\"executable\": \"/home/john-sheppard/miniconda3_fresh/bin/python3\", \"python\": \"3.13.2\", \"numpy\": \"2.4.2\", \"numpyFile\": \"/home/john-sheppard/miniconda3_fresh/lib/python3.13/site-packages/numpy/__init__.py\", \"mpmath\": \"1.3.0\", \"mpmathFile\": \"/home/john-sheppard/miniconda3_fresh/lib/python3.13/site-packages/mpmath/__init__.py\", \"sourceRecipeFile\": \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/source_recipe.py\", \"gmpyPresent\": false, \"mpmathBackend\": \"python\", \"cudaImported\": false}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/check-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B",
+        "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/mathematics.json"
+      ],
+      "stdout": "{\"pass_\": true, \"precisionDigits\": 50, \"offsetRemovedDifferenceM\": 4.662487794315254, \"cudaImported\": false, \"scope\": \"64 finite source checks at pre-screened locations; no arbitrary-source or browser acceptance.\"}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "--verify",
+        "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/relocated"
+      ],
+      "stdout": "{\"verified\": true, \"status\": \"resolved\", \"requestKey\": \"sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8\", \"definitionKey\": \"sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835\"}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "--verify",
+        "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-request"
+      ],
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 173, in <module>\n    main()\n    ~~~~^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 159, in main\n    print(json.dumps(verify_bundle(args.verify))); return\n                     ~~~~~~~~~~~~~^^^^^^^^^^^^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 33, in verify_bundle\n    raise ValueError('Request key mismatch')\nValueError: Request key mismatch\n",
+      "timedOut": false,
+      "exitCode": 1,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "--verify",
+        "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-result"
+      ],
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 173, in <module>\n    main()\n    ~~~~^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 159, in main\n    print(json.dumps(verify_bundle(args.verify))); return\n                     ~~~~~~~~~~~~~^^^^^^^^^^^^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 44, in verify_bundle\n    raise ValueError('Resolved definition mismatch')\nValueError: Resolved definition mismatch\n",
+      "timedOut": false,
+      "exitCode": 1,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "--verify",
+        "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-height"
+      ],
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 173, in <module>\n    main()\n    ~~~~^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 159, in main\n    print(json.dumps(verify_bundle(args.verify))); return\n                     ~~~~~~~~~~~~~^^^^^^^^^^^^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 44, in verify_bundle\n    raise ValueError('Resolved definition mismatch')\nValueError: Resolved definition mismatch\n",
+      "timedOut": false,
+      "exitCode": 1,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    }
+  ],
+  "checks": [
+    "All frozen original input and mathematical checker/source hashes match before CPU completion",
+    "All original recipe identities and positive repeatability/negative no-surface conditions independently rechecked",
+    "Unchanged independent 50-digit checker passes all 64 selected points on the unchanged original grids",
+    "Relocated original complete bundle verifies on the installed CPU reference environment",
+    "All three identity tamper controls reject after transport hashes are recomputed",
+    "Original failed experiment all generated data and mathematical source hashes still match after CPU completion"
+  ],
+  "referencePython": "/home/john-sheppard/miniconda3_fresh/bin/python3",
+  "frozenManifest": [
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/diagnostics.npz",
+      "sha256": "e6d82852cb20e53b461bf89885d154611e2e6331d67f419d8200cf07b352617f",
+      "bytes": 68366
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/result.json",
+      "sha256": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044",
+      "bytes": 2947
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/height.npy",
+      "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2",
+      "bytes": 33928
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/bundle.json",
+      "sha256": "a7006ec1ab8276adeb85fd47731a4786cec98930942d92d5f6329a51f96c31cb",
+      "bytes": 314
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/recipe.json",
+      "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4",
+      "bytes": 467
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/diagnostics.npz",
+      "sha256": "60ce3ae7111af9492adc3d8a00ff825107e15364d32bb9adc64a4ab6317c861e",
+      "bytes": 68366
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/recipe.json",
+      "sha256": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb",
+      "bytes": 465
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/bundle.json",
+      "sha256": "20f7580762f6710f1d3b332e6ded970892076e63c89745bf4a5426d30e3a1a00",
+      "bytes": 314
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/height.npy",
+      "sha256": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891",
+      "bytes": 33928
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/result.json",
+      "sha256": "1c8b1ad5a9ea46779c5737bfafcaaacd6f524e3a28d3bd3e16d998b8f3440f20",
+      "bytes": 2943
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/diagnostics.npz",
+      "sha256": "60ce3ae7111af9492adc3d8a00ff825107e15364d32bb9adc64a4ab6317c861e",
+      "bytes": 68366
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/height.npy",
+      "sha256": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891",
+      "bytes": 33928
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/bundle.json",
+      "sha256": "131ec5653215453ecfbec62e5ca646a22d0cd34ff313a93a11f11ab5d6002828",
+      "bytes": 314
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/recipe.json",
+      "sha256": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb",
+      "bytes": 465
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/result.json",
+      "sha256": "9d4153d2ba4d07ba0396568796db4be6815da351093686b1c5b47b1501559757",
+      "bytes": 2942
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/diagnostics.npz",
+      "sha256": "e6d82852cb20e53b461bf89885d154611e2e6331d67f419d8200cf07b352617f",
+      "bytes": 68366
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/recipe.json",
+      "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4",
+      "bytes": 467
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/bundle.json",
+      "sha256": "c6aba70517e17189bd117be469860af42057abe3e4f8de2102c91ba6a5dbd2c4",
+      "bytes": 314
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/height.npy",
+      "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2",
+      "bytes": 33928
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/result.json",
+      "sha256": "97e5e352e37f91f484a83037e40541ee416849eff50607fb0009dd89c6bd1bf5",
+      "bytes": 2945
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/diagnostics.npz",
+      "sha256": "71d22780297ebe17bf9f0426f27acfa6844055e496791ee60be076847a8f9713",
+      "bytes": 910
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/bundle.json",
+      "sha256": "0f0755be40f103cdd7f168b6ef75e08d67e844b3ab183661328ebed6ffc99115",
+      "bytes": 234
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/recipe.json",
+      "sha256": "c2eec33b0008e583f6406b3b929e85308031d4db80ddcb19d71bfe6e71603233",
+      "bytes": 447
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/result.json",
+      "sha256": "f1eaa39033a29533c836d2a64263b291d703e8787b26cbf81b1d9f87fe29ab01",
+      "bytes": 1593
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/bundle.json",
+      "sha256": "225dbeff9b64c132663c66404cad5fd0152e425f417f17fbaf04d8c14ae59421",
+      "bytes": 234
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/recipe.json",
+      "sha256": "565e2375efc13d20149462438c856627ea95bb7faa92a3bb0555fc832971abea",
+      "bytes": 459
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/result.json",
+      "sha256": "151501ca3bb1b077d19cf7bd60610aac874a94aec9e0747f00ac67f4111d35c1",
+      "bytes": 280
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/experiment.json",
+      "sha256": "78901add6eb8f16c19430b187dfebe759e28a5a5e674b154c2faa00c26cdd7e9",
+      "bytes": 30143
+    },
+    {
+      "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/check-parent.py",
+      "sha256": "8615d97d6a7c70d881c3962773d956fc84cdba413f9458844018bf2faa15d38d",
+      "bytes": 4376
+    },
+    {
+      "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py",
+      "sha256": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4",
+      "bytes": 10184
+    },
+    {
+      "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/source_recipe.py",
+      "sha256": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954",
+      "bytes": 6420
+    },
+    {
+      "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/src/space/generation/source-recipe.js",
+      "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a",
+      "bytes": 4291
+    },
+    {
+      "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/native/fkern.py",
+      "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+      "bytes": 2877
+    },
+    {
+      "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/tests/support/source-recipes.mjs",
+      "sha256": "84844f084e2d0cb6db649769b8ab51ebd0fe2f8b167d9b6e22f2e9542def370a",
+      "bytes": 899
+    }
+  ],
+  "referenceEnvironment": {
+    "executable": "/home/john-sheppard/miniconda3_fresh/bin/python3",
+    "python": "3.13.2",
+    "numpy": "2.4.2",
+    "numpyFile": "/home/john-sheppard/miniconda3_fresh/lib/python3.13/site-packages/numpy/__init__.py",
+    "mpmath": "1.3.0",
+    "mpmathFile": "/home/john-sheppard/miniconda3_fresh/lib/python3.13/site-packages/mpmath/__init__.py",
+    "sourceRecipeFile": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/source_recipe.py",
+    "gmpyPresent": false,
+    "mpmathBackend": "python",
+    "cudaImported": false
+  },
+  "mathematics": {
+    "pass_": true,
+    "precisionDigits": 50,
+    "cases": {
+      "A": {
+        "pass_": true,
+        "source": {
+          "im": "0.131807237950087553359375",
+          "re": "-0.743334490810060138125000",
+          "unitsPerMetre": "0.00000078125"
+        },
+        "points": [
+          {
+            "index": 0,
+            "row": 0,
+            "column": 0,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.9288401722951357e-12,
+            "heightErrorM": 4.169426019428555e-12
+          },
+          {
+            "index": 64,
+            "row": 0,
+            "column": 64,
+            "status": 1,
+            "gpuIterations": 97,
+            "referenceIterations": 97,
+            "distanceErrorM": 2.1791580045835474e-11,
+            "heightErrorM": 4.7069599506232286e-11
+          },
+          {
+            "index": 4160,
+            "row": 64,
+            "column": 0,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 2.914671386504192e-13,
+            "heightErrorM": 6.263410472906052e-13
+          },
+          {
+            "index": 4224,
+            "row": 64,
+            "column": 64,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 4.956978416392923e-12,
+            "heightErrorM": 1.0713695321258939e-11
+          },
+          {
+            "index": 2112,
+            "row": 32,
+            "column": 32,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 2.138994267927334e-11,
+            "heightErrorM": 4.6207001662263645e-11
+          },
+          {
+            "index": 1,
+            "row": 0,
+            "column": 1,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 9.375364908786922e-12,
+            "heightErrorM": 2.0247758627009615e-11
+          },
+          {
+            "index": 2,
+            "row": 0,
+            "column": 2,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 5.894273823682369e-12,
+            "heightErrorM": 1.2731655881429891e-11
+          },
+          {
+            "index": 3,
+            "row": 0,
+            "column": 3,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 9.619150216949322e-12,
+            "heightErrorM": 2.078703293926578e-11
+          },
+          {
+            "index": 4,
+            "row": 0,
+            "column": 4,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.9438489841987075e-12,
+            "heightErrorM": 4.188944623819459e-12
+          },
+          {
+            "index": 5,
+            "row": 0,
+            "column": 5,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.1267223122721464e-11,
+            "heightErrorM": 2.4342399197490843e-11
+          },
+          {
+            "index": 6,
+            "row": 0,
+            "column": 6,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 8.976057592406661e-12,
+            "heightErrorM": 1.93916223196635e-11
+          },
+          {
+            "index": 7,
+            "row": 0,
+            "column": 7,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 8.055152716544416e-12,
+            "heightErrorM": 1.740644696673192e-11
+          },
+          {
+            "index": 136,
+            "row": 2,
+            "column": 6,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.4323484475177512e-11,
+            "heightErrorM": 3.094092264632643e-11
+          },
+          {
+            "index": 272,
+            "row": 4,
+            "column": 12,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 4.045029236036361e-12,
+            "heightErrorM": 8.745810334333146e-12
+          },
+          {
+            "index": 408,
+            "row": 6,
+            "column": 18,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.633681367059279e-11,
+            "heightErrorM": 3.528374167515364e-11
+          },
+          {
+            "index": 545,
+            "row": 8,
+            "column": 25,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 5.349021235060719e-12,
+            "heightErrorM": 1.1544948051956448e-11
+          },
+          {
+            "index": 681,
+            "row": 10,
+            "column": 31,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.5931216245330206e-11,
+            "heightErrorM": 3.441527509029519e-11
+          },
+          {
+            "index": 817,
+            "row": 12,
+            "column": 37,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 8.885350988876505e-14,
+            "heightErrorM": 1.9122385042487194e-13
+          },
+          {
+            "index": 953,
+            "row": 14,
+            "column": 43,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.6296007563751372e-11,
+            "heightErrorM": 3.5199678255070525e-11
+          },
+          {
+            "index": 1090,
+            "row": 16,
+            "column": 50,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.3162950567135198e-11,
+            "heightErrorM": 2.84405261579085e-11
+          },
+          {
+            "index": 1226,
+            "row": 18,
+            "column": 56,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 2.4843735088871932e-12,
+            "heightErrorM": 5.365786969769365e-12
+          },
+          {
+            "index": 1362,
+            "row": 20,
+            "column": 62,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.2992637773977586e-11,
+            "heightErrorM": 2.8066051152684715e-11
+          },
+          {
+            "index": 1498,
+            "row": 23,
+            "column": 3,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 9.737955862932765e-12,
+            "heightErrorM": 2.103403643604669e-11
+          },
+          {
+            "index": 1635,
+            "row": 25,
+            "column": 10,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.7767620040488418e-12,
+            "heightErrorM": 3.838908621694935e-12
+          },
+          {
+            "index": 1771,
+            "row": 27,
+            "column": 16,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.2441938084264476e-11,
+            "heightErrorM": 2.687772696209432e-11
+          },
+          {
+            "index": 1907,
+            "row": 29,
+            "column": 22,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.0359287955996138e-11,
+            "heightErrorM": 2.2386644746961342e-11
+          },
+          {
+            "index": 2043,
+            "row": 31,
+            "column": 28,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 9.172412414299469e-12,
+            "heightErrorM": 1.98099357855092e-11
+          },
+          {
+            "index": 2180,
+            "row": 33,
+            "column": 35,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.9467726919063726e-11,
+            "heightErrorM": 4.204734375030472e-11
+          },
+          {
+            "index": 2316,
+            "row": 35,
+            "column": 41,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 3.11849132946392e-11,
+            "heightErrorM": 6.735687033939412e-11
+          },
+          {
+            "index": 2452,
+            "row": 37,
+            "column": 47,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 8.085834867128477e-12,
+            "heightErrorM": 1.746405390278834e-11
+          },
+          {
+            "index": 2588,
+            "row": 39,
+            "column": 53,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.6944978126123097e-11,
+            "heightErrorM": 3.659602523499957e-11
+          },
+          {
+            "index": 2725,
+            "row": 41,
+            "column": 60,
+            "status": 1,
+            "gpuIterations": 98,
+            "referenceIterations": 98,
+            "distanceErrorM": 1.5461662484494507e-11,
+            "heightErrorM": 3.3399365822927506e-11
+          }
+        ],
+        "highestIterationIndices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "maxDistanceErrorM": 3.11849132946392e-11,
+        "maxHeightErrorM": 6.735687033939412e-11,
+        "iterationMismatches": [],
+        "heightRangeM": 1.4901005588614566
+      },
+      "B": {
+        "pass_": true,
+        "source": {
+          "im": "0.00688857589984350546875",
+          "re": "0.275291862284820031484375",
+          "unitsPerMetre": "0.00000078125"
+        },
+        "points": [
+          {
+            "index": 0,
+            "row": 0,
+            "column": 0,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 2.3087603450180534e-11,
+            "heightErrorM": 4.9869593583954004e-11
+          },
+          {
+            "index": 64,
+            "row": 0,
+            "column": 64,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 9.8937979113398e-12,
+            "heightErrorM": 2.1372356414572418e-11
+          },
+          {
+            "index": 4160,
+            "row": 64,
+            "column": 0,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.1171372116380423e-12,
+            "heightErrorM": 2.4034726759693527e-12
+          },
+          {
+            "index": 4224,
+            "row": 64,
+            "column": 64,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 1.1449163677466477e-11,
+            "heightErrorM": 2.4729979872278395e-11
+          },
+          {
+            "index": 2112,
+            "row": 32,
+            "column": 32,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.6353763888167926e-11,
+            "heightErrorM": 3.531648393176278e-11
+          },
+          {
+            "index": 3704,
+            "row": 56,
+            "column": 64,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 4.62810270682557e-12,
+            "heightErrorM": 9.992590034229176e-12
+          },
+          {
+            "index": 3767,
+            "row": 57,
+            "column": 62,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 2.3297478168438253e-11,
+            "heightErrorM": 5.033294539383539e-11
+          },
+          {
+            "index": 3768,
+            "row": 57,
+            "column": 63,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 2.1511250853182883e-11,
+            "heightErrorM": 4.6469859440089914e-11
+          },
+          {
+            "index": 3769,
+            "row": 57,
+            "column": 64,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 2.3649452472662206e-12,
+            "heightErrorM": 5.107690744492267e-12
+          },
+          {
+            "index": 3830,
+            "row": 58,
+            "column": 60,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 1.4436032437360089e-11,
+            "heightErrorM": 3.118372954695876e-11
+          },
+          {
+            "index": 3831,
+            "row": 58,
+            "column": 61,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 1.1349069444768394e-11,
+            "heightErrorM": 2.4512654296748933e-11
+          },
+          {
+            "index": 3832,
+            "row": 58,
+            "column": 62,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 2.278821446891242e-11,
+            "heightErrorM": 4.9219687341727465e-11
+          },
+          {
+            "index": 3833,
+            "row": 58,
+            "column": 63,
+            "status": 1,
+            "gpuIterations": 45,
+            "referenceIterations": 45,
+            "distanceErrorM": 1.2269268606058322e-11,
+            "heightErrorM": 2.6506152616694734e-11
+          },
+          {
+            "index": 136,
+            "row": 2,
+            "column": 6,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.8967266390483767e-11,
+            "heightErrorM": 4.0979570466909626e-11
+          },
+          {
+            "index": 272,
+            "row": 4,
+            "column": 12,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.6661752938755636e-11,
+            "heightErrorM": 3.5985182069517235e-11
+          },
+          {
+            "index": 408,
+            "row": 6,
+            "column": 18,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.2766406875327044e-11,
+            "heightErrorM": 2.7581781842340782e-11
+          },
+          {
+            "index": 545,
+            "row": 8,
+            "column": 25,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.5893533678909263e-11,
+            "heightErrorM": 3.432718285594276e-11
+          },
+          {
+            "index": 681,
+            "row": 10,
+            "column": 31,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.203747793605723e-11,
+            "heightErrorM": 2.5994787628273363e-11
+          },
+          {
+            "index": 817,
+            "row": 12,
+            "column": 37,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.4053332106580863e-11,
+            "heightErrorM": 3.035541469809529e-11
+          },
+          {
+            "index": 953,
+            "row": 14,
+            "column": 43,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.4079858616689075e-11,
+            "heightErrorM": 3.041010340948275e-11
+          },
+          {
+            "index": 1090,
+            "row": 16,
+            "column": 50,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 3.194981141851682e-11,
+            "heightErrorM": 6.90082714857225e-11
+          },
+          {
+            "index": 1226,
+            "row": 18,
+            "column": 56,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.0910163904256818e-12,
+            "heightErrorM": 2.3530166152183474e-12
+          },
+          {
+            "index": 1362,
+            "row": 20,
+            "column": 62,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.045289319580282e-11,
+            "heightErrorM": 2.2579120638174806e-11
+          },
+          {
+            "index": 1498,
+            "row": 23,
+            "column": 3,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.2682344307027886e-11,
+            "heightErrorM": 2.7398573880733524e-11
+          },
+          {
+            "index": 1635,
+            "row": 25,
+            "column": 10,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 6.9565314357156786e-12,
+            "heightErrorM": 1.5028926165848155e-11
+          },
+          {
+            "index": 1771,
+            "row": 27,
+            "column": 16,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.2453247943591049e-11,
+            "heightErrorM": 2.69080736357003e-11
+          },
+          {
+            "index": 1907,
+            "row": 29,
+            "column": 22,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 5.283596563419691e-12,
+            "heightErrorM": 1.141229213811474e-11
+          },
+          {
+            "index": 2043,
+            "row": 31,
+            "column": 28,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.0393090486606971e-11,
+            "heightErrorM": 2.2442920390370837e-11
+          },
+          {
+            "index": 2180,
+            "row": 33,
+            "column": 35,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.955790067214726e-11,
+            "heightErrorM": 4.224634750534051e-11
+          },
+          {
+            "index": 2316,
+            "row": 35,
+            "column": 41,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 2.1958419799786762e-11,
+            "heightErrorM": 4.742521589162657e-11
+          },
+          {
+            "index": 2452,
+            "row": 37,
+            "column": 47,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 1.3923939839668147e-12,
+            "heightErrorM": 2.997360623545867e-12
+          },
+          {
+            "index": 2588,
+            "row": 39,
+            "column": 53,
+            "status": 1,
+            "gpuIterations": 44,
+            "referenceIterations": 44,
+            "distanceErrorM": 2.1393521758994176e-11,
+            "heightErrorM": 4.621241113732911e-11
+          }
+        ],
+        "highestIterationIndices": [
+          3704,
+          3767,
+          3768,
+          3769,
+          3830,
+          3831,
+          3832,
+          3833
+        ],
+        "maxDistanceErrorM": 3.194981141851682e-11,
+        "maxHeightErrorM": 6.90082714857225e-11,
+        "iterationMismatches": [],
+        "heightRangeM": 5.439485786970977
+      }
+    },
+    "offsetRemovedDifferenceM": 4.662487794315254,
+    "cudaImported": false,
+    "scope": "64 finite source checks at pre-screened locations; no arbitrary-source or browser acceptance."
+  },
+  "ended": 1793411375173,
+  "cleanup": true
+}

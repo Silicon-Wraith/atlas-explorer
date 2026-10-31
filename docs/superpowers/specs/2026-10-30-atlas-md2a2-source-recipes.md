@@ -37,3 +37,7 @@ Prior art: [RFC8785 §3.1/Appendix D](https://www.rfc-editor.org/rfc/rfc8785.htm
 ## Adopted numerical/output detail
 
 The [card amendments](../../reports/project1-interactive/MD2A21-CARD-2026-10-30.md#adopted-review-amendments-before-code) are normative. Fraction-based exact host coordinate formation replaces the proposed Decimal calculation and bypasses `fkern.fdser` coordinate construction: reuse its compiled `_K` directly with host-rounded cr/ci and host interior classification. This changes no existing kernel/source. Profile constants and precise rounding/operation/status semantics are fixed there. Native supported-digit/exponent limits narrow evaluation, not exact recipe storage. Diagnostics and JIT caches stay outside the portable bundle. Legacy construction/arrays/identity remain unchanged; A2.1 does not rebuild the tilted legacy chart. Both frozen sources were selected by historical screens, which limits the generality of the result.
+
+## A2.1 completion
+
+The [full scorecard](../../reports/project1-interactive/MD2A21-SOURCE-RECIPES-2026-10-30.md) records bounded source-input creation and all finite checks, separately completed under reviewed r2 after two preserved failures. A2.1 alone is complete; A2.2 and the broader foundation remain open. Generation/math source `71ec61a`; final source/tool head `fadee82`; later changes documentation/evidence only. No product/browser gate or arbitrary-source claim.

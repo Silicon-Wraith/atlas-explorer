@@ -1,0 +1,335 @@
+{
+  "files": [
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r0/experiment.json",
+      "bytes": 2237,
+      "sha256": "35bbdff344c2792aa6e4239e5fc34b87b6f0fbd5e48911966c73e3368a0a8db7"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r0/A.json",
+      "bytes": 583,
+      "sha256": "5ded21209ba87593436121624b9ba2ad0f4ad8c47dae53435485b9c972ee0d88"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r0/external-closure.json",
+      "bytes": 262,
+      "sha256": "2293b3733dbf840f6617a98653210d5544e7fd973d8e997434c73658b8766252"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B.json",
+      "bytes": 581,
+      "sha256": "9eab2391d9cd8c4f1a0308f7596ff1f7a347921aecabd4b2ea3eb7ebf9372cea"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep.json",
+      "bytes": 575,
+      "sha256": "008da6205a9c218a590e35d693c31750edf25250202bc593ca368bed1e214818"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/experiment.json",
+      "bytes": 30143,
+      "sha256": "78901add6eb8f16c19430b187dfebe759e28a5a5e674b154c2faa00c26cdd7e9"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/external-closure.json",
+      "bytes": 285,
+      "sha256": "362338a9bc9067444a5d1765489dddc1e289b86ef72422687f4f4ac91b27583d"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A.json",
+      "bytes": 583,
+      "sha256": "5ded21209ba87593436121624b9ba2ad0f4ad8c47dae53435485b9c972ee0d88"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown.json",
+      "bytes": 563,
+      "sha256": "2edebc45982294631fd0d1cbe4ac4514c641960d6cb6583ebb929fe2e3104ae9"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/diagnostics.npz",
+      "bytes": 910,
+      "sha256": "71d22780297ebe17bf9f0426f27acfa6844055e496791ee60be076847a8f9713"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/diagnostics.npz",
+      "bytes": 68366,
+      "sha256": "60ce3ae7111af9492adc3d8a00ff825107e15364d32bb9adc64a4ab6317c861e"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/diagnostics.npz",
+      "bytes": 68366,
+      "sha256": "60ce3ae7111af9492adc3d8a00ff825107e15364d32bb9adc64a4ab6317c861e"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/diagnostics.npz",
+      "bytes": 68366,
+      "sha256": "e6d82852cb20e53b461bf89885d154611e2e6331d67f419d8200cf07b352617f"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/diagnostics.npz",
+      "bytes": 68366,
+      "sha256": "e6d82852cb20e53b461bf89885d154611e2e6331d67f419d8200cf07b352617f"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/bundle.json",
+      "bytes": 234,
+      "sha256": "225dbeff9b64c132663c66404cad5fd0152e425f417f17fbaf04d8c14ae59421"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/recipe.json",
+      "bytes": 459,
+      "sha256": "565e2375efc13d20149462438c856627ea95bb7faa92a3bb0555fc832971abea"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/result.json",
+      "bytes": 280,
+      "sha256": "151501ca3bb1b077d19cf7bd60610aac874a94aec9e0747f00ac67f4111d35c1"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/result.json",
+      "bytes": 2947,
+      "sha256": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/height.npy",
+      "bytes": 33928,
+      "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/bundle.json",
+      "bytes": 314,
+      "sha256": "a7006ec1ab8276adeb85fd47731a4786cec98930942d92d5f6329a51f96c31cb"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/recipe.json",
+      "bytes": 467,
+      "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/recipe.json",
+      "bytes": 467,
+      "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/bundle.json",
+      "bytes": 314,
+      "sha256": "c6aba70517e17189bd117be469860af42057abe3e4f8de2102c91ba6a5dbd2c4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/height.npy",
+      "bytes": 33928,
+      "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/result.json",
+      "bytes": 2945,
+      "sha256": "97e5e352e37f91f484a83037e40541ee416849eff50607fb0009dd89c6bd1bf5"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/recipe.json",
+      "bytes": 465,
+      "sha256": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/bundle.json",
+      "bytes": 314,
+      "sha256": "20f7580762f6710f1d3b332e6ded970892076e63c89745bf4a5426d30e3a1a00"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/height.npy",
+      "bytes": 33928,
+      "sha256": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/result.json",
+      "bytes": 2943,
+      "sha256": "1c8b1ad5a9ea46779c5737bfafcaaacd6f524e3a28d3bd3e16d998b8f3440f20"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/height.npy",
+      "bytes": 33928,
+      "sha256": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/bundle.json",
+      "bytes": 314,
+      "sha256": "131ec5653215453ecfbec62e5ca646a22d0cd34ff313a93a11f11ab5d6002828"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/recipe.json",
+      "bytes": 465,
+      "sha256": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/result.json",
+      "bytes": 2942,
+      "sha256": "9d4153d2ba4d07ba0396568796db4be6815da351093686b1c5b47b1501559757"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/bundle.json",
+      "bytes": 234,
+      "sha256": "0f0755be40f103cdd7f168b6ef75e08d67e844b3ab183661328ebed6ffc99115"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/recipe.json",
+      "bytes": 447,
+      "sha256": "c2eec33b0008e583f6406b3b929e85308031d4db80ddcb19d71bfe6e71603233"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/result.json",
+      "bytes": 1593,
+      "sha256": "f1eaa39033a29533c836d2a64263b291d703e8787b26cbf81b1d9f87fe29ab01"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/verification.json",
+      "bytes": 35044,
+      "sha256": "f7e7148d133f9efe5b1f35b4f46c303f84f3efb791d8607ed5188fdae0f4a4be"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/mathematics.json",
+      "bytes": 19278,
+      "sha256": "f0a83bc120ee0ce750a80e76b449ed3e52b3a438e562d1490491972efac6efb4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/external-closure.json",
+      "bytes": 533,
+      "sha256": "5396b0caeb524b4168574dc8384efe3105ffa77b85ecfec655817505ec4fbdfe"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-request/bundle.json",
+      "bytes": 348,
+      "sha256": "783c2f14ee203d0abddd143ab63ca6d753f01edbefcea791357fe292b29f88fe"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-request/recipe.json",
+      "bytes": 584,
+      "sha256": "d917ed0e9106574ff8733c34f5175006ed4540304da00eb2db65536206941f5b"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-request/height.npy",
+      "bytes": 33928,
+      "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-request/result.json",
+      "bytes": 2947,
+      "sha256": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-height/result.json",
+      "bytes": 2947,
+      "sha256": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-height/height.npy",
+      "bytes": 33928,
+      "sha256": "733331ef7568d012329c31d9d7358d2df8c69e10db2ce8efd304a4f6d9ea820b"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-height/bundle.json",
+      "bytes": 348,
+      "sha256": "09f074a72fcfb094b0df41e5d49f20ccb4d9e08aa62160dd0cc308a4ce09fcf4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-height/recipe.json",
+      "bytes": 467,
+      "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/relocated/height.npy",
+      "bytes": 33928,
+      "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/relocated/result.json",
+      "bytes": 2947,
+      "sha256": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/relocated/bundle.json",
+      "bytes": 314,
+      "sha256": "a7006ec1ab8276adeb85fd47731a4786cec98930942d92d5f6329a51f96c31cb"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/relocated/recipe.json",
+      "bytes": 467,
+      "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-result/bundle.json",
+      "bytes": 348,
+      "sha256": "50c4475be4b3e3f83b07ce061d320ac338501a2441da8b7d5c4dab558de5e0c5"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-result/recipe.json",
+      "bytes": 467,
+      "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-result/height.npy",
+      "bytes": 33928,
+      "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0/tamper-result/result.json",
+      "bytes": 3692,
+      "sha256": "4be40164fae495833ad62505f0dfb5e7485e3a93db73355740b5ba30d7d4dc95"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/build-final-r0.log",
+      "bytes": 92,
+      "sha256": "97f95a27655448b03f7143c71687dbeb3739df8349238da2ec404fb0303b13f1"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/units-final-r0.log",
+      "bytes": 320335,
+      "sha256": "5b0688d14436d86ddb5efec052cbac261f98b3b6d759170645366bf63e54b89a"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/units-focused-r0.log",
+      "bytes": 2466,
+      "sha256": "b32c67a3b65b52d16827f98ff776be6571d3f9f32e41a89646557e4488b624b4"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/green-first-r0.log",
+      "bytes": 438,
+      "sha256": "c9e57ab3e13784ce56b5f2a9818294c036bec6e3feddfaa0b3231817117685b1"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/units-r0.log",
+      "bytes": 320314,
+      "sha256": "5292e05eb45f32f373de488968a5e7b2709fa644f742d765f0b14f27882fd688"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/red-r1.log",
+      "bytes": 94,
+      "sha256": "ae1f088389ae1b3775dadd899959480c6428af3babbcc26483895ff0d04d66a0"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r0.log",
+      "bytes": 2094,
+      "sha256": "05b4680636ccd03478fda6dfccb55d69816b222c7ccdc71c91f9c800e529cd89"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/build-r0.log",
+      "bytes": 92,
+      "sha256": "97f95a27655448b03f7143c71687dbeb3739df8349238da2ec404fb0303b13f1"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1.log",
+      "bytes": 1573,
+      "sha256": "27088c05d294de7203c92cdfff30da9d6a536d97d7e911f38efc50eac455f866"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/red-r0.log",
+      "bytes": 94,
+      "sha256": "ae1f088389ae1b3775dadd899959480c6428af3babbcc26483895ff0d04d66a0"
+    },
+    {
+      "path": "/mnt/ml_storage/scratch/atlas-md2a2/cpu-completion-r0.log",
+      "bytes": 636,
+      "sha256": "433d949f163cc0b55e6d7b159608a3fcdb9dade72c6c3c42847409b3cf0d30c6"
+    }
+  ],
+  "scope": "Generated arrays and complete portable bundles remain in scratch. This ledger omits CUDA/JIT caches; mathematical inputs/outputs and failure logs are bound."
+}

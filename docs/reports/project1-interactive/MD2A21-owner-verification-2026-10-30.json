@@ -1,0 +1,47 @@
+{
+  "base": "9b89e6cde87b71f33755a0b3c0bc27462147e475",
+  "finalSourceHead": "fadee82022a4dd89e57b408554c484afb1cc491e",
+  "nativeGenerationHead": "71ec61a972f6afd56680976fb6c88ffcb7ecdc46",
+  "baselineProductionFilesByteIdentical": 164,
+  "productionScope": "All pre-existing app, preparation, native runtime, regression inputs, certificate and generation manifest/config files. Only new inert source codec/tools/tests are added; no production imports change.",
+  "guardedUnits": {
+    "state": "passed",
+    "reason": "1368 tests passed",
+    "cleanup": "confirmed",
+    "files": 87,
+    "summary": {
+      "tests": 1368,
+      "pass": 1368,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  },
+  "fullProductGate": "Not run or claimed: inert unintegrated tool. A2.2 integration retains maintained headed full-gate requirement.",
+  "nativeOriginalState": "failed: missing reference dependency after valid native work",
+  "cpuCompletionPass": true,
+  "aggregateNativeAndCompletionSeconds": 5.243,
+  "referencePreflight": {
+    "executable": "/home/john-sheppard/miniconda3_fresh/bin/python3",
+    "python": "3.13.2",
+    "numpy": "2.4.2",
+    "numpyFile": "/home/john-sheppard/miniconda3_fresh/lib/python3.13/site-packages/numpy/__init__.py",
+    "mpmath": "1.3.0",
+    "mpmathFile": "/home/john-sheppard/miniconda3_fresh/lib/python3.13/site-packages/mpmath/__init__.py",
+    "sourceRecipeFile": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/source_recipe.py",
+    "gmpyPresent": false,
+    "mpmathBackend": "python",
+    "cudaImported": false
+  },
+  "processAccounting": {
+    "sourceCpuMinutes": 23.216666666666665,
+    "sourceCpuBoundMinutes": 180,
+    "nativeOriginalSeconds": 4.178,
+    "reviewedCpuCompletionSeconds": 1.065,
+    "originalProcessPlan": "Miss: sole repair used, repaired comparison then failed missing reference dependency; separately reviewed CPU completion on unchanged data.",
+    "wallMinutesFromFirstPositionReviewThroughArchive": 43.935264466666666,
+    "wallScope": "Includes source, checks, review/reporting waits; initial audit/worktree preparation preceded this timestamp. Not GPU busy time."
+  },
+  "exampleEqualsFrozenA": true
+}

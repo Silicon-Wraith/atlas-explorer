@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-31T01:40:09.458972+00:00",
+  "ownedPids": [
+    2182131,
+    2182142
+  ],
+  "alive": [],
+  "lockFree": true,
+  "cleanup": true,
+  "gpuJobsStarted": 0,
+  "scope": "Failed first CPU --inspect preflight; no CUDA import or geometry job."
+}
