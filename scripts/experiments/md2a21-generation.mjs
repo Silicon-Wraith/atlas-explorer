@@ -9,19 +9,31 @@ import { sourceCase } from '../../tests/support/source-recipes.mjs';
 import { createSourceRecipe, sourceRecipeKey, createParentDefinition } from '../../src/space/generation/source-recipe.js';
 import { canonicalJson } from '../../src/shared/scene.js';
 
+async function main(){
+const referencePython=process.env.ATLAS_REFERENCE_PYTHON;
+if(!referencePython)throw Error('Set ATLAS_REFERENCE_PYTHON to a CPU interpreter with NumPy and mpmath');
+let referencePid;
+const probe=await runBounded({spawnFn:(...args)=>{const child=spawn(...args);referencePid=child.pid;return child;},
+ command:referencePython,args:['scripts/generation/probe-reference.py'],timeoutMs:15000,
+ options:{cwd:process.cwd(),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}}});
+assert.notEqual(probe.cleanup,'unconfirmed');assert.equal(probe.timedOut,false);
+assert.equal(probe.exitCode,0,probe.stderr||probe.spawnError||probe.stdout);
+const referenceEnvironment=JSON.parse(probe.stdout);assert.equal(referenceEnvironment.cudaImported,false);
+assert.equal(path.resolve(referenceEnvironment.sourceRecipeFile),path.resolve('scripts/generation/source_recipe.py'));
+if(process.argv[2]==='--preflight'){console.log(JSON.stringify(referenceEnvironment));return;}
 if(!process.env.ATLAS_GPU_HANDOFF||process.env.ATLAS_GPU_DEFERRED)throw Error('One exclusive GPU handoff required');
 const root=path.resolve(process.argv[2]??'');
 if(!root.startsWith('/mnt/ml_storage/scratch/atlas-md2a2/'))throw Error('Private atlas-md2a2 scratch root required');
 await fs.mkdir(root);const python=process.env.ATLAS_GENERATION_PYTHON??'/mnt/ml_storage/scratch/venvs/gpu/bin/python';
-const detail={started:Date.now(),pass:false,checks:[],processes:[],ownedPids:[process.pid],runs:[]};
+const detail={started:Date.now(),pass:false,checks:[],processes:[],ownedPids:[process.pid,referencePid],runs:[],referenceEnvironment};
 const deadline=Date.now()+180000;
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const load=async p=>JSON.parse(await fs.readFile(p,'utf8'));
 const save=async(p,d)=>fs.writeFile(p,JSON.stringify(d,null,2)+'\n');
 function pass(name){detail.checks.push(name);console.log('PASS '+name);}
-async function command(args,expectSuccess=true){
+async function command(args,expectSuccess=true,interpreter=python){
  const remaining=deadline-Date.now();if(remaining<=0)throw Error('180 second experiment bound exhausted');
- const run=await runBounded({spawnFn:(...args)=>{const child=spawn(...args);if(child.pid)detail.ownedPids.push(child.pid);return child;},command:python,args,
+ const run=await runBounded({spawnFn:(...args)=>{const child=spawn(...args);if(child.pid)detail.ownedPids.push(child.pid);return child;},command:interpreter,args,
   options:{cwd:process.cwd(),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}},timeoutMs:remaining,cleanupMs:5000});
  detail.processes.push({args,...run});
  assert.notEqual(run.cleanup,'unconfirmed','Physical child group cleanup required');
@@ -60,7 +72,7 @@ try{
   assert.equal(hash(await fs.readFile(path.join(root,name,'bundle/height.npy'))),hash(await fs.readFile(path.join(root,name+'-rebuild','bundle/height.npy'))));
  }
  pass('Reverse source order reversed point order and different chunks preserve logical arrays and resolved definitions exactly');
- await command(['scripts/generation/check-parent.py',path.join(root,'A'),path.join(root,'B'),path.join(root,'mathematics.json')]);
+ await command(['scripts/generation/check-parent.py',path.join(root,'A'),path.join(root,'B'),path.join(root,'mathematics.json')],true,referencePython);
  detail.mathematics=await load(path.join(root,'mathematics.json'));assert.equal(detail.mathematics.pass_,true);assert.equal(detail.mathematics.cudaImported,false);
  pass('Independent 50-digit source evaluation agrees at all 64 frozen sample selections and both source surfaces differ');
  const moved=path.join(root,'relocated');await fs.cp(path.join(root,'A/bundle'),moved,{recursive:true});
@@ -82,3 +94,6 @@ finally{
  detail.ended=Date.now();detail.cleanup=detail.processes.every(x=>x.cleanup!=='unconfirmed');
  await save(path.join(root,'experiment.json'),detail);console.log(JSON.stringify({root,pass:detail.pass,cleanup:detail.cleanup,failure:detail.failure}));
 }
+
+}
+await main();
