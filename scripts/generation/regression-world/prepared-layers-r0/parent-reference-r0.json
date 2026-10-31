@@ -1,0 +1,62 @@
+{
+  "origin": [
+    1414.9660106701047,
+    79.19373300062107,
+    1040.6371764613734
+  ],
+  "half_extent": 0.10625,
+  "build_s": 0.011764603201299906,
+  "warmup_s": 0.2116274288855493,
+  "grid_spec": {
+    "component": "parent",
+    "bounds": [
+      -0.14716824926385305,
+      0.1211653108909378,
+      0.25524338761297083,
+      0.5974697498238899
+    ],
+    "reference_stats": {
+      "unknown": 0,
+      "elapsed_s": 0.0008006473071873188,
+      "queries": 257,
+      "promoted": 0
+    },
+    "point_gpu_stats": {
+      "unknown": 0,
+      "elapsed_s": 0.00035925116389989853,
+      "queries": 257,
+      "promoted": 0,
+      "iterations": 26111
+    },
+    "point_max_discrepancy": 6.889789262443102e-07,
+    "steps": [
+      {
+        "subdivisions_per_diameter": 4,
+        "vertices": 2475,
+        "surface_triangles": 4752,
+        "graph_stats": {
+          "unknown": 0,
+          "elapsed_s": 0.0004893168807029724,
+          "queries": 2475,
+          "promoted": 0,
+          "iterations": 251459
+        },
+        "max_error": 1.169551558677373e-05,
+        "p95_error": 8.218821347694139e-06,
+        "unresolved_checks": 0,
+        "cap_max_error": 0,
+        "local_f32_quantization_max": 3.2052288240615723e-08,
+        "graph_gate_pass": true,
+        "elapsed_s": 0.0009560110047459602,
+        "cpu_grid_array_bytes": 118800,
+        "gpu_pool_peak_retained": 21609472
+      }
+    ]
+  },
+  "source_hashes": {
+    "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/construction.json": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3",
+    "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-r0/sampling_r0.py": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e",
+    "/mnt/ml_storage/scratch/valley-spike/zoom2d/gpu/ia/rc1/prepared-static-r0/mesh_static_r0.py": "56dc529470f48f2ef2b635422fb15244f1ce60f4b1a2236dd61f5382ac3e971f"
+  },
+  "scope": "Prepared approximate parent solid, not analytic field enclosure."
+}

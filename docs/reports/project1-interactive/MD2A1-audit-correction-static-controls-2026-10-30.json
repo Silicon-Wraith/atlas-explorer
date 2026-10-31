@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "pass": true,
+      "modules": 18,
+      "inputs": 13,
+      "exactAllowedEdits": true,
+      "ambientReadRemoved": true,
+      "scratchSourceReadRejected": true,
+      "checkoutWriteRejected": true,
+      "gpuImports": false
+    },
+    {
+      "lazyModuleMutationControl": true
+    },
+    {
+      "auditImportBindings": true,
+      "swallowedImportNegativeControlRejected": true,
+      "gpuImports": false
+    }
+  ]
+}

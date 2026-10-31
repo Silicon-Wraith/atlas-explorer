@@ -1,3 +1,4 @@
+import { GENERATION_BUNDLE, GENERATION_CERTIFICATE } from '../generation/config.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -11,8 +12,8 @@ async function readJson(req) {
   let text = ''; for await (const chunk of req) { text += chunk; if (text.length > 65536) throw new Error('Application request too large'); }
   return JSON.parse(text);
 }
-export async function createApplicationServer({ runRoot, port = 5196, root = project, bundle = '/mnt/ml_storage/scratch/atlas-bw1-runtime-r1',
-  certificatePath = '/mnt/ml_storage/scratch/atlas-pc2/native-smoke-r0/policy-certificate.json', physicsPath = '/mnt/ml_storage/scratch/atlas-prepared-demo/rapier.mjs',
+export async function createApplicationServer({ runRoot, port = 5196, root = project, bundle = GENERATION_BUNDLE,
+  certificatePath = process.env.ATLAS_GENERATION_CERTIFICATE ?? GENERATION_CERTIFICATE, physicsPath = '/mnt/ml_storage/scratch/atlas-prepared-demo/rapier.mjs',
   adapterFactory = createNativeAdapter, sessionPolicy = APPLICATION_SESSION_POLICY, now = () => performance.now() }) {
   runRoot = path.resolve(runRoot); if (!runRoot.startsWith('/mnt/ml_storage/scratch/')) throw new Error('Application evidence requires a scratch output root');
   const events = []; let adapter, initialization, initializationFailure, startupController, closing = false, shutdown;

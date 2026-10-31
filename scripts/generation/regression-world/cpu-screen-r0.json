@@ -1,0 +1,2827 @@
+{
+  "world_identity": "H1C-surface-child@ee2564d40bda7ef6",
+  "diameter": 0.0265625,
+  "origin": [
+    1414.9757562519364,
+    79.21086912557448,
+    1040.6400501279961
+  ],
+  "normal": [
+    0.4891899899837377,
+    0.860166272170984,
+    0.14424679517820585
+  ],
+  "tangent": [
+    0.0,
+    0.16538701891281857,
+    -0.9862287432310676
+  ],
+  "binormal": [
+    -0.8721772490151933,
+    0.4824532290228802,
+    0.08090567412540195
+  ],
+  "step": 0.75,
+  "domain": {
+    "i": [
+      -2,
+      6
+    ],
+    "j": [
+      -2,
+      2
+    ]
+  },
+  "regions": [
+    {
+      "ij": [
+        -2,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.18505674069579,
+        1040.6761215940307
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.10099332802852992,
+            -0.03390993798997577,
+            0.37049640245158916,
+            0.4560529930042004
+          ],
+          "tile_begin": [
+            184,
+            202
+          ],
+          "tile_end": [
+            187,
+            206
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.04639283299957342,
+            0.02596239981719171,
+            -0.2125,
+            -0.1346836118502938
+          ],
+          "tile_begin": [
+            6,
+            0
+          ],
+          "tile_end": [
+            9,
+            3
+          ],
+          "tiles": 9,
+          "source_queries_upper_bound": 594441,
+          "tensor_vertices_upper_bound": 591361
+        }
+      ]
+    },
+    {
+      "ij": [
+        -2,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.19466811361772,
+        1040.6777333867576
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.08499539668504225,
+            -0.017912006646488083,
+            0.3591274072455274,
+            0.44468399779813866
+          ],
+          "tile_begin": [
+            185,
+            201
+          ],
+          "tile_end": [
+            188,
+            205
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.06232432063273628,
+            0.01003091218402885,
+            -0.20792099732917216,
+            -0.12561627951982093
+          ],
+          "tile_begin": [
+            5,
+            0
+          ],
+          "tile_end": [
+            9,
+            4
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        -2,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.20427948653966,
+        1040.6793451794842
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.06899746534148339,
+            -0.0019140753029292352,
+            0.3477584120396374,
+            0.4333150025922487
+          ],
+          "tile_begin": [
+            185,
+            201
+          ],
+          "tile_end": [
+            189,
+            205
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.0782558082657876,
+            -0.00590057544902247,
+            -0.19885366499850607,
+            -0.11654894718915487
+          ],
+          "tile_begin": [
+            5,
+            0
+          ],
+          "tile_end": [
+            8,
+            4
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        -2,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.21389085946161,
+        1040.6809569722109
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.05299953399792456,
+            0.014083856040629601,
+            0.3363894168337388,
+            0.42194600738635
+          ],
+          "tile_begin": [
+            186,
+            200
+          ],
+          "tile_end": [
+            189,
+            205
+          ],
+          "tiles": 15,
+          "source_queries_upper_bound": 990735,
+          "tensor_vertices_upper_bound": 985089
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.1666129702339442,
+            -0.0941609435190693,
+            -0.4022521549338926,
+            -0.3188621650095068
+          ],
+          "tile_begin": [
+            25,
+            16
+          ],
+          "tile_end": [
+            29,
+            20
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.09418729589883891,
+            -0.02183206308207379,
+            -0.18978633266783687,
+            -0.10748161485848566
+          ],
+          "tile_begin": [
+            4,
+            0
+          ],
+          "tile_end": [
+            8,
+            4
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        -2,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.22350223238355,
+        1040.6825687649377
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.03700160265443687,
+            0.030081787384117296,
+            0.3250204216276769,
+            0.4105770121802882
+          ],
+          "tile_begin": [
+            186,
+            200
+          ],
+          "tile_end": [
+            190,
+            204
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.18250991019040447,
+            -0.11005788347552957,
+            -0.39289090643052044,
+            -0.30950091650613465
+          ],
+          "tile_begin": [
+            25,
+            17
+          ],
+          "tile_end": [
+            28,
+            21
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.11011878353200177,
+            -0.03776355071523665,
+            -0.18071900033736402,
+            -0.09841428252801282
+          ],
+          "tile_begin": [
+            3,
+            1
+          ],
+          "tile_end": [
+            7,
+            5
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        -1,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.18835156021319,
+        1040.6564740682868
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.09484385644559191,
+            -0.027760466407037762,
+            0.38334012618367447,
+            0.46889671673628575
+          ],
+          "tile_begin": [
+            184,
+            202
+          ],
+          "tile_end": [
+            188,
+            206
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.03675393872185423,
+            0.035601294094910904,
+            -0.19956281073737536,
+            -0.11725809292802415
+          ],
+          "tile_begin": [
+            6,
+            0
+          ],
+          "tile_end": [
+            10,
+            4
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        -1,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.19796293313513,
+        1040.6580858610134
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.07884592510203307,
+            -0.011762535063478912,
+            0.3719711309777844,
+            0.45752772153039567
+          ],
+          "tile_begin": [
+            185,
+            202
+          ],
+          "tile_end": [
+            188,
+            206
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.05268542635490554,
+            0.01966980646185959,
+            -0.19049547840670927,
+            -0.10819076059735808
+          ],
+          "tile_begin": [
+            6,
+            0
+          ],
+          "tile_end": [
+            9,
+            4
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        -1,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.20757430605707,
+        1040.65969765374
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.06284799375847422,
+            0.0042353962800799365,
+            0.3606021357718944,
+            0.4461587263245057
+          ],
+          "tile_begin": [
+            185,
+            201
+          ],
+          "tile_end": [
+            189,
+            206
+          ],
+          "tiles": 20,
+          "source_queries_upper_bound": 1320980,
+          "tensor_vertices_upper_bound": 1313025
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.06861691398795686,
+            0.003738318828808269,
+            -0.1814281460760432,
+            -0.09912342826669202
+          ],
+          "tile_begin": [
+            5,
+            1
+          ],
+          "tile_end": [
+            9,
+            5
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        -1,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.217185678979,
+        1040.661309446467
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.04685006241498655,
+            0.020233327623567606,
+            0.34923314056583266,
+            0.43478973111844393
+          ],
+          "tile_begin": [
+            186,
+            201
+          ],
+          "tile_end": [
+            190,
+            205
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.08454840162111972,
+            -0.012193168804354598,
+            -0.17236081374557036,
+            -0.09005609593621917
+          ],
+          "tile_begin": [
+            4,
+            1
+          ],
+          "tile_end": [
+            8,
+            5
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        -1,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.22679705190096,
+        1040.6629212391936
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.0308521310714277,
+            0.03623125896712647,
+            0.33786414535993403,
+            0.4234207359125453
+          ],
+          "tile_begin": [
+            187,
+            200
+          ],
+          "tile_end": [
+            190,
+            205
+          ],
+          "tiles": 15,
+          "source_queries_upper_bound": 990735,
+          "tensor_vertices_upper_bound": 985089
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.17278849812564848,
+            -0.10033647141077356,
+            -0.3755340674523546,
+            -0.29214407752796884
+          ],
+          "tile_begin": [
+            25,
+            17
+          ],
+          "tile_end": [
+            29,
+            22
+          ],
+          "tiles": 20,
+          "source_queries_upper_bound": 1320980,
+          "tensor_vertices_upper_bound": 1313025
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.10047988925417103,
+            -0.02812465643740591,
+            -0.16329348141490116,
+            -0.08098876360554995
+          ],
+          "tile_begin": [
+            4,
+            1
+          ],
+          "tile_end": [
+            7,
+            5
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        0,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.1916463797306,
+        1040.6368265425426
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.08869438486258274,
+            -0.02161099482402859,
+            0.3961838499159315,
+            0.48174044046854275
+          ],
+          "tile_begin": [
+            184,
+            203
+          ],
+          "tile_end": [
+            188,
+            207
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.02711504444402349,
+            0.045240188372741644,
+            -0.1821372918149125,
+            -0.0998325740055613
+          ],
+          "tile_begin": [
+            6,
+            1
+          ],
+          "tile_end": [
+            10,
+            5
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        0,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.20125775265254,
+        1040.6384383352695
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.07269645351909507,
+            -0.005613063480540906,
+            0.38481485470986976,
+            0.47037144526248104
+          ],
+          "tile_begin": [
+            185,
+            202
+          ],
+          "tile_end": [
+            189,
+            206
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.04304653207718635,
+            0.02930870073957878,
+            -0.17306995948443965,
+            -0.09076524167508845
+          ],
+          "tile_begin": [
+            6,
+            1
+          ],
+          "tile_end": [
+            10,
+            5
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        0,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.21086912557448,
+        1040.6400501279961
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.05669852217553622,
+            0.010384867863017943,
+            0.3734458595039798,
+            0.459002450056591
+          ],
+          "tile_begin": [
+            186,
+            202
+          ],
+          "tile_end": [
+            189,
+            206
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.058978019710237674,
+            0.013377213106527461,
+            -0.1640026271537736,
+            -0.08169790934442238
+          ],
+          "tile_begin": [
+            5,
+            1
+          ],
+          "tile_end": [
+            9,
+            5
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        0,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.22048049849641,
+        1040.6416619207228
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.04070059083197738,
+            0.02638279920657678,
+            0.36207686429808966,
+            0.44763345485070094
+          ],
+          "tile_begin": [
+            186,
+            201
+          ],
+          "tile_end": [
+            190,
+            206
+          ],
+          "tiles": 20,
+          "source_queries_upper_bound": 1320980,
+          "tensor_vertices_upper_bound": 1313025
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.07490950734328898,
+            -0.0025542745265238593,
+            -0.1549352948231075,
+            -0.0726305770137563
+          ],
+          "tile_begin": [
+            5,
+            2
+          ],
+          "tile_end": [
+            8,
+            6
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        0,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.23009187141835,
+        1040.6432737134496
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.02470265948848969,
+            0.04238073055006448,
+            0.35070786909202795,
+            0.4362644596446392
+          ],
+          "tile_begin": [
+            187,
+            201
+          ],
+          "tile_end": [
+            190,
+            205
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.16306708606100498,
+            -0.09061505934613007,
+            -0.35817722847438377,
+            -0.274787238549998
+          ],
+          "tile_begin": [
+            25,
+            18
+          ],
+          "tile_end": [
+            29,
+            22
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.09084099497645184,
+            -0.018485762159686718,
+            -0.14586796249263467,
+            -0.06356324468328346
+          ],
+          "tile_begin": [
+            4,
+            2
+          ],
+          "tile_end": [
+            8,
+            6
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        1,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.19494119924799,
+        1040.6171790167987
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.08254491327964474,
+            -0.015461523241090583,
+            0.4090275736480254,
+            0.49458416420063667
+          ],
+          "tile_begin": [
+            185,
+            203
+          ],
+          "tile_end": [
+            188,
+            207
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.0174761501663043,
+            0.054879082650460834,
+            -0.16471177289264602,
+            -0.08240705508329481
+          ],
+          "tile_begin": [
+            7,
+            1
+          ],
+          "tile_end": [
+            11,
+            5
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        1,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.20455257216994,
+        1040.6187908095253
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.0665469819360859,
+            0.000536408102468266,
+            0.39765857844212676,
+            0.483215168994738
+          ],
+          "tile_begin": [
+            185,
+            203
+          ],
+          "tile_end": [
+            189,
+            207
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.03340763779935561,
+            0.03894759501740952,
+            -0.1556444405619768,
+            -0.0733397227526256
+          ],
+          "tile_begin": [
+            6,
+            2
+          ],
+          "tile_end": [
+            10,
+            6
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        1,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.21416394509188,
+        1040.6204026022522
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.05054905059259821,
+            0.016534339445955948,
+            0.386289583236065,
+            0.47184617378867627
+          ],
+          "tile_begin": [
+            186,
+            202
+          ],
+          "tile_end": [
+            189,
+            207
+          ],
+          "tiles": 15,
+          "source_queries_upper_bound": 990735,
+          "tensor_vertices_upper_bound": 985089
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.04933912543251848,
+            0.023016107384246653,
+            -0.14657710823150397,
+            -0.06427239042215276
+          ],
+          "tile_begin": [
+            6,
+            2
+          ],
+          "tile_end": [
+            9,
+            6
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        1,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.22377531801382,
+        1040.6220143949788
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.03455111924903937,
+            0.03253227078951478,
+            0.37492058803017503,
+            0.4604771785827863
+          ],
+          "tile_begin": [
+            186,
+            202
+          ],
+          "tile_end": [
+            190,
+            206
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.06527061306556979,
+            0.007084619751195333,
+            -0.13750977590083788,
+            -0.05520505809148668
+          ],
+          "tile_begin": [
+            5,
+            2
+          ],
+          "tile_end": [
+            9,
+            6
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        1,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.23338669093576,
+        1040.6236261877054
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.01855318790548052,
+            0.04853020213307365,
+            0.36355159282428506,
+            0.4491081833768963
+          ],
+          "tile_begin": [
+            187,
+            201
+          ],
+          "tile_end": [
+            191,
+            206
+          ],
+          "tiles": 20,
+          "source_queries_upper_bound": 1320980,
+          "tensor_vertices_upper_bound": 1313025
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.15334567399624896,
+            -0.08089364728137406,
+            -0.34082038949621796,
+            -0.25743039957183217
+          ],
+          "tile_begin": [
+            26,
+            19
+          ],
+          "tile_end": [
+            29,
+            23
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.0812021006986211,
+            -0.00884686788185598,
+            -0.12844244357017182,
+            -0.046137725760820605
+          ],
+          "tile_begin": [
+            4,
+            3
+          ],
+          "tile_end": [
+            8,
+            7
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        2,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.1982360187654,
+        1040.5975314910545
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.07639544169663556,
+            -0.00931205165808141,
+            0.4218712973802825,
+            0.5074278879328937
+          ],
+          "tile_begin": [
+            185,
+            204
+          ],
+          "tile_end": [
+            188,
+            208
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.00783725588847356,
+            0.06451797692829157,
+            -0.14728625397018316,
+            -0.06498153616083195
+          ],
+          "tile_begin": [
+            7,
+            2
+          ],
+          "tile_end": [
+            11,
+            6
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        2,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.20784739168734,
+        1040.5991432837814
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.06039751035314789,
+            0.006685879685406272,
+            0.41050230217422073,
+            0.496058892726832
+          ],
+          "tile_begin": [
+            185,
+            203
+          ],
+          "tile_end": [
+            189,
+            207
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.023768743521636423,
+            0.04858648929512871,
+            -0.1382189216397103,
+            -0.055914203830359104
+          ],
+          "tile_begin": [
+            7,
+            2
+          ],
+          "tile_end": [
+            10,
+            6
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        2,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.21745876460929,
+        1040.600755076508
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.04439957900958904,
+            0.02268381102896512,
+            0.3991333069683221,
+            0.4846898975209334
+          ],
+          "tile_begin": [
+            186,
+            203
+          ],
+          "tile_end": [
+            190,
+            207
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.03970023115468774,
+            0.03265500166207739,
+            -0.1291515893090411,
+            -0.04684687149968989
+          ],
+          "tile_begin": [
+            6,
+            3
+          ],
+          "tile_end": [
+            10,
+            7
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        2,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.22707013753123,
+        1040.6023668692346
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.0284016476660302,
+            0.038681742372523954,
+            0.38776431176243203,
+            0.4733209023150433
+          ],
+          "tile_begin": [
+            187,
+            202
+          ],
+          "tile_end": [
+            190,
+            207
+          ],
+          "tiles": 15,
+          "source_queries_upper_bound": 990735,
+          "tensor_vertices_upper_bound": 985089
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.05563171878773906,
+            0.01672351402902607,
+            -0.12008425697837502,
+            -0.03777953916902382
+          ],
+          "tile_begin": [
+            5,
+            3
+          ],
+          "tile_end": [
+            9,
+            7
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        2,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.23668151045317,
+        1040.6039786619615
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.012403716322542514,
+            0.05467967371601165,
+            0.37639531655637026,
+            0.46195190710898154
+          ],
+          "tile_begin": [
+            187,
+            202
+          ],
+          "tile_end": [
+            191,
+            206
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.14362426193160546,
+            -0.07117223521673056,
+            -0.32346355051824355,
+            -0.2400735605938578
+          ],
+          "tile_begin": [
+            26,
+            19
+          ],
+          "tile_end": [
+            30,
+            23
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.07156320642090191,
+            0.0007920263958632111,
+            -0.11101692464790218,
+            -0.02871220683855098
+          ],
+          "tile_begin": [
+            5,
+            3
+          ],
+          "tile_end": [
+            9,
+            7
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        3,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.2015308382828,
+        1040.5778839653105
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.07024597011369757,
+            -0.003162580075143405,
+            0.43471502111236776,
+            0.520271611664979
+          ],
+          "tile_begin": [
+            185,
+            204
+          ],
+          "tile_end": [
+            189,
+            208
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            0.0018016383892456318,
+            0.07415687120601076,
+            -0.12986073504791354,
+            -0.04755601723856232
+          ],
+          "tile_begin": [
+            8,
+            3
+          ],
+          "tile_end": [
+            11,
+            7
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        3,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.21114221120474,
+        1040.5794957580372
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.054248038770138715,
+            0.012835351268415444,
+            0.42334602590647774,
+            0.5089026164590891
+          ],
+          "tile_begin": [
+            186,
+            204
+          ],
+          "tile_end": [
+            189,
+            208
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.014129849243805684,
+            0.05822538357295945,
+            -0.12079340271724745,
+            -0.038488684907896246
+          ],
+          "tile_begin": [
+            7,
+            3
+          ],
+          "tile_end": [
+            11,
+            7
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        3,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.22075358412668,
+        1040.581107550764
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.03825010742665103,
+            0.028833282611903127,
+            0.411977030700416,
+            0.4975336212530273
+          ],
+          "tile_begin": [
+            186,
+            203
+          ],
+          "tile_end": [
+            190,
+            207
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.030061336876968547,
+            0.042293895939796586,
+            -0.11172607038677461,
+            -0.029421352577423406
+          ],
+          "tile_begin": [
+            6,
+            3
+          ],
+          "tile_end": [
+            10,
+            7
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        3,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.23036495704862,
+        1040.5827193434907
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.02225217608309219,
+            0.04483121395546196,
+            0.40060803549452606,
+            0.4861646260471373
+          ],
+          "tile_begin": [
+            187,
+            203
+          ],
+          "tile_end": [
+            190,
+            207
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.04599282451001986,
+            0.026362408306745265,
+            -0.10265873805610853,
+            -0.02035402024675733
+          ],
+          "tile_begin": [
+            6,
+            4
+          ],
+          "tile_end": [
+            9,
+            8
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        3,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.23997632997057,
+        1040.5843311362173
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.006254244739533342,
+            0.06082914529902082,
+            0.3892390402886274,
+            0.47479563084123866
+          ],
+          "tile_begin": [
+            187,
+            202
+          ],
+          "tile_end": [
+            191,
+            207
+          ],
+          "tiles": 20,
+          "source_queries_upper_bound": 1320980,
+          "tensor_vertices_upper_bound": 1313025
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.13390284986684947,
+            -0.06145082315197456,
+            -0.30610671154007774,
+            -0.22271672161569198
+          ],
+          "tile_begin": [
+            26,
+            20
+          ],
+          "tile_end": [
+            30,
+            24
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.061924312143071175,
+            0.01043092067369395,
+            -0.09359140572543932,
+            -0.011286687916088117
+          ],
+          "tile_begin": [
+            5,
+            4
+          ],
+          "tile_end": [
+            9,
+            8
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        4,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.20482565780021,
+        1040.5582364395664
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.0640964985306884,
+            0.002986891507865767,
+            0.4475587448446248,
+            0.5331153353972361
+          ],
+          "tile_begin": [
+            185,
+            205
+          ],
+          "tile_end": [
+            189,
+            209
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            0.011440532667076371,
+            0.0837957654838415,
+            -0.11243521612545065,
+            -0.030130498316099458
+          ],
+          "tile_begin": [
+            8,
+            3
+          ],
+          "tile_end": [
+            12,
+            7
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        4,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.21443703072215,
+        1040.5598482322932
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.04809856718720071,
+            0.01898482285135345,
+            0.4361897496385631,
+            0.5217463401911744
+          ],
+          "tile_begin": [
+            186,
+            204
+          ],
+          "tile_end": [
+            189,
+            208
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.004490954966086493,
+            0.06786427785067864,
+            -0.10336788379497783,
+            -0.021063165985626617
+          ],
+          "tile_begin": [
+            7,
+            4
+          ],
+          "tile_end": [
+            11,
+            8
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        4,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.22404840364409,
+        1040.5614600250199
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.03210063584364186,
+            0.0349827541949123,
+            0.42482075443267303,
+            0.5103773449852843
+          ],
+          "tile_begin": [
+            187,
+            204
+          ],
+          "tile_end": [
+            190,
+            208
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.020422442599137808,
+            0.051932790217627325,
+            -0.09430055146431175,
+            -0.011995833654960545
+          ],
+          "tile_begin": [
+            7,
+            4
+          ],
+          "tile_end": [
+            10,
+            8
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        4,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.23365977656603,
+        1040.5630718177465
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.01610270450008302,
+            0.050980685538471134,
+            0.413451759226783,
+            0.4990083497793943
+          ],
+          "tile_begin": [
+            187,
+            203
+          ],
+          "tile_end": [
+            191,
+            208
+          ],
+          "tiles": 20,
+          "source_queries_upper_bound": 1320980,
+          "tensor_vertices_upper_bound": 1313025
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.03635393023218912,
+            0.036001302584576005,
+            -0.08523321913364568,
+            -0.0029285013242944698
+          ],
+          "tile_begin": [
+            6,
+            4
+          ],
+          "tile_end": [
+            10,
+            8
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        4,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.24327114948797,
+        1040.5646836104734
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.0001047731565953352,
+            0.06697861688195883,
+            0.4020827640207213,
+            0.4876393545733326
+          ],
+          "tile_begin": [
+            188,
+            203
+          ],
+          "tile_end": [
+            191,
+            207
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.12418143780220596,
+            -0.051729411087331055,
+            -0.2887498725621069,
+            -0.20535988263772112
+          ],
+          "tile_begin": [
+            27,
+            21
+          ],
+          "tile_end": [
+            31,
+            25
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.052285417865351985,
+            0.02006981495141314,
+            -0.07616588680317284,
+            0.00613883100617837
+          ],
+          "tile_begin": [
+            6,
+            5
+          ],
+          "tile_end": [
+            9,
+            9
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        5,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.20812047731762,
+        1040.5385889138224
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.057947026947750384,
+            0.009136363090803774,
+            0.4604024685767102,
+            0.5459590591293214
+          ],
+          "tile_begin": [
+            186,
+            205
+          ],
+          "tile_end": [
+            189,
+            209
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            0.021079426944795563,
+            0.09343465976156069,
+            -0.09500969720318105,
+            -0.012704979393829832
+          ],
+          "tile_begin": [
+            8,
+            4
+          ],
+          "tile_end": [
+            12,
+            8
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        5,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.21773185023956,
+        1040.540200706549
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.041949095604191536,
+            0.025134294434362624,
+            0.4490334733708201,
+            0.5345900639234313
+          ],
+          "tile_begin": [
+            186,
+            205
+          ],
+          "tile_end": [
+            190,
+            209
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            0.0051479393117442466,
+            0.07750317212850938,
+            -0.08594236487251497,
+            -0.0036376470631637567
+          ],
+          "tile_begin": [
+            8,
+            4
+          ],
+          "tile_end": [
+            11,
+            8
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        5,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.2273432231615,
+        1040.541812499276
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.025951164260703853,
+            0.041132225777850306,
+            0.43766447816475834,
+            0.5232210687173696
+          ],
+          "tile_begin": [
+            187,
+            204
+          ],
+          "tile_end": [
+            190,
+            208
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.010783548321418618,
+            0.061571684495346515,
+            -0.07687503254204213,
+            0.005429685267309082
+          ],
+          "tile_begin": [
+            7,
+            5
+          ],
+          "tile_end": [
+            11,
+            9
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        5,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.23695459608344,
+        1040.5434242920026
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.009953232917145012,
+            0.05713015712140914,
+            0.4262954829588684,
+            0.5118520735114797
+          ],
+          "tile_begin": [
+            187,
+            204
+          ],
+          "tile_end": [
+            191,
+            208
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.02671503595446993,
+            0.045640196862295195,
+            -0.06780770021137605,
+            0.014497017597975156
+          ],
+          "tile_begin": [
+            6,
+            5
+          ],
+          "tile_end": [
+            10,
+            9
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        5,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.24656596900537,
+        1040.5450360847292
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            0.006044698426413837,
+            0.073128088464968,
+            0.4149264877529783,
+            0.5004830783055896
+          ],
+          "tile_begin": [
+            188,
+            203
+          ],
+          "tile_end": [
+            191,
+            208
+          ],
+          "tiles": 15,
+          "source_queries_upper_bound": 990735,
+          "tensor_vertices_upper_bound": 985089
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.11446002573744996,
+            -0.04200799902257506,
+            -0.27139303358394107,
+            -0.1880030436595553
+          ],
+          "tile_begin": [
+            27,
+            21
+          ],
+          "tile_end": [
+            31,
+            25
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.042646523587521246,
+            0.02970870922924388,
+            -0.05874036788070997,
+            0.02356434992864123
+          ],
+          "tile_begin": [
+            6,
+            5
+          ],
+          "tile_end": [
+            10,
+            9
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        6,
+        -2
+      ],
+      "origin": [
+        1415.0105070642019,
+        79.21141529683501,
+        1040.5189413880782
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.05179755536474121,
+            0.015285834673812945,
+            0.47324619230897585,
+            0.5588027828615871
+          ],
+          "tile_begin": [
+            186,
+            206
+          ],
+          "tile_end": [
+            189,
+            210
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            0.030718321222626303,
+            0.10307355403939143,
+            -0.07758417828072132,
+            0.00472053952862989
+          ],
+          "tile_begin": [
+            9,
+            5
+          ],
+          "tile_end": [
+            12,
+            9
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        }
+      ]
+    },
+    {
+      "ij": [
+        6,
+        -1
+      ],
+      "origin": [
+        1414.9931316580692,
+        79.22102666975695,
+        1040.520553180805
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.03579962402125353,
+            0.03128376601730063,
+            0.461877197102914,
+            0.5474337876555253
+          ],
+          "tile_begin": [
+            186,
+            205
+          ],
+          "tile_end": [
+            190,
+            209
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            0.014786833589463437,
+            0.08714206640622857,
+            -0.06851684595024847,
+            0.01378787185910273
+          ],
+          "tile_begin": [
+            8,
+            5
+          ],
+          "tile_end": [
+            12,
+            9
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        6,
+        0
+      ],
+      "origin": [
+        1414.9757562519364,
+        79.2306380426789,
+        1040.5221649735317
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.01980169267769468,
+            0.04728169736085948,
+            0.45050820189701546,
+            0.5360647924496268
+          ],
+          "tile_begin": [
+            187,
+            205
+          ],
+          "tile_end": [
+            191,
+            209
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.0011446540435878787,
+            0.07121057877317725,
+            -0.059449513619579265,
+            0.022855204189771945
+          ],
+          "tile_begin": [
+            7,
+            5
+          ],
+          "tile_end": [
+            11,
+            9
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        6,
+        1
+      ],
+      "origin": [
+        1414.9583808458037,
+        79.24024941560084,
+        1040.5237767662586
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            -0.003803761334207006,
+            0.06327962870434715,
+            0.43913920669095363,
+            0.5246957972435649
+          ],
+          "tile_begin": [
+            188,
+            204
+          ],
+          "tile_end": [
+            191,
+            208
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "child",
+          "disjoint": true
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.017076141676750742,
+            0.055279091140014384,
+            -0.050382181289106424,
+            0.031922536520244786
+          ],
+          "tile_begin": [
+            7,
+            6
+          ],
+          "tile_end": [
+            11,
+            10
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    },
+    {
+      "ij": [
+        6,
+        2
+      ],
+      "origin": [
+        1414.941005439671,
+        79.24986078852278,
+        1040.5253885589852
+      ],
+      "components": [
+        {
+          "name": "parent",
+          "chart_bounds": [
+            0.012194170009351843,
+            0.07927756004790601,
+            0.42777021148506367,
+            0.5133268020376749
+          ],
+          "tile_begin": [
+            188,
+            204
+          ],
+          "tile_end": [
+            192,
+            208
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        },
+        {
+          "name": "child",
+          "chart_bounds": [
+            -0.10473861367280646,
+            -0.03228658695793155,
+            -0.25403619460596666,
+            -0.1706462046815809
+          ],
+          "tile_begin": [
+            28,
+            22
+          ],
+          "tile_end": [
+            31,
+            26
+          ],
+          "tiles": 12,
+          "source_queries_upper_bound": 792588,
+          "tensor_vertices_upper_bound": 788225
+        },
+        {
+          "name": "gchild",
+          "chart_bounds": [
+            -0.033007629309802056,
+            0.03934760350696307,
+            -0.04131484895844035,
+            0.04098986885091086
+          ],
+          "tile_begin": [
+            6,
+            6
+          ],
+          "tile_end": [
+            10,
+            10
+          ],
+          "tiles": 16,
+          "source_queries_upper_bound": 1056784,
+          "tensor_vertices_upper_bound": 1050625
+        }
+      ]
+    }
+  ],
+  "reference_path_screen": [
+    {
+      "from": [
+        0,
+        0
+      ],
+      "to": [
+        6,
+        0
+      ],
+      "samples": 3483,
+      "solid": 0,
+      "unknown": 0,
+      "first_blocked_fraction": null
+    },
+    {
+      "from": [
+        6,
+        0
+      ],
+      "to": [
+        6,
+        2
+      ],
+      "samples": 3483,
+      "solid": 0,
+      "unknown": 0,
+      "first_blocked_fraction": null
+    },
+    {
+      "from": [
+        6,
+        2
+      ],
+      "to": [
+        0,
+        2
+      ],
+      "samples": 3483,
+      "solid": 0,
+      "unknown": 0,
+      "first_blocked_fraction": null
+    },
+    {
+      "from": [
+        0,
+        2
+      ],
+      "to": [
+        0,
+        0
+      ],
+      "samples": 3483,
+      "solid": 0,
+      "unknown": 0,
+      "first_blocked_fraction": null
+    }
+  ],
+  "elapsed_s": 0.11823401413857937,
+  "sources": {
+    "/mnt/ml_storage/scratch/atlas-world-bw1/screen_cpu_r0.py": "e845ea9e8c467561d61ca5fd998f72dc1cb9dfd7b686e00b7be226a57e1f55e1",
+    "/mnt/ml_storage/scratch/atlas-multiscale-pr8/descendant_world.py": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e",
+    "/mnt/ml_storage/scratch/atlas-world-bw1/card-r0.md": "138dd18ef3d3bb285e56af5d535df98f193e51a79e70cb720f05fadecd356ee5"
+  },
+  "scope": "Finite CPU geometry/source-bound screen only, no GPU/preparation or flat-terrain proof. Blocked paths are terrain observations."
+}

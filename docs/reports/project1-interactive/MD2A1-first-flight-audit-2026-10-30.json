@@ -1,0 +1,8 @@
+{
+  "pass": false,
+  "pid": 2012835,
+  "error": "Traceback (most recent call last):\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/experiments/pc2-audit.py\", line 46, in <module>\n    prefix=[near(mesh,p+fraction*delta) for fraction in np.linspace(0,toi,17)]\n            ~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/experiments/pc2-audit.py\", line 18, in near\n    return float(distances(point,mesh['t'][mask]).min()) if mask.any() else .7\n                 ^^^^^^^^^\nNameError: name 'distances' is not defined\n",
+  "runs": [],
+  "elapsedS": 0.16698192991316319,
+  "scope": "Finite triangle-prefix, mathematical contact-crossing and body samples at actual handoffs; recorded-frame motion and revision checks. Not a continuous world/topology proof."
+}

@@ -6,8 +6,12 @@ import numpy as np
 parser=argparse.ArgumentParser();parser.add_argument('root');args=parser.parse_args();root=Path(args.root).resolve()
 assert not (root/'flight-audit.json').exists(),'Preserve evidence'
 report=json.loads((root/'browser.json').read_text());data=json.loads((root/'qualification-input.json').read_text())
-sys.path.insert(0,'/mnt/ml_storage/scratch/atlas-multiscale-pr8');import descendant_world as W
-sys.path.insert(0,str(W.ROOT/'prepared-r0'));from check_collision_r0 import distances
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'generation/native'))
+import generation_paths as GP
+GP.configure_packages(); GP.install_io_guard(); GP.validate_inputs()
+import descendant_world as W
+# Distance reference resolves from the owned native package.
+from check_collision_r0 import distances
 started=time.monotonic();meshes={};rows=[];failure=None
 def near(mesh,point):
     if not len(mesh['t']):return float('inf')

@@ -1,0 +1,99 @@
+{
+  "baselineUnits": 1352,
+  "currentUnits": 1357,
+  "unitFiles": 86,
+  "guardedUnitResult": "UNIT {\"state\":\"passed\",\"reason\":\"1357 tests passed\",\"cleanup\":\"confirmed\",\"files\":86,\"summary\":{\"tests\":1357,\"pass\":1357,\"fail\":0,\"cancelled\":0,\"skipped\":0,\"todo\":0}}",
+  "focusedAfterFinalSource": "UNIT {\"state\":\"passed\",\"reason\":\"6 tests passed\",\"cleanup\":\"confirmed\",\"files\":2,\"summary\":{\"tests\":6,\"pass\":6,\"fail\":0,\"cancelled\":0,\"skipped\":0,\"todo\":0}}",
+  "build": "\n> atlas-mandelbrot@1.0.0 build\n> node scripts/build.mjs\n\nStatic application built in dist/\n",
+  "staticImport": "{\"pass\": true, \"modules\": 18, \"inputs\": 13, \"exactAllowedEdits\": true, \"ambientReadRemoved\": true, \"scratchSourceReadRejected\": true, \"checkoutWriteRejected\": true, \"gpuImports\": false}\n{\"lazyModuleMutationControl\": true}\n",
+  "httpControls": [
+    "{\"root\":\"/mnt/ml_storage/scratch/atlas-md2a/http-preflight-r0\",\"pass\":true,\"cleanup\":true,\"checks\":[\"Passive status never constructs the fake or native adapter\",\"Status discloses no owner capability; second-tab close retire and open cannot mutate the owner\",\"Reordered renewal does not extend the accepted deadline\",\"Exact deadline retires silent ownership before the periodic sweep\",\"Old-session cleanup cannot retire or close replacement resources\",\"Known cancelled in-flight work may drain but its late result cannot revive the old client\",\"Failed retirement stays sticky and blocks replacement admission\",\"All controls use the injected fake adapter; no native controller starts\"]}",
+    "{\"root\":\"/mnt/ml_storage/scratch/atlas-md2a/recovery-http-preflight-r0\",\"pass\":true,\"cleanup\":true,\"checks\":[\"Recovery HTTP status is passive before startup\",\"Client adapter is admitted once for healthy operations\",\"Native loss is typed for open prepare transfer and heartbeat\",\"A held result after terminal loss is retired before publication\",\"Loss cleanup remains available and never constructs a replacement\",\"Failed startup confirms cleanup and remains restart-required\",\"Post-construction certificate failure closes its owned adapter\",\"Startup cleanup failure stays sticky even after a later teardown acknowledgement\",\"Recovery HTTP fixtures use no native process and confirm owned cleanup\"]}"
+  ],
+  "negativeRoot": {
+    "script": "tests/generation-ownership.mjs",
+    "exitCode": 1,
+    "directoryAbsent": true,
+    "logSha256": "51cdb281df28fac14c884dd7a3b9494e60e2cda189a3db7bf4b191f6ccaa2796"
+  },
+  "mechanicalRepair": "One permitted outcome-independent preflight mechanical repair consumed. First attempt generation-preflight-r0 failed during provenance enumeration before any geometry job: Python's lazy modules changed sys.modules during iteration. Native-controller.json confirms child exit and cleanup; external-closure.json independently confirms both PIDs absent and GPU lock free. Migration detail's cleanup=false omitted successful constructor-failure cleanup, so the harness now captures the already-owned controller and reports/acknowledges its idempotent close. The original attempt remains unchanged. Repair snapshots list(sys.modules.items()) before reading lazy metadata; a stdlib control mutates the module table from __getattr__ and verifies the recorder survives. No mathematical module, CUDA, geometry/tolerance, target or workload changed. Next attempt is generation-preflight-r1; no further repair/rerun for a nicer outcome.\n",
+  "failedPreflight": {
+    "started": 1793398983962,
+    "rows": [],
+    "checks": [],
+    "events": [
+      {
+        "type": "worker-exit",
+        "pid": 1969083,
+        "code": 1,
+        "signal": null
+      }
+    ],
+    "cleanup": false,
+    "ownedPids": [
+      1969070
+    ],
+    "failure": "Error: Native preparation stopped. Save your scene and restart ATLAS.\n    at ChildProcess.<anonymous> (file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/preparation/native-controller.mjs:23:45)\n    at Object.onceWrapper (node:events:639:26)\n    at ChildProcess.emit (node:events:524:28)\n    at maybeClose (node:internal/child_process:1104:16)\n    at ChildProcess._handle.onexit (node:internal/child_process:304:5)",
+    "ended": 1793398984777
+  },
+  "failedPreflightController": {
+    "cleanup": true,
+    "pid": 1969083,
+    "exit": {
+      "code": 1,
+      "signal": null
+    },
+    "stopped": false,
+    "diagnostics": [
+      "Traceback (most recent call last):\n",
+      "  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/preparation/native-worker.py\", line 139, in <module>\n    if __name__ == '__main__': main()\n                               ~~~~^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/preparation/native-worker.py\", line 38, in main\n    source_rows, module_rows = P.owned_provenance(graphs)\n                               ~~~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/scripts/generation/native/generation_paths.py\", line 114, in owned_provenance\n    modules = {name: module for name, module in sys.modules.items() if getattr(module, '__file__', None)\n                                                ~~~~~~~~~~~~~~~~~^^\nRuntimeError: dictionary changed size during iteration\n"
+    ]
+  },
+  "failedPreflightClosure": {
+    "checkedAt": 1793399003.4628365,
+    "pids": [
+      1969070,
+      1969083
+    ],
+    "alive": [],
+    "lockFree": true,
+    "controllerCleanup": true,
+    "cleanup": true
+  },
+  "newCertificate": {
+    "sourcesKey": "fnv1a64:13ad585ee91d5b57",
+    "evidenceId": "sha256:896f11432f0fd391e19383a7c74b4c5a92ee0c12690683d86b991acdafff0c2d",
+    "policies": {
+      "coarse": {
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.000103759765625,
+          "tileWidthM": 0.0265625,
+          "rtinToleranceM": 2.65625e-05,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "qualifiedSpecimens": 3
+      },
+      "fine": {
+        "sampling": {
+          "cells": 256,
+          "stepM": 2.593994140625e-05,
+          "tileWidthM": 0.006640625,
+          "rtinToleranceM": 6.640625e-06,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "qualifiedSpecimens": 1
+      },
+      "view": {
+        "sampling": {
+          "cells": 256,
+          "stepM": 0.0004150390625,
+          "tileWidthM": 0.10625,
+          "rtinToleranceM": 0.00010625,
+          "coordinateType": "float32-local-metres-per-unit"
+        },
+        "qualifiedSpecimens": 1
+      }
+    }
+  }
+}

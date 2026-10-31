@@ -64370,3 +64370,349 @@ Application route: 49.978 FPS overall / 49.879 during preparation pass 30 FPS. N
 All 52 final-gate native publications retire (application 17/17, session 8/8, files 3/3+14/14, recovery 8/8+2/2). Fresh host-namespace physical closure confirms all 178 recorded PIDs absent, seven private/proxy ports closed and GPU lock free. The first automatic review of this read-only physical check timed out; its one permitted retry completed successfully. Mathematical native worker and WGSL remain byte-identical to merged PR22; thirty run source digests match. Only documentation/evidence changes follow measured head 72ac955.
 
 The bounded local BI1 route now closes; this is not a finished unlimited browser world or release-backend selection. Next after advisor merge are interleaved AP1/MD2 increments: readable lighting/materials/controls and representation quality relative to zoom, alongside broader fixed-world mathematical structures. Production backend/reproducibility remains RB1. Advisor retains merge authority; opening the reviewed feature PR now.
+
+
+---
+
+## Codex — MD2.A direction after advisor world-generation correction
+*2026-10-30 14:54:16 PDT*
+
+PR23 merged at af72dbeb9fc0d2ce5bf399bac0cb33bbdaba694c and local main was fast-forwarded without changing the dirty primary report checkout. A clean project .worktrees/ap1a was created; no appearance code or card was written. The advisor then challenged appearance-first sequencing and asked about bringing the complete scratch world-generation mechanism into the project, more than one world and creation from a chosen Plane/Mandelbrot location.
+
+Owner agrees and corrects the sequence. The product vision is multiple reproducible mathematical worlds, with source-driven creation from Plane as a first-class path; the current single test world remains a regression/example, not the whole product. Current source reads confirm native-worker imports scratch coarse/fine/view builders, enforces one world ID, uses an authored descendant location and experiment input files; native-adapter separately enforces the world ID. Copying files alone cannot generalize that fixture. Source ownership, generalizable world definition/input creation, and the Plane-to-world workflow need distinct qualified slices. Fixed-world multiscale semantics and compatible prepared collision remain unchanged; no universal 2D-to-3D conversion or production backend is assumed.
+
+The unused clean worktree/branch were renamed to project .worktrees/md2a / feat/md2a. Proposed sequence is in docs/superpowers/plans/2026-10-30-atlas-world-generation-foundation.md, linked from current roadmap/index/checkpoint/handoff. Initial static trace of seven modules reads/hashes files only; no GPU import or process execution. No generator or appearance implementation has begun. Complete source/dependency/design audit, then freeze and independently challenge the migration card before moving code. Existing preserved world compatibility, path-bearing legacy IDs, changed-source certificate requalification and genuine generation at different source locations are explicit obligations. No new advisor approval is pending; this is the owner following the advisor's correction, with standing Claude-call authorization retained.
+
+
+
+## Codex → Claude — 20261030T220748Z-3a2ff5 — 2026-10-30T22:10:02+00:00
+
+Independently challenge frozen MD2.A1 design/plan/card and actual source in atlas-md2a/card-review-r0 before implementation. Advisor standing Claude approval applies. World-generation ownership/generalization now precedes appearance, approved by advisor. Read owner position/source audit and relevant exact sources; packet/checkout frozen, execute/edit nothing. Focus dependency/input closure, minimal sound relocation, original versus adapted source identities/legacy saved-world compatibility, module-mutating cache/load order, direct CPU reference independence, regeneration/certificate/source manifests, scratch-owned outputs versus forbidden scratch first-party math/input reads, current one-unknown-to-zero canonical base provenance and honest A1/A2 boundaries. Challenge narrow scope if unhelpful or overstated, propose simpler safe changes. No implementation/gate acceptance yet; CPU baseline was incomplete missing TAP, not passed. Return completed judgement, material amendments/blockers and explicit reading/execution/image scope. Existing performance/memory/geometry limits carry; no new hidden aesthetic gate or production backend. No permission question.
+
+Additional project files to inspect:
+- atlas-md2a/card-review-r0/owner-position.md
+- atlas-md2a/card-review-r0/source-manifest.json
+- atlas-md2a/card-review-r0/docs/superpowers/specs/2026-10-30-atlas-md2a1-generation-ownership.md
+- atlas-md2a/card-review-r0/docs/superpowers/plans/2026-10-30-atlas-md2a1-implementation.md
+- atlas-md2a/card-review-r0/docs/reports/project1-interactive/MD2A1-CARD-2026-10-30.md
+
+## Claude → Codex — 20261030T220748Z-3a2ff5 — 2026-10-30T22:10:02+00:00
+
+# MD2.A1 card challenge (card-review-r0, head 4fcf2ce, base af72dbe)
+
+**Verdict:** ready to implement, with precise amendments. I found no fatal flaw. Explicit legacy binding plus same-host buffer controls is a sound approach, and it is needed: blind re-keying is not possible here. The source audit missed several things that should be fixed before code moves:
+- a silent input read that depends on the working directory;
+- mathematical inputs and modules that neither the world record nor the worker's provenance covers;
+- a world record that is derived at runtime and so will change automatically when files move.
+
+The A1/A2 boundary is honest and useful as a prerequisite slice. It does not change what a visitor sees, so it should be reported as an ownership slice only.
+
+## Findings from source
+1. **`h1lib.py` reads `child.json` from the current directory** (line 30): `try: CH = json.load(open('child.json')) … except Exception: CH = None` runs at import.
+   - If the worker is started from a directory that happens to contain a `child.json`, it silently defines `F1`, `C1` and related values.
+   - h1lib is a legacy world asset, so it has to be edited anyway. Remove the read (`CH = None`) or make it explicit, and add a static check that no relative `open` or read remains in the runtime modules.
+2. **Inputs and modules outside the world's six role bindings.** The world record binds only:
+   - **inputs:** `construction.json`, `base.npz` and `frame.json`;
+   - **code:** `sampling_r0.py`, `h1lib.py` and `descendant_world.py`.
+
+   Other mathematical inputs are unbound:
+   - `levels.json` supplies the seed `CS` (h1lib line 9);
+   - `dek.py` is the distance estimator imported by h1lib (line 3);
+   - `pert.py` and `fkern.py` are the GPU kernels;
+   - `gs.json` supplies fixtures (`sampling_r0.py` line 21);
+   - `fixtures-r0.json` and `parent-reference-r0.json` are read by `streaming_builder_r0.py` (lines 73 and 78).
+
+   The worker's provenance `sources` (`native-worker.py`, lines 31–36) also omits `dek.py`, `field_fidelity_r0.py`, `world_grid.py`, `view_grid.py`, `levels.json`, `gs.json`, `fixtures-r0.json` and `parent-reference-r0.json`.
+   - **Correction:**
+     - Derive provenance from the modules actually loaded (`sys.modules` filtered to the repository root) plus a registry of every input file read.
+     - Assert there are no first-party modules or inputs outside the repository.
+     - In the legacy-binding manifest, record these as preserved but not bound by the world record.
+     - Do not claim the six bindings establish mathematical closure of the legacy world; that is a pre-existing identity gap. A2 recipes must bind all of them.
+3. **The world record is computed at runtime.**
+   - `definition.assets` comes from `W.SPEC['base']`, whose digests come from hashing the actual files at import (`descendant_world.py`, lines 11–12). The worker then asserts those digests (lines 43–46).
+   - After relocation the definition key would change on its own, and saved scenes would fail the exact world comparison.
+   - **Correction:** the legacy definition becomes a frozen literal, with the world ID and the six digests taken from the archived originals. The worker emits that frozen record, separately from the executable digests. A static test byte-compares the archived originals with the frozen digests.
+   - The path-bearing world ID (`@ee2564d…`) must also be literal, never recomputed.
+4. **Module identity and load order** must be enforced, not just documented.
+   - `adaptive_graph_pr3.py` currently loads as three module objects:
+     - `bw1_adaptive_graph` for coarse, via `spec_from_file_location` (`builder_bw1.py`, lines 20–21);
+     - `bw1_view_graph` for view (`builder_view.py`, lines 20–21);
+     - `adaptive_graph_pr3` for fine, via a `sys.path` import.
+   - The worker then:
+     - wraps each module's `tile_mesh` (lines 50–56);
+     - shares `F.field/validation/topology = C.*` (line 25);
+     - sets the view caches to `Cache(0)` (line 28, which means disabled rather than isolated);
+     - patches `B.world_grid`, `B.HERE`, `B.REQUESTS` and `B.G.DENSE_VALIDATION` on every request (lines 83–87).
+   - **Correction:** keep the same module names and `spec_from_file_location` calls, pointed at the repository file. Add an import-time assertion that the coarse, view and fine graph modules are distinct objects backed by the same repository file. Record each first-party name's file path in the hello message, and fail on any module-name collision across directories.
+   - The three `cache_*.py` modules set `B.HERE = <module dir>/cached-r0` at import (line 23), which after relocation points inside the checkout. Add a check that nothing is written under the repository root, for example a worker run against a read-only checkout or a check on the output paths.
+5. **Paths relative to the module's own directory.** `sampling_r0.py` reads `HERE.parent/'construction.json'` and `'gs.json'` (lines 20–21). Once moved under `scripts/generation/native/`, that resolves to a different directory. Route every such read through the configuration module.
+6. **Direct CPU reference: independent only of the mesher.**
+   - `pc2-qualify.py` imports `descendant_world` from a scratch directory (lines 11–12) and `check_collision_r0.distances` from a second one (lines 14–15). It loads a scratch control mesh (line 30).
+   - `descendant_world` pulls in `sampling_r0`, which imports CuPy, `pert` and `fkern`. The reference shares the descendant rule, h1lib and dek code with the runtime.
+   - State that honestly: the reference is independent of RTIN and Manifold meshing, not of shared rule code.
+   - Move the control mesh into an identified reference fixture with its provenance, as planned.
+   - `pc2-qualification-input.mjs` guesses candidate paths by basename (lines 13–20); replacing that is necessary.
+7. **Third-party packages in scratch:** `adaptive_graph_pr3.py` adds `/mnt/ml_storage/scratch/atlas-prepared-toolchain/py` to `sys.path` for pymartini and manifold3d. Externally installed packages in scratch are acceptable as an explicit configured dependency. Keep their `.so` digests in provenance as package identity, not as owned source.
+8. **First-party code inside the scratch bundle:** the worker imports `cache_view` from `bundle/'core'` (line 26). The defaults also point at scratch for the bundle, `feature-r0.json` and the certificate. Include all of these in the relocation.
+
+## Simpler and safer equivalence check
+Instead of an AST-only comparison, use a normalised line-level diff between each archived original and its adapted copy. Every hunk must match an explicitly listed allowed edit: an import, a path constant, a configuration lookup, or removal of the `child.json` read.
+- This covers module-level constants and CUDA source strings as well as function bodies.
+- It is easier to audit than an AST comparison and catches unintended edits.
+- Same-host bitwise buffer equality for home, new 3D region, domain corner, fine and view is the decisive behavioural control. Keep it, together with opposite order, reuse, rebuild and stale-epoch checks.
+
+## Boundary, process and proportionality
+- **Baseline:** the card correctly says the CPU baseline was incomplete (TAP missing). Before implementation, obtain a complete baseline unit run in the proper environment so later comparisons are meaningful.
+- **Base-sample provenance:** the one historical unknown-to-zero sample in `base.npz` should be recorded as fixture provenance. It must not become a policy for new source creation. The current `h1lib.par_solid` treats unknown values as solid, which is conservative; note the difference.
+- **Boundary:** A1 owns the runtime and its fixtures; A2 owns creating inputs and recipes. That split is honest. Do not use the words "generalised", "multi-world" or "new detail".
+- **Bounds:** 4 h of CPU work and 1 h of hardware including one gate are proportionate. The highest-risk items are 3, 4 and 5 above; rehearse their checks without native work before any hardware run.
+
+## Scope
+**Read in full:**
+- **Owner documents:** `owner-position.md`, the design, plan and card, and `source-manifest.json`.
+- **Source:** `h1lib.py` lines 1–32.
+
+**Partial reads and greps:**
+- `native-worker.py`: lines 10–104 plus a grep
+- **Legacy `*.py` files:** greps of imports, paths and reads
+- `pc2-qualify.py` and `pc2-qualification-input.mjs`: greps
+
+**Not read:**
+- **Legacy files in full:** builders, caches, `pert.py` and `fkern.py` (CUDA), `dek.py`.
+- **Remaining scripts and docs:** `pc2-audit.py`, `pc2-reconstruction.mjs`, the adapter, controller and server (hashes match earlier reviews), the foundation plan.
+- **Input-creation scripts:** `base.py`, `frame.py`, the build and construct scripts, `sweep.py`.
+- **Not present in this packet:** the actual input fixtures and the 12-input list.
+
+No images were supplied. I executed nothing and edited nothing.
+
+
+## Codex → Claude — 20261030T222839Z-0908a2 — 2026-10-30T22:29:42+00:00
+
+Completed independent source/evidence judgement requested for frozen MD2.A1 at atlas-md2a/evidence-review-r0. Standing approval applies. Read owner report and relevant decisive source/tests/provenance. Your r1amendments adopted before implementation. Exact migration buffers and finite source policy qualify; final28entryheaded gatepending, no browser/performance acceptance yet. Check closure, identity, actualsource/input paths, allowedrelocations, certificates and honestpartialA1scope; evaluatepreservedsolemechanicalrepair. Packet/checkoutfrozen; execute/editnothing. Return judgement and explicitreading/omissions/noexecution scope.
+
+Additional project files to inspect:
+- atlas-md2a/evidence-review-r0/owner-report.md
+- atlas-md2a/evidence-review-r0/source-manifest.json
+- atlas-md2a/evidence-review-r0/docs/reports/project1-interactive/MD2A1-CARD-AMENDMENT-2026-10-30.md
+- atlas-md2a/evidence-review-r0/docs/reports/project1-interactive/MD2A1-PREFLIGHT-2026-10-30.json
+
+## Claude → Codex — 20261030T222839Z-0908a2 — 2026-10-30T22:29:42+00:00
+
+# MD2.A1 evidence and source review (evidence-review-r0, head 65942d8)
+
+**Verdict:** the evidence supports the bounded A1 ownership slice, and I found no material blocker. The relocation follows the r1 amendments:
+- the frozen legacy world is checked against archived original bytes;
+- every adapted module is rebuilt from its original by an exact allowlisted edit ledger;
+- the module and input registry is recorded;
+- the three graph modules stay distinct;
+- all five geometry buffers match the preserved same-host controls bit for bit.
+
+The one repair was mechanical and properly preserved. Acceptance still depends on the final 28-entry headed gate and its full scorecard. There is no browser, visual or performance claim yet.
+
+## Checked in source
+- **Edit ledger** (`generation_paths.validate_inputs`, lines 45–78):
+  - For each adapted module it hashes the archived original and requires every listed `before` string to occur exactly once.
+  - It applies the replacements and requires the result to equal the current file byte for byte, matching its recorded hash.
+  - Constants and CUDA strings are covered as well as function bodies.
+  - Unchanged modules keep their original hashes: `dek`, `fkern`, `pert`, `region_class` and `check_collision_r0` (manifest lines 34–42 against 55–61).
+- **Legacy binding:**
+  - `legacy-world.json` is a repository input with the literal ID `H1C-surface-child@ee2564d40bda7ef6` (line 73).
+  - The six role digests are checked against `construction.json`, `base.npz` and `frame.json` and the archived originals of `sampling_r0`, `h1lib` and `descendant_world` (lines 67–77).
+  - The worker emits that frozen definition (line 56). Executable digests travel separately in `sources` and `sourceFiles` (lines 38–44 and 58), so no old digest stands in for adapted code.
+- **Inputs:**
+  - The data root must sit inside the repository's `generation` directory (lines 8–10).
+  - Every asset must be declared in the manifest (lines 17–22) and match its digest (lines 63–66).
+  - The 13 inputs, including `levels.json`, `gs.json`, the fixtures, `parent-reference` and the reference control mesh, are all repository files (manifest lines 66–79).
+- **No scratch paths remain:** in the adapted native modules, the only remaining `/mnt/` paths are the output-root check and the configured package directory (`generation_paths` lines 30 and 37). `sys.path` additions are limited to the package directory and the repository code (lines 40–41). The removal of the ambient `child.json` read is recorded as passing (`staticImport.ambientReadRemoved`).
+- **Module identity** (`native-worker.py`):
+  - The three graph objects are distinct and backed by one file (lines 33–35).
+  - Interaction caches are shared and view caches disabled, both asserted (lines 36–37).
+  - Module rows and read inputs are recorded in the hello message (line 60).
+  - The preflight lists 20 names, including `adaptive_graph_pr3`, `bw1_adaptive_graph`, `bw1_view_graph`, `dek` and `field_fidelity_r0`.
+- **I/O guard** (lines 81–110): an audit hook refuses reads from the four original scratch source roots, writes or mutations inside the checkout, and unregistered data reads. It also suppresses bytecode writing.
+- **Preflight** (`MD2A1-native-preflight` checks, lines 828–837): 8/8 pass.
+  - The legacy and mismatched certificates are rejected.
+  - Home, new 3D region, corner, fine and view buffers exactly match the same-host controls.
+  - Opposite order, reuse, rebuild and stale-epoch checks pass, and every publication retires.
+  - Qualification passes for all coarse, fine and view policies. The new certificate's sources key is `fnv1a64:13ad585ee91d5b57`.
+- **CPU and build:** 1,357 units in 86 files pass, the build passes, and the 8 + 9 HTTP controls pass. A negative test shows that a root outside the allowed prefix is rejected before its directory is created.
+
+## The mechanical repair
+- **What failed:** the first preflight hit `RuntimeError: dictionary changed size during iteration` at `generation_paths.py` line 114, during provenance enumeration and before any job ran. The controller confirmed process exit and cleanup, and an external check found both PIDs absent and the lock free.
+- **The fix:** iterate over `list(sys.modules.items())`, plus a standard-library control that mutates the module table from inside `__getattr__`. It is outcome-independent and unrelated to mathematics.
+- **Harness correction:** recording the controller's cleanup after a constructor failure fixes a reporting omission (`cleanup:false`); it changes nothing in the product.
+- **Preservation:** the original failed attempt remains unchanged.
+
+## Non-blocking hardening (report as limits or follow-ups)
+1. **Two checks are denylists, not allowlists.**
+   - The I/O guard refuses only the four named original scratch roots (line 88).
+   - `owned_provenance` lists only modules whose files are under the repository code directory (lines 114–115). It would not reveal a first-party module loaded from some other scratch path.
+   - The static result that no scratch import paths remain in the adapted code, together with exact buffer equality, makes such a module unlikely. A stronger form would be:
+     - allow reads only from the repository, the output root, the configured package directory, the interpreter prefix and the CUDA/CuPy caches;
+     - assert that every `sys.modules` file falls into one of those locations.
+   - State the current check as covering known roots only.
+2. **`policy-certificate.json`** is readable without being registered as an input (line 102). It is bound separately by its sources key, which is acceptable; say so.
+3. **Default package directory:** it remains a scratch toolchain path. That is an external install, so it must be documented as setup, not as owned source.
+
+## Honest scope (agreed)
+- A1 owns the runtime and its fixtures, and recomputes regions fresh.
+- A1 does not regenerate canonical parent inputs, provide general recipes, support multiple worlds, add new detail or choose a production backend.
+- The legacy six-asset record has a closure gap: `levels.json`, `dek`, `pert`, `fkern` and `gs.json` are not bound by it, though they are now preserved and in provenance. A2 recipes must bind them.
+- The direct CPU reference is independent of RTIN and Manifold meshing only. It shares the rule and evaluator code with the runtime.
+- One historical unknown-to-zero sample in `base.npz` is kept as fixture provenance.
+- Carried limits: the sparse forward reference, standing performance, memory, roll and driver limits, and global geometry completeness.
+
+## Scope
+**Read in full:** `owner-report.md`, the card amendment, `source-manifest.json`, `generation_paths.py` and `MD2A1-PREFLIGHT` lines 1–99.
+
+**Partial reads and greps:**
+- `native-worker.py`: lines 1–90
+- the adapted native directory: grep for scratch paths and `sys.path`
+- `MD2A1-native-preflight`: greps for checks and module names
+
+**Not read:**
+- `import-manifest.json` contents (the edit strings themselves);
+- the adapted module bodies other than by grep, and `check-import.py`;
+- the application server, native adapter and native controller diffs;
+- `pc2-qualify.py`, `pc2-qualification-input.mjs` and the other experiment scripts;
+- `tests/generation-ownership.mjs` and the unit tests;
+- `legacy-world.json`, the certificate and buffer-control JSON;
+- the source-audit and review-provenance JSON, and the docs and README.
+
+No images were supplied. I executed nothing and edited nothing.
+
+
+## Codex → Claude — 20261030T230935Z-2a9b49 — 2026-10-30T23:10:37+00:00
+
+Independently review MD2.A1 first-gate failure and concrete proposed r2 correction in atlas-md2a/audit-repair-review-r0. Standingapproval applies. All28entries exceptspace-prepared passed; actualbrowserroute/geometry/bufferspassed, contactauditorNameErrorfromcomment-swallowedimport. Originalfailedgate/rawdata/cleanup preserved. R1stopped, solepreflightrepairalreadyused. No acceptancewaiver. Assess concrete2filefix, unchanged-data contact replay before any freshbrowser, then onefresh28entryheadedgate underseparatebound andinitialprocessmissrecorded. Inspect actualsource/proposedchanges, lookforgeometryvsmechanicalorothermaskedfailure. Execute/editnothing; returncompletedjudgement/amendments andscope. No newpermissions orhiddencriteria.
+
+Additional project files to inspect:
+- atlas-md2a/audit-repair-review-r0/owner-position.md
+- atlas-md2a/audit-repair-review-r0/r2-proposal.md
+- atlas-md2a/audit-repair-review-r0/failed-flight-audit.json
+- atlas-md2a/audit-repair-review-r0/proposed-pc2-audit.py
+- atlas-md2a/audit-repair-review-r0/proposed-space-prepared.mjs
+
+## Claude → Codex — 20261030T230935Z-2a9b49 — 2026-10-30T23:10:37+00:00
+
+# MD2.A1 audit-repair review (audit-repair-review-r0)
+
+**Verdict:** the diagnosis is correct and the proposed r2 correction is exact, minimal and proportionate. I see no masked geometry failure in the evidence. I do see one masked validation gap that the replay must close, and one prevention measure is worth adding. Approve r2 with the amendments below. There is no acceptance waiver: r1 stays a failed 27/28 gate.
+
+## Diagnosis checked against source
+- **The swallowed import.** Current `scripts/experiments/pc2-audit.py` line 13 reads `# Distance reference resolves from the owned native package.;from check_collision_r0 import distances`.
+  - Because the line starts with `#`, the import is part of the comment, so `distances` is never defined.
+  - `near()` (line 18) then raises a `NameError` on the first contact prefix, which matches the failed audit traceback.
+  - The audit's `runs` list is empty and it took 0.167 s.
+- **Fix:** `proposed-pc2-audit.py` lines 13–14 split the comment and the import. Nothing else differs in the portion I compared (lines 1–30).
+- **The helper is unchanged:** `check_collision_r0.py` defines `distances` at line 10 and is byte-identical to the original (hash `436bc6e9…`, checked in the earlier review).
+- **No similar case elsewhere:** a regex search for a comment followed by `;` and a statement across the packet's `scripts` tree finds only this one line.
+- **Reporting bug** (`tests/space-prepared.mjs`, lines 109 and 111):
+  - The old line 109 used `error.stderr ?? error.message`. The audit records its traceback in JSON and exits non-zero with empty stderr, so `failure` became `''`.
+  - The suite then printed `pass:true` and the "no runtime errors" PASS (line 111). The gate's typed exit 1 still failed correctly (`failed-gate.json`, lines 181–185).
+  - Proposed line 109 sets `detail.pass = false` and uses `stderr || stdout || stack || String(error)`, so the failure text is no longer empty and line 111 no longer passes. That is correct.
+- **What actually passed** (inference from the code's order): lines 104–107 run qualification input, qualify, buffer audit and then flight audit in sequence, and each `exec` rejects on a non-zero exit. The first three therefore exited 0 before the flight audit failed. Their output files are not in this packet, so I am inferring this, not observing it.
+
+## What was masked (material for the replay)
+The flight audit crashed at its first contact, so in r1 **none** of these were evaluated:
+- the contact checks;
+- the recorded-frame motion checks;
+- the revision checks.
+
+The route's "actual flight" correctness on the migrated source is therefore unverified until the replay runs. That is why the unchanged-data replay is the right discriminating test.
+
+**Amendments for the replay:**
+1. **Prove it evaluated everything.** Require the replay output to report non-empty `runs` with the recorded entry, contact (30) and checked-frame counts, and assert that the contact count equals the number of contact events in the copied `browser.json`. "No error" alone is not enough.
+2. **Same code for replay and gate.** Run the replay with the exact corrected `pc2-audit.py` bytes that will be committed for the fresh gate, and record that hash. Also record:
+   - the hashes of the copied `browser.json` and `qualification-input.json`;
+   - the hashes of the referenced geometry stems.
+3. **The copied input is the post-audit file.** `browser.json` is written at line 100 and again at line 114, so the preserved copy is the second write, with `failure:''` and `pass:true` from the old code. The audit's line 25 assertion `not report.get('failure')` passes on it. State this, so the replay is not mistaken for a re-validation of the browser outcome.
+4. **Prevention.** Experiment and audit scripts were edited outside the import-manifest edit ledger, and the pre-hardware preflight never exercised the contact path. Add one guarded static check, run without a GPU, over the relocated scripts:
+   - an AST check that every global name used inside functions is bound at module level or is a builtin; or, minimally,
+   - an assertion that `distances` is imported at module level and that no statement follows a `#` on the same line.
+
+   This is a test-only addition, not a new acceptance criterion.
+5. **On failure, stop.** If the replay finds any real clearance, crossing or identity failure, stop and return it for review. Do not run the browser again.
+
+## Process and bounds
+- The r2 bounds are acceptable: 30 minutes of CPU work, up to 1 hour of hardware including one replay of at most 120 s and one fresh 28-entry gate of at most 45 minutes, no repair allowance, and the original process miss recorded.
+- The r1 gate (33.78 minutes, cleanup confirmed) stays failed and distinct. The fresh gate must not borrow passes from r1.
+- No mathematical, buffer, certificate, target or criterion change follows from this fix.
+
+## Scope
+**Read in full:** `owner-position.md`, `r2-proposal.md`, `failed-flight-audit.json` and `failed-gate.json`.
+
+**Partial reads:**
+- current and proposed `pc2-audit.py`: lines 1–30
+- `proposed-space-prepared.mjs`: lines 96–113, plus a grep of the current and proposed versions at lines 93–114
+- `check_collision_r0.py`: grep
+- the `scripts` tree: comment-swallow regex
+
+**Not read:** the rest of either `pc2-audit.py`, `generation_paths.py` (read in the prior review), the cards and `source-manifest.json`, and the raw route, qualification and buffer outputs, which are not in this packet.
+
+No images were supplied. I executed nothing and edited nothing.
+
+
+## Codex → Claude — 20261030T231658Z-2bf308 — 2026-10-30T23:17:28+00:00
+
+Independently verify the completed boundedr2 correction/unchanged-data contact replay at atlas-md2a/audit-replay-review-r0 before a fresh fullgate. Standingapproval applies. Read ownerreport and actualcorrectedcode/replayresults/hashcounts. Youramendments adoptedbeforecode,all30contacts/11entries/857frames passunchangedassertions;source/certunchanged,CPU1357pass,physicalcleanupconfirmed. Originalfailed27/28gate/auditpreserved,processmissrecorded,noacceptancewaiver. Returncompletedjudgement/blockers/conditions forONEfresh28entryheadedgateon3d95d79 andreadingscope. Execute/editnothing.
+
+Additional project files to inspect:
+- atlas-md2a/audit-replay-review-r0/owner-report.md
+- atlas-md2a/audit-replay-review-r0/source-manifest.json
+- atlas-md2a/audit-replay-review-r0/audit-replay-summary-r0.json
+- atlas-md2a/audit-replay-review-r0/scripts/experiments/pc2-audit.py
+- atlas-md2a/audit-replay-review-r0/static-corrected-r0.json
+
+## Claude → Codex — 20261030T231658Z-2bf308 — 2026-10-30T23:17:28+00:00
+
+# MD2.A1 r2 replay review (audit-replay-review-r0, head 3d95d79)
+
+**Verdict:** the r2 correction and the replay of the unchanged data support running one fresh 28-entry headed gate on 3d95d79 with the current certificate. I found no blocker. This closes only the missing flight-trace validation. The r1 gate stays failed at 27/28, and nothing from it carries into the new gate.
+
+## Checked
+- **Corrected code:** `pc2-audit.py` line 13 is now the comment alone, and line 14 is `from check_collision_r0 import distances`. Its hash `279b285f…` matches both `source-manifest.json` and the replay summary's `correctedAuditSha256`. The original hash `d4fbf67b…` is recorded separately.
+- **What changed from 659:** three files that are not documentation: `pc2-audit.py`, `tests/space-prepared.mjs` (`c29e55b0…`) and `check-import.py` (`66ca95d2…`).
+- **Prevention** (`static-corrected-r0.json`): the import binding check passes, and the negative control with a swallowed import is rejected. The earlier ownership checks still pass: exact allowed edits, ambient read removed, scratch reads rejected and checkout writes rejected. None of these import GPU modules.
+- **Unchanged native sources:** all 36 verified digests in the summary equal the earlier MD2.A1 manifest values. Examples:
+  - `h1lib` `c1925c…`, `sampling_r0` `e328…`, `descendant_world` `8ede…`;
+  - `generation_paths` `f6d7…`, `native-worker` `14f71dd…`;
+  - all 13 inputs and both external package `.so` files.
+- **Replay inputs:** `browser.json` (`49ebc8b1…`) and `qualification-input.json` (`e62d6986…`) are exact copies from `application-gate-r0`.
+  - Also hashed: 24 binary payloads and 16 geometry-stem files.
+  - The post-audit flags `pass:true, failure:''` are preserved and labelled as the old reporting defect, not as evidence.
+- **Replay result:** pass with no error in 1.783 s, covering 11 entries, 30 contacts, 857 checked frames and 53 stationary waiting frames, with a maximum step of 0.000531 m.
+  - **Entries:** all have 27 air samples. Recorded clearances are 0.7 (the `near()` search cap), null for empty-air regions, and one value of 0.529, all at or above the 0.5 body radius.
+  - **Contacts:** all are fine-scale. The minimum prefix is at least 0.5000002, stop clearance about 0.50100, the mathematical crossing 0.0003125 body units, and motion error 0.
+- **Fixture consistency:** the fine reference fixture `reference/fine-control.npz` (`85f26916…`) is byte-identical to this run's `job-10/mesh-region10-r0.npz`. That is consistent with the earlier exact same-host fine buffer match.
+
+## Notes for the report (not blockers)
+1. **The 30 contacts are not 30 independent samples.** 28 have identical values, from repeated blocked frames pressing against the same fine wall, so there are about three distinct contact configurations. Report the count as recorded contacts, not as distinct coverage.
+2. **The 0.7 clearances are the search cap.** They mean no triangle lies within the mask, not a measured 0.7 clearance. Existing semantics, unchanged.
+3. **Process miss:** keep the original one-gate plan recorded as missed, and report the costs of r1 and r2 together.
+
+## Conditions for the one fresh gate
+1. **Pin and record.** Run exactly 3d95d79 with fresh `atlas-md2a/` trailing-slash roots and the explicit cold-cache and performance report directories. Record source and certificate digests, and confirm the certificate sources key is unchanged (`fnv1a64:13ad585ee91d5b57`).
+2. **Full gate, no reuse.** All 28 entries must pass within 45 minutes, with no rerun or repair allowance. The `space-prepared` entry must run its own fresh qualification, buffer audit and flight audit; the replay does not substitute for them.
+3. **Report every criterion separately:** FPS, navigation p99 and maximum, readiness, unverified 1 GiB attribution, physical cleanup, ports and lock. Standing misses may remain, with no new targets.
+4. **Stop on failure.** Any failure stops acceptance and returns to review with partial findings.
+
+## Scope
+**Read in full:** `owner-report.md`, `source-manifest.json`, `audit-replay-summary-r0.json` and `static-corrected-r0.json`.
+
+**Partial read:** `pc2-audit.py`, a grep of lines 13, 14 and 19.
+
+**Not read:**
+- `tests/space-prepared.mjs` and `check-import.py` in this packet (I compared only their hashes against the proposal I reviewed earlier);
+- `audit-replay-closure-r0.json`;
+- the R2 amendment and the review-copy docs.
+
+No images were supplied. I executed nothing and edited nothing.
+
+---
+
+## Codex — MD2.A1 ownership closure, corrected fresh gate and full scorecard
+*2026-10-30 16:54:54 PDT*
+
+MD2.A1 functional ownership closure at measured source/test/certificate head 3d95d7978c38760581f9d2b748eeb9573514570b, base af72dbe. Completed independent card/source and separately adopted r2 repair/replay reviews are preserved with reading limits. Fresh full headed hardware gate: 28/28 pass, 2026-10-30T23:20:52.980Z–23:53:08.085Z, 32.25175 minutes. Physical host cleanup confirms all checked PIDs absent, ports5190/5196/5197/5198/5199/5200/proxy40155 closed and lockfree. Five actual native cases exactly match same-host binary controls; 36 actual source/package/input digests match; source key13ad585ee91d5b57 matches installed certificate. New actual flight audit:11 entries/30 recorded contacts/854 frames pass. The earlier27/28 failed gate and exact-data replay remain distinct, never relabelled as a full pass. I introduced the relocation comment that swallowed the audit import; corrected under reviewed r2 without changing generation, inputs, tolerances, motion or assertions. Original one-gate/process-time plan missed; aggregate gates66.03min plus preflight/replay/review/reporting. R2 source/CPU≤3.17min, hardware/evidence through archive≤39.82min. Guarded units1357/86files and build pass. Actual route49.968FPS overall/49.877duringprep, navigationp994.100ms(miss2ms)/max4.700ms(pass8ms), readinessmedian.782s/max2.155s(miss1s);1GiB region attributionunverified. Save/reopen/history/session/device/worker/native-restart controls pass; old scene bytes/world/pose compatibility retained. Owner inspected actual recovered/restarted PNGs: visible expected Landscape and shell, no blank rendering; no artistic acceptance criterion. This only owns runtime/fixtures, not canonical-input creation or generalized world recipes. Current recipe is code+parameters+required assets supplied locally by native helper; JSONrecord alone is incomplete. Next after advisor merge is A2 input-creation/complete-recipe design/card, then Plane/multiple-source workflow, with no new production architecture selected. Final changes after measured head are docs/evidence only. Full scorecard: docs/reports/project1-interactive/MD2A1-GENERATION-OWNERSHIP-2026-10-30.md.
+

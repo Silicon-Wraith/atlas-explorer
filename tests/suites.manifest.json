@@ -232,6 +232,26 @@
         "Recovery and restarted delivered geometry pass finite buffer and actual-motion audits",
         "Recovery workflow confirms all owned native browser worker and GPU cleanup"
       ]
+    },
+    {
+      "id": "generation-ownership",
+      "gpu": true,
+      "timeoutMs": 300000,
+      "command": [
+        "tests/generation-ownership.mjs"
+      ],
+      "report": "artifacts/generation-ownership-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "Owned generation uses the recorded native CUDA hardware and frozen legacy world",
+        "Actual first-party modules and registered inputs are repository-owned with distinct mesh modules",
+        "Legacy or mismatched source certificates remain rejected",
+        "Fresh home new3D corner fine and view buffers exactly match preserved same-host controls",
+        "Opposite order resident reuse and actual rebuild preserve current representation and geometry",
+        "Stale producer epochs are rejected and all migration publications retire",
+        "Relocated mathematical references qualify all actual coarse fine and view source policies",
+        "Native ownership control confirms process cleanup and preserves source-qualified evidence"
+      ]
     }
   ],
   "diagnostics": [

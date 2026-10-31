@@ -10,3 +10,10 @@ test('all prepared suites accept the exact BI1.C evidence namespace without admi
  assert.equal(preparedRunRoot('/mnt/ml_storage/scratch/atlas-pc3/run','application'),'/mnt/ml_storage/scratch/atlas-pc3/run');
  assert.throws(()=>preparedRunRoot('/mnt/ml_storage/scratch/atlas-pc3/run','recovery'));
 });
+
+test('MD2.A ownership and maintained suites reject escaped and look-alike evidence roots',()=>{
+ for(const role of ['application','session','files','http','recovery','generation']){
+  assert.equal(preparedRunRoot('/mnt/ml_storage/scratch/atlas-md2a/run',role),'/mnt/ml_storage/scratch/atlas-md2a/run');
+  for(const root of ['/mnt/ml_storage/scratch/atlas-md2ax/run','/mnt/ml_storage/scratch/atlas-md2a/../outside','/tmp/atlas-md2a/run'])assert.throws(()=>preparedRunRoot(root,role));
+ }
+});

@@ -1,3 +1,4 @@
+import { GENERATION_BUNDLE, GENERATION_CERTIFICATE } from '../generation/config.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -11,7 +12,7 @@ async function readJson(req) {
   return JSON.parse(text);
 }
 
-export async function createPc2Server({ runRoot, port = 5280, bundle = '/mnt/ml_storage/scratch/atlas-bw1-runtime-r1', certificatePath = '/mnt/ml_storage/scratch/atlas-pc2/native-smoke-r0/policy-certificate.json' }) {
+export async function createPc2Server({ runRoot, port = 5280, bundle = GENERATION_BUNDLE, certificatePath = process.env.ATLAS_GENERATION_CERTIFICATE ?? GENERATION_CERTIFICATE }) {
   const events = []; let adapter, server, delayUntil = 0;
   const event = value => events.push({ time: Date.now(), ...value });
   try {

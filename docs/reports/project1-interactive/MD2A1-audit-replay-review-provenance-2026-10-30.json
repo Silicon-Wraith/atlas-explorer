@@ -1,0 +1,112 @@
+{
+  "run_id": "20261030T231658Z-2bf308",
+  "artifacts": "/mnt/ml_storage/scratch/codex-bridge/claude-runs/20261030T231658Z-2bf308",
+  "log_error": null,
+  "result": {
+    "structured": null,
+    "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+    "observed_model": "claude-opus-5-5",
+    "cli_version": "2.1.314",
+    "usage": {
+      "input_tokens": 112200853,
+      "output_tokens": 452553,
+      "cache_read_tokens": 104261449,
+      "cache_write_tokens": 6973552,
+      "reasoning_tokens": 261771,
+      "total_tokens": 112653406
+    },
+    "cost_usd": 89.5366149,
+    "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+  },
+  "bridgeProvenance": {
+    "run_id": "20261030T231658Z-2bf308",
+    "started_at": "2026-10-30T23:16:58+00:00",
+    "cwd": "/mnt/ml_storage/scratch",
+    "context": [
+      {
+        "path": "atlas-md2a/audit-replay-review-r0/owner-report.md",
+        "sha256": "bd08a127ac5d940a6780c8a6be4dcfacc121c15525d0ca2fc25409f3d7473647"
+      },
+      {
+        "path": "atlas-md2a/audit-replay-review-r0/source-manifest.json",
+        "sha256": "b896c521ffa875934ba4deaefe8c2100d2660ab3853860f2cfd7cd815511ee4c"
+      },
+      {
+        "path": "atlas-md2a/audit-replay-review-r0/audit-replay-summary-r0.json",
+        "sha256": "be0252cc1ffbb4d14bc2b68415ed71f2a1bf7cf5d8786fd20eb59b4753ce2309"
+      },
+      {
+        "path": "atlas-md2a/audit-replay-review-r0/scripts/experiments/pc2-audit.py",
+        "sha256": "279b285f9655c235b9bf4e92d04b6091ce37efafcd4351ad793210b60a766990"
+      },
+      {
+        "path": "atlas-md2a/audit-replay-review-r0/static-corrected-r0.json",
+        "sha256": "b6b14ad5c63aa00525c2ea1489c8826f5acefa53719699bfaf6ffc6e413ab68f"
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "effort": "medium",
+    "permission_mode": "plan",
+    "tools": [
+      "Read",
+      "Grep",
+      "Glob"
+    ],
+    "max_turns": 24,
+    "timeout_s": 900.0,
+    "idle_timeout_s": 300.0,
+    "resumed_session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+    "finished_at": "2026-10-30T23:17:28+00:00",
+    "result": {
+      "text": "# MD2.A1 r2 replay review (audit-replay-review-r0, head 3d95d79)\n\n**Verdict:** the r2 correction and the replay of the unchanged data support running one fresh 28-entry headed gate on 3d95d79 with the current certificate. I found no blocker. This closes only the missing flight-trace validation. The r1 gate stays failed at 27/28, and nothing from it carries into the new gate.\n\n## Checked\n- **Corrected code:** `pc2-audit.py` line 13 is now the comment alone, and line 14 is `from check_collision_r0 import distances`. Its hash `279b285f\u2026` matches both `source-manifest.json` and the replay summary's `correctedAuditSha256`. The original hash `d4fbf67b\u2026` is recorded separately.\n- **What changed from 659:** three files that are not documentation: `pc2-audit.py`, `tests/space-prepared.mjs` (`c29e55b0\u2026`) and `check-import.py` (`66ca95d2\u2026`).\n- **Prevention** (`static-corrected-r0.json`): the import binding check passes, and the negative control with a swallowed import is rejected. The earlier ownership checks still pass: exact allowed edits, ambient read removed, scratch reads rejected and checkout writes rejected. None of these import GPU modules.\n- **Unchanged native sources:** all 36 verified digests in the summary equal the earlier MD2.A1 manifest values. Examples:\n  - `h1lib` `c1925c\u2026`, `sampling_r0` `e328\u2026`, `descendant_world` `8ede\u2026`;\n  - `generation_paths` `f6d7\u2026`, `native-worker` `14f71dd\u2026`;\n  - all 13 inputs and both external package `.so` files.\n- **Replay inputs:** `browser.json` (`49ebc8b1\u2026`) and `qualification-input.json` (`e62d6986\u2026`) are exact copies from `application-gate-r0`.\n  - Also hashed: 24 binary payloads and 16 geometry-stem files.\n  - The post-audit flags `pass:true, failure:''` are preserved and labelled as the old reporting defect, not as evidence.\n- **Replay result:** pass with no error in 1.783 s, covering 11 entries, 30 contacts, 857 checked frames and 53 stationary waiting frames, with a maximum step of 0.000531 m.\n  - **Entries:** all have 27 air samples. Recorded clearances are 0.7 (the `near()` search cap), null for empty-air regions, and one value of 0.529, all at or above the 0.5 body radius.\n  - **Contacts:** all are fine-scale. The minimum prefix is at least 0.5000002, stop clearance about 0.50100, the mathematical crossing 0.0003125 body units, and motion error 0.\n- **Fixture consistency:** the fine reference fixture `reference/fine-control.npz` (`85f26916\u2026`) is byte-identical to this run's `job-10/mesh-region10-r0.npz`. That is consistent with the earlier exact same-host fine buffer match.\n\n## Notes for the report (not blockers)\n1. **The 30 contacts are not 30 independent samples.** 28 have identical values, from repeated blocked frames pressing against the same fine wall, so there are about three distinct contact configurations. Report the count as recorded contacts, not as distinct coverage.\n2. **The 0.7 clearances are the search cap.** They mean no triangle lies within the mask, not a measured 0.7 clearance. Existing semantics, unchanged.\n3. **Process miss:** keep the original one-gate plan recorded as missed, and report the costs of r1 and r2 together.\n\n## Conditions for the one fresh gate\n1. **Pin and record.** Run exactly 3d95d79 with fresh `atlas-md2a/` trailing-slash roots and the explicit cold-cache and performance report directories. Record source and certificate digests, and confirm the certificate sources key is unchanged (`fnv1a64:13ad585ee91d5b57`).\n2. **Full gate, no reuse.** All 28 entries must pass within 45 minutes, with no rerun or repair allowance. The `space-prepared` entry must run its own fresh qualification, buffer audit and flight audit; the replay does not substitute for them.\n3. **Report every criterion separately:** FPS, navigation p99 and maximum, readiness, unverified 1 GiB attribution, physical cleanup, ports and lock. Standing misses may remain, with no new targets.\n4. **Stop on failure.** Any failure stops acceptance and returns to review with partial findings.\n\n## Scope\n**Read in full:** `owner-report.md`, `source-manifest.json`, `audit-replay-summary-r0.json` and `static-corrected-r0.json`.\n\n**Partial read:** `pc2-audit.py`, a grep of lines 13, 14 and 19.\n\n**Not read:**\n- `tests/space-prepared.mjs` and `check-import.py` in this packet (I compared only their hashes against the proposal I reviewed earlier);\n- `audit-replay-closure-r0.json`;\n- the R2 amendment and the review-copy docs.\n\nNo images were supplied. I executed nothing and edited nothing.",
+      "structured": null,
+      "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+      "observed_model": "claude-opus-5-5",
+      "cli_version": "2.1.314",
+      "usage": {
+        "input_tokens": 112200853,
+        "output_tokens": 452553,
+        "cache_read_tokens": 104261449,
+        "cache_write_tokens": 6973552,
+        "reasoning_tokens": 261771,
+        "total_tokens": 112653406
+      },
+      "cost_usd": 89.5366149,
+      "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+    }
+  },
+  "packetManifest": {
+    "head": "3d95d7978c38760581f9d2b748eeb9573514570b",
+    "failedGateHead": "65942d841db2ee0a78d211b09269f8edd50f23f7",
+    "files": {
+      "scripts/experiments/pc2-audit.py": "279b285f9655c235b9bf4e92d04b6091ce37efafcd4351ad793210b60a766990",
+      "tests/space-prepared.mjs": "c29e55b09220e214c1b7f37af37f2cd0458b99600a0300991d081677c7205c95",
+      "scripts/generation/check-import.py": "66ca95d267122bca89aa12641c9b5caafa02e66dceb5ad1417d85d372b029db0",
+      "docs/reports/project1-interactive/MD2A1-CARD-AMENDMENT-R2-2026-10-30.md": "f6999f56870a4f21abe4307c3ccf0da6bc622bd30161662d418c4c6b8ef0d6fc",
+      "docs/reports/project1-interactive/MD2A1-CLAUDE-AUDIT-REPAIR-REVIEW-2026-10-30.md": "50b19599860d633068166d8465588b848fee59cc7b7beb88c1593cb2dd3efc09",
+      "audit-replay-summary-r0.json": "be0252cc1ffbb4d14bc2b68415ed71f2a1bf7cf5d8786fd20eb59b4753ce2309",
+      "audit-replay-closure-r0.json": "01f15cca304a0b4509a074f296e7467129aca699961628a1ac83ac787a1bee7e",
+      "static-corrected-r0.json": "b6b14ad5c63aa00525c2ea1489c8826f5acefa53719699bfaf6ffc6e413ab68f"
+    }
+  },
+  "scope": {
+    "full": [
+      "owner report",
+      "source manifest",
+      "unchanged-data replay summary",
+      "corrected static controls"
+    ],
+    "partial": [
+      "auditor import/use lines 13, 14, 19"
+    ],
+    "notRead": [
+      "test/guard bodies in this packet; hashes compared to earlier proposal",
+      "replay closure",
+      "r2 amendment/review-copy docs"
+    ],
+    "executed": false,
+    "edited": false,
+    "imagesSupplied": false,
+    "usageCaveat": "Resumed-session CLI counters are cumulative, not review-attributable."
+  }
+}

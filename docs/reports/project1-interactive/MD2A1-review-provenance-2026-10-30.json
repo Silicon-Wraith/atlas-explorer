@@ -1,0 +1,193 @@
+{
+  "run_id": "20261030T222839Z-0908a2",
+  "artifacts": "/mnt/ml_storage/scratch/codex-bridge/claude-runs/20261030T222839Z-0908a2",
+  "log_error": null,
+  "result": {
+    "structured": null,
+    "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+    "observed_model": "claude-opus-5-5",
+    "cli_version": "2.1.314",
+    "usage": {
+      "input_tokens": 107621777,
+      "output_tokens": 443810,
+      "cache_read_tokens": 99720232,
+      "cache_write_tokens": 6935715,
+      "reasoning_tokens": 258844,
+      "total_tokens": 108065587
+    },
+    "cost_usd": 88.15072750000002,
+    "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+  },
+  "bridgeProvenance": {
+    "run_id": "20261030T222839Z-0908a2",
+    "started_at": "2026-10-30T22:28:39+00:00",
+    "cwd": "/mnt/ml_storage/scratch",
+    "context": [
+      {
+        "path": "atlas-md2a/evidence-review-r0/owner-report.md",
+        "sha256": "45763ddb2e8add901a25126a226e63c79c7961176f9d9611bfdf5bb7e447a9d2"
+      },
+      {
+        "path": "atlas-md2a/evidence-review-r0/source-manifest.json",
+        "sha256": "33b3b6c330e1de942fb083dbff015c7ac7d3d33eeff87150d4bf73b29fd9865b"
+      },
+      {
+        "path": "atlas-md2a/evidence-review-r0/docs/reports/project1-interactive/MD2A1-CARD-AMENDMENT-2026-10-30.md",
+        "sha256": "16e21a85627d0b34fb69f01728f2243a0019fdf269a9ffb87a9e7e757414307e"
+      },
+      {
+        "path": "atlas-md2a/evidence-review-r0/docs/reports/project1-interactive/MD2A1-PREFLIGHT-2026-10-30.json",
+        "sha256": "6e426e6749628cfe562397b47ab0bd3cc76fc6660f62abe15395581939949f0f"
+      }
+    ],
+    "model": "claude-opus-5-5",
+    "effort": "medium",
+    "permission_mode": "plan",
+    "tools": [
+      "Read",
+      "Grep",
+      "Glob"
+    ],
+    "max_turns": 24,
+    "timeout_s": 900.0,
+    "idle_timeout_s": 300.0,
+    "resumed_session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+    "finished_at": "2026-10-30T22:29:42+00:00",
+    "result": {
+      "text": "# MD2.A1 evidence and source review (evidence-review-r0, head 65942d8)\n\n**Verdict:** the evidence supports the bounded A1 ownership slice, and I found no material blocker. The relocation follows the r1 amendments:\n- the frozen legacy world is checked against archived original bytes;\n- every adapted module is rebuilt from its original by an exact allowlisted edit ledger;\n- the module and input registry is recorded;\n- the three graph modules stay distinct;\n- all five geometry buffers match the preserved same-host controls bit for bit.\n\nThe one repair was mechanical and properly preserved. Acceptance still depends on the final 28-entry headed gate and its full scorecard. There is no browser, visual or performance claim yet.\n\n## Checked in source\n- **Edit ledger** (`generation_paths.validate_inputs`, lines 45\u201378):\n  - For each adapted module it hashes the archived original and requires every listed `before` string to occur exactly once.\n  - It applies the replacements and requires the result to equal the current file byte for byte, matching its recorded hash.\n  - Constants and CUDA strings are covered as well as function bodies.\n  - Unchanged modules keep their original hashes: `dek`, `fkern`, `pert`, `region_class` and `check_collision_r0` (manifest lines 34\u201342 against 55\u201361).\n- **Legacy binding:**\n  - `legacy-world.json` is a repository input with the literal ID `H1C-surface-child@ee2564d40bda7ef6` (line 73).\n  - The six role digests are checked against `construction.json`, `base.npz` and `frame.json` and the archived originals of `sampling_r0`, `h1lib` and `descendant_world` (lines 67\u201377).\n  - The worker emits that frozen definition (line 56). Executable digests travel separately in `sources` and `sourceFiles` (lines 38\u201344 and 58), so no old digest stands in for adapted code.\n- **Inputs:**\n  - The data root must sit inside the repository's `generation` directory (lines 8\u201310).\n  - Every asset must be declared in the manifest (lines 17\u201322) and match its digest (lines 63\u201366).\n  - The 13 inputs, including `levels.json`, `gs.json`, the fixtures, `parent-reference` and the reference control mesh, are all repository files (manifest lines 66\u201379).\n- **No scratch paths remain:** in the adapted native modules, the only remaining `/mnt/` paths are the output-root check and the configured package directory (`generation_paths` lines 30 and 37). `sys.path` additions are limited to the package directory and the repository code (lines 40\u201341). The removal of the ambient `child.json` read is recorded as passing (`staticImport.ambientReadRemoved`).\n- **Module identity** (`native-worker.py`):\n  - The three graph objects are distinct and backed by one file (lines 33\u201335).\n  - Interaction caches are shared and view caches disabled, both asserted (lines 36\u201337).\n  - Module rows and read inputs are recorded in the hello message (line 60).\n  - The preflight lists 20 names, including `adaptive_graph_pr3`, `bw1_adaptive_graph`, `bw1_view_graph`, `dek` and `field_fidelity_r0`.\n- **I/O guard** (lines 81\u2013110): an audit hook refuses reads from the four original scratch source roots, writes or mutations inside the checkout, and unregistered data reads. It also suppresses bytecode writing.\n- **Preflight** (`MD2A1-native-preflight` checks, lines 828\u2013837): 8/8 pass.\n  - The legacy and mismatched certificates are rejected.\n  - Home, new 3D region, corner, fine and view buffers exactly match the same-host controls.\n  - Opposite order, reuse, rebuild and stale-epoch checks pass, and every publication retires.\n  - Qualification passes for all coarse, fine and view policies. The new certificate's sources key is `fnv1a64:13ad585ee91d5b57`.\n- **CPU and build:** 1,357 units in 86 files pass, the build passes, and the 8 + 9 HTTP controls pass. A negative test shows that a root outside the allowed prefix is rejected before its directory is created.\n\n## The mechanical repair\n- **What failed:** the first preflight hit `RuntimeError: dictionary changed size during iteration` at `generation_paths.py` line 114, during provenance enumeration and before any job ran. The controller confirmed process exit and cleanup, and an external check found both PIDs absent and the lock free.\n- **The fix:** iterate over `list(sys.modules.items())`, plus a standard-library control that mutates the module table from inside `__getattr__`. It is outcome-independent and unrelated to mathematics.\n- **Harness correction:** recording the controller's cleanup after a constructor failure fixes a reporting omission (`cleanup:false`); it changes nothing in the product.\n- **Preservation:** the original failed attempt remains unchanged.\n\n## Non-blocking hardening (report as limits or follow-ups)\n1. **Two checks are denylists, not allowlists.**\n   - The I/O guard refuses only the four named original scratch roots (line 88).\n   - `owned_provenance` lists only modules whose files are under the repository code directory (lines 114\u2013115). It would not reveal a first-party module loaded from some other scratch path.\n   - The static result that no scratch import paths remain in the adapted code, together with exact buffer equality, makes such a module unlikely. A stronger form would be:\n     - allow reads only from the repository, the output root, the configured package directory, the interpreter prefix and the CUDA/CuPy caches;\n     - assert that every `sys.modules` file falls into one of those locations.\n   - State the current check as covering known roots only.\n2. **`policy-certificate.json`** is readable without being registered as an input (line 102). It is bound separately by its sources key, which is acceptable; say so.\n3. **Default package directory:** it remains a scratch toolchain path. That is an external install, so it must be documented as setup, not as owned source.\n\n## Honest scope (agreed)\n- A1 owns the runtime and its fixtures, and recomputes regions fresh.\n- A1 does not regenerate canonical parent inputs, provide general recipes, support multiple worlds, add new detail or choose a production backend.\n- The legacy six-asset record has a closure gap: `levels.json`, `dek`, `pert`, `fkern` and `gs.json` are not bound by it, though they are now preserved and in provenance. A2 recipes must bind them.\n- The direct CPU reference is independent of RTIN and Manifold meshing only. It shares the rule and evaluator code with the runtime.\n- One historical unknown-to-zero sample in `base.npz` is kept as fixture provenance.\n- Carried limits: the sparse forward reference, standing performance, memory, roll and driver limits, and global geometry completeness.\n\n## Scope\n**Read in full:** `owner-report.md`, the card amendment, `source-manifest.json`, `generation_paths.py` and `MD2A1-PREFLIGHT` lines 1\u201399.\n\n**Partial reads and greps:**\n- `native-worker.py`: lines 1\u201390\n- the adapted native directory: grep for scratch paths and `sys.path`\n- `MD2A1-native-preflight`: greps for checks and module names\n\n**Not read:**\n- `import-manifest.json` contents (the edit strings themselves);\n- the adapted module bodies other than by grep, and `check-import.py`;\n- the application server, native adapter and native controller diffs;\n- `pc2-qualify.py`, `pc2-qualification-input.mjs` and the other experiment scripts;\n- `tests/generation-ownership.mjs` and the unit tests;\n- `legacy-world.json`, the certificate and buffer-control JSON;\n- the source-audit and review-provenance JSON, and the docs and README.\n\nNo images were supplied. I executed nothing and edited nothing.",
+      "structured": null,
+      "session_id": "e499bd58-582a-4b1a-8454-fc81aa7352a0",
+      "observed_model": "claude-opus-5-5",
+      "cli_version": "2.1.314",
+      "usage": {
+        "input_tokens": 107621777,
+        "output_tokens": 443810,
+        "cache_read_tokens": 99720232,
+        "cache_write_tokens": 6935715,
+        "reasoning_tokens": 258844,
+        "total_tokens": 108065587
+      },
+      "cost_usd": 88.15072750000002,
+      "fingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0"
+    }
+  },
+  "packetManifest": {
+    "base": "af72dbeb9fc0d2ce5bf399bac0cb33bbdaba694c",
+    "head": "65942d841db2ee0a78d211b09269f8edd50f23f7",
+    "files": {
+      "HANDOFF.md": "60bfacdd2f1593d4a29a734bbe44c5c1e7ab456a0a02060a3e6f1a796049a2ee",
+      "docs/reports/project1-interactive/CODEX-RESTART-CHECKPOINT-2026-10-28.md": "fad5f5140fe4b2b4c64a7f7975732f00437446f4ff88b1837c815d6d92394d3a",
+      "docs/reports/project1-interactive/MD2A1-CARD-2026-10-30.md": "93961bca4644199a961bd78e59d80b4a41d1e11899b9ca40b6accdaf3bda9ac6",
+      "docs/reports/project1-interactive/MD2A1-CARD-AMENDMENT-2026-10-30.md": "16e21a85627d0b34fb69f01728f2243a0019fdf269a9ffb87a9e7e757414307e",
+      "docs/reports/project1-interactive/MD2A1-CLAUDE-CARD-REVIEW-2026-10-30.md": "3bf9be0fabafaaf069c86459939a921652b5213abbb60c3e4239425c814301d0",
+      "docs/reports/project1-interactive/MD2A1-PREFLIGHT-2026-10-30.json": "6e426e6749628cfe562397b47ab0bd3cc76fc6660f62abe15395581939949f0f",
+      "docs/reports/project1-interactive/MD2A1-card-review-provenance-2026-10-30.json": "1105f410ab42affbfdf36eee3a8e2d84054e9015af930a7f7668b4ac4b027183",
+      "docs/reports/project1-interactive/MD2A1-native-preflight-2026-10-30.json": "1c899860d05619c5c9383b79062de515ca2aea243252cf398fd00a1ffbdadd47",
+      "docs/reports/project1-interactive/MD2A1-source-audit-2026-10-30.json": "aae1d54f4edbcd0fd13f8e07b1f8e10c2a2cd48102954887505db9d44739eafb",
+      "docs/reports/project1-interactive/README.md": "6492afa9d5045833f0fb4637d7e517c80ca018439566864e8afbc0d07063cd56",
+      "docs/superpowers/plans/2026-10-29-atlas-browser-world-move-forward.md": "43b1a4e90d27f29d7c683f8ea3464b7d590cb9970e2ed5807dc24516104776a8",
+      "docs/superpowers/plans/2026-10-30-atlas-md2a1-implementation.md": "a5a1d8ad1d0c7ba8122f5b8c7100cdfa5895b07a1f946515183af66fdf0f8399",
+      "docs/superpowers/plans/2026-10-30-atlas-world-generation-foundation.md": "aeeb11ae9f9119315ee4aa8abb13c60823154c31d1a9cfbdaa51f0099fe713aa",
+      "docs/superpowers/specs/2026-10-30-atlas-md2a1-generation-ownership.md": "08ef76f66eaa50f598af3ea0fe08cadd6e6abbebbe7ad6645dfe312fede3e889",
+      "scripts/experiments/pc2-audit.py": "d4fbf67bf18065c8f7bfdae6237c11e484b3cb9b76f34a98edd45eb5b3fbc9db",
+      "scripts/experiments/pc2-native-smoke.mjs": "49311a717f2a812031c404434e4d3bd97881ffc356d9d1267aa2803cbba12f93",
+      "scripts/experiments/pc2-qualification-input.mjs": "6970854e8328ce3e34e6820e0ece0b0c897887733b27cf73b76fb5a95e2bd74b",
+      "scripts/experiments/pc2-qualify.py": "9ea82c92b44607a7983a3f63c8a5f1074ccaf2421854ed8f609b7c89980bc830",
+      "scripts/experiments/pc2-reconstruction.mjs": "5d9b0f888e22f6775e36a545bf1801bd24fcdb3e303d62d974db365c2c34bdd9",
+      "scripts/generation/README.md": "55a5d8900e5cacbaf32885925e50f27d479f4f6d878d58ca58a8b1276c39b3a3",
+      "scripts/generation/check-import.py": "22f22b66447f1f97520cc38737005c5d862dab57dfed416d7a2b2f3e807d14b6",
+      "scripts/generation/config.mjs": "4727af9664943171c605be6ba72452f9ef0533ebf93a6510209f954f63b23a67",
+      "scripts/generation/import-manifest.json": "e94e943d384a07c3e5c75f92a10c16f4d323809d85010d619b82bfc5238574f6",
+      "scripts/generation/native/adaptive_graph_pr3.py": "83147332869f2cbd660253d38e671f8370b87abe7c5a6ee4b693ba7061578f25",
+      "scripts/generation/native/builder_bw1.py": "50763f620e526ccb6af486c84b0c25a8218598966c3adccef466edffa95047f7",
+      "scripts/generation/native/builder_view.py": "2b14ae570873f00f176bdfb69440c05ae0a713644ef44768f47a4a65de16f0bf",
+      "scripts/generation/native/cache_bw1.py": "73f0e0417124a29e138228623a3cf8658af9c4df72e1ba83d24f516f88282573",
+      "scripts/generation/native/cache_r0.py": "85a42614c61de2d9e783f01d73ae3cfbe7ed367d9223ce13de8b8cc7d04f1e17",
+      "scripts/generation/native/cache_view.py": "8c4cb50e0af6094f521c9ed04fd9c6e66568354ba93c84eac0dc7cd7274eb5da",
+      "scripts/generation/native/check_collision_r0.py": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4",
+      "scripts/generation/native/dek.py": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0",
+      "scripts/generation/native/descendant_world.py": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e",
+      "scripts/generation/native/field_fidelity_r0.py": "542bea18cf0a591e644877b5773319ac50d03303336bd32445b7ea21a4bce864",
+      "scripts/generation/native/fkern.py": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+      "scripts/generation/native/generation_paths.py": "f6d7acdc002e99be7098d79f54f56fb0efbe01093aeb8142cb26467f71e9fa4a",
+      "scripts/generation/native/h1lib.py": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124",
+      "scripts/generation/native/pert.py": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929",
+      "scripts/generation/native/region_class.py": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c",
+      "scripts/generation/native/sampling_r0.py": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598",
+      "scripts/generation/native/streaming_builder_r0.py": "554f20376b5424fc89fc7790c9158f9ed6c4e5a1fe930036e42dd9e36db41eb3",
+      "scripts/generation/native/view_grid.py": "8d00ccabaadc5a003ff6e1a5a54e62f77ef6a2697fded51eb1860aeea43fdf4c",
+      "scripts/generation/native/world_grid.py": "24ea3190cce577c03748d0f93f42aef44a4f13646b7a853e33825e53a56a392d",
+      "scripts/generation/provenance/legacy-buffer-controls.json": "56381e9cf28d4ddc93488c1637987adc9191e831cb4bd8e2b5749fa2c7f21a38",
+      "scripts/generation/provenance/original/adaptive_graph_pr3.py": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057",
+      "scripts/generation/provenance/original/builder_bw1.py": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c",
+      "scripts/generation/provenance/original/builder_view.py": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c",
+      "scripts/generation/provenance/original/cache_bw1.py": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6",
+      "scripts/generation/provenance/original/cache_r0.py": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c",
+      "scripts/generation/provenance/original/cache_view.py": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a",
+      "scripts/generation/provenance/original/check_collision_r0.py": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4",
+      "scripts/generation/provenance/original/dek.py": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0",
+      "scripts/generation/provenance/original/descendant_world.py": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e",
+      "scripts/generation/provenance/original/field_fidelity_r0.py": "6a938170e4af65778856bff847e3926bec47dd3164a760ec08b7ac8de504ab38",
+      "scripts/generation/provenance/original/fkern.py": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+      "scripts/generation/provenance/original/h1lib.py": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d",
+      "scripts/generation/provenance/original/pert.py": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929",
+      "scripts/generation/provenance/original/region_class.py": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c",
+      "scripts/generation/provenance/original/sampling_r0.py": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e",
+      "scripts/generation/provenance/original/streaming_builder_r0.py": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c",
+      "scripts/generation/provenance/original/view_grid.py": "4885fac0724ae9600bee99d5c652b0d51045ba62aa4eaa9fce5d19e4b655c67b",
+      "scripts/generation/provenance/original/world_grid.py": "a7cc55fce61c52c41e14636434270fe9ec603bde467ca00bfd41f50012f1f43e",
+      "scripts/generation/regression-world/approach-r1.json": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d",
+      "scripts/generation/regression-world/base.npz": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b",
+      "scripts/generation/regression-world/construction.json": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3",
+      "scripts/generation/regression-world/cpu-screen-r0.json": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a",
+      "scripts/generation/regression-world/feature-r0.json": "87b1a6e303758f7e767e460c6d121d43db9382fa31ec47571be25d8a7b75eca6",
+      "scripts/generation/regression-world/frame.json": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec",
+      "scripts/generation/regression-world/gs.json": "31f88d35160d4d56bb0937f45e0cfc6568210db0a8f93b7f2fe1340314a1d202",
+      "scripts/generation/regression-world/legacy-world.json": "22f4200e40b0bc5fe36fe5a310bca2b3cdf8a063128742b6ebc1323d6718a879",
+      "scripts/generation/regression-world/levels.json": "1b28cf656f304f20e0b6d46e0177841549223f96a9f498ba5068af6730b326e1",
+      "scripts/generation/regression-world/policy-certificate.json": "94fc27f682b28f97f8f220a6c97ae6295807e0d8a8a27aa2a88cc8d694a431ce",
+      "scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.json": "e41e0ba46548b4dbe95cd2e3685e98138a255ef51045679614d18a81c8cf28eb",
+      "scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.npz": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd",
+      "scripts/generation/regression-world/prepared-static-r0/fixtures-r0.json": "e91c31daa47989603689179dca4d44a0799d3abbde476fcef29f0c4162b3096f",
+      "scripts/generation/regression-world/reference/fine-control.npz": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877",
+      "scripts/preparation/application-server.mjs": "0d1e3dfca24d967c7a4bfd11d9ba602cf4d2cfbefc167bd25be05f15df8b8b1f",
+      "scripts/preparation/native-adapter.mjs": "b6cc5df17520063efde7dc5e1264bd985f0cf895abe0cdda134fb87bf012ada1",
+      "scripts/preparation/native-controller.mjs": "bde521e5cbd6eeaf828af335e9e79c07d843e163ceb0770dc75f44b87790d70d",
+      "scripts/preparation/native-worker.py": "14f71dda70a8e553e924959f9e0b1d475344c1bc25568920e6f274391a8a7166",
+      "scripts/preparation/pc2-server.mjs": "7116a46d4ae90eaa443da6f78d76902ff682f03b8f3680f5e0fc9d05ad770718",
+      "tests/generation-ownership.mjs": "958bd656b2cbe51226f58965ff12d3b71011d8b231139ca1f1f44047ee9fdc76",
+      "tests/suites.manifest.json": "3365078aeebcd0c9676bebb87361162123732965f83a332a367841ed0d8e4998",
+      "tests/support/prepared-run-root.mjs": "ad2be46988edd2b78da7b5aec38ecf9f14a2aca95f292a9aabb174c381d259af",
+      "tests/unit.manifest.json": "b67bb5aa055179c7062ba45e02c57b0b5efa2ff2360d5c0c79df806c08080a3a",
+      "tests/unit/generation-config.test.js": "118602ff7bcb1ca03812b2fbda4ae09ebfb09810dad611c08ac4614cc291f692",
+      "tests/unit/prepared-run-root.test.js": "d25048a0077e7c6953f6c0f2a6a1392f12c569ea9d28466daf20a714ae03eafe"
+    }
+  },
+  "scope": {
+    "full": [
+      "owner report",
+      "adopted r1 card",
+      "source manifest",
+      "generation_paths.py",
+      "preflight lines 1\u201399"
+    ],
+    "partial": [
+      "native-worker lines 1\u201390",
+      "adapted native path/sys.path grep",
+      "native preflight checks/module-name grep"
+    ],
+    "notRead": [
+      "import-manifest edit strings",
+      "most adapted native bodies/check-import",
+      "adapter/controller/server diffs",
+      "qualification/input mapper/experiment diffs",
+      "new GPU suite and unit bodies",
+      "legacy-world/certificate/buffer-control JSON",
+      "docs and README"
+    ],
+    "executed": false,
+    "edited": false,
+    "usageCaveat": "Resumed-session CLI token/cost counters are cumulative; not attributable to this review alone.",
+    "imagesSupplied": false
+  }
+}

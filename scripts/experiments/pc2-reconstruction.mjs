@@ -1,3 +1,4 @@
+import { GENERATION_ROOT } from '../generation/config.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -8,13 +9,13 @@ if(!process.env.ATLAS_GPU_HANDOFF||process.env.ATLAS_GPU_DEFERRED)throw Error('H
 const root=path.resolve(process.argv[2]);if(!root.startsWith('/mnt/ml_storage/scratch/atlas-pc2/'))throw Error('Scratch required');await fs.mkdir(root);
 const report={started:Date.now(),rows:[],events:[],cleanup:false,ownedPids:[process.pid]};let adapter;
 try{
- adapter=await createNativeAdapter({bundle:'/mnt/ml_storage/scratch/atlas-bw1-runtime-r1',runRoot:root,onEvent:e=>report.events.push(e)});report.ownedPids.push(adapter.snapshot().pid);report.hello=adapter.hello();
- const original=JSON.parse(await fs.readFile('/mnt/ml_storage/scratch/atlas-pc2/native-smoke-r0/smoke.json','utf8'));const D=adapter.grid.config.diameter;
- let sequence=0;
+ adapter=await createNativeAdapter({runRoot:root,onEvent:e=>report.events.push(e)});report.ownedPids.push(adapter.snapshot().pid);report.hello=adapter.hello();
+ const original=JSON.parse(await fs.readFile(path.join(GENERATION_ROOT,'provenance/legacy-buffer-controls.json'),'utf8'));const D=adapter.grid.config.diameter;
+ let sequence=0;const currentKeys=new Map();
  const request=async(kind,retire=true)=>{
   const body=kind==='fine'?D/4:D,q=createPreparationRequest({schema:'atlas.preparation.request',schemaVersion:1,identity:{runtimeId:'pc2-reconstruction',epoch:0,requestId:'r'+ ++sequence},producer:adapter.producer(),world:worldReference(adapter.world),bounds:kind==='fine'?adapter.fineBounds:adapter.grid.bounds([0,0,0]),intent:'interaction',requirements:{maxErrorM:.01*body,bodyDiameterM:body}});
   const output=await adapter.prepare(q,{qualification:true});assert.equal(output.result.status,'prepared');const artifact=output.result.artifact;
-  const control=original.rows.find(r=>r.label===(kind==='fine'?'fine-control':'home')).artifact;assert.equal(representationKey(artifact),representationKey(control));assert.deepEqual(artifact.buffers,control.buffers);
+  const control=original.rows.find(r=>r.label===(kind==='fine'?'fine-control':'home'));const key=representationKey(artifact);if(currentKeys.has(kind))assert.equal(key,currentKeys.get(kind));else currentKeys.set(kind,key);assert.deepEqual(artifact.buffers,control.buffers);
   const row={kind,cacheHit:output.cacheHit,key:representationKey(artifact),token:output.token,producer:q.producer,buffers:artifact.buffers};report.rows.push(row);if(retire)adapter.retire(output.token);return row;
  };
  // The preflight built home before fine; this fresh producer reverses that order.

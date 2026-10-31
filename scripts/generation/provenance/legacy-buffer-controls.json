@@ -1,0 +1,245 @@
+{
+  "scope": "Preserved same-host PC2 control, all five rows from the original native source. Compare delivered buffer bytes, not cross-builder representation keys.",
+  "sourceReportSha256": "e6038aa257f6543d030a6472d0804e096addf98ad97b54221a71824e94c66723",
+  "world": {
+    "assets": [
+      {
+        "role": "base-field-evaluator",
+        "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+      },
+      {
+        "role": "canonical-parent-frame",
+        "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+      },
+      {
+        "role": "canonical-parent-samples",
+        "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+      },
+      {
+        "role": "construction",
+        "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+      },
+      {
+        "role": "descendant-rule",
+        "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+      },
+      {
+        "role": "parent-field-kernel",
+        "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+      }
+    ],
+    "generator": {
+      "id": "atlas.surface-descendant",
+      "version": "surface-descendant-r1"
+    },
+    "id": "H1C-surface-child@ee2564d40bda7ef6",
+    "lineage": [
+      {
+        "id": "H1C@61bbb572d425d9ee",
+        "parent": null
+      },
+      {
+        "id": "H1C/gchild/surface-descendant-r1",
+        "parent": "H1C@61bbb572d425d9ee"
+      }
+    ],
+    "parameters": {
+      "amplitude_m": 0.0002,
+      "chart_centre": [
+        -0.029882812666932553,
+        -0.11953125059172012
+      ],
+      "half_support_m": 0.0033203125,
+      "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+      "source_scale": 64
+    },
+    "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+  },
+  "rows": [
+    {
+      "label": "home",
+      "bounds": {
+        "max": [
+          1415.0023187519364,
+          79.23743162557447,
+          1040.666612627996
+        ],
+        "min": [
+          1414.9491937519365,
+          79.18430662557448,
+          1040.6134876279962
+        ]
+      },
+      "intent": "interaction",
+      "requirements": {
+        "bodyDiameterM": 0.0265625,
+        "maxErrorM": 0.000265625
+      },
+      "buffers": [
+        {
+          "byteLength": 491688,
+          "role": "solid-indices",
+          "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+        },
+        {
+          "byteLength": 469656,
+          "role": "surface-indices",
+          "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+        },
+        {
+          "byteLength": 245868,
+          "role": "vertices",
+          "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+        }
+      ],
+      "classification": "surface"
+    },
+    {
+      "label": "new-3d",
+      "bounds": {
+        "max": [
+          1415.0037292569568,
+          79.26668737412697,
+          1040.6715187119776
+        ],
+        "min": [
+          1414.950604256957,
+          79.21356237412698,
+          1040.6183937119777
+        ]
+      },
+      "intent": "interaction",
+      "requirements": {
+        "bodyDiameterM": 0.0265625,
+        "maxErrorM": 0.000265625
+      },
+      "buffers": [
+        {
+          "byteLength": 0,
+          "role": "solid-indices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "byteLength": 0,
+          "role": "surface-indices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "byteLength": 0,
+          "role": "vertices",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "classification": "empty-air"
+    },
+    {
+      "label": "domain-corner",
+      "bounds": {
+        "max": [
+          1414.954573830562,
+          79.25357512191823,
+          1040.5481195034884
+        ],
+        "min": [
+          1414.901448830562,
+          79.20045012191824,
+          1040.4949945034884
+        ]
+      },
+      "intent": "interaction",
+      "requirements": {
+        "bodyDiameterM": 0.0265625,
+        "maxErrorM": 0.000265625
+      },
+      "buffers": [
+        {
+          "byteLength": 3147816,
+          "role": "solid-indices",
+          "sha256": "242366fb15ac5d777e7de39890149b9f425a24b6aeb5dddb79bd9a827339d0fe"
+        },
+        {
+          "byteLength": 3114096,
+          "role": "surface-indices",
+          "sha256": "92f74c4aaf2723f2f3f1a6d4845adbbdace7bfa4b8096f40a302891fb54f8067"
+        },
+        {
+          "byteLength": 1573932,
+          "role": "vertices",
+          "sha256": "d1ccdeda062475efc87b577237977c65b093528386d3cf17c25aed115a2c2350"
+        }
+      ],
+      "classification": "surface"
+    },
+    {
+      "label": "fine-control",
+      "bounds": {
+        "max": [
+          1414.982563124518,
+          79.2127661665704,
+          1040.6514222870244
+        ],
+        "min": [
+          1414.9560006245179,
+          79.18620366657039,
+          1040.6248597870242
+        ]
+      },
+      "intent": "interaction",
+      "requirements": {
+        "bodyDiameterM": 0.006640625,
+        "maxErrorM": 6.640625e-05
+      },
+      "buffers": [
+        {
+          "byteLength": 627672,
+          "role": "solid-indices",
+          "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+        },
+        {
+          "byteLength": 615300,
+          "role": "surface-indices",
+          "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6"
+        },
+        {
+          "byteLength": 313860,
+          "role": "vertices",
+          "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce"
+        }
+      ],
+      "classification": "surface"
+    },
+    {
+      "label": "view",
+      "bounds": {
+        "max": [
+          1415.0820062519365,
+          79.31711912557448,
+          1040.7463001279962
+        ],
+        "min": [
+          1414.8695062519364,
+          79.10461912557447,
+          1040.533800127996
+        ]
+      },
+      "intent": "view",
+      "requirements": {
+        "bodyDiameterM": null,
+        "maxErrorM": 0.0010625
+      },
+      "buffers": [
+        {
+          "byteLength": 2061864,
+          "role": "surface-indices",
+          "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec"
+        },
+        {
+          "byteLength": 1044864,
+          "role": "vertices",
+          "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b"
+        }
+      ],
+      "classification": "surface"
+    }
+  ]
+}

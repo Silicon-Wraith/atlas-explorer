@@ -1,0 +1,216 @@
+{
+  "schema": "atlas.plane-gate",
+  "schemaVersion": 1,
+  "startedAt": "2026-10-30T22:31:25.455Z",
+  "commit": "65942d841db2ee0a78d211b09269f8edd50f23f7",
+  "requiredIds": [
+    "unit",
+    "build",
+    "reference",
+    "browser",
+    "workflow",
+    "browser-hardware",
+    "navigation",
+    "graphics",
+    "space-coexistence",
+    "space-recovery",
+    "space-numerics",
+    "space-rendering",
+    "space-shell",
+    "space-interaction",
+    "space-performance-bulb",
+    "space-performance-quaternion",
+    "space-performance-menger",
+    "space-prewarm",
+    "performance-entry",
+    "acceptance-audit",
+    "space-prepared",
+    "preparation-session-http",
+    "space-preparation-session",
+    "space-prepared-files",
+    "preparation-recovery-http",
+    "space-prepared-recovery",
+    "generation-ownership",
+    "cleanup"
+  ],
+  "handoff": "Codex MD2.A1 reviewed final gate 2026-10-30",
+  "deferral": null,
+  "results": {
+    "unit": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "build": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "reference": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence",
+      "evidence": [
+        {
+          "name": "P1 complete matrix regeneration",
+          "state": "passed",
+          "checked": {
+            "strata": 1123,
+            "mandatory": 979,
+            "anchors": 18,
+            "shards": 18
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 379915.202157
+        },
+        {
+          "name": "P2 quaternion usability regeneration",
+          "state": "passed",
+          "checked": {
+            "rays": 14400
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 274.70418000000063
+        },
+        {
+          "name": "P3 complete workload and prediction regeneration",
+          "state": "passed",
+          "checked": {
+            "scenes": 3,
+            "orbitPoses": 5625,
+            "interactionPoses": 1200,
+            "checkpoints": 15,
+            "rays": 5529600
+          },
+          "identities": {
+            "matrixSha256": "b7c8f53d8c5116e3c30d5625c2a73e9e5df1366802ec7ad48b782e27fa1f4c3c",
+            "indexSha256": "3e68955ff7bae321cb19cbcda646860f305a514fb85021880b9db4bdc8710828",
+            "generatorSha256": "138cbdc75637ea7c96b5d5ca7664d6cad1c7a3128d65a2a896c9d61f4e0f85bd",
+            "predictionSha256": "4868da7df834734f95d40f59f785c33a90d6ab8a4f0261bee25a56d01b0632b9",
+            "workloadSha256": "47758f70dd0f7c33151976c422bc3a3b1eb0291e7af201920a82c4f7884b238d"
+          },
+          "durationMs": 38343.66398299998
+        }
+      ]
+    },
+    "performance-entry": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "acceptance-audit": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "preparation-session-http": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "preparation-recovery-http": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "browser": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "workflow": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "browser-hardware": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "navigation": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "graphics": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-coexistence": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-recovery": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-numerics": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-rendering": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-shell": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-interaction": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-performance-bulb": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-performance-quaternion": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-performance-menger": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-prewarm": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-prepared": {
+      "state": "failed",
+      "reason": "exit 1",
+      "stdoutTail": "PASS Prepared application uses the maintained headed hardware profile\nPASS Application landscape route demonstrates 3D contact scale and retained return\nPASS Rapid switches suppress stale landscape publication and input\nPASS Leaving during pending native work retires the old client before re-entry\nPASS Missing preparation falls back inside Space and preserves Plane access\nPASS Preparation endpoints reject foreign origins and private paths stay blocked\nPASS Prepared application has no runtime errors and confirms owned cleanup\n{\"root\":\"/mnt/ml_storage/scratch/atlas-md2a/application-gate-r0\",\"pass\":true,\"cleanup\":true,\"failure\":\"\"}\n",
+      "stderrTail": ""
+    },
+    "space-preparation-session": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-prepared-files": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "space-prepared-recovery": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "generation-ownership": {
+      "state": "passed",
+      "reason": "exit 0 with valid evidence"
+    },
+    "cleanup": {
+      "state": "passed",
+      "reason": "every owned process exited"
+    }
+  },
+  "notes": [],
+  "server": "confirmed",
+  "finishedAt": "2026-10-30T23:05:12.001Z",
+  "overall": {
+    "state": "failed",
+    "exitCode": 1,
+    "reason": "a required suite did not pass"
+  }
+}

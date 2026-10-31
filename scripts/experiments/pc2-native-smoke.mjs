@@ -1,3 +1,4 @@
+import { GENERATION_ROOT } from '../generation/config.mjs';
 // Bounded development smoke. All generator files/outputs remain producer-owned.
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,9 +14,9 @@ await fs.mkdir(root, { recursive: false });
 const report = { started: new Date().toISOString(), ownedPids: [process.pid], mode: 'native-development-smoke', handoff: process.env.ATLAS_GPU_HANDOFF, rows: [], cleanup: false, events: [] };
 let adapter, count = 0;
 try {
-  adapter = await createNativeAdapter({ bundle: '/mnt/ml_storage/scratch/atlas-bw1-runtime-r1', runRoot: root, onEvent: e => report.events.push(e) });
+  adapter = await createNativeAdapter({ runRoot: root, onEvent: e => report.events.push(e) });
   report.hello = adapter.hello(); report.ownedPids.push(adapter.snapshot().pid);
-  const old = JSON.parse(await fs.readFile('/mnt/ml_storage/scratch/atlas-preparation-pc1/replay-result-r1.json', 'utf8'));
+  const old = JSON.parse(await fs.readFile(path.join(GENERATION_ROOT,'provenance/legacy-buffer-controls.json'), 'utf8'));
   assert.equal(adapter.world.definitionKey, old.world.definitionKey);
   const D = adapter.grid.config.diameter;
   const cases = [
