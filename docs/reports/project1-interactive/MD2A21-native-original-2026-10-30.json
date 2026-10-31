@@ -1,0 +1,705 @@
+{
+  "started": 1793410831962,
+  "pass": false,
+  "checks": [
+    "Exact JS Python source bytes and SHA-256 agree; valid deep source is numerically unsupported before CUDA",
+    "Both frozen positive sources produce fresh resolved CUDA parent grids; unknown and unsupported cases grant no height surface",
+    "Reverse source order reversed point order and different chunks preserve logical arrays and resolved definitions exactly"
+  ],
+  "processes": [
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A.json",
+        "--inspect"
+      ],
+      "stdout": "{\"status\": \"supported\", \"reason\": null, \"requestKey\": \"sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8\", \"canonical\": \"{\\\"generator\\\":{\\\"id\\\":\\\"atlas.mandelbrot-parent-chart\\\",\\\"version\\\":\\\"affine-distance-r1\\\"},\\\"grid\\\":{\\\"cells\\\":64,\\\"halfExtentM\\\":\\\"0.8\\\"},\\\"numerics\\\":{\\\"maxIterations\\\":131072,\\\"roundingDenominator\\\":1024},\\\"schema\\\":\\\"atlas.generation.source-recipe\\\",\\\"schemaVersion\\\":1,\\\"source\\\":{\\\"im\\\":\\\"0.131807237950087553359375\\\",\\\"re\\\":\\\"-0.743334490810060138125000\\\",\\\"unitsPerMetre\\\":\\\"0.00000078125\\\"},\\\"transfer\\\":{\\\"referenceDistanceM\\\":\\\"6.8\\\",\\\"referenceHeightM\\\":\\\"89.06014237811313\\\",\\\"slope\\\":\\\"2.1600443105285194\\\"}}\", \"cudaImported\": false}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B.json",
+        "--inspect"
+      ],
+      "stdout": "{\"status\": \"supported\", \"reason\": null, \"requestKey\": \"sha256:75653dba93508cfa93021455321a31f177b0cb88e45f40034dff77c1a518e3a3\", \"canonical\": \"{\\\"generator\\\":{\\\"id\\\":\\\"atlas.mandelbrot-parent-chart\\\",\\\"version\\\":\\\"affine-distance-r1\\\"},\\\"grid\\\":{\\\"cells\\\":64,\\\"halfExtentM\\\":\\\"0.8\\\"},\\\"numerics\\\":{\\\"maxIterations\\\":131072,\\\"roundingDenominator\\\":1024},\\\"schema\\\":\\\"atlas.generation.source-recipe\\\",\\\"schemaVersion\\\":1,\\\"source\\\":{\\\"im\\\":\\\"0.00688857589984350546875\\\",\\\"re\\\":\\\"0.275291862284820031484375\\\",\\\"unitsPerMetre\\\":\\\"0.00000078125\\\"},\\\"transfer\\\":{\\\"referenceDistanceM\\\":\\\"6.8\\\",\\\"referenceHeightM\\\":\\\"89.06014237811313\\\",\\\"slope\\\":\\\"2.1600443105285194\\\"}}\", \"cudaImported\": false}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown.json",
+        "--inspect"
+      ],
+      "stdout": "{\"status\": \"supported\", \"reason\": null, \"requestKey\": \"sha256:5bae59034ff99dd1c8b84b5371e5078a6ae9a283f219f42390348389da88ea99\", \"canonical\": \"{\\\"generator\\\":{\\\"id\\\":\\\"atlas.mandelbrot-parent-chart\\\",\\\"version\\\":\\\"affine-distance-r1\\\"},\\\"grid\\\":{\\\"cells\\\":2,\\\"halfExtentM\\\":\\\"0.000001\\\"},\\\"numerics\\\":{\\\"maxIterations\\\":131072,\\\"roundingDenominator\\\":1024},\\\"schema\\\":\\\"atlas.generation.source-recipe\\\",\\\"schemaVersion\\\":1,\\\"source\\\":{\\\"im\\\":\\\"0.744861766619\\\",\\\"re\\\":\\\"-0.122561166876\\\",\\\"unitsPerMetre\\\":\\\"0.00000078125\\\"},\\\"transfer\\\":{\\\"referenceDistanceM\\\":\\\"6.8\\\",\\\"referenceHeightM\\\":\\\"89.06014237811313\\\",\\\"slope\\\":\\\"2.1600443105285194\\\"}}\", \"cudaImported\": false}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep.json",
+        "--inspect"
+      ],
+      "stdout": "{\"status\": \"unsupported\", \"reason\": \"coordinate rounding exceeds 1/1024 sample spacing or collapses samples\", \"requestKey\": \"sha256:916f9a62955f8e129c014c6375dada128c6f2e6b37cd1b69d759f3ba6f00c0df\", \"canonical\": \"{\\\"generator\\\":{\\\"id\\\":\\\"atlas.mandelbrot-parent-chart\\\",\\\"version\\\":\\\"affine-distance-r1\\\"},\\\"grid\\\":{\\\"cells\\\":64,\\\"halfExtentM\\\":\\\"0.8\\\"},\\\"numerics\\\":{\\\"maxIterations\\\":131072,\\\"roundingDenominator\\\":1024},\\\"schema\\\":\\\"atlas.generation.source-recipe\\\",\\\"schemaVersion\\\":1,\\\"source\\\":{\\\"im\\\":\\\"0.131807237950087553359375\\\",\\\"re\\\":\\\"-0.743334490810060138125000\\\",\\\"unitsPerMetre\\\":\\\"1e-40\\\"},\\\"transfer\\\":{\\\"referenceDistanceM\\\":\\\"6.8\\\",\\\"referenceHeightM\\\":\\\"89.06014237811313\\\",\\\"slope\\\":\\\"2.1600443105285194\\\"}}\", \"cudaImported\": false}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A.json",
+        "--out",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A",
+        "--chunk-size",
+        "4096"
+      ],
+      "stdout": "{\"status\": \"resolved\", \"reason\": null, \"pid\": 2183587, \"requestKey\": \"sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8\", \"sampleCount\": 4225, \"counts\": {\"0\": 0, \"1\": 4225, \"3\": 0, \"4\": 0}, \"cudaImported\": true, \"elapsedS\": 0.5517548401840031}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B.json",
+        "--out",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B",
+        "--chunk-size",
+        "4096"
+      ],
+      "stdout": "{\"status\": \"resolved\", \"reason\": null, \"pid\": 2183633, \"requestKey\": \"sha256:75653dba93508cfa93021455321a31f177b0cb88e45f40034dff77c1a518e3a3\", \"sampleCount\": 4225, \"counts\": {\"0\": 0, \"1\": 4225, \"3\": 0, \"4\": 0}, \"cudaImported\": true, \"elapsedS\": 0.49351328285411}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B.json",
+        "--out",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild",
+        "--chunk-size",
+        "127",
+        "--reverse"
+      ],
+      "stdout": "{\"status\": \"resolved\", \"reason\": null, \"pid\": 2183675, \"requestKey\": \"sha256:75653dba93508cfa93021455321a31f177b0cb88e45f40034dff77c1a518e3a3\", \"sampleCount\": 4225, \"counts\": {\"0\": 0, \"1\": 4225, \"3\": 0, \"4\": 0}, \"cudaImported\": true, \"elapsedS\": 0.523436700925231}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A.json",
+        "--out",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild",
+        "--chunk-size",
+        "127",
+        "--reverse"
+      ],
+      "stdout": "{\"status\": \"resolved\", \"reason\": null, \"pid\": 2183738, \"requestKey\": \"sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8\", \"sampleCount\": 4225, \"counts\": {\"0\": 0, \"1\": 4225, \"3\": 0, \"4\": 0}, \"cudaImported\": true, \"elapsedS\": 0.4980775499716401}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown.json",
+        "--out",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown",
+        "--chunk-size",
+        "4096"
+      ],
+      "stdout": "{\"status\": \"unresolved\", \"reason\": \"unknown required samples\", \"pid\": 2183821, \"requestKey\": \"sha256:5bae59034ff99dd1c8b84b5371e5078a6ae9a283f219f42390348389da88ea99\", \"sampleCount\": 9, \"counts\": {\"0\": 9, \"1\": 0, \"3\": 0, \"4\": 0}, \"cudaImported\": true, \"elapsedS\": 0.5246128649450839}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep.json",
+        "--out",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep",
+        "--chunk-size",
+        "4096"
+      ],
+      "stdout": "{\"status\": \"unsupported\", \"reason\": \"coordinate rounding exceeds 1/1024 sample spacing or collapses samples\", \"pid\": 2183864, \"requestKey\": \"sha256:916f9a62955f8e129c014c6375dada128c6f2e6b37cd1b69d759f3ba6f00c0df\", \"sampleCount\": null, \"counts\": null, \"cudaImported\": false, \"elapsedS\": 0.0010184012353420258}\n",
+      "stderr": "",
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    },
+    {
+      "args": [
+        "scripts/generation/check-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/mathematics.json"
+      ],
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/check-parent.py\", line 6, in <module>\n    import mpmath as mp\nModuleNotFoundError: No module named 'mpmath'\n",
+      "timedOut": false,
+      "exitCode": 1,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    }
+  ],
+  "ownedPids": [
+    2183563,
+    2183574,
+    2183577,
+    2183578,
+    2183580,
+    2183587,
+    2183633,
+    2183675,
+    2183738,
+    2183821,
+    2183864,
+    2183865
+  ],
+  "runs": [
+    {
+      "name": "A",
+      "counts": {
+        "0": 0,
+        "1": 4225,
+        "3": 0,
+        "4": 0
+      },
+      "cudaImported": true,
+      "definition": {
+        "definitionKey": "sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835",
+        "profile": {
+          "array": "little-endian-float64-C",
+          "coordinateArithmetic": "exact-rational-round-once-binary64",
+          "coordinateMapping": "C+U*(x-i*z)",
+          "derivative": "before-z",
+          "distance": "half-milnor",
+          "distanceArithmetic": "binary64-Dc-divide-U",
+          "escapeRadius": "1000000",
+          "failed": "failed-no-surface",
+          "formula": "z*z+c",
+          "heightArithmetic": "binary64-subtract-multiply-subtract",
+          "interior": "strict-cardioid-period2",
+          "interiorDistanceM": "0",
+          "interiorMargin": "0.000000001",
+          "interpolation": "bilinear",
+          "negativeZero": "positive",
+          "outsideDomain": "undefined",
+          "unknown": "unresolved-no-surface"
+        },
+        "recipe": {
+          "generator": {
+            "id": "atlas.mandelbrot-parent-chart",
+            "version": "affine-distance-r1"
+          },
+          "grid": {
+            "cells": 64,
+            "halfExtentM": "0.8"
+          },
+          "numerics": {
+            "maxIterations": 131072,
+            "roundingDenominator": 1024
+          },
+          "schema": "atlas.generation.source-recipe",
+          "schemaVersion": 1,
+          "source": {
+            "im": "0.131807237950087553359375",
+            "re": "-0.743334490810060138125000",
+            "unitsPerMetre": "0.00000078125"
+          },
+          "transfer": {
+            "referenceDistanceM": "6.8",
+            "referenceHeightM": "89.06014237811313",
+            "slope": "2.1600443105285194"
+          }
+        },
+        "schema": "atlas.generation.parent-definition",
+        "schemaVersion": 1,
+        "surface": {
+          "axisOrder": "z,x",
+          "dtype": "<f8",
+          "file": "height.npy",
+          "logicalSha256": "436766498eec371b3dd2ce52a472e9aaad38e3d5e0eb10f73a150d6a5ca815fc",
+          "order": "C",
+          "shape": [
+            65,
+            65
+          ]
+        }
+      },
+      "elapsedS": 0.5517548401840031,
+      "maxRoundoffFraction": "2.5759790955781937e-09",
+      "pid": 2183587,
+      "provenance": {
+        "chunkSize": 4096,
+        "cupy": "14.2.0",
+        "device": "NVIDIA RTX 6000 Ada Generation",
+        "fixtureReadGuard": [
+          "/mnt/ml_storage/scratch/valley-spike",
+          "/mnt/ml_storage/scratch/atlas-world-bw1",
+          "/mnt/ml_storage/scratch/atlas-multiscale-pr8",
+          "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1",
+          "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/regression-world"
+        ],
+        "guardScope": "Python audit hooks for these known fixtures and task writes; native C IO is not a universal allowlist.",
+        "kernelOptions": [
+          "--fmad=false"
+        ],
+        "numpy": "2.5.4",
+        "observedFirstPartyReads": [
+          "scripts/generation/create-parent.py",
+          "scripts/generation/native/__pycache__/fkern.cpython-313.pyc",
+          "scripts/generation/native/fkern.py",
+          "scripts/generation/source_recipe.py",
+          "src/space/generation/source-recipe.js"
+        ],
+        "python": "3.13.2",
+        "reverse": false,
+        "sources": {
+          "scripts/generation/create-parent.py": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4",
+          "scripts/generation/native/fkern.py": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+          "scripts/generation/source_recipe.py": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954",
+          "src/space/generation/source-recipe.js": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+        }
+      },
+      "reason": null,
+      "requestKey": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+      "sampleCount": 4225,
+      "status": "resolved"
+    },
+    {
+      "name": "B",
+      "counts": {
+        "0": 0,
+        "1": 4225,
+        "3": 0,
+        "4": 0
+      },
+      "cudaImported": true,
+      "definition": {
+        "definitionKey": "sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b",
+        "profile": {
+          "array": "little-endian-float64-C",
+          "coordinateArithmetic": "exact-rational-round-once-binary64",
+          "coordinateMapping": "C+U*(x-i*z)",
+          "derivative": "before-z",
+          "distance": "half-milnor",
+          "distanceArithmetic": "binary64-Dc-divide-U",
+          "escapeRadius": "1000000",
+          "failed": "failed-no-surface",
+          "formula": "z*z+c",
+          "heightArithmetic": "binary64-subtract-multiply-subtract",
+          "interior": "strict-cardioid-period2",
+          "interiorDistanceM": "0",
+          "interiorMargin": "0.000000001",
+          "interpolation": "bilinear",
+          "negativeZero": "positive",
+          "outsideDomain": "undefined",
+          "unknown": "unresolved-no-surface"
+        },
+        "recipe": {
+          "generator": {
+            "id": "atlas.mandelbrot-parent-chart",
+            "version": "affine-distance-r1"
+          },
+          "grid": {
+            "cells": 64,
+            "halfExtentM": "0.8"
+          },
+          "numerics": {
+            "maxIterations": 131072,
+            "roundingDenominator": 1024
+          },
+          "schema": "atlas.generation.source-recipe",
+          "schemaVersion": 1,
+          "source": {
+            "im": "0.00688857589984350546875",
+            "re": "0.275291862284820031484375",
+            "unitsPerMetre": "0.00000078125"
+          },
+          "transfer": {
+            "referenceDistanceM": "6.8",
+            "referenceHeightM": "89.06014237811313",
+            "slope": "2.1600443105285194"
+          }
+        },
+        "schema": "atlas.generation.parent-definition",
+        "schemaVersion": 1,
+        "surface": {
+          "axisOrder": "z,x",
+          "dtype": "<f8",
+          "file": "height.npy",
+          "logicalSha256": "6514d68017870395fe6b02acd74421fb25e40c9d783586a767a4cf5448b166ba",
+          "order": "C",
+          "shape": [
+            65,
+            65
+          ]
+        }
+      },
+      "elapsedS": 0.49351328285411,
+      "maxRoundoffFraction": "1.3788421277776361e-09",
+      "pid": 2183633,
+      "provenance": {
+        "chunkSize": 4096,
+        "cupy": "14.2.0",
+        "device": "NVIDIA RTX 6000 Ada Generation",
+        "fixtureReadGuard": [
+          "/mnt/ml_storage/scratch/valley-spike",
+          "/mnt/ml_storage/scratch/atlas-world-bw1",
+          "/mnt/ml_storage/scratch/atlas-multiscale-pr8",
+          "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1",
+          "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/regression-world"
+        ],
+        "guardScope": "Python audit hooks for these known fixtures and task writes; native C IO is not a universal allowlist.",
+        "kernelOptions": [
+          "--fmad=false"
+        ],
+        "numpy": "2.5.4",
+        "observedFirstPartyReads": [
+          "scripts/generation/create-parent.py",
+          "scripts/generation/native/__pycache__/fkern.cpython-313.pyc",
+          "scripts/generation/native/fkern.py",
+          "scripts/generation/source_recipe.py",
+          "src/space/generation/source-recipe.js"
+        ],
+        "python": "3.13.2",
+        "reverse": false,
+        "sources": {
+          "scripts/generation/create-parent.py": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4",
+          "scripts/generation/native/fkern.py": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+          "scripts/generation/source_recipe.py": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954",
+          "src/space/generation/source-recipe.js": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+        }
+      },
+      "reason": null,
+      "requestKey": "sha256:75653dba93508cfa93021455321a31f177b0cb88e45f40034dff77c1a518e3a3",
+      "sampleCount": 4225,
+      "status": "resolved"
+    },
+    {
+      "name": "B-rebuild",
+      "counts": {
+        "0": 0,
+        "1": 4225,
+        "3": 0,
+        "4": 0
+      },
+      "cudaImported": true,
+      "definition": {
+        "definitionKey": "sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b",
+        "profile": {
+          "array": "little-endian-float64-C",
+          "coordinateArithmetic": "exact-rational-round-once-binary64",
+          "coordinateMapping": "C+U*(x-i*z)",
+          "derivative": "before-z",
+          "distance": "half-milnor",
+          "distanceArithmetic": "binary64-Dc-divide-U",
+          "escapeRadius": "1000000",
+          "failed": "failed-no-surface",
+          "formula": "z*z+c",
+          "heightArithmetic": "binary64-subtract-multiply-subtract",
+          "interior": "strict-cardioid-period2",
+          "interiorDistanceM": "0",
+          "interiorMargin": "0.000000001",
+          "interpolation": "bilinear",
+          "negativeZero": "positive",
+          "outsideDomain": "undefined",
+          "unknown": "unresolved-no-surface"
+        },
+        "recipe": {
+          "generator": {
+            "id": "atlas.mandelbrot-parent-chart",
+            "version": "affine-distance-r1"
+          },
+          "grid": {
+            "cells": 64,
+            "halfExtentM": "0.8"
+          },
+          "numerics": {
+            "maxIterations": 131072,
+            "roundingDenominator": 1024
+          },
+          "schema": "atlas.generation.source-recipe",
+          "schemaVersion": 1,
+          "source": {
+            "im": "0.00688857589984350546875",
+            "re": "0.275291862284820031484375",
+            "unitsPerMetre": "0.00000078125"
+          },
+          "transfer": {
+            "referenceDistanceM": "6.8",
+            "referenceHeightM": "89.06014237811313",
+            "slope": "2.1600443105285194"
+          }
+        },
+        "schema": "atlas.generation.parent-definition",
+        "schemaVersion": 1,
+        "surface": {
+          "axisOrder": "z,x",
+          "dtype": "<f8",
+          "file": "height.npy",
+          "logicalSha256": "6514d68017870395fe6b02acd74421fb25e40c9d783586a767a4cf5448b166ba",
+          "order": "C",
+          "shape": [
+            65,
+            65
+          ]
+        }
+      },
+      "elapsedS": 0.523436700925231,
+      "maxRoundoffFraction": "1.3788421277776361e-09",
+      "pid": 2183675,
+      "provenance": {
+        "chunkSize": 127,
+        "cupy": "14.2.0",
+        "device": "NVIDIA RTX 6000 Ada Generation",
+        "fixtureReadGuard": [
+          "/mnt/ml_storage/scratch/valley-spike",
+          "/mnt/ml_storage/scratch/atlas-world-bw1",
+          "/mnt/ml_storage/scratch/atlas-multiscale-pr8",
+          "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1",
+          "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/regression-world"
+        ],
+        "guardScope": "Python audit hooks for these known fixtures and task writes; native C IO is not a universal allowlist.",
+        "kernelOptions": [
+          "--fmad=false"
+        ],
+        "numpy": "2.5.4",
+        "observedFirstPartyReads": [
+          "scripts/generation/create-parent.py",
+          "scripts/generation/native/__pycache__/fkern.cpython-313.pyc",
+          "scripts/generation/native/fkern.py",
+          "scripts/generation/source_recipe.py",
+          "src/space/generation/source-recipe.js"
+        ],
+        "python": "3.13.2",
+        "reverse": true,
+        "sources": {
+          "scripts/generation/create-parent.py": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4",
+          "scripts/generation/native/fkern.py": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+          "scripts/generation/source_recipe.py": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954",
+          "src/space/generation/source-recipe.js": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+        }
+      },
+      "reason": null,
+      "requestKey": "sha256:75653dba93508cfa93021455321a31f177b0cb88e45f40034dff77c1a518e3a3",
+      "sampleCount": 4225,
+      "status": "resolved"
+    },
+    {
+      "name": "A-rebuild",
+      "counts": {
+        "0": 0,
+        "1": 4225,
+        "3": 0,
+        "4": 0
+      },
+      "cudaImported": true,
+      "definition": {
+        "definitionKey": "sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835",
+        "profile": {
+          "array": "little-endian-float64-C",
+          "coordinateArithmetic": "exact-rational-round-once-binary64",
+          "coordinateMapping": "C+U*(x-i*z)",
+          "derivative": "before-z",
+          "distance": "half-milnor",
+          "distanceArithmetic": "binary64-Dc-divide-U",
+          "escapeRadius": "1000000",
+          "failed": "failed-no-surface",
+          "formula": "z*z+c",
+          "heightArithmetic": "binary64-subtract-multiply-subtract",
+          "interior": "strict-cardioid-period2",
+          "interiorDistanceM": "0",
+          "interiorMargin": "0.000000001",
+          "interpolation": "bilinear",
+          "negativeZero": "positive",
+          "outsideDomain": "undefined",
+          "unknown": "unresolved-no-surface"
+        },
+        "recipe": {
+          "generator": {
+            "id": "atlas.mandelbrot-parent-chart",
+            "version": "affine-distance-r1"
+          },
+          "grid": {
+            "cells": 64,
+            "halfExtentM": "0.8"
+          },
+          "numerics": {
+            "maxIterations": 131072,
+            "roundingDenominator": 1024
+          },
+          "schema": "atlas.generation.source-recipe",
+          "schemaVersion": 1,
+          "source": {
+            "im": "0.131807237950087553359375",
+            "re": "-0.743334490810060138125000",
+            "unitsPerMetre": "0.00000078125"
+          },
+          "transfer": {
+            "referenceDistanceM": "6.8",
+            "referenceHeightM": "89.06014237811313",
+            "slope": "2.1600443105285194"
+          }
+        },
+        "schema": "atlas.generation.parent-definition",
+        "schemaVersion": 1,
+        "surface": {
+          "axisOrder": "z,x",
+          "dtype": "<f8",
+          "file": "height.npy",
+          "logicalSha256": "436766498eec371b3dd2ce52a472e9aaad38e3d5e0eb10f73a150d6a5ca815fc",
+          "order": "C",
+          "shape": [
+            65,
+            65
+          ]
+        }
+      },
+      "elapsedS": 0.4980775499716401,
+      "maxRoundoffFraction": "2.5759790955781937e-09",
+      "pid": 2183738,
+      "provenance": {
+        "chunkSize": 127,
+        "cupy": "14.2.0",
+        "device": "NVIDIA RTX 6000 Ada Generation",
+        "fixtureReadGuard": [
+          "/mnt/ml_storage/scratch/valley-spike",
+          "/mnt/ml_storage/scratch/atlas-world-bw1",
+          "/mnt/ml_storage/scratch/atlas-multiscale-pr8",
+          "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1",
+          "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/regression-world"
+        ],
+        "guardScope": "Python audit hooks for these known fixtures and task writes; native C IO is not a universal allowlist.",
+        "kernelOptions": [
+          "--fmad=false"
+        ],
+        "numpy": "2.5.4",
+        "observedFirstPartyReads": [
+          "scripts/generation/create-parent.py",
+          "scripts/generation/native/__pycache__/fkern.cpython-313.pyc",
+          "scripts/generation/native/fkern.py",
+          "scripts/generation/source_recipe.py",
+          "src/space/generation/source-recipe.js"
+        ],
+        "python": "3.13.2",
+        "reverse": true,
+        "sources": {
+          "scripts/generation/create-parent.py": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4",
+          "scripts/generation/native/fkern.py": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+          "scripts/generation/source_recipe.py": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954",
+          "src/space/generation/source-recipe.js": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+        }
+      },
+      "reason": null,
+      "requestKey": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+      "sampleCount": 4225,
+      "status": "resolved"
+    },
+    {
+      "name": "unknown",
+      "counts": {
+        "0": 9,
+        "1": 0,
+        "3": 0,
+        "4": 0
+      },
+      "cudaImported": true,
+      "definition": null,
+      "elapsedS": 0.5246128649450839,
+      "maxRoundoffFraction": "6.929261842742563e-05",
+      "pid": 2183821,
+      "provenance": {
+        "chunkSize": 4096,
+        "cupy": "14.2.0",
+        "device": "NVIDIA RTX 6000 Ada Generation",
+        "fixtureReadGuard": [
+          "/mnt/ml_storage/scratch/valley-spike",
+          "/mnt/ml_storage/scratch/atlas-world-bw1",
+          "/mnt/ml_storage/scratch/atlas-multiscale-pr8",
+          "/mnt/ml_storage/scratch/atlas-bw1-runtime-r1",
+          "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/regression-world"
+        ],
+        "guardScope": "Python audit hooks for these known fixtures and task writes; native C IO is not a universal allowlist.",
+        "kernelOptions": [
+          "--fmad=false"
+        ],
+        "numpy": "2.5.4",
+        "observedFirstPartyReads": [
+          "scripts/generation/create-parent.py",
+          "scripts/generation/native/__pycache__/fkern.cpython-313.pyc",
+          "scripts/generation/native/fkern.py",
+          "scripts/generation/source_recipe.py",
+          "src/space/generation/source-recipe.js"
+        ],
+        "python": "3.13.2",
+        "reverse": false,
+        "sources": {
+          "scripts/generation/create-parent.py": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4",
+          "scripts/generation/native/fkern.py": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+          "scripts/generation/source_recipe.py": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954",
+          "src/space/generation/source-recipe.js": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+        }
+      },
+      "reason": "unknown required samples",
+      "requestKey": "sha256:5bae59034ff99dd1c8b84b5371e5078a6ae9a283f219f42390348389da88ea99",
+      "sampleCount": 9,
+      "status": "unresolved"
+    },
+    {
+      "name": "deep",
+      "cudaImported": false,
+      "definition": null,
+      "elapsedS": 0.0010184012353420258,
+      "pid": 2183864,
+      "reason": "coordinate rounding exceeds 1/1024 sample spacing or collapses samples",
+      "requestKey": "sha256:916f9a62955f8e129c014c6375dada128c6f2e6b37cd1b69d759f3ba6f00c0df",
+      "status": "unsupported"
+    }
+  ],
+  "failure": "AssertionError [ERR_ASSERTION]: Traceback (most recent call last):\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/check-parent.py\", line 6, in <module>\n    import mpmath as mp\nModuleNotFoundError: No module named 'mpmath'\n\n\n1 !== 0\n\n    at command (file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/experiments/md2a21-generation.mjs:29:26)\n    at async file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/experiments/md2a21-generation.mjs:63:2",
+  "ended": 1793410836140,
+  "cleanup": true
+}

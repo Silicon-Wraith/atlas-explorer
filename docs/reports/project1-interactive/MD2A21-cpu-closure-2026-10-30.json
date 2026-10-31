@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-31T01:49:46.096705+00:00",
+  "ownedPids": [
+    2193041,
+    2193052,
+    2193084,
+    2193116,
+    2193150,
+    2193151,
+    2193183
+  ],
+  "alive": [],
+  "lockFree": true,
+  "cleanup": true,
+  "referenceMatchesFrozenProbe": true,
+  "driverManifestSha256": "5c757de4f643aab3e93d434bcbb6dba065705d2b867bc9dde6ff7941b23219c3",
+  "driverSha256": "284282b38a85e6735b92bfbb17f4ebda6c77a3374e56752b8ff706a9f7b2e236",
+  "environmentOverrides": "PYTHONPATH and PYTHONHOME unset; no GPU handoff or CUDA creation"
+}

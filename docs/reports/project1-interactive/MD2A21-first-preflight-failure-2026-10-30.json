@@ -1,0 +1,29 @@
+{
+  "started": 1793410745470,
+  "pass": false,
+  "checks": [],
+  "processes": [
+    {
+      "args": [
+        "scripts/generation/create-parent.py",
+        "/mnt/ml_storage/scratch/atlas-md2a2/native-r0/A.json",
+        "--inspect"
+      ],
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 173, in <module>\n    main()\n    ~~~~^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 163, in main\n    prepared = preflight(recipe); status='supported'; reason=None\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/source_recipe.py\", line 98, in preflight\n    transfers = {k: float(exact(v)) for k, v in recipe['transfer'].items()}\n                          ~~~~~^^^\nTypeError: 'list' object is not callable\n",
+      "timedOut": false,
+      "exitCode": 1,
+      "signal": null,
+      "spawnError": null,
+      "cleanup": "confirmed"
+    }
+  ],
+  "ownedPids": [
+    2182131,
+    2182142
+  ],
+  "runs": [],
+  "failure": "AssertionError [ERR_ASSERTION]: Traceback (most recent call last):\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 173, in <module>\n    main()\n    ~~~~^^\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py\", line 163, in main\n    prepared = preflight(recipe); status='supported'; reason=None\n  File \"/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/source_recipe.py\", line 98, in preflight\n    transfers = {k: float(exact(v)) for k, v in recipe['transfer'].items()}\n                          ~~~~~^^^\nTypeError: 'list' object is not callable\n\n\n1 !== 0\n\n    at command (file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/experiments/md2a21-generation.mjs:29:26)\n    at async file:///mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/experiments/md2a21-generation.mjs:37:29",
+  "ended": 1793410745563,
+  "cleanup": true
+}

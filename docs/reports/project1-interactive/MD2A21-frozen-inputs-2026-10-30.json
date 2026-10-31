@@ -1,0 +1,172 @@
+[
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/diagnostics.npz",
+    "sha256": "e6d82852cb20e53b461bf89885d154611e2e6331d67f419d8200cf07b352617f",
+    "bytes": 68366
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/result.json",
+    "sha256": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044",
+    "bytes": 2947
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/height.npy",
+    "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2",
+    "bytes": 33928
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/bundle.json",
+    "sha256": "a7006ec1ab8276adeb85fd47731a4786cec98930942d92d5f6329a51f96c31cb",
+    "bytes": 314
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A/bundle/recipe.json",
+    "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4",
+    "bytes": 467
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/diagnostics.npz",
+    "sha256": "60ce3ae7111af9492adc3d8a00ff825107e15364d32bb9adc64a4ab6317c861e",
+    "bytes": 68366
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/recipe.json",
+    "sha256": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb",
+    "bytes": 465
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/bundle.json",
+    "sha256": "20f7580762f6710f1d3b332e6ded970892076e63c89745bf4a5426d30e3a1a00",
+    "bytes": 314
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/height.npy",
+    "sha256": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891",
+    "bytes": 33928
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B/bundle/result.json",
+    "sha256": "1c8b1ad5a9ea46779c5737bfafcaaacd6f524e3a28d3bd3e16d998b8f3440f20",
+    "bytes": 2943
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/diagnostics.npz",
+    "sha256": "60ce3ae7111af9492adc3d8a00ff825107e15364d32bb9adc64a4ab6317c861e",
+    "bytes": 68366
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/height.npy",
+    "sha256": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891",
+    "bytes": 33928
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/bundle.json",
+    "sha256": "131ec5653215453ecfbec62e5ca646a22d0cd34ff313a93a11f11ab5d6002828",
+    "bytes": 314
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/recipe.json",
+    "sha256": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb",
+    "bytes": 465
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/B-rebuild/bundle/result.json",
+    "sha256": "9d4153d2ba4d07ba0396568796db4be6815da351093686b1c5b47b1501559757",
+    "bytes": 2942
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/diagnostics.npz",
+    "sha256": "e6d82852cb20e53b461bf89885d154611e2e6331d67f419d8200cf07b352617f",
+    "bytes": 68366
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/recipe.json",
+    "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4",
+    "bytes": 467
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/bundle.json",
+    "sha256": "c6aba70517e17189bd117be469860af42057abe3e4f8de2102c91ba6a5dbd2c4",
+    "bytes": 314
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/height.npy",
+    "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2",
+    "bytes": 33928
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/A-rebuild/bundle/result.json",
+    "sha256": "97e5e352e37f91f484a83037e40541ee416849eff50607fb0009dd89c6bd1bf5",
+    "bytes": 2945
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/diagnostics.npz",
+    "sha256": "71d22780297ebe17bf9f0426f27acfa6844055e496791ee60be076847a8f9713",
+    "bytes": 910
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/bundle.json",
+    "sha256": "0f0755be40f103cdd7f168b6ef75e08d67e844b3ab183661328ebed6ffc99115",
+    "bytes": 234
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/recipe.json",
+    "sha256": "c2eec33b0008e583f6406b3b929e85308031d4db80ddcb19d71bfe6e71603233",
+    "bytes": 447
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/unknown/bundle/result.json",
+    "sha256": "f1eaa39033a29533c836d2a64263b291d703e8787b26cbf81b1d9f87fe29ab01",
+    "bytes": 1593
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/bundle.json",
+    "sha256": "225dbeff9b64c132663c66404cad5fd0152e425f417f17fbaf04d8c14ae59421",
+    "bytes": 234
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/recipe.json",
+    "sha256": "565e2375efc13d20149462438c856627ea95bb7faa92a3bb0555fc832971abea",
+    "bytes": 459
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/deep/bundle/result.json",
+    "sha256": "151501ca3bb1b077d19cf7bd60610aac874a94aec9e0747f00ac67f4111d35c1",
+    "bytes": 280
+  },
+  {
+    "path": "/mnt/ml_storage/scratch/atlas-md2a2/native-r1/experiment.json",
+    "sha256": "78901add6eb8f16c19430b187dfebe759e28a5a5e674b154c2faa00c26cdd7e9",
+    "bytes": 30143
+  },
+  {
+    "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/check-parent.py",
+    "sha256": "8615d97d6a7c70d881c3962773d956fc84cdba413f9458844018bf2faa15d38d",
+    "bytes": 4376
+  },
+  {
+    "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/create-parent.py",
+    "sha256": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4",
+    "bytes": 10184
+  },
+  {
+    "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/source_recipe.py",
+    "sha256": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954",
+    "bytes": 6420
+  },
+  {
+    "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/src/space/generation/source-recipe.js",
+    "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a",
+    "bytes": 4291
+  },
+  {
+    "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/scripts/generation/native/fkern.py",
+    "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17",
+    "bytes": 2877
+  },
+  {
+    "path": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/tests/support/source-recipes.mjs",
+    "sha256": "84844f084e2d0cb6db649769b8ab51ebd0fe2f8b167d9b6e22f2e9542def370a",
+    "bytes": 899
+  }
+]

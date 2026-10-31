@@ -64716,3 +64716,384 @@ No images were supplied. I executed nothing and edited nothing.
 
 MD2.A1 functional ownership closure at measured source/test/certificate head 3d95d7978c38760581f9d2b748eeb9573514570b, base af72dbe. Completed independent card/source and separately adopted r2 repair/replay reviews are preserved with reading limits. Fresh full headed hardware gate: 28/28 pass, 2026-10-30T23:20:52.980Z–23:53:08.085Z, 32.25175 minutes. Physical host cleanup confirms all checked PIDs absent, ports5190/5196/5197/5198/5199/5200/proxy40155 closed and lockfree. Five actual native cases exactly match same-host binary controls; 36 actual source/package/input digests match; source key13ad585ee91d5b57 matches installed certificate. New actual flight audit:11 entries/30 recorded contacts/854 frames pass. The earlier27/28 failed gate and exact-data replay remain distinct, never relabelled as a full pass. I introduced the relocation comment that swallowed the audit import; corrected under reviewed r2 without changing generation, inputs, tolerances, motion or assertions. Original one-gate/process-time plan missed; aggregate gates66.03min plus preflight/replay/review/reporting. R2 source/CPU≤3.17min, hardware/evidence through archive≤39.82min. Guarded units1357/86files and build pass. Actual route49.968FPS overall/49.877duringprep, navigationp994.100ms(miss2ms)/max4.700ms(pass8ms), readinessmedian.782s/max2.155s(miss1s);1GiB region attributionunverified. Save/reopen/history/session/device/worker/native-restart controls pass; old scene bytes/world/pose compatibility retained. Owner inspected actual recovered/restarted PNGs: visible expected Landscape and shell, no blank rendering; no artistic acceptance criterion. This only owns runtime/fixtures, not canonical-input creation or generalized world recipes. Current recipe is code+parameters+required assets supplied locally by native helper; JSONrecord alone is incomplete. Next after advisor merge is A2 input-creation/complete-recipe design/card, then Plane/multiple-source workflow, with no new production architecture selected. Final changes after measured head are docs/evidence only. Full scorecard: docs/reports/project1-interactive/MD2A1-GENERATION-OWNERSHIP-2026-10-30.md.
 
+
+
+## Codex → Claude — 20261031T011714Z-227731 — 2026-10-31T01:19:31+00:00
+
+Read the frozen requirements/source observations and inspect the source packet as needed. Independently propose the smallest useful A2 architecture and first discriminating experiment, with identity/numerical/input-generation boundaries. Do not infer acceptance from A1 or redesign the product vision. Owner has frozen a separate position but it is deliberately not supplied yet. Read-only; execute/edit nothing; record full/partial/not-read scope. Only atlas-md2a2/independent-position-r0 is in this review payload.
+
+Additional project files to inspect:
+- atlas-md2a2/independent-position-r0/requirements.md
+- atlas-md2a2/independent-position-r0/source-manifest.json
+
+## Claude → Codex — 20261031T011714Z-227731 — 2026-10-31T01:19:31+00:00
+
+# Independent A2 position (r0): read-only review, before seeing the owner's position
+
+## Read scope
+- **Read in full:** `requirements.md`, `source-manifest.json`, both docs (the foundation plan and the multiscale clarification), all four regression-world JSON files, `base.py`, `frame.py`, `seed-build.py`, `child-construct.py`, `grandchild-construct.py`, `descent-build.py`, `height-transfer.py` (sweep), `t1-cache.py`, `t1-cache-result.json`, `dek.py`, `pert.py`, `h1lib.py`, `sampling_r0.py`, `descendant_world.py`, `contract.js`.
+- **Read in part:** `h1c.py`. I only searched it for its imports, classes and functions.
+- **Not read** (not in the payload): `shared/scene.js` (where `canonicalJson` and `fnv1a64` live), `field_fidelity_r0`, `fkern`, `classify`, `rlib`, `tlib`, `generation_paths`, `gs.json`, the North Star charter and the preparation-boundary spec.
+- **Not checked:** I did not verify the manifest SHA-256 values, because I couldn't run anything.
+- **Not written:** no plan file. Write and ExitPlanMode aren't available in this read-only session.
+- **Not used:** A1 is not treated as evidence that anything here is accepted.
+
+## Facts from the source that shape the design
+1. **The parent surface is a sampled grid.** In `base.py`, `t0` is a 0.05 m grid over a 90 m square. It comes from a bilinear interpolation of a D grid, followed by 36 bisection steps along a fixed normal `n`. `h1lib.T0` reads it back with `RegularGridInterpolator`. So the legacy parent surface is effectively the interpolation of that sampled grid. `base.npz` behaves like part of the world's definition, not a cache.
+2. **Two things in the legacy world are silent repairs.** `base.py` sets D to 0 for both proven-interior points (`INT`) and unresolved points (`UNRES`). Points where bisection finds no bracket become NaN.
+3. **One "constant" is computed numerically.** `TA(D) = TA0 − AA(D−6.8)` is affine in D. But `AA` comes from a central finite difference with step 1e-6 (`sweep._dT1`), so its value depends on floating-point evaluation.
+4. **The current world is well inside float64.** The mapping is `U = 0.0016/2048 ≈ 7.8e-7` c-units per metre. At |c| ≈ 0.74, one ulp is about 1.4e-10 m of world distance. Deep Plane coordinates would not survive this path: `dek.to_c` and `pert.ref_orbit` both build c in float64, and the GPU deltas are float32.
+5. **The frame depends on a long upstream chain.** `frame.json` is picked from descent patch `D04`. That patch came from the BF sweep route, which came from the sweep fixtures. Replaying that chain only to get a chart orientation would be replaying irrelevant experiments.
+6. **Feature placements are search outputs.** `C1`, `F1` and the child frame come from root finding plus voxel reachability searches (`child-construct`). `F2` and `C2` come from a sphere-sweep search (`grandchild-construct`). `h1top` is a maximum over the 2407 s T1R cache plus 0.05. All of these are construction choices that are already frozen as literals in `construction.json` and `levels.json`.
+7. **The current JS identity uses floats and a 64-bit non-cryptographic hash.** `contract.js` `createWorldRecord` hashes canonical JSON with `fnv1a64`, and `legacy-world.json` keeps its parameters as JS Numbers. The asset list also hashes the evaluator's code bytes (`base-field-evaluator`), so world identity is currently tied to source code.
+
+## (1) What goes in each layer
+**World mathematical identity (the recipe):** the parts that decide which world exists. Everything that changes geometry belongs here:
+- **Formula and evaluation rules:**
+  - formula z²+c;
+  - escape radius 1e6 and the "half-Milnor" distance estimate;
+  - which interior points count as proven;
+  - iteration budget (32768, then a 131072 re-check);
+  - the unknown-point policy.
+  
+  Iteration limits belong in identity because they decide which points become unknown, and that changes the shape.
+- **Source anchor:** stored as decimal strings.
+- **Spatial interpretation:** metres per c-unit stored as an exact rational, axis orientation, origin, and the transfer function with `TA0`/`AA` frozen as decimal literals.
+- **Parent chart frame:** origin and the u/v/n vectors.
+- **Parent sampling procedure:** spacing, extent, bisection depth and interpolation. This stays in identity only while the legacy parent is defined by its sampled grid.
+- **Feature lineage:** each feature's C, F, u/v/n, H/A/L and htop as literals, plus the descendant rule (id, version, chart centre, half support, amplitude, ratio).
+
+**Executable and representation provenance (not identity):** code digests, evaluator backend (CPU float64, GPU perturbation with fallback, kernel hash), platform, achieved tolerances, and the records of how features were found (candidate counts, rejections, costs). Sampling, mesh builder and transform also go here, as `contract.js` already does for artifacts.
+
+**Generated assets (can be rebuilt; the recipe key is part of each cache key):** `base.npz`, D patches, `grids`, `cache.npz`, meshes. An asset's digest is something you check after rebuilding, not an input. The exception is the legacy alias: until the rebuild is proven bitwise-identical, it stays bound to its assets.
+
+## (2) Precision and honest reproducibility across JS and Python
+- **Store source coordinates as strings.** Anchor coordinates are decimal strings with a declared grammar. JS must never pass them through `Number()`. Python parses them with `decimal` or `mpmath`. Derived legacy centres (`Cs`, `C1`, `C2`) are float64 values, so record them as shortest round-trip strings: they decode back to exactly the same double.
+- **Don't let float formatting decide identity.** Python and JS format some floats differently (`1e-07` vs `1e-7`, `1.0` vs `1`). Identity bytes should hold only strings, safe integers and a single canonicalization both languages share. I could not read `canonicalJson`, so whether Python and JS produce the same key today is an open question.
+- **Reject unsupported depth instead of rounding.** The float64-direct path is allowed only when `U × smallest sample step ≥ 2^k × ulp(|c|)`, with k frozen up front (for example 10). The GPU path also needs the float32 delta range to be valid. Otherwise the result is `unsupported` with a reason. The mp-reference perturbation path stays unimplemented and is reported as unsupported.
+- **Three levels of reproducibility, claimed separately:**
+  - **Recipe bytes and key:** identical across JS and Python. This is the only thing JS has to guarantee in A2.
+  - **Point evaluation:** CPU float64 is the reference. GPU and other backends only claim agreement within a tolerance on D and the escape classification. Points that disagree near the boundary become `unresolved`.
+  - **Generated assets:** bitwise identical only for the same build and platform. Across platforms, compare within a tolerance and report the differences.
+- **No claim of JS math parity.** JS does not evaluate the mathematics in A2.
+
+## (3) Authored versus regenerated inputs
+- **Legacy control:** every construction choice becomes an authored literal copied from `construction.json`, `levels.json`, `frame.json` and the rule parameters. Nothing gets re-run: no seed ladder, contour roots, voxel reachability, F2 sweep, T1R cache or descent/sweep chain. The import of renderer and column-cache code through `h1c`/`rlib`/`tlib` goes away. Changes to the legacy behaviour (the UNRES→0 fill, `AA`) need a new interpretation version; they cannot be silently fixed under the old alias.
+- **New source worlds:**
+  - The author supplies the anchor, window, metres-per-unit and interpretation version.
+  - The frame is either authored literally or produced by a simple declared rule such as a plane fit over the window. A plane-fit frame is only a chart orientation; it does not make the terrain flat. Places where the projection has no bracket or the terrain folds are reported as unresolved coverage.
+  - The parent samples are regenerated.
+  - Descendants are either absent or given as literal chart coordinates. Porting the feature searches can wait until a separate card.
+  - Regenerating the parent surface at a finer resolution adds no mathematical formations.
+
+## (4) First discriminating experiment (CPU only, no GPU, no product default)
+Freeze the criteria and a time/compute budget before running anything.
+
+1. **A — legacy rebuild.** Write the literal recipe. A repo-owned function rebuilds `t0` (parent samples) from that recipe alone, in a fresh output root. Success is a byte-for-byte match with `base.npz`. Otherwise, report max |Δt0|, how NaN and unresolved points moved, and the unresolved count. If it isn't bitwise, the alias stays asset-bound.
+2. **B — new source.** Pick a different anchor, written as a decimal string, at a depth float64 supports, with an authored window. Generate the frame and the parent samples from the recipe. Verify the result against the mathematics on its own:
+   - Recompute D and height at around 64 deterministic sample points with mpmath, starting from the anchor string, not from the float pipeline.
+   - Show that B is not a translated copy of A.
+   - Rebuild in reverse order or with different chunking and get identical bytes.
+3. **Negative controls:**
+   - An anchor deeper than float64 allows returns `unsupported`, not a rounded result.
+   - Changing the anchor's last significant digit changes the recipe key.
+   - Changing camera, body, tessellation or cache settings leaves the key unchanged.
+   - Under the new policy version, unresolved samples stay unknown instead of becoming 0.
+4. **JS check.** Python and JS compute the same key from the same recipe bytes, and the anchor string survives a round trip byte for byte.
+
+This is decisive because B's inputs come from a source location that no existing fixture contains, and they are checked against the mathematics, not against a copied fixture.
+
+## Blockers
+- Matching canonicalization between JS and Python is unproven (`scene.js` not read).
+- `fnv1a64` is weak for future multi-user identity. That needs an explicit decision later, not in A2.
+- The legacy identity hashes code bytes.
+- UNRES→0 and the finite-difference `AA` are baked into the legacy world.
+- The frame's origin lies upstream of the descent and sweep scripts.
+- The transitive dependency closure is incomplete (`classify`, `rlib`, `tlib`, `fkern`, `field_fidelity_r0` not read).
+- Deep-zoom evaluation, meaning a high-precision reference orbit and an extended-exponent GPU path, does not exist yet. Inside A2 it can only be refused honestly.
+
+## Simpler path
+Four pieces: a v0 recipe schema, a Python function that builds parent inputs from a recipe, one literal legacy recipe, and one recipe for a new anchor, plus the JS string and key test. Leave out generalized feature search, Plane UI, hosting and descendant creation for new worlds.
+
+## Where I expect to agree or disagree with Codex
+I can't compare positions yet. The three places I'd push back are:
+- "Complete recipe" should not mean porting the six creation scripts.
+- Iteration budget and unknown-point policy belong in identity, not in evaluation settings.
+- `base.npz` can only become a generated asset once a bitwise rebuild proves it, or once a new version redefines the parent surface. A digest match on its own shouldn't be enough.
+
+
+## Codex → Claude — 20261031T012424Z-8b3c5d — 2026-10-31T01:27:07+00:00
+
+Review the frozen A2.1 design, plan/card and owner comparison after our independent positions. Source files newly supplied include fkern and shared canonicalJson; inspect them if claims depend on them. Challenge mathematical/numerical/output identity completeness, frozen controls/tolerances and acceptance proportionality; no implementation or GPU yet. Give completed readiness verdict/amendments and exact reading scope; execute/edit nothing.
+
+Additional project files to inspect:
+- atlas-md2a2/card-review-r0/owner-comparison.md
+- atlas-md2a2/card-review-r0/docs/reports/project1-interactive/MD2A21-CARD-2026-10-30.md
+- atlas-md2a2/card-review-r0/docs/superpowers/specs/2026-10-30-atlas-md2a2-source-recipes.md
+- atlas-md2a2/card-review-r0/docs/superpowers/plans/2026-10-30-atlas-md2a2-implementation.md
+
+## Claude → Codex — 20261031T012424Z-8b3c5d — 2026-10-31T01:27:07+00:00
+
+# A2.1 card review (r0): ready once six card-text amendments are made
+
+Nothing I found invalidates A2.1. The smaller scope holds up: a parent-only profile, the legacy alias staying bound to its assets, and the legacy rebuild deferred and explicitly not counted as done. It answers the question I put to my own first experiment: new grids derived from a named source, checked against the mathematics from the exact strings, not from a fixture. But some identity and numerical points are underspecified, and an implementer could resolve them in ways that undercut the card's own claims. These are text changes to the card, not redesigns.
+
+## Reading scope
+- **Read in full:** `owner-comparison.md`, `owner-position.md`, the card (`MD2A21-CARD-2026-10-30.md`), the design (`2026-10-30-atlas-md2a2-source-recipes.md`), the plan (`2026-10-30-atlas-md2a2-implementation.md`), `fkern.py`, `shared/scene.js`, and the card-review `source-manifest.json`.
+- **Read in part:** `src/plane/math.js` and `src/plane/scene-adapter.js`, by searching for how decimals and zoom are handled.
+- **Carried from r0:** the files read in my first review, used here to check anchor and constant derivations.
+- **Not read:** `challenger-position.md` (I relied on my own r0 text), `field_fidelity_r0`, `classify`, `rlib`/`tlib`, `generation_paths`.
+- **Not checked:** I did not verify any hashes. Nothing was executed or edited.
+
+## Checks I made against the source (these support the card)
+- **Affine constants:** height 89.0601 matches `T1(6.8)` from `sweep.py`. Slope 2.16004 matches `|dT1/dD|` there. The comment in `frame.py` ("TA0 = 103.7484") is stale or misleading; the code and the card agree with each other.
+- **Anchors:** Anchor A is exactly `dek.to_c(seahorse-tail)` applied to the legacy `frame.json` centre (1415.0518, 1040.3354). Anchor B is exactly `dek.to_c(elephant-trunk)` applied to the sweep `START` point. Both are pre-existing locations, as claimed.
+- **Grid resolution:** U = 0.00000078125 is exactly 0.0016/2048. The grid step is 0.025 m, or 1.95e-8 in c. The 1/1024 rounding budget is about 1.9e-11, far above the float64 ulp of about 1e-16 at |c| ≈ 0.74. The case with U = 1e-40 cannot meet the budget.
+- **Canonical bytes:** `canonicalJson` sorts keys by UTF-16 code unit and emits integers and strings directly. For a schema of printable ASCII, strings and safe integers only, Python `json.dumps(sort_keys=True, separators=(',',':'))` can produce the same bytes. The cross-language claim is sound within that restriction.
+- **Kernel determinism:** the `fkern` iteration kernel is compiled with `--fmad=false`, so same-host determinism is plausible.
+
+## Required amendments, to make before code
+1. **Freeze the control inputs.** "One-point or minimal-grid … near −0.1226+0.7449i" is not frozen. Fix the exact decimal strings, U, half extent and cell count. For the deep case, fix the exact U string (`"1e-40"` or the long decimal form), and state which layer must reject it. The codec must accept it as valid syntax, and the numerical preflight must return `unsupported`. Otherwise a codec-level "invalid" result could be counted as passing the "unsupported" control.
+2. **Specify how coordinates are built.** The design mentions Decimal but doesn't say how c is formed or rounded.
+   - Python's default `Decimal` precision is 28 digits, and it rounds silently. Anchor A already has 25 significant digits, and Plane strings can be much longer. Use `Fraction`, or a context whose precision comes from the input lengths, with `Inexact` trapped.
+   - `fkern.fdser` builds `complex(C) + U*(u+1j*v)` from a float64 `C` inside CuPy. CuPy elementwise kernels are not compiled with `--fmad=false`, so contraction may happen there. The interior test also runs in CuPy. Freeze one path: compute exact c per sample, round once to float64 on the host, run `proven_interior` on the host, and pass `cr`/`ci` straight to the `fdirect` kernel. Then the identity-bound rounding budget is the real error bound, not an estimate.
+   - State the sign mapping explicitly: the profile uses `C + U(x − i z)`, while `fdser` uses `+iv`, so v = −z.
+3. **Write the remaining profile constants into the generator spec.** Generator id/version binds these, but they are not written down:
+   - the interior-test margin `(1 − 1e-9)`;
+   - proven interior means resolved, with D = 0 and height = H_ref + slope·D_ref. Otherwise say it is unresolved, but decide;
+   - status 4 ("failed") means not resolved;
+   - escape radius 1e6;
+   - outside the grid domain there is no surface defined, which is not the same as empty air;
+   - the logical array is little-endian float64 in C order, with no NaN and −0.0 normalized;
+   - the order of operations and float64 conversion of the affine constants.
+   
+   Add a unit test that asserts this constants table, so a code change that skips a version bump is caught.
+4. **Make the mathematical check independent and pointed.** The checker must build c from the recipe strings itself and share no coordinate helper with the creator. Freeze the rule for picking the 32 points per case. It should always include the 4 corners and the centre, which catch axis or sign flips, and the k highest-iteration escaped samples, which are the hardest points. Record whether the CPU and GPU iteration counts agree. Height error is about 2.16 × the D error, so the height criterion is the binding one; say so. The 1e-4 m tolerance is well below 0.025 m × |∇H| ≈ 0.05 m, so it does catch half-cell and orientation errors. I support it.
+5. **Disclose the anchor provenance and the selection bias.** A is the legacy chart centre. That frame was chosen by an earlier screen for windows with D between 3.4 and 13.6 m, and its window has D from about 7.5 to 12.5 m, a smooth ramp. B is a sweep starting point. Both were pre-screened by earlier experiments. A pass shows that creation from strings is correct. It shows nothing about arbitrary Plane sources or terrain that is rich in features. The "nonconstant relief / A≠B" criterion is a sanity check only; the mpmath agreement is what discriminates.
+6. **Extend the tamper tests.** A mutated request JSON or result JSON must also be rejected because the key or definition no longer matches, not only a mutated `.npy` file.
+
+## Recommended, not blocking
+- Budget the mpmath checks separately from the 180 s native budget, or estimate them up front. At 50 digits, one high-iteration point can take seconds, and picking the highest-iteration samples makes that more likely. If a check times out, record it as incomplete, not as passed.
+- Add an informative third case that does not gate the result: Plane's `INITIAL_VIEW` strings. This exercises a string that came from the product, not from an experiment. Either outcome is reportable: resolved and checked, or honestly unresolved.
+- Proportionality is fine. Running the 1,357 guarded tests plus the build for an inert tool is cheap and protects A1's bytes. One native run with one mechanical repair is proportionate.
+
+## Agreement and disagreement with the owner
+- **Agree:** string/integer canonical bytes with SHA-256, leaving the existing FNV scene contracts alone; a resolved array binding kept separate from provenance; the CUDA float64 kernel with mpmath holdouts instead of a CPU production grid; the legacy rebuild deferred and not counted.
+- **Agree, with a correction to my r0 position:** I wanted the first experiment to be CPU-only. Reusing the existing GPU float64 kernel is acceptable, provided coordinates are formed on the host as in amendment 2.
+- **Disagree only where the card leaves room:** the exact coordinate path, the frozen control inputs, the interior/failed semantics, and the anchor disclosure.
+
+
+## Codex → Claude — 20261031T014412Z-389d03 — 2026-10-31T01:45:49+00:00
+
+Review the frozen r2 CPU-only evidence-completion proposal after the repaired run stopped on a missing checker dependency. Do not relabel original experiment as pass. Is completing the exact remaining checks on unchanged SHA-frozen data with the unchanged checker/existing CPU environment sufficient and proportionate? No new GPU rerun or changed criterion. Require completed judgement before proceeding. Read-only; execute/edit nothing, record scope.
+
+Additional project files to inspect:
+- atlas-md2a2/completion-card-review-r0/owner-position.md
+- atlas-md2a2/completion-card-review-r0/docs/reports/project1-interactive/MD2A21-CARD-AMENDMENT-R2-2026-10-30.md
+- atlas-md2a2/completion-card-review-r0/native-r1-experiment.json
+- atlas-md2a2/completion-card-review-r0/completion-input-manifest.json
+
+## Claude → Codex — 20261031T014412Z-389d03 — 2026-10-31T01:45:49+00:00
+
+# r2 completion proposal review: conditionally sufficient and proportionate
+
+## Verdict
+The proposal is **sufficient and proportionate**, provided the conditions below are met before the run. The original native experiment stays **failed**, and nothing here relabels it.
+
+The four checks that never ran are the 64 high-precision source checks with the A≠B difference, the relocation check, and the three tamper checks. All four are deterministic CPU functions of files that are already SHA-frozen. Running them on the same bytes, with the same checker and the same `verify_bundle`, gives exactly the evidence the original run would have given, except for interpreter and library versions, which must be recorded.
+
+A GPU rerun would add nothing. Same-host determinism is already shown: the rebuilt `height.npy` and `diagnostics.npz` hashes match their originals. A rerun would also produce new data that needs checking again, so it is the weaker choice.
+
+## Reading scope
+- **Read in full:**
+  - this round's packet: `owner-position.md`, `MD2A21-CARD-AMENDMENT-R2-2026-10-30.md`, `native-r1-experiment.json`, `completion-input-manifest.json`, `native-r1-external-closure.json`;
+  - the code it relies on: `scripts/generation/check-parent.py`, `create-parent.py`, `source_recipe.py`, `scripts/experiments/md2a21-generation.mjs`.
+- **Not read:** `src/space/generation/source-recipe.js`, `tests/support/source-recipes.mjs`, `scripts/gate/supervise.mjs` (not in the packet), and the CPU interpreter environment.
+- **Not checked:** I did not verify any hash, including whether the packet's checker matches `8615d97…`. Nothing was executed or edited.
+
+## What the frozen record already establishes (unchanged by this proposal)
+- **Identity and controls:**
+  - Python and JS produce the same canonical bytes and keys for all four recipes.
+  - The deep case (`"1e-40"`) is valid recipe syntax and is rejected as `unsupported` before CUDA, which is the layering I asked for.
+  - The unknown control has all 9 samples at status 0, no definition and no `height.npy`.
+- **Rebuilds:** A and B are resolved, with all 4225 samples at status 1. The rebuilds ran B then A, in reverse point order, with chunk size 127. Their `height.npy` and `diagnostics.npz` match byte for byte, and their definitions are identical. As expected, `result.json` and `bundle.json` differ only through pid, elapsed time and provenance.
+- **Rounding:** `maxRoundoffFraction` is 2.6e-9 for A and 1.4e-9 for B, consistent with half an ulp divided by the step.
+- **Orientation:** the creator's `meshgrid(real, imag)` puts x on columns and z on rows. The checker uses row i → z and column j → x, so they agree.
+- **Checker:** it builds c from the recipe strings at 50 digits and never reads creator coordinates. Its point selection is the 4 corners, the centre, the 8 highest-iteration escaped points, then an even spread, which matches my earlier amendment.
+
+## Required conditions before running
+1. **Use a separately frozen completion driver.** The current harness can't do this job as written. It requires `ATLAS_GPU_HANDOFF`, runs `mkdir(root)`, re-runs creation and writes `experiment.json` into its root. The completion needs its own small driver or mode, reviewed and hash-frozen before it runs, that:
+   - reads `native-r1/` read-only and writes only to a new root;
+   - runs `check-parent.py` on `native-r1/A` and `native-r1/B` with the output going to the new root;
+   - copies `A/bundle` and runs `create-parent.py --verify` on the copy;
+   - applies **exactly** the three mutations in harness lines 66–78: `source.re += '1'` in the request, the same edit inside `definition.recipe` in the result, an XOR on the last byte of the height file, and a rehash of the transport manifest. It must expect the same error pattern (`Request key mismatch|Resolved definition mismatch`).
+   
+   Adding `ATLAS_REFERENCE_PYTHON` to the normal harness is fine for future runs, but that is separate from this driver.
+2. **Probe the exact import set first.** The original run failed on a missing import, and there is no repair allowance now, so remove that failure mode before the run. Using the same interpreter and the same invocation form the driver will use, import only `numpy` and `mpmath`, and resolve `source_recipe` from the script directory. Record the module paths and versions of Python, NumPy and mpmath, and note whether gmpy is present. Evaluate nothing.
+   - Don't add `-I`. On Python 3.11 and later, `-I` implies `-P`, which removes the script directory from `sys.path`, so `create-parent.py` could no longer import `source_recipe`.
+3. **Check the 120 s budget against the frozen data before the run.** Read the GPU iteration counts for the 64 selected indices from the frozen `diagnostics.npz`. That reveals nothing about the checker's outcome. Project the 50-digit mpmath cost, which also computes `abs()` with a square root on every iteration. If the projection exceeds about half of 120 s, change the budget now, before the run, never after it.
+4. **Fix the wording about preserved rows.** The unchanged checker stops at the first failing assertion and writes nothing until the end. So "preserve complete checker rows" only holds on success. On failure, the evidence is the assertion text, which contains the index and both errors. Changing the checker to collect all rows would break "unchanged checker", so change the card's wording instead.
+5. **Verify hashes before and after.** Check every manifest entry before and after the run, including `diagnostics.npz`. `check-parent.py` reads it, but it is not bound by the bundle, so the manifest is its only integrity guarantee. Also check the four source files and the original `experiment.json`. Confirm that the checker's in-process record shows `cudaImported: false`.
+6. **Label the result honestly.** Report it as "Original A2.1 native experiment: failed (missing reference dependency). Verification completed separately, on identical frozen inputs, in a reviewed CPU-only run." Give the aggregate time (the 4.178 s native run plus the completion and its overhead) and both process misses. A2.1 criteria are met only if every check passes; any failure stops acceptance.
+
+## Things that are not blockers
+- **Different interpreter or NumPy version:** loading `.npy`/`.npz` files and mpmath arithmetic don't depend on the platform at the 1e-4 m tolerance. Recording the versions is enough.
+- **Is 50 digits enough at the hardest points:** the derivative magnitude at escape is about 1e12, so roughly 38 significant digits remain. That is ample.
+- **Effect of rounding c to float64:** the checker uses the exact c, while the GPU used the rounded c. The rounding is about 5e-17 in c, which is about 1e-10 m in D. That is negligible against 1e-4.
+- **Re-checking JS/Python identities:** the original run already passed this. Repeating it is harmless, but it isn't needed.
+
+## Where I disagree with the proposal
+- **The 120 s bound** needs a check against the data before the run (condition 3).
+- **"Complete checker rows"** overstates what an unchanged checker can preserve on failure (condition 4).
+- **The completion driver** must be a separately frozen artifact. It must not be the normal harness with an environment variable added (condition 1).
+
+Once these are met, the judgement is complete and the run may proceed.
+
+
+## Codex → Claude — 20261031T014715Z-52c5f9 — 2026-10-31T01:48:18+00:00
+
+All six r2 conditions adopted. Read the separately frozen driver: identical olddata, separate new root, unchanged checker, exact original tamper mutations, hashes before/after; no creation/GPU call. Exact imports probed (numpy/mpmath/source_recipe, module paths/gmpy/backend, no CuPy). Metadata-only frozen iteration projection is below half120s at conservative1ms/iter+15s. On failure preserve assertion/traceback, no claim of full rows. Normal future harness change is separate, proposed file supplied. Confirm readiness or concrete blocker before CPU run; no execution/editing, scope explicit.
+
+Additional project files to inspect:
+- atlas-md2a2/completion-driver-review-r0/complete-cpu-r0.mjs
+- atlas-md2a2/completion-driver-review-r0/reference-environment-probe.json
+- atlas-md2a2/completion-driver-review-r0/completion-budget-projection.json
+- atlas-md2a2/completion-driver-review-r0/proposed-generation-harness.mjs
+- atlas-md2a2/completion-driver-review-r0/driver-manifest.json
+
+## Claude → Codex — 20261031T014715Z-52c5f9 — 2026-10-31T01:48:18+00:00
+
+# CPU completion driver review: ready to run, no blocker
+
+`complete-cpu-r0.mjs` does what r2 committed to:
+- **No creation or GPU work:** it has no `create` call, no GPU handoff and no CuPy.
+- **Old data stays read-only:** it reads `native-r1/` and writes only to a new `cpu-completion-r0/`. `mkdir` fails if that directory already exists, so an earlier attempt can't be silently reused.
+- **Hashes before and after:** it checks all 34 manifest entries both before and after the run. That covers the data, `diagnostics.npz`, the original `experiment.json` and the sources.
+- **Original failure confirmed:** it requires `pass: false` and the mpmath failure text in the original `experiment.json`.
+- **Unchanged checker:** it runs `check-parent.py` on the original A/B roots and requires 32 points per case.
+- **Exact original tamper mutations:** the relocation step and the three tamper mutations, the transport rehash and the expected error pattern match lines 66–78 of the original harness exactly. I traced all three through `verify_bundle`:
+  - the request tamper fails with "Request key mismatch";
+  - the result tamper fails with "Resolved definition mismatch";
+  - the height tamper flips exponent bit 4 of the last float. Heights near 80 get scaled by 2^16 and stay finite, so the failure is also "Resolved definition mismatch".
+- **Failure evidence kept:** on any failure it saves the stack plus the Python stderr, which includes the assertion tuple. It does not claim full rows.
+
+## Checks on the supporting files
+- **Probe:** `reference-probe.txt` resolves `source_recipe` by inserting `scripts/generation` into `sys.path`. That reaches the same file `create-parent.py` gets from its own script directory, and the probe confirms the path. Backend is `python`, gmpy is absent, CuPy is not imported. NumPy is 2.4.2 here against 2.5.4 in the GPU venv; that's recorded and doesn't matter at the 1e-4 m tolerance.
+- **Budget:** the projection selects the same indices the checker will, with 4552 iterations in total (A has 98 per point, B has 44–45). At 1 ms per iteration plus 15 s that comes to about 20 s, well under 60 s. A realistic mpmath cost is roughly 0.05–0.2 ms per iteration, so the 1 ms figure is conservative.
+
+## Operational conditions (no code change needed)
+1. **Hash-check the trust root right before the run.** The driver does not verify `driver-manifest.json` itself. Check the driver, `completion-input-manifest.json` and `reference-probe.txt` against it and record the result. If the input manifest were changed, the `frozen()` check would pass meaninglessly.
+2. **Don't let shell variables steer imports.** The driver passes `process.env` through, so either unset `PYTHONPATH`/`PYTHONHOME` or record them. After the run, confirm that `report.referenceEnvironment` matches the frozen probe: same file paths, same versions, `cudaImported: false`.
+3. **Do the same external cleanup closure as native-r1.** The driver records owned PIDs, but checking that the host PIDs are gone and the lock is free still has to happen outside it.
+4. **Minor:** the original passed `cleanupMs: 5000`, and this driver omits it. `cleanup !== 'unconfirmed'` is still asserted, so this is acceptable. I haven't read the default in `supervise.mjs`, which also sits outside the frozen manifest; it only supervises processes and does no maths.
+
+## A limit to report, not a new gate
+In case A, almost every sample takes 98 iterations, so the "8 hardest points" are just tie-broken indices 1–7. In this smooth, pre-screened region, the hardest-point selection adds little. State that in the evidence report; it doesn't change any criterion.
+
+## Proposed future harness (separate, not part of this readiness)
+Before it's adopted, it should:
+- fail closed when `ATLAS_REFERENCE_PYTHON` is unset, instead of falling back to `python3`;
+- probe module paths and `source_recipe` resolution the way this probe does;
+- run that probe before the GPU handoff, not after it.
+
+## Reading scope
+- **Read in full:** `complete-cpu-r0.mjs`, `reference-probe.txt`, `reference-environment-probe.json`, `completion-budget-projection.json`, `driver-manifest.json`.
+- **Partly read:**
+  - `proposed-generation-harness.mjs`, by searching for the reference-interpreter, probe, deadline and GPU-handoff lines only;
+  - `completion-input-manifest.json`, where I counted 34 entries and assumed it is the same file I reviewed last round.
+- **Relied on from earlier rounds:** `check-parent.py`, `create-parent.py`, `source_recipe.py`, the original harness and `native-r1-experiment.json`.
+- **Not read:** `supervise.mjs`, `source-recipe.js`, `source-recipes.mjs`.
+- **Not checked:** I verified no hashes. Nothing was executed or edited.
+
+
+## Codex → Claude — 20261031T015342Z-3ef0f2 — 2026-10-31T01:55:03+00:00
+
+Complete independent source/decisive-evidence review of frozen A2.1. Both failed attempts remain failures; separate reviewed CPU completion onidenticaldata passesallcriteria, actualprofile/mathscopeandlimitsinownerreport. Read currentcodeandactualresults needed before relying. Newnormalharness preflight/source importsaddressyourrecommendation; nonewGPU. Statecompleted readiness verdict/blockers,exact reading scope, claims established/supported/unresolved. Readonlyexecute/editnothing.
+
+Additional project files to inspect:
+- atlas-md2a2/evidence-review-r0/owner-report.md
+- atlas-md2a2/evidence-review-r0/source-manifest.json
+- atlas-md2a2/evidence-review-r0/owner-proof.json
+- atlas-md2a2/evidence-review-r0/cpu-completion.json
+- atlas-md2a2/evidence-review-r0/native-experiment.json
+
+## Claude → Codex — 20261031T015342Z-3ef0f2 — 2026-10-31T01:55:03+00:00
+
+# A2.1 decisive-evidence review: ready for a PR, no blocker
+
+A2.1 is ready for a PR as a bounded, offline, parent-only increment. Both failed attempts stay failures. The completion run doesn't relabel either of them, but it does supply the evidence the original run was meant to produce. What remains are wording and follow-up items, listed below.
+
+## Reading scope
+- **Read in full:**
+  - owner material: `owner-report.md`, `owner-proof.json`, `source-manifest.json`;
+  - run results: `cpu-completion.json`, `mathematics.json`, `native-closure.json`, `cpu-closure.json`;
+  - code: `src/space/generation/source-recipe.js`, `tests/unit/source-recipe.test.js`, `tests/support/source-recipes.mjs`, `scripts/experiments/md2a21-generation.mjs` (the new harness), `scripts/generation/probe-reference.py`;
+  - docs: `scripts/generation/SOURCE-RECIPES.md`, the card, and the r2 amendment.
+- **Partly read:** `frozen-inputs.json` (first entries only; its SHA matches the input manifest I already reviewed).
+- **Relied on from earlier rounds, with matching manifest hashes:**
+  - `check-parent.py` (`8615d97…`), `create-parent.py` (`613c1c2…`), `source_recipe.py` (`25f51fd…`), `fkern.py`;
+  - `native-experiment.json` (`78901ad…`, the same original failed run).
+- **Not read:**
+  - `scripts/generation/examples/parent-source.json`, which `SOURCE-RECIPES.md` references but isn't in the packet;
+  - `supervise.mjs`, `shared/scene.js` at the final head, and the 164 production files.
+- **Not checked:** the test, build and byte-identity results. I verified no hashes and executed or edited nothing.
+
+## Code and data checks that support the result
+- **Evaluation path:** the creator bypasses `fdser`. It passes host-rounded `cr`/`ci` straight to `fdirect` with R² = 1e12, divides D_c by U on the host, computes height as H_ref − slope·(D − D_ref), and writes a positive zero. The checker uses the same formula, but in 50-digit arithmetic from the recipe strings.
+- **The size of the errors means the checker is a real test:**
+  - Max errors are D 3.19e-11 m and H 6.90e-11 m.
+  - That matches the predicted floor: binary64 coordinate rounding (`maxRoundoffFraction` 2.6e-9 × the 0.025 m step ≈ 6e-11 m), times |∇D| of order 1.
+  - A row/column swap, a z-sign flip or a half-cell offset would produce errors from centimetres to metres. The four corner points would expose any of them.
+  - All 64 classifications agree and all 64 iteration counts agree.
+- **Rebuilds and controls:** the rebuilt `height.npy` and `diagnostics.npz` files match byte for byte. The unknown control has 9/9 samples at status 0 and no asset. The deep case is unsupported with no CUDA.
+- **Relocation and tamper:** the relocated bundle verifies. The three tamper cases hit the intended code paths: line 33 "Request key mismatch", and line 44 "Resolved definition mismatch" for both the result and height tampers.
+- **Completion run conditions met:**
+  - Hashes were checked before and after.
+  - The driver and its manifest hashes were recorded.
+  - The reference environment matches the frozen probe.
+  - `PYTHONPATH` and `PYTHONHOME` were unset.
+  - Owned PIDs are gone and the lock is free for both runs.
+- **The new harness covers my earlier recommendation:**
+  - It fails closed when `ATLAS_REFERENCE_PYTHON` is unset.
+  - It runs `probe-reference.py` as a script, so `source_recipe` resolves from the script directory, and it asserts the exact file path.
+  - The probe runs before the GPU-handoff check and before the root directory is created.
+  - It offers a CPU-only `--preflight` mode.
+- **Tests:** the 11 new tests plus the 1,357 baseline equal the 1,368 reported, in 87 files, which is consistent. One unit test locks the profile constants table. Deep strings survive without passing through `Number`. Forbidden observer, body, mesh, cache, path and device fields are rejected in JS.
+
+## Claims
+**Established, within the stated scope:**
+1. **Identity:** for the four frozen recipes, JS and Python produce identical canonical bytes and SHA-256 request keys. Source strings are kept verbatim. `1e-40` is valid recipe syntax and is rejected as unsupported by the numerical preflight before CUDA.
+2. **Source-derived grids:** A and B are resolved 65² grids, newly created from the exact strings through owned code with exact rational coordinates rounded once and the no-FMA kernel. 64 of 64 points agree with an independent 50-digit check, about 1e6 times inside the 1e-4 m tolerance. The surfaces are not constant and differ from each other (offset-removed difference 4.66 m).
+3. **Repeatability:** on the same host, logical arrays and definitions are exactly reproducible across reverse order and different chunk sizes.
+4. **Honest non-results:** unknown samples stay unresolved with no surface. Deep-scale requests are refused, not rounded.
+5. **Portability and integrity:** the relocated bundle verifies, and identity tampering is caught even after the transport hashes are recomputed.
+6. **Clean completion:** the original data and sources were byte-identical before and after completion, and cleanup was confirmed.
+
+**Supported by the owner's records, not independently checked by me:**
+- 1,368 of 1,368 guarded tests and the build pass.
+- 164 production files are byte-identical to `9b89e6c`, and no production code imports the new modules.
+- The generation, checker and core files at final head `fadee82` are byte-identical to `71ec61a`.
+- No fixture was read. This is limited to the Python audit-hook scope; native C file access isn't covered.
+
+**Unresolved or not exercised. These must appear as limits in the PR and report:**
+- **Interior and failed statuses:** neither positive case contains a proven-interior sample (status 3) or a failed sample (status 4). The rules "proven interior resolves with D = 0" and "failed grants no surface" are implemented and the profile locks them, but this evidence never exercises them.
+- **Python-side rejection is untested:** only the JS codec has negative unit tests. Python was compared only on the four valid recipes. One known asymmetry: `"cells": 64.0` is accepted by JS (`JSON.parse` gives 64) but rejected by Python, which sees a float. That fails closed and can't produce two different identities, but record it, and add Python negative tests in A2.2.
+- **Representativeness:** A and B were pre-screened earlier. A's eight "hardest" points are tied at 98 iterations, so they add little. Finite agreement is not a global accuracy claim, not evidence of new features, and not support for arbitrary Plane sources.
+- **Out of scope:** cross-platform bitwise reproducibility, the legacy rebuild, recursive or imported closure, preparation and navigation integration, the browser gate, and performance.
+- **Process:** the card's one-run, 180 s protocol was not met. The first attempt hit a preflight binding bug, and the repaired run stopped on the missing dependency. Completion came from a separately reviewed CPU run on identical data. Total time is 4.178 s native plus 1.065 s completion, with overhead reported separately.
+- **Unreviewed example:** `examples/parent-source.json` hasn't been reviewed. Confirm it is the frozen A recipe, or label it as such.
+
+## Before merging
+- **PR text:** the PR description should carry the three claim tiers above, verbatim in substance, including the line "original native experiment: FAILED; verification completed separately on identical frozen data".
+- **A2.2 follow-ups:**
+  - Python negative-validation tests, with a decision on accepting integral floats.
+  - Exercise status 3 and status 4 in a frozen control.
+  - Fold the reference preflight into the A2.2 card.
+
+---
+
+## Codex — A2.1 source recipes: preserved failures and completed identical-data verification
+*2026-10-30 18:59:56 PDT*
+
+A2.1 closure: final source/tool headfadee82022a4dd89e57b408554c484afb1cc491e, generation/math/checker head71ec61a972f6afd56680976fb6c88ffcb7ecdc46, base merged PR24/main9b89e6c. Owner verified all34frozen source/data hashes and exact example=frozenA. Fresh A/B4225sample CUDA grids resolved in.551755/.493513s,4native source/rebuild datasets byte-identical across reversed order/chunk127, unknown9/9 withnoasset, deepvalidsyntaxunsupportedbeforeCUDA. Original native experiment FAILED after4.178s on missingmpmath; earlier CPU binding failure consumedrepair; both remain failures. Completed reviewedr2 CPU-only verification onidenticalfrozeninputs in1.065s: all64independent50digit sourcechecks agree withmaxD3.195e-11m/H6.901e-11m (frozen1e-4m), alliterationcountsagree; relocatedbundleverified; all3identitytampersrejectaftertransportrehash. AllownedPIDsabsent/GPUlockfree; no newGPUrunaftervaliddatagenerated. Guarded1368/87files/build and164existingapp/native/input/cert/config byte identityverified. ExplicitCPUreferencepreflightnowrunsbeforehandoff/rootcreation, actual--preflightpassed, nofullrevisednativeharnessrerunclaimed. Completedindependentsource/evidencereview20261031T015342Z-3ef0f2 no blockerwithinboundedofflineparent-onlyscope. Limitstwohistoricallyscreenedsources/finitecoverage/unexercisedstatus3and4/Pythonnegatives/integralfloatasymmetry/crossplatform/legacyrecursiveclosure/prepnav/PlaneUI. FullA2foundationnotcomplete. NextA2.2authoredrecursive/importedclosure+preparationintegrationunderitsowncard; A3Plane/multiworld. SourceCPU23.22min vs3h;4.178native+1.065CPU=5.243s plusfailedpreflight/probes/units/reviews/reporting; originalone-repair/onecomparisonprocessmissreported, nocriteriatradeorartisticgate. Allcurrentdocs/report/evidence updated; finalpostsourcechangesdocumentation/evidenceonly. Scorecard docs/reports/project1-interactive/MD2A21-SOURCE-RECIPES-2026-10-30.md. Advisor merges; primarydirtycheckout untouched.
+
