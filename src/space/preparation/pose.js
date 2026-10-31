@@ -70,7 +70,10 @@ export function createPreparedPoseModel({ world, grid, fineBounds }) {
     if (!Array.isArray(position) || position.length !== 3 || !position.every(Number.isFinite) || ![D, fineD].includes(bodyDiameterM)) return false;
     if (position.some((x, i) => x - originM[i] < localBounds.min[i] || x - originM[i] > localBounds.max[i])) return false;
     const radius = .501 * fineD + roundoffBoundM;
-    return bodyDiameterM !== fineD || position.every((x, i) => x - radius >= fine.min[i] && x + radius <= fine.max[i]);
+    return bodyDiameterM !== fineD || position.every((x, i) => {
+      const absolute = originM[i] + (x - originM[i]);
+      return absolute - radius >= fine.min[i] && absolute + radius <= fine.max[i];
+    });
   }
   return Object.freeze({ D, fineD, reference, originM: deepFreeze(originM), localBounds: deepFreeze(localBounds), roundoffBoundM, create, validate,
     supportsPositionM, positionM: pose => pose.positionLocalM.map((x, i) => originM[i] + x),

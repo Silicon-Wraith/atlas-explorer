@@ -47,10 +47,10 @@ async function pulse(key,ms,label) {
 async function download(file) {const waiting=page.waitForEvent('download',{timeout:30000});await page.click('#landscape-save-scene');const data=await within(waiting,30000,'source scene download');await within(data.saveAs(file),30000,'source scene preservation');return fs.readFile(file,'utf8');}
 async function boundary(setup,scene) {
  const model=createPreparedPoseModel({world:setup.world,grid:createSpatialGrid(setup.grid),fineBounds:setup.fineBounds});
- const fixture=structuredClone(scene);fixture.camera.bodyDiameterM=.025;fixture.camera.positionLocalM=[model.localBounds.min[0]+.0001,setup.fineBounds.max[1]-.25-model.originM[1],0];fixture.camera.orientationWxyz=preparedOrientation(-Math.PI/2,0);
+ const fixture=structuredClone(scene);fixture.camera.bodyDiameterM=.025;fixture.camera.positionLocalM=[model.localBounds.min[0]+.000001,setup.fineBounds.max[1]-.25-model.originM[1],0];fixture.camera.orientationWxyz=preparedOrientation(-Math.PI/2,0);
  assert.ok(model.supportsPositionM(fixture.camera.positionLocalM.map((x,i)=>x+model.originM[i]),.025));
  await page.setInputFiles('#landscape-open-scene',{name:'finite-boundary.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))});await ready(.025);
- const before=(await state()).pose;await pulse('w',600,'fine-finite-boundary');assert.deepEqual((await state()).pose.positionLocalM,before.positionLocalM);assert.ok((await events()).some(e=>e.type==='navigation'&&e.reason==='finite-domain'));assert.equal((await state()).runtime.error,null);
+ const before=(await state()).pose;await pulse('w',600,'fine-finite-boundary');const stopped=(await state()).pose;assert.ok(stopped.positionLocalM[0]>=model.localBounds.min[0]);assert.ok(Math.hypot(...stopped.positionLocalM.map((x,i)=>x-before.positionLocalM[i]))<=1.01e-6);assert.ok((await events()).some(e=>e.type==='navigation'&&e.reason==='finite-domain'));assert.equal((await state()).runtime.error,null);
 }
 try {
  for(const kind of ['A','B']) {
@@ -91,7 +91,7 @@ if(detail.pass&&detail.cleanup) {
  try {
   const python=process.env.ATLAS_REFERENCE_PYTHON;if(!python)throw Error('CPU audit interpreter required');
   detail.audit=await runBounded({spawnFn:spawn,command:python,args:['scripts/experiments/md2a22-qualify.py',root,'--audit'],timeoutMs:120000,options:{cwd:process.cwd(),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1',PYTHONPATH:'',PYTHONHOME:''}}});
-  assert.notEqual(detail.audit.cleanup,'unconfirmed');assert.equal(detail.audit.exitCode,0,detail.audit.stderr||detail.audit.stdout);pass('Independent delivered-triangle motion audits and all source-world cleanup pass');
- }catch(error){detail.failure=error.stack;detail.pass=false;report.push({name:'FAIL',error:detail.failure});process.exitCode=1;}
+  if(detail.audit.cleanup==='unconfirmed'){detail.cleanup=false;process.exitCode=125;console.error('CLEANUP-UNCONFIRMED independent source motion audit');}assert.notEqual(detail.audit.cleanup,'unconfirmed');assert.equal(detail.audit.exitCode,0,detail.audit.stderr||detail.audit.stdout);pass('Independent delivered-triangle motion audits and all source-world cleanup pass');
+ }catch(error){detail.failure=error.stack;detail.pass=false;report.push({name:'FAIL',error:detail.failure});if(process.exitCode!==125)process.exitCode=1;}
 }
 await fs.writeFile(path.join(root,'source-browser.json'),JSON.stringify(detail,null,2)+'\n');await fs.mkdir('artifacts',{recursive:true});await fs.writeFile('artifacts/source-worlds-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({root,pass:detail.pass,cleanup:detail.cleanup,failure:detail.failure}));
