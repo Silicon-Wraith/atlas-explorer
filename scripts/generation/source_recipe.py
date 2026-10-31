@@ -1,7 +1,7 @@
 """Stdlib source recipe/identity/precision preflight; importing this never loads CUDA."""
 from fractions import Fraction
 from pathlib import Path
-import hashlib, json, math, re
+import copy, hashlib, json, math, re
 
 PROFILE = dict(formula='z*z+c', escapeRadius='1000000', derivative='before-z', distance='half-milnor',
               interior='strict-cardioid-period2', interiorMargin='0.000000001', interiorDistanceM='0',
@@ -37,9 +37,17 @@ def decimal(value, positive=False):
         raise ValueError('Expected positive decimal')
     return m
 
+def integral(value, minimum, maximum):
+    """Match JS JSON-number integers without accepting Python bools or mutating input."""
+    if type(value) not in (int, float) or not minimum <= value <= maximum or not math.isfinite(value) or value != int(value):
+        raise ValueError('Expected bounded integral JSON number')
+    return int(value)
+
 def validate(value):
     object_keys(value, 'schema schemaVersion generator source grid transfer numerics')
-    if value['schema'] != 'atlas.generation.source-recipe' or type(value['schemaVersion']) is not int or value['schemaVersion'] != 1:
+    value = copy.deepcopy(value)
+    value['schemaVersion'] = integral(value['schemaVersion'], 1, 1)
+    if value['schema'] != 'atlas.generation.source-recipe':
         raise ValueError('Unsupported schema/version')
     object_keys(value['generator'], 'id version')
     if value['generator'] != dict(id='atlas.mandelbrot-parent-chart', version='affine-distance-r1'):
@@ -48,16 +56,14 @@ def validate(value):
     for name, text in value['source'].items():
         decimal(text, name == 'unitsPerMetre')
     object_keys(value['grid'], 'halfExtentM cells'); decimal(value['grid']['halfExtentM'], True)
-    cells = value['grid']['cells']
-    if type(cells) is not int or not 1 <= cells <= 512:
-        raise ValueError('Unsupported cell count')
+    value['grid']['cells'] = integral(value['grid']['cells'], 1, 512)
     object_keys(value['transfer'], 'referenceDistanceM referenceHeightM slope')
     for name, text in value['transfer'].items():
         decimal(text, name == 'slope')
     object_keys(value['numerics'], 'maxIterations roundingDenominator')
     num = value['numerics']
-    if type(num['maxIterations']) is not int or not 1 <= num['maxIterations'] <= 131072 or type(num['roundingDenominator']) is not int or num['roundingDenominator'] != 1024:
-        raise ValueError('Unsupported numerical budget')
+    num['maxIterations'] = integral(num['maxIterations'], 1, 131072)
+    num['roundingDenominator'] = integral(num['roundingDenominator'], 1024, 1024)
     return value
 
 def no_duplicates(pairs):
@@ -68,14 +74,22 @@ def no_duplicates(pairs):
         out[k] = v
     return out
 
+def parse_json(text):
+    def number(text):
+        value = float(text)
+        if not math.isfinite(value):
+            raise ValueError('Nonfinite JSON number')
+        return value
+    return json.loads(text, object_pairs_hook=no_duplicates, parse_float=number,
+                      parse_constant=lambda x: (_ for _ in ()).throw(ValueError('Nonfinite JSON')))
+
 def load_json(path):
     if Path(path).stat().st_size > 2000000:
         raise ValueError('JSON input too large')
-    return json.loads(Path(path).read_text(), object_pairs_hook=no_duplicates,
-                      parse_constant=lambda x: (_ for _ in ()).throw(ValueError('Nonfinite JSON')))
+    return parse_json(Path(path).read_text())
 
 def preflight(recipe):
-    validate(recipe)
+    recipe = validate(recipe)
     texts = list(recipe['source'].values()) + [recipe['grid']['halfExtentM']] + list(recipe['transfer'].values())
     for text in texts:
         m = decimal(text)
@@ -109,7 +123,31 @@ def preflight(recipe):
                 maxRoundoffFraction=str(float(maximum / step)))
 
 def parent_definition(recipe, logical_digest):
+    recipe = validate(recipe)
     n = recipe['grid']['cells'] + 1
     body = dict(schema='atlas.generation.parent-definition', schemaVersion=1, recipe=recipe, profile=PROFILE,
                 surface=dict(file='height.npy', logicalSha256=logical_digest, dtype='<f8', shape=[n, n], order='C', axisOrder='z,x'))
     return dict(body, definitionKey=key(body))
+
+def resolve_sample_summary(counts, foreign_count, nonfinite_resolved_count, all_finite):
+    """Unchanged producer decision from validated summaries, independent of NumPy/CUDA."""
+    object_keys(counts, '0 1 3 4')
+    counts = {k: integral(v, 0, 263169) for k, v in counts.items()}
+    foreign_count = integral(foreign_count, 0, 263169)
+    nonfinite_resolved_count = integral(nonfinite_resolved_count, 0, 263169)
+    total = sum(counts.values()) + foreign_count
+    if type(all_finite) is not bool or not 1 <= total <= 263169 or nonfinite_resolved_count > counts['1'] + counts['3'] or all_finite and nonfinite_resolved_count:
+        raise ValueError('Inconsistent sample summary')
+    if counts['4'] or foreign_count or nonfinite_resolved_count:
+        return 'failed'
+    if counts['0'] or not all_finite:
+        return 'unresolved'
+    return 'resolved'
+
+def affine_height(distance, reference_distance, reference_height, slope):
+    """Scalar or NumPy ufunc arithmetic, in the original operation order."""
+    height = reference_height - slope*(distance-reference_distance)
+    if isinstance(height, (int, float)):
+        return 0. if height == 0 else height
+    height[height == 0] = 0.
+    return height

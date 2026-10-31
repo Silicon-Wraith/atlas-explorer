@@ -1,0 +1,18 @@
+{
+  "source": "Merged PR26 preflight-r0 A/B input; bytes copied without regeneration for CPU compatibility controls",
+  "runRoot": "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0",
+  "files": {
+    "A": {
+      "bundle.json": "a7006ec1ab8276adeb85fd47731a4786cec98930942d92d5f6329a51f96c31cb",
+      "recipe.json": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4",
+      "result.json": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044",
+      "height.npy": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2"
+    },
+    "B": {
+      "result.json": "1c8b1ad5a9ea46779c5737bfafcaaacd6f524e3a28d3bd3e16d998b8f3440f20",
+      "recipe.json": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb",
+      "height.npy": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891",
+      "bundle.json": "20f7580762f6710f1d3b332e6ded970892076e63c89745bf4a5426d30e3a1a00"
+    }
+  }
+}

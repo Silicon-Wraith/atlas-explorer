@@ -1,0 +1,762 @@
+{
+  "started": 1793475557832,
+  "root": "/mnt/ml_storage/scratch/atlas-md2a22b/contracts-r0",
+  "nativeFree": true,
+  "cleanup": true,
+  "pythonRun": {
+    "stdout": "PASS parity\nPASS projection\nPASS parent\nPASS policy\nPASS bundles\n{\"pass\": true, \"elapsedS\": 1.0400248290970922, \"error\": null}\n",
+    "stderr": "",
+    "timedOut": false,
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "cleanup": "confirmed"
+  },
+  "python": {
+    "startedUTC": "2026-10-31T19:39:17Z",
+    "pid": 3221048,
+    "nativeFree": true,
+    "toolchain": {
+      "python": "3.13.2 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:02) [GCC 11.2.0]",
+      "interpreter": "/home/john-sheppard/miniconda3_fresh/bin/python3",
+      "numpy": "2.4.2",
+      "numpyFile": "/home/john-sheppard/miniconda3_fresh/lib/python3.13/site-packages/numpy/__init__.py"
+    },
+    "checks": [
+      {
+        "name": "parity",
+        "detail": {
+          "sourceCases": 53,
+          "recursiveCases": 37
+        }
+      },
+      {
+        "name": "projection",
+        "detail": {
+          "components": 3,
+          "descendants": 1,
+          "sourceBindings": 6
+        }
+      },
+      {
+        "name": "parent",
+        "detail": {
+          "transportSha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b",
+          "gridSamples": 1201,
+          "origin": [
+            1415.0517631230232,
+            80.30829849396879,
+            1040.3354238879317
+          ],
+          "finite": 1098499,
+          "nan": 343902,
+          "unresolvedDiagnostic": 1,
+          "negativeControls": 10
+        }
+      },
+      {
+        "name": "policy",
+        "detail": {
+          "cases": 1110,
+          "outcomes": {
+            "resolved": 14,
+            "unresolved": 70,
+            "failed": 1026
+          },
+          "syntheticOnly": true,
+          "actualGPUStatus3And4": "unverified; B2"
+        }
+      },
+      {
+        "name": "bundles",
+        "detail": {
+          "A": {
+            "verified": true,
+            "status": "resolved",
+            "requestKey": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+            "definitionKey": "sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835"
+          },
+          "B": {
+            "verified": true,
+            "status": "resolved",
+            "requestKey": "sha256:75653dba93508cfa93021455321a31f177b0cb88e45f40034dff77c1a518e3a3",
+            "definitionKey": "sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b"
+          }
+        }
+      }
+    ],
+    "parity": {
+      "sourceCases": [
+        {
+          "id": "A",
+          "accepted": true,
+          "key": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+          "canonicalBytes": 466
+        },
+        {
+          "id": "B",
+          "accepted": true,
+          "key": "sha256:75653dba93508cfa93021455321a31f177b0cb88e45f40034dff77c1a518e3a3",
+          "canonicalBytes": 464
+        },
+        {
+          "id": "unknown",
+          "accepted": true,
+          "key": "sha256:5bae59034ff99dd1c8b84b5371e5078a6ae9a283f219f42390348389da88ea99",
+          "canonicalBytes": 446
+        },
+        {
+          "id": "deep",
+          "accepted": true,
+          "key": "sha256:916f9a62955f8e129c014c6375dada128c6f2e6b37cd1b69d759f3ba6f00c0df",
+          "canonicalBytes": 458
+        },
+        {
+          "id": "integral-float",
+          "accepted": true,
+          "key": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+          "canonicalBytes": 466
+        },
+        {
+          "id": "integral-exponent",
+          "accepted": true,
+          "key": "sha256:a3ab4b0c0340d2cb5e8fbc25255a35a3abc3ff8e1c5e5bb8c675404e3642a926",
+          "canonicalBytes": 467
+        },
+        {
+          "id": "rounded-integer",
+          "accepted": true,
+          "key": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+          "canonicalBytes": 466
+        },
+        {
+          "id": "schema-float",
+          "accepted": true,
+          "key": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+          "canonicalBytes": 466
+        },
+        {
+          "id": "iterations-float",
+          "accepted": true,
+          "key": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+          "canonicalBytes": 466
+        },
+        {
+          "id": "denominator-float",
+          "accepted": true,
+          "key": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+          "canonicalBytes": 466
+        },
+        {
+          "id": "exponent-many-leading-zero",
+          "accepted": true,
+          "key": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+          "canonicalBytes": 466
+        },
+        {
+          "id": "overflow-number",
+          "accepted": false
+        },
+        {
+          "id": "zero",
+          "accepted": false
+        },
+        {
+          "id": "negative-zero",
+          "accepted": false
+        },
+        {
+          "id": "negative-zero-float",
+          "accepted": false
+        },
+        {
+          "id": "large-exponent-integer",
+          "accepted": false
+        },
+        {
+          "id": "fraction",
+          "accepted": false
+        },
+        {
+          "id": "schema-bool",
+          "accepted": false
+        },
+        {
+          "id": "cells-bool",
+          "accepted": false
+        },
+        {
+          "id": "iterations-bool",
+          "accepted": false
+        },
+        {
+          "id": "denominator-bool",
+          "accepted": false
+        },
+        {
+          "id": "cells-min",
+          "accepted": true,
+          "key": "sha256:7c71184375bc156b78a4c9c078b97a2b590b86721e1e3c8c66037d3426b41029",
+          "canonicalBytes": 465
+        },
+        {
+          "id": "cells-max",
+          "accepted": true,
+          "key": "sha256:1b1ec2541ba50902db8f52c6fe161f2057067ca089542c07a6313f7824a1f2ab",
+          "canonicalBytes": 467
+        },
+        {
+          "id": "cells-over",
+          "accepted": false
+        },
+        {
+          "id": "iter-min",
+          "accepted": true,
+          "key": "sha256:b98030ddfb41bab609766cd84f2e90cbe0b99f862e11e33f284283fa0fbcd207",
+          "canonicalBytes": 461
+        },
+        {
+          "id": "iter-over",
+          "accepted": false
+        },
+        {
+          "id": "denom-wrong",
+          "accepted": false
+        },
+        {
+          "id": "decimal-plus",
+          "accepted": true,
+          "key": "sha256:0c73caafb6f0702fb9cd4f12875bd48fc5f442b7c93137c7069fd20895e0b690",
+          "canonicalBytes": 449
+        },
+        {
+          "id": "decimal-zero-signed",
+          "accepted": true,
+          "key": "sha256:4cfe302ac18d2da8f30995ead8373fe8e643a47937151576395f7113ce046c7b",
+          "canonicalBytes": 441
+        },
+        {
+          "id": "decimal-zero-signed-float",
+          "accepted": true,
+          "key": "sha256:cd7d728ce74f14fdd989b0f2d44d2acdf32f8bbb72e77f87937b8c5c3bde6e73",
+          "canonicalBytes": 443
+        },
+        {
+          "id": "decimal-unicode",
+          "accepted": false
+        },
+        {
+          "id": "decimal-space",
+          "accepted": false
+        },
+        {
+          "id": "decimal-empty",
+          "accepted": false
+        },
+        {
+          "id": "decimal-dot",
+          "accepted": false
+        },
+        {
+          "id": "decimal-infinity",
+          "accepted": false
+        },
+        {
+          "id": "decimal-number",
+          "accepted": false
+        },
+        {
+          "id": "decimal-leading-zero-exponent",
+          "accepted": true,
+          "key": "sha256:81773eeb45e7b55f0e3c8816c70cc43c3a425b66202ac5ff1673a9cf70d0d2b7",
+          "canonicalBytes": 493
+        },
+        {
+          "id": "decimal-exponent-max",
+          "accepted": true,
+          "key": "sha256:beec88afb7c77ed9b272b5d7b19e148a7a084cbd45217be2e45834ce53135148",
+          "canonicalBytes": 447
+        },
+        {
+          "id": "decimal-exponent-over",
+          "accepted": false
+        },
+        {
+          "id": "decimal-digits-max",
+          "accepted": true,
+          "key": "sha256:888cda39a5a6ce363df4ec1d28571e6b4c7f2eadbd1104b023f2fef6470a23bf",
+          "canonicalBytes": 200440
+        },
+        {
+          "id": "decimal-digits-over",
+          "accepted": false
+        },
+        {
+          "id": "decimal-zero-scale",
+          "accepted": false
+        },
+        {
+          "id": "decimal-negative-scale",
+          "accepted": false
+        },
+        {
+          "id": "decimal-tiny-scale",
+          "accepted": true,
+          "key": "sha256:6b7c00c0949660fff430f257c020aac0a4bf42943bc6586948b4a0141fad5ea0",
+          "canonicalBytes": 462
+        },
+        {
+          "id": "unknown-version",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-nested",
+          "accepted": false
+        },
+        {
+          "id": "slope-zero",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-camera",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-body",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-mesh",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-cache",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-device",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-path",
+          "accepted": false
+        }
+      ],
+      "recursiveCases": [
+        {
+          "id": "imported",
+          "accepted": true,
+          "key": "sha256:af77121a3682c4681d94886efb458112769317f5e494c17bf104161e7e144931",
+          "canonicalBytes": 3888
+        },
+        {
+          "id": "reordered-keys",
+          "accepted": true,
+          "key": "sha256:af77121a3682c4681d94886efb458112769317f5e494c17bf104161e7e144931",
+          "canonicalBytes": 3888
+        },
+        {
+          "id": "deep-source",
+          "accepted": true,
+          "key": "sha256:273eeb830f45f2dfbe37ecae76f784a54d14aeef90ad350c978347f471253f12",
+          "canonicalBytes": 4872
+        },
+        {
+          "id": "other-handedness",
+          "accepted": true,
+          "key": "sha256:c8707dd08c448f05df42de8b0fec61371657031011385d19a02b3ad1d99c4cff",
+          "canonicalBytes": 3891
+        },
+        {
+          "id": "support-is-authored",
+          "accepted": true,
+          "key": "sha256:4ad95ee31a44a19cc6827ecf3a9016e919431f002e50907e8efc75a69dbc745c",
+          "canonicalBytes": 3881
+        },
+        {
+          "id": "signed-zero-source",
+          "accepted": true,
+          "key": "sha256:2e83084c46f9f93971a1e1dc4e3b4f4927a75b9275964bde74f16775618d07ac",
+          "canonicalBytes": 3873
+        },
+        {
+          "id": "integral-float-shapes",
+          "accepted": true,
+          "key": "sha256:af77121a3682c4681d94886efb458112769317f5e494c17bf104161e7e144931",
+          "canonicalBytes": 3888
+        },
+        {
+          "id": "version",
+          "accepted": false
+        },
+        {
+          "id": "field-bool",
+          "accepted": false
+        },
+        {
+          "id": "field-unknown",
+          "accepted": false
+        },
+        {
+          "id": "binding-count",
+          "accepted": false
+        },
+        {
+          "id": "binding-path",
+          "accepted": false
+        },
+        {
+          "id": "digest",
+          "accepted": false
+        },
+        {
+          "id": "absolute-path",
+          "accepted": false
+        },
+        {
+          "id": "relative-escape",
+          "accepted": false
+        },
+        {
+          "id": "array-shape",
+          "accepted": false
+        },
+        {
+          "id": "array-bool",
+          "accepted": false
+        },
+        {
+          "id": "array-order",
+          "accepted": false
+        },
+        {
+          "id": "empty-components",
+          "accepted": false
+        },
+        {
+          "id": "many-components",
+          "accepted": false
+        },
+        {
+          "id": "parent-cycle",
+          "accepted": false
+        },
+        {
+          "id": "missing-parent",
+          "accepted": false
+        },
+        {
+          "id": "duplicate-id",
+          "accepted": false
+        },
+        {
+          "id": "wrong-cap",
+          "accepted": false
+        },
+        {
+          "id": "frame-norm",
+          "accepted": false
+        },
+        {
+          "id": "frame-inf",
+          "accepted": false
+        },
+        {
+          "id": "negative-support",
+          "accepted": false
+        },
+        {
+          "id": "underflow-support",
+          "accepted": false
+        },
+        {
+          "id": "numeric-source",
+          "accepted": false
+        },
+        {
+          "id": "exponent-budget",
+          "accepted": false
+        },
+        {
+          "id": "digit-budget",
+          "accepted": false
+        },
+        {
+          "id": "decimal-unicode",
+          "accepted": false
+        },
+        {
+          "id": "descendant-parent",
+          "accepted": false
+        },
+        {
+          "id": "descendant-rule",
+          "accepted": false
+        },
+        {
+          "id": "composition-order",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-mesh",
+          "accepted": false
+        },
+        {
+          "id": "forbidden-device",
+          "accepted": false
+        }
+      ]
+    },
+    "projection": {
+      "bits": {
+        "components": [
+          {
+            "name": "parent",
+            "C": [
+              "638929c674c9e7bf",
+              "06dae533cddec03f"
+            ],
+            "H": "0000000000001440",
+            "A": "333333333333f33f",
+            "L": "333333333333eb3f",
+            "F": [
+              "18626401351c9640",
+              "21409b29bb135440",
+              "db135c7957419040"
+            ],
+            "u": [
+              "eaa4a4d76764eebf",
+              "000000000000803c",
+              "46b5a29b0508d4bf"
+            ],
+            "v": [
+              "a3d8479edbdccf3f",
+              "0c78ef86e265e3bf",
+              "da4382a0ed2be8bf"
+            ],
+            "n": [
+              "ccdd75e61449c83f",
+              "23e8413f4773e93f",
+              "50a70fb5616ce2bf"
+            ]
+          },
+          {
+            "name": "child",
+            "C": [
+              "3c016fb674c9e7bf",
+              "68416f0bcddec03f"
+            ],
+            "H": "333333333333eb3f",
+            "A": "333333333333d33f",
+            "L": "333333333333cb3f",
+            "F": [
+              "eda0ed87c21b9640",
+              "4c73ec941de85340",
+              "7070f9588a419040"
+            ],
+            "u": [
+              "07fca0aef2ceeb3f",
+              "0000000000000000",
+              "32d0b768a6aadfbf"
+            ],
+            "v": [
+              "cd6aeef5cfabdebf",
+              "2666abf777d7cf3f",
+              "0857ccc928efeabf"
+            ],
+            "n": [
+              "924b337b8a82bf3f",
+              "a29623b27afeee3f",
+              "040b82c8b9abcb3f"
+            ],
+            "htop": "312a5c0f0ae9df3f"
+          },
+          {
+            "name": "gchild",
+            "C": [
+              "39bf83d474c9e7bf",
+              "34a025a9cbdec03f"
+            ],
+            "H": "333333333333cb3f",
+            "A": "333333333333b33f",
+            "L": "333333333333ab3f",
+            "F": [
+              "ef8a6787c41b9640",
+              "0991b53628d25340",
+              "8ee6734822429040"
+            ],
+            "u": [
+              "237465826de2eb3f",
+              "0000000000000000",
+              "9b1396b8d665dfbf"
+            ],
+            "v": [
+              "e72fb13e329fdebf",
+              "00cbc17ce147cc3f",
+              "12c157470332ebbf"
+            ],
+            "n": [
+              "73656314a3bfbb3f",
+              "4099ab338c35ef3f",
+              "745adab1c2a4c83f"
+            ],
+            "htop": "333333333333b33f"
+          }
+        ],
+        "descendants": [
+          {
+            "id": "descendant",
+            "parent": "gchild",
+            "A0": "f2c6779c99999ebf",
+            "B0": "0234249c9999bebf",
+            "HALF": "3333333333336b3f",
+            "AMPLITUDE": "2d431cebe2362a3f",
+            "RATIO": "0000000000005040",
+            "rule": "surface-descendant-r1"
+          }
+        ],
+        "lineage": [
+          {
+            "id": "parent",
+            "parent": null
+          },
+          {
+            "id": "child",
+            "parent": "parent"
+          },
+          {
+            "id": "gchild",
+            "parent": "child"
+          },
+          {
+            "id": "descendant",
+            "parent": "gchild"
+          }
+        ],
+        "U": "2d431cebe236aa3e",
+        "N0": 32768,
+        "composition": {
+          "operator": "ordered-subtraction-of-capped-graph-intervals-r1",
+          "root": "parent",
+          "cutters": [
+            "child",
+            "gchild"
+          ]
+        }
+      },
+      "componentOrder": [
+        "parent",
+        "child",
+        "gchild"
+      ],
+      "constantSources": [
+        "h1lib.py",
+        "sampling_r0.py",
+        "descendant_world.py",
+        "dek.py"
+      ],
+      "sourceBindings": [
+        {
+          "file": "native/h1lib.py",
+          "sha256": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124"
+        },
+        {
+          "file": "native/sampling_r0.py",
+          "sha256": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598"
+        },
+        {
+          "file": "native/descendant_world.py",
+          "sha256": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e"
+        },
+        {
+          "file": "native/dek.py",
+          "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0"
+        },
+        {
+          "file": "native/pert.py",
+          "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+        },
+        {
+          "file": "native/fkern.py",
+          "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+        }
+      ],
+      "lineageScope": "Authored root/child/gchild/descendant hierarchy; legacy runtime has no full lineage record.",
+      "arithmeticScope": "Parameter-bit comparison only. Evaluator arithmetic order is source-hash-bound, not proved equivalent across CPU/GPU paths."
+    },
+    "parent": {
+      "transportSha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b",
+      "gridSamples": 1201,
+      "origin": [
+        1415.0517631230232,
+        80.30829849396879,
+        1040.3354238879317
+      ],
+      "finite": 1098499,
+      "nan": 343902,
+      "unresolvedDiagnostic": 1
+    },
+    "policy": {
+      "cases": 1110,
+      "outcomes": {
+        "resolved": 14,
+        "unresolved": 70,
+        "failed": 1026
+      },
+      "syntheticOnly": true,
+      "actualGPUStatus3And4": "unverified; B2"
+    },
+    "sourceBundles": {
+      "A": {
+        "verified": true,
+        "status": "resolved",
+        "requestKey": "sha256:7df75fa6dc1671c10e60f53eeb892ab54e56ca041d5c1cada1764c73758fc1e8",
+        "definitionKey": "sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835"
+      },
+      "B": {
+        "verified": true,
+        "status": "resolved",
+        "requestKey": "sha256:75653dba93508cfa93021455321a31f177b0cb88e45f40034dff77c1a518e3a3",
+        "definitionKey": "sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b"
+      }
+    },
+    "pass_": true,
+    "elapsedS": 1.0400248290970922
+  },
+  "runtimeBaseline": {
+    "base": "79a3ab926d78b455e97178d7e677d48cd6e9c673",
+    "files": 194,
+    "sha256": "45f0c14bece3582b0dfe6754851d0c7f35385131c04d322188bb170ba72dd170"
+  },
+  "importValidation": {
+    "modules": 18,
+    "inputs": 13
+  },
+  "sourceCertificate": {
+    "sourcesKey": "ee1382dfe91b037079fec5a2b24d2ae96231e825aa263b92e1f692085e6d0ba4",
+    "inputs": {
+      "A": {
+        "definitionKey": "sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835",
+        "inputKey": "677346ce3e1df3bfc174494eecda4bc5a06dbd30dba1b566175e20a6111fea86"
+      },
+      "B": {
+        "definitionKey": "sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b",
+        "inputKey": "764a0ab824c2efce9941e0ab45cec7e6c2431de56a192119ef94d71d6e4db254"
+      }
+    }
+  },
+  "hashes": {
+    "src/space/generation/recursive-recipe.js": "51c20a0ad9f81ef6cc0933bdb6f2b004985f806f2de5aaa4784e524d8671e963",
+    "scripts/generation/recursive_recipe.py": "81c65ba2e41ce17c12e07aaf666cf507350d8d5af13817905d76666e030494ae",
+    "scripts/generation/source_recipe.py": "31f14c6e206a81b5c7c7394353d2923b8047c1fab7db0128cb4a8ce5b5269c07",
+    "scripts/generation/create-parent.py": "5712d0750a8b9ae8b0c415b9757f43c6c35b239a2ba5392691ad814c5a2f27ce",
+    "scripts/generation/check-recursive-inputs.py": "bbc429d54226c5a571682f0d07813de7d00b0f9c45f4850aea5664c405434951",
+    "scripts/generation/examples/regression-recursive.json": "ef2bb6c0d78e8e13669ae1f3b7216730b9bab5460d777d681bbde81bf64c6703",
+    "tests/generation-contract.mjs": "a0b5fe9670ac8aea4b295d94002ef02650087478a4889a9223175ef2b84620c4",
+    "tests/reference/generation-recipe-cases.json": "c0bafe40906f97703d711dbaa90cfc85de35abce5e9c84ab1239e60c9a172875",
+    "tests/suites.manifest.json": "808f09f5d1a865634c19de5f0db1c7c4729d8b33fbe1575c108b647ba6a792f5"
+  },
+  "pass": true,
+  "ended": 1793475559087,
+  "elapsedMs": 1255
+}

@@ -3,7 +3,7 @@
 from pathlib import Path
 import argparse, hashlib, json, os, sys, time
 sys.dont_write_bytecode = True
-from source_recipe import validate, load_json, canonical, key, preflight, parent_definition, Unsupported
+from source_recipe import validate, load_json, canonical, key, preflight, parent_definition, Unsupported, resolve_sample_summary, affine_height
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent.parent
@@ -115,18 +115,18 @@ def create(recipe, output, chunk, reverse=False):
                  np.int32(recipe['numerics']['maxIterations']), np.float64(1e12), so, io, dd))
         status[ids] = so.get(); iterations[ids] = io.get(); distance[ids] = dd.get()/prepared['unit']
     transfer = prepared['transfer']
-    height = transfer['referenceHeightM'] - transfer['slope']*(distance-transfer['referenceDistanceM'])
-    height[height == 0] = 0.
+    height = affine_height(distance, transfer['referenceDistanceM'], transfer['referenceHeightM'], transfer['slope'])
     n = recipe['grid']['cells'] + 1
     height = np.ascontiguousarray(height.reshape(n, n), dtype='<f8')
     counts = {str(k): int(np.count_nonzero(status == k)) for k in [0, 1, 3, 4]}
-    good = np.isin(status, [1, 3]).all() and np.isfinite(distance).all() and np.isfinite(height).all()
-    if good:
+    outcome = resolve_sample_summary(counts, int(np.count_nonzero(~np.isin(status, [0, 1, 3, 4]))),
+                int(np.count_nonzero(np.isin(status, [1, 3]) & (~np.isfinite(distance) | ~np.isfinite(height.ravel())))),
+                bool(np.isfinite(distance).all() and np.isfinite(height).all()))
+    if outcome == 'resolved':
         np.save(bundle / 'height.npy', height, allow_pickle=False)
         result.update(status='resolved', reason=None, definition=parent_definition(recipe, array_hash(height)))
     else:
-        failed = counts['4'] or not np.isin(status, [0, 1, 3, 4]).all() or np.any(np.isin(status, [1, 3]) & (~np.isfinite(distance) | ~np.isfinite(height.ravel())))
-        result.update(status='failed' if failed else 'unresolved', reason='nonfinite evaluation' if failed else 'unknown required samples')
+        result.update(status=outcome, reason='nonfinite evaluation' if outcome == 'failed' else 'unknown required samples')
     np.savez(output / 'diagnostics.npz', distance=distance.reshape(n, n), status=status.reshape(n, n),
              iterations=iterations.reshape(n, n))
     device = cp.cuda.runtime.getDeviceProperties(0)['name']
