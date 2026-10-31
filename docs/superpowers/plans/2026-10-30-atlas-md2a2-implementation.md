@@ -1,0 +1,9 @@
+# MD2.A2 implementation sequence
+
+2026-10-30. Base merged PR24 `9b89e6c`; [governing design](../specs/2026-10-30-atlas-md2a2-source-recipes.md). A2.1 is this bounded offline creator; A2.2 remains subsequent integration/recursive-lineage work.
+
+1. Freeze source observations, independent owner/challenger positions and A2.1 criteria. Resolve disagreements with source/math or the smallest frozen test. Adopt completed review before code. Completed review `20261031T012424Z-8b3c5d` and six normative card amendments are adopted.
+2. Add the inert JS source-recipe codec and independent stdlib Python codec/key/precision preflight. Register focused unit tests for precision preservation, cross-input identity, forbidden observer settings, resource bounds and validation. Use an assertion RED against an importable skeleton, then implement. No GPU from Node units.
+3. Add the scratch-output parent creator reusing the owned CUDA float64 kernel. Validate before imports; construct coordinates and explicit status/height arrays; publish a resolved definition only if all required samples resolve. Add portable numeric-array verification and source/device provenance. Keep all A1 files/manifests/fixtures/certificate byte-identical.
+4. Run guarded units/build/static no-production-import/source-boundary checks. Run the single bounded GPU comparison in the frozen card with independent mpmath checks, different order/chunking, moved-output verification and unsupported/unresolved controls. Preserve all outcomes and confirm physical cleanup before further GPU work. No full browser gate is claimed for this unintegrated tool.
+5. Complete independent decisive-evidence review. Report all frozen criteria, performance/precision/reproducibility limits and process cost. Publish current docs and a reviewed PR against merged main. Advisor merges. A2.2 then completes recursive/imported recipe closure and preparation integration; A3 connects Plane and user-visible multiple worlds.
