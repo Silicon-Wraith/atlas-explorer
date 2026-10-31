@@ -1,0 +1,30 @@
+{
+  "pass_": true,
+  "rows": [
+    {
+      "phase": "A-explore",
+      "samples": 190,
+      "contacts": 698,
+      "conservativeSourceClearanceLowerBoundM": 8.243340395419465e-06
+    },
+    {
+      "phase": "B-explore",
+      "samples": 187,
+      "contacts": 362,
+      "conservativeSourceClearanceLowerBoundM": -1.2739647492315906e-06
+    },
+    {
+      "phase": "A-reopen",
+      "samples": 37,
+      "contacts": 0,
+      "conservativeSourceClearanceLowerBoundM": 0.09782743958465098
+    },
+    {
+      "phase": "B-reopen",
+      "samples": 38,
+      "contacts": 0,
+      "conservativeSourceClearanceLowerBoundM": 0.019256117574552516
+    }
+  ],
+  "cudaImported": false
+}

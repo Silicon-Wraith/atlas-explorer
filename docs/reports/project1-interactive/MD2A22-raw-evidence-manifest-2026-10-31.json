@@ -1,0 +1,1926 @@
+{
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/physical-closure.json": {
+    "sha256": "11f7df00f61880ffaf7309076985fed80b64df8abf30b9e226cba6ee0a0bf479",
+    "bytes": 174
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/source-world-certificates.json": {
+    "sha256": "f1ba9ce514ad67fb098179a5f0711c74286cacc4a6cee2b2ef3a008e8b109076",
+    "bytes": 4796
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/preflight.json": {
+    "sha256": "22d7198006385995b2b8a42643626dcc75566c382a57184d9f6b808ca73c0b92",
+    "bytes": 56473
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/qualification.json": {
+    "sha256": "2949f9afb1a1e3918ccf05f4fcafac91635688f26cf7ed230b5cfa54cae598b2",
+    "bytes": 5730
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/coarse-solid-indices.bin": {
+    "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37",
+    "bytes": 202752
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/fine-solid-indices.bin": {
+    "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37",
+    "bytes": 202752
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/source-records.json": {
+    "sha256": "235dbbef7a209e5f50e7ce80ff4b80a0c12bfeec70729033e1a904410c9de005",
+    "bytes": 15604
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/coarse-surface-indices.bin": {
+    "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333",
+    "bytes": 98304
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/view-surface-indices.bin": {
+    "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333",
+    "bytes": 98304
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/view-vertices.bin": {
+    "sha256": "5202560e9ffde67abfccc047f19a8a6b728d176a3b42102d696c6e40984ff91a",
+    "bytes": 101400
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/coarse-vertices.bin": {
+    "sha256": "0bef51cda6c787deaf81694d25d9e386224e4d3bcda8656d5dbc4d9e5c0ee36b",
+    "bytes": 101400
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/fine-surface-indices.bin": {
+    "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333",
+    "bytes": 98304
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/specimen.json": {
+    "sha256": "ca0e21351fd7f4acd20865edaf93077b9caa68b499caffaccee0d96c85d77a57",
+    "bytes": 23072
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/fine-vertices.bin": {
+    "sha256": "43961149c4a9b141b2e009fca8e420f1fa4677c7968d57ac706338516875b39c",
+    "bytes": 101400
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/coarse-vertices.bin": {
+    "sha256": "18d36c87a0d899b7d255b9b10efcf469ecf3e811b0114694ef5e7bb1be1de0c4",
+    "bytes": 101400
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/coarse-solid-indices.bin": {
+    "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37",
+    "bytes": 202752
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/view-surface-indices.bin": {
+    "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333",
+    "bytes": 98304
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/specimen.json": {
+    "sha256": "8e0abb2560bda35f7819de05c77b4be94ab8e0227471bdf5f55bc52cf4c03185",
+    "bytes": 23034
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/coarse-surface-indices.bin": {
+    "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333",
+    "bytes": 98304
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/fine-vertices.bin": {
+    "sha256": "1efa0bf2bc06850f6e2803bc654ed6afd850f82e242e8f877464dca4b6e6a51f",
+    "bytes": 101400
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/view-vertices.bin": {
+    "sha256": "80cdf506bb0ee3d2e51b7e9f7f0ebd8aafcd116c3ab3bcd8435a11a9d28d2881",
+    "bytes": 101400
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/source-records.json": {
+    "sha256": "b131ebee353df7d7b9bb2790bb20617235df18494b8576cdbd0e4c2999f191b1",
+    "bytes": 15596
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/fine-solid-indices.bin": {
+    "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37",
+    "bytes": 202752
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/fine-surface-indices.bin": {
+    "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333",
+    "bytes": 98304
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/input/height.npy": {
+    "sha256": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2",
+    "bytes": 33928
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/input/bundle.json": {
+    "sha256": "a7006ec1ab8276adeb85fd47731a4786cec98930942d92d5f6329a51f96c31cb",
+    "bytes": 314
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/input/recipe.json": {
+    "sha256": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4",
+    "bytes": 467
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/A/input/result.json": {
+    "sha256": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044",
+    "bytes": 2947
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/input/bundle.json": {
+    "sha256": "20f7580762f6710f1d3b332e6ded970892076e63c89745bf4a5426d30e3a1a00",
+    "bytes": 314
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/input/recipe.json": {
+    "sha256": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb",
+    "bytes": 465
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/input/height.npy": {
+    "sha256": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891",
+    "bytes": 33928
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/preflight-r0/B/input/result.json": {
+    "sha256": "1c8b1ad5a9ea46779c5737bfafcaaacd6f524e3a28d3bd3e16d998b8f3440f20",
+    "bytes": 2943
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-reexported.json": {
+    "sha256": "7d95418a532487df5ffd281f6808942952ef9358482ccc5cbb0f5cbf8c071e9c",
+    "bytes": 4052
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-actual-scene.json": {
+    "sha256": "aa53b4109c24b467831df18fac3c8f563db5ee242af3a8038e9df1ce4622bd1b",
+    "bytes": 4050
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/source-browser.json": {
+    "sha256": "9fa9a22114141bf1833a993b610f1654e7f02e3efc15fc9c876e1368d6f05a79",
+    "bytes": 10130977
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-fine.png": {
+    "sha256": "1f966bd75f7d640cf6f0c0c225db2085001f84d26cffcd66a844b490a946b148",
+    "bytes": 32337
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-coarse.png": {
+    "sha256": "6d885bf69731b95bf7c8f738032d117d06d4921c358ac2a3a0b92ca1c972dc8c",
+    "bytes": 34577
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-reexported.json": {
+    "sha256": "aa53b4109c24b467831df18fac3c8f563db5ee242af3a8038e9df1ce4622bd1b",
+    "bytes": 4050
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/motion-audit.json": {
+    "sha256": "4c52c09065a4d1aada0c4fb5b094fc4223873c062795b2cd8d86e4912216c941",
+    "bytes": 676
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-fine.png": {
+    "sha256": "e06311052f5235ea5afadbc2891f78019efab7fe5016c8b79a041eaa11bc71e9",
+    "bytes": 33069
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-coarse.png": {
+    "sha256": "fceced27d39072ae5eaefc60691ef2c7b7a289520b928c17e9f549fde12faf0d",
+    "bytes": 39110
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-actual-scene.json": {
+    "sha256": "7d95418a532487df5ffd281f6808942952ef9358482ccc5cbb0f5cbf8c071e9c",
+    "bytes": 4052
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-reopen/launcher.json": {
+    "sha256": "b8c79838126b4f60ef86adf3f78bd0754d7e0dc83adbc660e9719ff897b6e959",
+    "bytes": 5611
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-reopen/application-server.json": {
+    "sha256": "a03ac0137775812436f861e8fc464508ad3bbd312a7232a7cc8e67aa7212428d",
+    "bytes": 43025
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-reopen/browser.json": {
+    "sha256": "ff9df6e2414b56c65a462c6a9a1684de91ce732a134716e967b8c783ac2946bd",
+    "bytes": 109443
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-reopen/source-records.json": {
+    "sha256": "52a051b12c35d08bae2669aa2c3f535ce14c9739ce7aacc2f689a4b64d5500a4",
+    "bytes": 26523
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-explore/launcher.json": {
+    "sha256": "5ad7659e5d9d60cc0d67db811e75209c2d77d88c069d1e2c727530afe59b864e",
+    "bytes": 73096
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-explore/application-server.json": {
+    "sha256": "485bc31538b4f6f9de3a975d0f5ddde5f65d423ea8da904a2f0f69f5e33599bf",
+    "bytes": 123485
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-explore/source-records.json": {
+    "sha256": "52f0fdc40308fb7429bc34941f07e444c0cc730328249ed2fd4beb40ccf21207",
+    "bytes": 100755
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/A-explore/browser.json": {
+    "sha256": "64bf8e5b78ebaf413a49ee61d38ed3d192dc711f7152835d6b927f4f44312c78",
+    "bytes": 4502039
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-explore/source-records.json": {
+    "sha256": "8f14a23950b1e61021e46f0d0fb835dd632759eda807c04b97dfd8aa8c2fbb29",
+    "bytes": 121261
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-explore/browser.json": {
+    "sha256": "adc7a6590cc09cb09ba1059945912c7db7be1880d4af2042c1330d7090b8e644",
+    "bytes": 4127629
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-explore/launcher.json": {
+    "sha256": "9144746e8940b4a96ed03cffa65ead4b4425f8b1960ddbafb6b40d3178700d98",
+    "bytes": 73099
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-explore/application-server.json": {
+    "sha256": "138e5342c288cbcccd80c1dc1a510df9d5cd82071f0da12674525ca9267c2df2",
+    "bytes": 146179
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-reopen/source-records.json": {
+    "sha256": "c66b1b61ea661d14ae520add245bd434071baad32470090c07a73bcac9ffed08",
+    "bytes": 26538
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-reopen/launcher.json": {
+    "sha256": "af2bcc0fd1b06140a0b1689574f4d02ef32f81a4f4e32ada11fd1ccbd927da36",
+    "bytes": 5606
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-reopen/application-server.json": {
+    "sha256": "6b6f618db4bf25af9c54b4dc435c81b1f96a4a8debc245c8a7b4d691d0e2d76d",
+    "bytes": 43054
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-source-worlds/B-reopen/browser.json": {
+    "sha256": "f4363b9f2eb33511764208352f3ebb20cce3a1d5a31d881c825ab48ac96ce873",
+    "bytes": 110302
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/qualification-input.json": {
+    "sha256": "3ca6f129ec275b7503585adca6d52e720244c281adfb69029616df9f364f5dc4",
+    "bytes": 33557
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/buffer-audit.json": {
+    "sha256": "8ec50cf847933a8f4c49368f1b27e58dc60144f1a45cf7976814a7b111dc05c9",
+    "bytes": 919
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/fine-inspection.png": {
+    "sha256": "b53dd82136f14c25399349b3a9c88bb0a404cacad8870bab8d8601cb2ef80eae",
+    "bytes": 188599
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/policy-certificate.json": {
+    "sha256": "583b3091dc11bc1cf638bab25bc5fea91396255d2a91e7a31a89bf6e902bc862",
+    "bytes": 963
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native-controller.json": {
+    "sha256": "8299a3b02a81c70ba5334e1b938766f9541b296fae0f6c773772c308967f72b3",
+    "bytes": 131
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/flight-audit.json": {
+    "sha256": "0adbe9b955c5fee6c13299e91a77643cd8e80aa7f0edfcb50e4804ed4052ee6c",
+    "bytes": 8766
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/application-server.json": {
+    "sha256": "9e649c85fde4d4df450c438ddcc907e5902159b378577c0733b23a9cdcb50158",
+    "bytes": 99754
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/application.png": {
+    "sha256": "48a51faf24d6d8884992f17afa5d39cda18c4dab0ddbd214d6f2fa6fe45f8606",
+    "bytes": 32479
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native-records.json": {
+    "sha256": "1969f7f725024d6f7140ae81ae0a0616ad229f71ef6cf578a3ddc8a9464581cf",
+    "bytes": 64082
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/qualification.json": {
+    "sha256": "b52c71117618b23658fe52306f913d929533dc1c13cce11897f8ee1e0e6177d0",
+    "bytes": 5891
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/browser.json": {
+    "sha256": "8f15ceb8b82426333ffd09d3dadc0983ad22d74d67dde9d699560e26a9a91d7f",
+    "bytes": 8811120
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-10/mesh-region10-r0.normalized.vertices.bin": {
+    "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce",
+    "bytes": 313860
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-10/mesh-region10-r0.json": {
+    "sha256": "95e6f9505898e61701f54f39002fd1fe79ce2e70b867d30cafdfb435d4f6fae3",
+    "bytes": 8788
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-10/mesh-region10-r0.indices.bin": {
+    "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6",
+    "bytes": 615300
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-10/mesh-region10-r0.solid.bin": {
+    "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3",
+    "bytes": 627672
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-10/build-result-r1.json": {
+    "sha256": "71bc66d901e2104dea3851ed57d66937b6905ef5bc62631bd5d78bd0e3b91e04",
+    "bytes": 76663
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-8/build-result-r1.json": {
+    "sha256": "ca9fba6ba6a25640369c9feefdd8b8e1cf112db302dcd2509e2c27237c9658d9",
+    "bytes": 59751
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-8/mesh-region9-r0.indices.bin": {
+    "sha256": "a3bab9f85e049c5870178ec128ae8e9fdad881c14879842db848f8b766c08d8b",
+    "bytes": 1642080
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-8/mesh-region9-r0.solid.bin": {
+    "sha256": "0a130b084e4e47c445d7c5dd0160f7fa51c8c974eb4b421d8e48ee8cf766ca18",
+    "bytes": 1669128
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-8/mesh-region9-r0.normalized.vertices.bin": {
+    "sha256": "af11ae9de968a9950277d6583616ea8d1227dd447a2c8e3b61069251e8ecb2bb",
+    "bytes": 834588
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-8/mesh-region9-r0.json": {
+    "sha256": "eb0d21ae87ddd4d31d8ffdb5836ea29e3bc4fcc08af41295ac22f1d7cdf31a8e",
+    "bytes": 8345
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-2/mesh-region3-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-2/build-result-r1.json": {
+    "sha256": "680f599fc134ffe2cf62ae5cac55cf9f8ab134d11994724d4469d43cd3cd228a",
+    "bytes": 80427
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-2/mesh-region3-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-2/mesh-region3-r0.json": {
+    "sha256": "4eff874420efb5335a3572b62943dfb6c6b4bceb1aa4241b40436c5cc047d1b0",
+    "bytes": 10785
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-2/mesh-region3-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-5/mesh-region6-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-5/mesh-region6-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-5/mesh-region6-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-5/mesh-region6-r0.json": {
+    "sha256": "886422d62b8d3dbd694106cbeab83192d0ed1cc1e5e05a7093beaa5b6ee90034",
+    "bytes": 10637
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-5/build-result-r1.json": {
+    "sha256": "a36cb6d16c9058b639e78c5cf3d28f70ac9062e402d091394baf113c371b114e",
+    "bytes": 78805
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-17/mesh-region18-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-17/mesh-region18-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-17/mesh-region18-r0.json": {
+    "sha256": "d0b9b5202de108043b8a4c08ff5b4ab1b341f45bb3a98882010c33965aa26f75",
+    "bytes": 7792
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-17/build-result-r1.json": {
+    "sha256": "3a668e30a40fca33ef7e0d0dd017a5788e5ffed723f5a1f57801121ac224742b",
+    "bytes": 53185
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-17/mesh-region18-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-1/mesh-region2-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-1/mesh-region2-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-1/mesh-region2-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-1/mesh-region2-r0.json": {
+    "sha256": "125f175dc8fabdd4aabd239d0d99f22f6b738e2fba40692ecdc9fd21ec1e8878",
+    "bytes": 10773
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-1/build-result-r1.json": {
+    "sha256": "824db24beea4b6eb4e031201346308fa70448386af77be3fda28f5c16c5d3a9e",
+    "bytes": 79704
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-19/mesh-region20-r0.json": {
+    "sha256": "d9556f64499847e79c5b8c8dca704fcecdf974afa9c59151bc07083e7b4f57cb",
+    "bytes": 7794
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-19/mesh-region20-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-19/mesh-region20-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-19/build-result-r1.json": {
+    "sha256": "afdd149b7846723eb58b347330d33caa3920b252f88f6f00524b5256edf0c474",
+    "bytes": 53188
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-19/mesh-region20-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-13/mesh-region14-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-13/mesh-region14-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-13/mesh-region14-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-13/mesh-region14-r0.json": {
+    "sha256": "6268623df1e8c473a2f2cfa6a32fbe99170f955e2f16ef7d1a50997f6d6c0916",
+    "bytes": 10770
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-13/build-result-r1.json": {
+    "sha256": "e147ab8ccc07bcb3114d8d4ee92855b97c57ca56c01a3b3a3d504a830e2ec479",
+    "bytes": 79832
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-21/mesh-region22-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-21/mesh-region22-r0.json": {
+    "sha256": "3864668aab054d3bcc862111be556b2c4fa053a1a60d5a00b3c4853130e64e5a",
+    "bytes": 10765
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-21/build-result-r1.json": {
+    "sha256": "db9c3ae4b2cb0d8da4a951a30a9104bec43926f08a2134f726e18ce19945ccab",
+    "bytes": 79826
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-21/mesh-region22-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-21/mesh-region22-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-14/mesh-region15-r0.json": {
+    "sha256": "328c8f8dbc5ad89355649819fe7e8a87c7f4b6cf49317d6c912e01261857a0c1",
+    "bytes": 7790
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-14/mesh-region15-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-14/build-result-r1.json": {
+    "sha256": "8206a722ce13d35b64f121a55936d19fcd3a1101033c865656a356d72f493947",
+    "bytes": 53184
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-14/mesh-region15-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-14/mesh-region15-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-6/mesh-region7-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-6/mesh-region7-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-6/mesh-region7-r0.json": {
+    "sha256": "32af8cd0a2cfdc24d3cdbfd2e239af091ec1a8ec7a1f2bae2574fa6727e1d306",
+    "bytes": 10254
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-6/build-result-r1.json": {
+    "sha256": "77c363d9a012e6c8509b9f99d2d993872c0be10208fcb05e885118013356fcaf",
+    "bytes": 74013
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-6/mesh-region7-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-4/build-result-r1.json": {
+    "sha256": "385225549b0963e84f4077bf80503e4a4667edd721915e91a751a04f36378592",
+    "bytes": 85372
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-4/mesh-region5-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-4/mesh-region5-r0.json": {
+    "sha256": "4e6d04291ee3a4cc8e0a8dc3da643be77a8866db81e90b0744bf894ebbae15ed",
+    "bytes": 11151
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-4/mesh-region5-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-4/mesh-region5-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-16/mesh-region17-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-16/build-result-r1.json": {
+    "sha256": "3ad7c75248715ba06abce4fa6f2839fbcbdd9908ac5682fa16253b6ded2f9478",
+    "bytes": 53187
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-16/mesh-region17-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-16/mesh-region17-r0.json": {
+    "sha256": "ff4e2ae4dcce49bd03251c4a4103735c230397f0327653d04aeb74551f036839",
+    "bytes": 7793
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-16/mesh-region17-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-11/mesh-region12-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-11/mesh-region12-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-11/mesh-region12-r0.json": {
+    "sha256": "28117582f5349a709e84ae2abe8c7b78f5e5a8b2f011bb5dbc040b2d1e8d746c",
+    "bytes": 11313
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-11/mesh-region12-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-11/build-result-r1.json": {
+    "sha256": "ba83c770c061f287d1382a5f887000d71a6e1f6fc9dbf27af1d040ebc4825265",
+    "bytes": 87006
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-3/mesh-region4-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-3/build-result-r1.json": {
+    "sha256": "7c7c976463c4e5c024fbd91d46c8a8ee412331131edfcdf12e2df573c5b8d61a",
+    "bytes": 93913
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-3/mesh-region4-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-3/mesh-region4-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-3/mesh-region4-r0.json": {
+    "sha256": "b5254da412836ded0d885a9f8dfe3f6e3119f13dc01dc5db64e8d408b903d8c9",
+    "bytes": 11857
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-9/mesh-region10-r0.indices.bin": {
+    "sha256": "92cb40e944bf25382c451924047e3309e467cd145653a1ec6ca760e64eb48303",
+    "bytes": 1936284
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-9/mesh-region10-r0.solid.bin": {
+    "sha256": "304dda9e78b87352f57aaf0972452f3f5f6a3e57d63beb1c52706f5f9d8f7831",
+    "bytes": 1963128
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-9/build-result-r1.json": {
+    "sha256": "52335377bbdd9f8fcd0a661c7eb510be6236c59d9616906757facc45d16141b8",
+    "bytes": 66076
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-9/mesh-region10-r0.normalized.vertices.bin": {
+    "sha256": "7d92d64b8594f2eaf8b4c4c52d96926c0fa02b12dbebf20edbb9b90dd4fe4fa4",
+    "bytes": 981588
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-9/mesh-region10-r0.json": {
+    "sha256": "7d995bdaa76df1a62815941fa1bb9eec54009da2ae6b06c67be954081bbd5c49",
+    "bytes": 8866
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-15/mesh-region16-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-15/mesh-region16-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-15/build-result-r1.json": {
+    "sha256": "1350d1baf3326f38afc9372cbc7cf2519e7b016d34aa70b5612837c3d3d2f916",
+    "bytes": 79831
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-15/mesh-region16-r0.json": {
+    "sha256": "182248e662dcc9c9e06b35eabd0fa633ebb5e677016ce988cd90c6c1aaf9a1fc",
+    "bytes": 10769
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-15/mesh-region16-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-7/mesh-region8-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-7/mesh-region8-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-7/build-result-r1.json": {
+    "sha256": "299cc1f4e4a0b43b878db3f67cb1b3e809ac148b5a2b37b129daa01282469753",
+    "bytes": 87054
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-7/mesh-region8-r0.json": {
+    "sha256": "d263c61d54ef7c61646d52387464ce921d94dd256047cf6c7bdc6c0c92b78a47",
+    "bytes": 11303
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-7/mesh-region8-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-0/mesh-region1-r0.json": {
+    "sha256": "7f4894d124f4d871581da04238b6bd47996164d567c832285e832d990a4f1a93",
+    "bytes": 7796
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-0/mesh-region1-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-0/mesh-region1-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-0/mesh-region1-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-0/build-result-r1.json": {
+    "sha256": "65dc58edc7951d220ee1099a94071557dbd092fd51dc5958839de89b11beb73d",
+    "bytes": 53104
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-12/mesh-region13-r0.json": {
+    "sha256": "ec354ad4e5938b2d0528e1a69c2bc558a86f4662cef7a1658c24e93bf2f35386",
+    "bytes": 7794
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-12/mesh-region13-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-12/mesh-region13-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-12/build-result-r1.json": {
+    "sha256": "dd8ce5623ae3b4be10397c42004692d1dde7e0b6b936e4414c124f2db54d7915",
+    "bytes": 53187
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-12/mesh-region13-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-18/mesh-region19-r0.json": {
+    "sha256": "6c93b40e07cf61c3f8842ab2b6526c7a521b0a04b94ebab9b4fca4a915102f30",
+    "bytes": 10769
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-18/mesh-region19-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-18/mesh-region19-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-18/mesh-region19-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-18/build-result-r1.json": {
+    "sha256": "7580d8fb31d6357103105e974180be907e14abdc390473af05a3e5303c34230a",
+    "bytes": 79831
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-20/mesh-region21-r0.json": {
+    "sha256": "0f905aaff72ae6fc7f7a93aa691c13ddecc58a05104871fdf1a647be84d806a7",
+    "bytes": 7795
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-20/mesh-region21-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-20/mesh-region21-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-20/mesh-region21-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-application/native/job-20/build-result-r1.json": {
+    "sha256": "a30eec2db379dc713366e3e8dfbc7d8da3ebcaaacd5cf29b83c289cf5e5231f4",
+    "bytes": 53188
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session-http/certificate.json": {
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "bytes": 2
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session-http/http-session.json": {
+    "sha256": "8e24f6862800750a7a974dfdb8fda97ca3682c9cdf37c0d1b7dc077c5ed9eda3",
+    "bytes": 6271
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session-http/application-server.json": {
+    "sha256": "cfd1e179e2e102ff8ad5982646154992c29780c26156e77ccaa8785d9600634e",
+    "bytes": 3618
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session-http/feature-r0.json": {
+    "sha256": "88f52253277079651aeeed2aab9294e05f42fc8f7edfb7d40807d03ffdafb4e5",
+    "bytes": 50
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session-http/failed-retirement/application-server.json": {
+    "sha256": "36bb17d7c60e44ca2206a2a05538b4b63abcb8983260f14289ffe562160e3d2f",
+    "bytes": 1310
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/flight-audit.json": {
+    "sha256": "b2f76cb134b65b217feba0bccbbdffd6bdc6741b346acc460d9240d90e542fe5",
+    "bytes": 516
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/browser.json": {
+    "sha256": "5cdd0e8d435fb1e37b97f65ac04de586438bf66aa12f9bc3f63a5d8213b823ab",
+    "bytes": 7451139
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/second-tab-refused.png": {
+    "sha256": "faac2d3f81e4a07f62598ecb17e9f55a6b6836308ae72b81fa43e30037cf3ac1",
+    "bytes": 145159
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/policy-certificate.json": {
+    "sha256": "efd6903375a8a709cc4a09813611531fb3f7cd0ca2b680221db8fc0420075cc5",
+    "bytes": 963
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/qualification.json": {
+    "sha256": "5b2d86217a192df0cabaf7ef38008e916a7f155fccfedc2e47c9d874469f3970",
+    "bytes": 3194
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/application-server.json": {
+    "sha256": "3b1d09b52d98a40357c301aa3f4e0805b6ff0e95b1d7d2d79a9d9fd815686611",
+    "bytes": 81467
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/buffer-audit.json": {
+    "sha256": "91cf6c938890061620867be46ee81aac5a1338fb48a3f9fb0808d8bc0b1793c3",
+    "bytes": 553
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/session-retried.png": {
+    "sha256": "6da787fd8890bfbc71c73834896a2df81c916258da390d2d0687f2f33035f838",
+    "bytes": 459191
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native-records.json": {
+    "sha256": "ae9a68f3c118f5798952152095492bc897813717b4988092d81bba9cd135fd12",
+    "bytes": 26194
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/session-expired.png": {
+    "sha256": "dc8e9e589826d7ec3089cba333299a382f2cc56192799b6b4c20d42c6f3f2f84",
+    "bytes": 153735
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native-controller.json": {
+    "sha256": "3ec3ed15de3e18c4b447982232ab53b7ea073041bf21977eb7081490573f12ff",
+    "bytes": 131
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/session.json": {
+    "sha256": "9989be9ffa55c067073d6558856572ffb62b72a73db62821f32f3b41b5a5bd32",
+    "bytes": 7455153
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/qualification-input.json": {
+    "sha256": "e53cc14c9f697314d388cebacc9f0634c2e1cb348c6c340c235971e06331a033",
+    "bytes": 21750
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/launcher/application-server.json": {
+    "sha256": "f572c0c419aa54a6b590ce51472eb95ad62ce818104ec64ae82fbff2103a8345",
+    "bytes": 145
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/launcher/launcher.json": {
+    "sha256": "701ddd888aa083af7f8485d15dd4ca52208a9711a5415d825e62097a26547f94",
+    "bytes": 2136
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-1/mesh-region2-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-1/build-result-r1.json": {
+    "sha256": "faccca455437eeb1dbdec4c6a4d35c1ccf97bc31a2f03dd7939cf1da31be9513",
+    "bytes": 79702
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-1/mesh-region2-r0.json": {
+    "sha256": "2e8aadf9300c47704b9bb8b3babcd5b8c9d6d898f9d79a2552568e54ad84f405",
+    "bytes": 10770
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-1/mesh-region2-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-1/mesh-region2-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-6/mesh-region7-r0.json": {
+    "sha256": "17e29b9ad3af9a333c63fbad2595dc32ff5d8a4fd4fc8ae15851d3b43ef6dda4",
+    "bytes": 10778
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-6/build-result-r1.json": {
+    "sha256": "bfded0655167e6303c74efd80c65a2584c83767e23ef79906060733877bf7725",
+    "bytes": 80422
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-6/mesh-region7-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-6/mesh-region7-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-6/mesh-region7-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-2/build-result-r1.json": {
+    "sha256": "e03b2449efb6f30970b99ea83d64b2e1c34b72b5e16d86e6b5452d42be5dcec7",
+    "bytes": 80427
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-2/mesh-region3-r0.json": {
+    "sha256": "bdb5594e64fe31880ddd62ddd70635b24611bc132affec204872c7b5a14a9aea",
+    "bytes": 10784
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-2/mesh-region3-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-2/mesh-region3-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-2/mesh-region3-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-8/mesh-region9-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-8/mesh-region9-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-8/mesh-region9-r0.json": {
+    "sha256": "2b1f7cb17ea76d58a624fcdf557a9cee638bbcbdbc2ee930f22b5a25e631cec2",
+    "bytes": 10766
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-8/mesh-region9-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-8/build-result-r1.json": {
+    "sha256": "5bf4125a4391cb96394fa8bd586f68ef2b2234e69a0589627571984296dd034a",
+    "bytes": 79697
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-5/build-result-r1.json": {
+    "sha256": "9bb2d148161f4be9e8f3fc4f9d8571cf50ff58ea8fcd45810577a672b08cfad0",
+    "bytes": 79702
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-5/mesh-region6-r0.json": {
+    "sha256": "87f317392572356f0deb02373cad6bf6dbcb918f9d7bd1ce34eda2f3db0ef44c",
+    "bytes": 10770
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-5/mesh-region6-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-5/mesh-region6-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-5/mesh-region6-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-7/mesh-region8-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-7/build-result-r1.json": {
+    "sha256": "90588cb47d47aa86db13e663c2d692a73cd10adf7d290c3ee689e7d9debc20ae",
+    "bytes": 53106
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-7/mesh-region8-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-7/mesh-region8-r0.json": {
+    "sha256": "034f9b8a40bcdabbd7f071ea205a19140e446e3b6f6489904cfd16901e96e230",
+    "bytes": 7794
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-7/mesh-region8-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-0/mesh-region1-r0.json": {
+    "sha256": "da5b4bc13d756d9274baa4867035c9f6568c4d76504a61d8d52f882b1e025dd8",
+    "bytes": 7795
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-0/mesh-region1-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-0/mesh-region1-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-0/mesh-region1-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-0/build-result-r1.json": {
+    "sha256": "d3dc11495c0fe8c5f196f49059bb0ca10adeca692c0023fcf54c6ce4bb2221cb",
+    "bytes": 53104
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-4/mesh-region5-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-4/build-result-r1.json": {
+    "sha256": "8a2fa6cd993f44ebd642122b8c9096c7f5266e909b5ca9cc0d18b170da1ca07f",
+    "bytes": 53107
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-4/mesh-region5-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-4/mesh-region5-r0.json": {
+    "sha256": "ff7db807f3f49e467cf720eccdce89722864cdcba0ad37f2a25c5ffdbe340719",
+    "bytes": 7795
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-4/mesh-region5-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-3/mesh-region10-r0.normalized.vertices.bin": {
+    "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce",
+    "bytes": 313860
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-3/mesh-region10-r0.json": {
+    "sha256": "5c218020bd3531b8cf5e6d9dc8ff546eb1048a9347678855f6ece26b113b157c",
+    "bytes": 8790
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-3/mesh-region10-r0.indices.bin": {
+    "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6",
+    "bytes": 615300
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-3/mesh-region10-r0.solid.bin": {
+    "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3",
+    "bytes": 627672
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-session/native/job-3/build-result-r1.json": {
+    "sha256": "ca32a973c1b52db2f6c05f4b01a0cd65d5c2828b928368463f587c070fe8b339",
+    "bytes": 76666
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/files.json": {
+    "sha256": "11deb87dfdf32273929d5e5889d9c8b2c67e18a3bc59144542e9f951f8310f02",
+    "bytes": 900073
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/restored-place.png": {
+    "sha256": "22b2aaf4808f3e075bd3cdddd905a6cb8e3e6c3e8d479f77b8ff62a8d7999a9f",
+    "bytes": 403180
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/actual-saved-scene.json": {
+    "sha256": "907f4037be0d16ed54445a0dc670c7b1b59737e3e6cd33937139f0dc24ff4dc5",
+    "bytes": 2851
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/actual-reexported-scene.json": {
+    "sha256": "907f4037be0d16ed54445a0dc670c7b1b59737e3e6cd33937139f0dc24ff4dc5",
+    "bytes": 2851
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/saved-place.png": {
+    "sha256": "ce005db29e76d0363894d1284da930797b16c712a6cb8436e5e76a64e53d4eba",
+    "bytes": 469482
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/flight-audit.json": {
+    "sha256": "6db03a91387e9c53d6c0d6b32e36d6c129f64dd72672a38195d0e4996e952933",
+    "bytes": 511
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native-records.json": {
+    "sha256": "3b3ed009f15d551ab267adf6825d98435b7582a259a4355d521e8ea99c76f382",
+    "bytes": 40807
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/qualification.json": {
+    "sha256": "100b2285956ed3c5ff8cbe4f3fc46929f073a4867b6491be65c7d77676841eff",
+    "bytes": 2410
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/buffer-audit.json": {
+    "sha256": "fd3b293fece2d93e4459a2b4267eb8f477e943fd00cae4b7f8e1c58011c9d15e",
+    "bytes": 463
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/policy-certificate.json": {
+    "sha256": "6f7cd0633b34faea0fc6b0c3e049bed78ab4b0b4f46e997d97927f424cf7822b",
+    "bytes": 691
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/qualification-input.json": {
+    "sha256": "6ea491734713e9f79b63140e47f8412dbff65018c025b6682f84fa5e3843b660",
+    "bytes": 18806
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/application-server.json": {
+    "sha256": "450ac4032a211976bcbd8c74c0f5898affec52aeb54e7e991adc7fab1e1723aa",
+    "bytes": 91328
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native-controller.json": {
+    "sha256": "72e0009d23a86a26c6d41e6c9919bc3bd4285d00bca14fc4085f6b7e04cb0723",
+    "bytes": 131
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/browser.json": {
+    "sha256": "8889ef9d5ece30932aa94cec0a742337d3aca2745bb344a994d3bc398196354a",
+    "bytes": 472814
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/policy-certificate.json": {
+    "sha256": "a168771b7489d5641ebd1000f2a425b4f7d624c54f40c995d5116b7d01b9ab10",
+    "bytes": 691
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/browser.json": {
+    "sha256": "5aadc5111ea36c43a1ee00bee4c2254ba17ed4d5cce0a1aec84c00781f3cab71",
+    "bytes": 318648
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native-controller.json": {
+    "sha256": "c894e8e8fb973ce820980c5a284136c47fb997a007922da9b226d41f22e88b6f",
+    "bytes": 131
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/application-server.json": {
+    "sha256": "64a722787136e4e194265973f05405d1dd9398110ae46a33f0a02fc577cb5f53",
+    "bytes": 69748
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/qualification.json": {
+    "sha256": "d27b6c0ec1f78002c2553116983f7e4d34dccbf0d0080adcfe6791dc03b6aef5",
+    "bytes": 2469
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/qualification-input.json": {
+    "sha256": "4bc56f2a93b06e624948d4224cbcaee60627ae59f2d5ca0c57451d1320e2584a",
+    "bytes": 18823
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/flight-audit.json": {
+    "sha256": "3303504f097f9d89c80a6aa1c153e005876e050372eccdeb8a1d0a03a5be21ad",
+    "bytes": 515
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native-records.json": {
+    "sha256": "2786e090c1bd4c0e770289f2ef4c8146ed6eafcfbea5423f06b3a93ac51699b5",
+    "bytes": 8904
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/buffer-audit.json": {
+    "sha256": "f16e937f758edf886f6f4566129c04d2850f2f77f03c8bbe454d1faa97223907",
+    "bytes": 462
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-1/mesh-region2-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-1/mesh-region2-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-1/mesh-region2-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-1/build-result-r1.json": {
+    "sha256": "082620dc1c027f7e21dfb9b0fd17263c54d6193f7ee494af2194d0097e50274c",
+    "bytes": 79696
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-1/mesh-region2-r0.json": {
+    "sha256": "bafa018a065d2e312681b938d2ce2ad6085e275a4fdf37076297ada6d79c8904",
+    "bytes": 10766
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-2/mesh-region3-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-2/mesh-region3-r0.json": {
+    "sha256": "ba96648853f21cbf7fa86d89ac1bf83a464ee4fb8b2ed00e1135d88c1ecfe1fb",
+    "bytes": 10786
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-2/build-result-r1.json": {
+    "sha256": "0d4ad7ab57f98f8ddf99002825e829bfaa05c8b73d68bad16e497b7f289da40e",
+    "bytes": 80429
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-2/mesh-region3-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-2/mesh-region3-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-0/build-result-r1.json": {
+    "sha256": "4d3075614682f704ce11218c353c2749bb4a287a6517df83522b5f6e6a5ad078",
+    "bytes": 53089
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-0/mesh-region1-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-0/mesh-region1-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-0/mesh-region1-r0.json": {
+    "sha256": "43e12eed9fda04bf161e9d004212dd044e8189686ee331159773beb9f328941c",
+    "bytes": 7786
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/save/native/job-0/mesh-region1-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-12/mesh-region13-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-12/mesh-region13-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-12/mesh-region13-r0.json": {
+    "sha256": "d9af6442ca6b81bb40f6cf1d789ee543b76f666d87e757f795ab7eac6796a591",
+    "bytes": 10778
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-12/mesh-region13-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-12/build-result-r1.json": {
+    "sha256": "833c1f7ec946f34dd63d0bc85f4f8e0cfa3c2ae653391947c6ce0698dec7be33",
+    "bytes": 80549
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-0/mesh-region1-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-0/mesh-region1-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-0/mesh-region1-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-0/mesh-region1-r0.json": {
+    "sha256": "57bed7b8ca9bbadab30d68e57e1b1963684fb96e15e28407fae71b96a9353164",
+    "bytes": 10784
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-0/build-result-r1.json": {
+    "sha256": "77a7500e98f0b410f1df2aabdca024d7bfd5abe758f9c4ac873876e8b8568edd",
+    "bytes": 80424
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-7/mesh-region8-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-7/mesh-region8-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-7/build-result-r1.json": {
+    "sha256": "6dc507c1ff99a0a7f0a57e2cde9902e3231f7b60c0f7efa2676442b3fc9cbd3e",
+    "bytes": 79691
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-7/mesh-region8-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-7/mesh-region8-r0.json": {
+    "sha256": "1e134a4a3d5304217a1c1fb2fcc46e9e3792ac2aec0bde56750e6e0ea60f8bec",
+    "bytes": 10763
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-11/mesh-region12-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-11/mesh-region12-r0.json": {
+    "sha256": "03c288af8bca43bf087f6324e5071b23938eebf0679438bd24232a5eadabe358",
+    "bytes": 10768
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-11/build-result-r1.json": {
+    "sha256": "860cac661152ad18dccb78738a285499085c21e5807431c68133d4288958665f",
+    "bytes": 79828
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-11/mesh-region12-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-11/mesh-region12-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-3/mesh-region4-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-3/mesh-region4-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-3/build-result-r1.json": {
+    "sha256": "77d2bad4d6f8925693a8663c1410563f287ef30a89c4c413a9f73216515d7017",
+    "bytes": 80418
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-3/mesh-region4-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-3/mesh-region4-r0.json": {
+    "sha256": "a8d8b36f2c1c8e7e85c0aad012d80d909fc57af0007cd6fe56bc8ee424a1ece0",
+    "bytes": 10779
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-9/mesh-region10-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-9/mesh-region10-r0.json": {
+    "sha256": "a73d157ce5a0475ffa1b492d65a98642239d6dc0568c9312d2acaa8a9dce424f",
+    "bytes": 10767
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-9/mesh-region10-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-9/build-result-r1.json": {
+    "sha256": "ad8c96c5e2b665f319e1b2aa1c45c62022a51809e3eb1a043db554aec4486971",
+    "bytes": 79827
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-9/mesh-region10-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-4/build-result-r1.json": {
+    "sha256": "35c068bb06addd234aaef421722e9c6ff330330789414ab13fc3c7628e67ee34",
+    "bytes": 79694
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-4/mesh-region5-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-4/mesh-region5-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-4/mesh-region5-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-4/mesh-region5-r0.json": {
+    "sha256": "be4423d2ea113c71179dcd8ff9cafd4bbc08944d932023ff0586b75e27aae879",
+    "bytes": 10766
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-6/build-result-r1.json": {
+    "sha256": "d198721f54ae01a8ab6dc06428da01e4c41d09ffc5eb134ba38c922cd183fd7b",
+    "bytes": 80415
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-6/mesh-region7-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-6/mesh-region7-r0.json": {
+    "sha256": "621d03a6affdf42e856623410e5b7cf35fd66131d5e10888f021e638bd20b3df",
+    "bytes": 10776
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-6/mesh-region7-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-6/mesh-region7-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-13/build-result-r1.json": {
+    "sha256": "df0763a842b29d2440c75503b89c81cd2064a8c8407cb8548aa11887d71e43a9",
+    "bytes": 79829
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-13/mesh-region14-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-13/mesh-region14-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-13/mesh-region14-r0.json": {
+    "sha256": "c59c2738e719a45bb2fa120fa940f026dd8d0b9a7328cef18d42e239cca03cd7",
+    "bytes": 10769
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-13/mesh-region14-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-1/mesh-region2-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-1/build-result-r1.json": {
+    "sha256": "a3e20fdb4dbecb087055870de8d4a0b1eaf961fb37db9e80b601ff7fa0ee574a",
+    "bytes": 79698
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-1/mesh-region2-r0.json": {
+    "sha256": "50e8dfd5e7662ecbb95015d98f3811f4c0a40b4a7f9dae3fe6a12d499ee18298",
+    "bytes": 10772
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-1/mesh-region2-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-1/mesh-region2-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-5/build-result-r1.json": {
+    "sha256": "949a6c8cbfe96e56f0caa0c3cd486d4a939e3f853f55387dcfa4457e601f58b9",
+    "bytes": 79692
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-5/mesh-region6-r0.json": {
+    "sha256": "b6b3521179841fc835fac54044b1b51287065b1cac24b95c517d53538561e3f6",
+    "bytes": 10764
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-5/mesh-region6-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-5/mesh-region6-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-5/mesh-region6-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-10/mesh-region11-r0.json": {
+    "sha256": "df18f2537b17abe35556641dad6bc62b943b69d50326a005bc36624d1fea9ba9",
+    "bytes": 10776
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-10/mesh-region11-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-10/mesh-region11-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-10/build-result-r1.json": {
+    "sha256": "a82ea5137612159a930f6e7efaf162b2d18aac58afed329fc2163182952607c7",
+    "bytes": 80547
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-10/mesh-region11-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-8/mesh-region9-r0.json": {
+    "sha256": "94d3473b29e4450364c24cae89f80f70bfde4f541b773b2f6b29df7fca2f341c",
+    "bytes": 11852
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-8/mesh-region9-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-8/mesh-region9-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-8/mesh-region9-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-8/build-result-r1.json": {
+    "sha256": "0a11a7ba0dfe3dbfc1a00d1572b535e221cee2e1eab3f23db9b32669e24ac5ef",
+    "bytes": 93907
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-2/mesh-region3-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-2/mesh-region3-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-2/build-result-r1.json": {
+    "sha256": "c59957875ae75461742c8255b09aca36f4620b993bf60efe7d10e864d3b5f0a3",
+    "bytes": 93907
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-2/mesh-region3-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-files/reopen/native/job-2/mesh-region3-r0.json": {
+    "sha256": "c956a471149fc90049304117166993c8c63cda53725ea8581bd8345b5672d639",
+    "bytes": 11852
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery-http/recovery-http.json": {
+    "sha256": "ba3c295a2dd974941becf81940fd28af2b5d96ed05bd626064c8765b20a422af",
+    "bytes": 8307
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery-http/certificate.json": {
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "bytes": 2
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery-http/feature-r0.json": {
+    "sha256": "88f52253277079651aeeed2aab9294e05f42fc8f7edfb7d40807d03ffdafb4e5",
+    "bytes": 50
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery-http/failed-certificate/application-server.json": {
+    "sha256": "d3b44d9057ea59b830f4f2cb6c8f87d4cb175c10afd443bc0ae3d26c4c7dce70",
+    "bytes": 1295
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery-http/failed-cleanup/application-server.json": {
+    "sha256": "fa433c59886395315a001090404a8cfc773e1742e312fb66f2cdd0da2c77714c",
+    "bytes": 1301
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery-http/terminal/application-server.json": {
+    "sha256": "b73e4b0d56a3efc1f841bb85ef9a1f003b852d554dc9a2fca55ea98425426e77",
+    "bytes": 2480
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery-http/failed-startup/application-server.json": {
+    "sha256": "712266cb26b3564ac037a1ef71011d54bae32aa9b10e1fc1d26bec32a1981105",
+    "bytes": 1259
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/device-stopped.png": {
+    "sha256": "66e6aa3a7a01eff9c8895f805a57c0cd1eeff0ff0164a9e699f25b83c4bc72e0",
+    "bytes": 39866
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart-return.png": {
+    "sha256": "a2509b4f906a0a6fcdc57df4d36bfb8d1480d437e00a9f855d27af62e1d69bfb",
+    "bytes": 402100
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/worker-stopped.png": {
+    "sha256": "f34fed7e06c960610facf7526c263280161d1c85797ad0e51f4f7d79361208a3",
+    "bytes": 154870
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/actual-recovery-reexport.json": {
+    "sha256": "6c75cee8e135a6c9011fce0c7ef17d63a24a032965a8e813546c8096e5aca48f",
+    "bytes": 2851
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/actual-recovery-scene.json": {
+    "sha256": "6c75cee8e135a6c9011fce0c7ef17d63a24a032965a8e813546c8096e5aca48f",
+    "bytes": 2851
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/recovery.json": {
+    "sha256": "a0dfd7b9502c8caec90c597d8a9a89b2bcb686506059d9536107f18cd86fbd2e",
+    "bytes": 868048
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/device-recovered.png": {
+    "sha256": "782e7c69ba27046757bce5f34f1cc6ac98667003eadbcea5b4884b38a6a14f17",
+    "bytes": 394390
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/native-stopped.png": {
+    "sha256": "a7cda1eede6882366ccbee8e4312b87153a8444b5390877badc7de754ae03848",
+    "bytes": 153917
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/qualification-input.json": {
+    "sha256": "b377db799524ca60d5a36317aa0e356180cb5787d9508c20478b62f5fd1037b8",
+    "bytes": 18952
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/flight-audit.json": {
+    "sha256": "8462c51274d082f31da5c61b8ec158500c2e54638ad501737369097dc2cace71",
+    "bytes": 736
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/buffer-audit.json": {
+    "sha256": "c1811c803c57874331a0a78e52dff91392fa01993481e1280f5cb8bd4cc392df",
+    "bytes": 462
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/qualification.json": {
+    "sha256": "cd24741843366d81146a2119aa74e4a23578c4dca4dc612dcd109aa827ba6a02",
+    "bytes": 2468
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native-controller.json": {
+    "sha256": "113c6d5dd575b722592e9d210f482fe2c47c9fdce1e697ebf032f61ffee6ea6a",
+    "bytes": 140
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native-records.json": {
+    "sha256": "8e08e2a7a28974862ccc3d3c667e324864c93efdbf2343151dd217bf795c7ab9",
+    "bytes": 23722
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/application-server.json": {
+    "sha256": "d922ca310267dba1038dea576ec5a732aa005cde6d8301ce55e3709e1109d1fd",
+    "bytes": 80825
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/policy-certificate.json": {
+    "sha256": "8cc883172bb2c16c0760e843b598cfc70eb59096e6c03a9730fa163183db5d64",
+    "bytes": 691
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/browser.json": {
+    "sha256": "d26df034bf09384e8a7e446fca9f923d49cb0d14d0d143f0617cf6211d315663",
+    "bytes": 557087
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native-records.json": {
+    "sha256": "a1466f6583262feef40633e5442902880ff20adc9b730e655e75618e8923c51c",
+    "bytes": 6049
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/policy-certificate.json": {
+    "sha256": "b8b1e7d97505d01cecd42c47e1b1a5e11a821fad43fc6f58c1cee5fdf961c65f",
+    "bytes": 691
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/browser.json": {
+    "sha256": "8a320907880df3a0dc73711e5d742fe3d4d68d866682d0c3fbb2eca3721e2c9b",
+    "bytes": 204546
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/buffer-audit.json": {
+    "sha256": "525bc616dbc330e1a51e49eab6c1f421b06b7e57a716fa041c2c223c06cca95f",
+    "bytes": 371
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/application-server.json": {
+    "sha256": "b885bdb91c14d31dc9927707df1704d8323e8340b6a5a6d1bd7b678a1736b525",
+    "bytes": 67758
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native-controller.json": {
+    "sha256": "ae1639a870b8910556ea9a5ab49aeb8860c272b096196d2047e86424eba6f7c6",
+    "bytes": 131
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/flight-audit.json": {
+    "sha256": "7916ac27d25d622c45f7cc0b9e431609ea0cdeeb07c36911f77f7adf71ac6380",
+    "bytes": 511
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/qualification.json": {
+    "sha256": "8429c6dd4612b423b6c2a0916aae87d263c103cb56f29bdb05c1a67314275418",
+    "bytes": 1753
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/qualification-input.json": {
+    "sha256": "c709547d8e19aec5bbf841627f7a40ac4e05454f287c7889b0d7644546691c83",
+    "bytes": 15913
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-0/mesh-region1-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-0/build-result-r1.json": {
+    "sha256": "2adc2f85b83e0fb24409a9e198d92607c0dde0f9e5bc13f8245c26b5d6b224c7",
+    "bytes": 80420
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-0/mesh-region1-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-0/mesh-region1-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-0/mesh-region1-r0.json": {
+    "sha256": "861208d1ebb4c112ea1fd9f89f271661d2b04d0169f09e68f04a19032f75b581",
+    "bytes": 10781
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-1/mesh-region2-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-1/mesh-region2-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-1/mesh-region2-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-1/mesh-region2-r0.json": {
+    "sha256": "90fd7910bfaab455e7edf1b2a5658bc6db33164719b860bd2bc60bfb1bc976d1",
+    "bytes": 10767
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/restart/native/job-1/build-result-r1.json": {
+    "sha256": "0b9bd7c18c19c245bd686107771b3d8c9fe335d69416eeda5b11e0e4c21be8d7",
+    "bytes": 79696
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-4/mesh-region5-r0.json": {
+    "sha256": "8c08b3fe5a6f7b7125f52f751cf046fc421c5cf7d2e7858bfc26427db3c6b181",
+    "bytes": 10776
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-4/mesh-region5-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-4/mesh-region5-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-4/build-result-r1.json": {
+    "sha256": "f1d571150691bda042c1245f91b1ef35f50ee88f62d6467379a6db15ec4aa0fb",
+    "bytes": 80415
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-4/mesh-region5-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-3/mesh-region4-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-3/mesh-region4-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-3/mesh-region4-r0.json": {
+    "sha256": "ad676efed42f7dd699bce48d195d00bd5364c04c71bd8d96384fac02e2cbcb94",
+    "bytes": 10770
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-3/mesh-region4-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-3/build-result-r1.json": {
+    "sha256": "bd7743cb1942a62292d70ac7315dac876b04da5b9f2e9b10b44013d30982d4d8",
+    "bytes": 79697
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-7/mesh-region8-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-7/mesh-region8-r0.json": {
+    "sha256": "6cce215eac4f01cab545db03d0d69c05bd3ee280bf676a8aae4bcd65da0f33d3",
+    "bytes": 10771
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-7/mesh-region8-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-7/build-result-r1.json": {
+    "sha256": "ee06c60919d7dc3b55b71680e5356429d5628b376b2a7035d08e6632fd2157b8",
+    "bytes": 79703
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-7/mesh-region8-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-0/mesh-region1-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-0/build-result-r1.json": {
+    "sha256": "17305607857cee1778aa834625b40b1885a57ab80cbf5d15f8531dbdc056114e",
+    "bytes": 53102
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-0/mesh-region1-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-0/mesh-region1-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-0/mesh-region1-r0.json": {
+    "sha256": "02327973c8cc83c94fd903ca1ee23a1b2007010bfe8962fd64f034566752c3a3",
+    "bytes": 7793
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-2/build-result-r1.json": {
+    "sha256": "dc9c90ead2d6d54e59581f3de9608567482d4318ad53fac830c3258722ab9c73",
+    "bytes": 80429
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-2/mesh-region3-r0.json": {
+    "sha256": "da715bd0f2cf8b4d4b72011de84486e5971be61dbe77d3428937a33a05222778",
+    "bytes": 10787
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-2/mesh-region3-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-2/mesh-region3-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-2/mesh-region3-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-5/mesh-region6-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-5/mesh-region6-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-5/mesh-region6-r0.json": {
+    "sha256": "ba78c5b26f57ecd962ddd94f4b78869b220a790a5489638a96298a0832f6c108",
+    "bytes": 10767
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-5/build-result-r1.json": {
+    "sha256": "4e5e54cc833ae54b8445d166e80d2ee9c2ddfd4eccb7f51a7c2f0d90cebe58e9",
+    "bytes": 79699
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-5/mesh-region6-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-1/mesh-region2-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-1/mesh-region2-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-1/mesh-region2-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-1/mesh-region2-r0.json": {
+    "sha256": "cd1716cd01223b6dbcd6cf7e412b54d247f98a101d5a2c97cb3760acdc57cf77",
+    "bytes": 10772
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-1/build-result-r1.json": {
+    "sha256": "13b153d7c2ada2d3f48065ad5586ff8148230509324f55fd92b61b41f3972dcf",
+    "bytes": 79703
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-6/mesh-region7-r0.json": {
+    "sha256": "10924f3b531117cfbae1c50729c9247ce5a572ac3aa2c6e402b0377ebc2b3915",
+    "bytes": 10786
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-6/mesh-region7-r0.normalized.vertices.bin": {
+    "sha256": "b49da841bb3a41d99be5041d4db8ef6e4b3cdcb8b49ea9508cd4f0479e5932ad",
+    "bytes": 708
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-6/build-result-r1.json": {
+    "sha256": "6fd25ab943f52e3c41c684a75b36b30d24473ff1a80e017a62494316f99cea07",
+    "bytes": 80429
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-6/mesh-region7-r0.indices.bin": {
+    "sha256": "51bc03377fbf826c049cdd41a959c2e9fe825dedb71d9a4522cabc06f47901eb",
+    "bytes": 924
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-recovery/interruption/native/job-6/mesh-region7-r0.solid.bin": {
+    "sha256": "b835c2e0d4873f6351a9ea4eab8bf22d7571249fc25fe77f584db843dd91686a",
+    "bytes": 1368
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/policy-certificate.json": {
+    "sha256": "750d66aeffa2cf1c3a8d60c1d9a81c4a5b4ecd784f6786cd876249d5762b7bc3",
+    "bytes": 963
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native-records.json": {
+    "sha256": "d8acb861bf5da77cdaff2c5d003cb1e2a2567f681df66fbad34c764184d07472",
+    "bytes": 22996
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/migration.json": {
+    "sha256": "1fb9a4d4c65ad82a272a369cd732eaea8eb81c93ea07665fe2a70c32a3ebb3e5",
+    "bytes": 96260
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native-controller.json": {
+    "sha256": "f418717f5a37a6f73f9ea29bce305db2de6b9942d326a79d150983616c4edbdf",
+    "bytes": 131
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/qualification-input.json": {
+    "sha256": "0ca1b8f42f6a9f1ee401eb51307558b844430ff28e675f01a9f2ba055d9368f6",
+    "bytes": 24464
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/qualification.json": {
+    "sha256": "70d1d9123863031daedbdbae422381c9dbe623f1671c5cdfe74743934dddd725",
+    "bytes": 3853
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-2/mesh-region3-r0.json": {
+    "sha256": "606423586cf82f31adc5a9ab74835b8a5ac5fa70a72fc662e92225c391fcbf99",
+    "bytes": 8229
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-2/mesh-region3-r0.indices.bin": {
+    "sha256": "92f74c4aaf2723f2f3f1a6d4845adbbdace7bfa4b8096f40a302891fb54f8067",
+    "bytes": 3114096
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-2/build-result-r1.json": {
+    "sha256": "b6a70bb7eec1977058ad9780bcd88f6d4640d6169c41679ebebfa9b5e941a100",
+    "bytes": 57961
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-2/mesh-region3-r0.normalized.vertices.bin": {
+    "sha256": "d1ccdeda062475efc87b577237977c65b093528386d3cf17c25aed115a2c2350",
+    "bytes": 1573932
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-2/mesh-region3-r0.solid.bin": {
+    "sha256": "242366fb15ac5d777e7de39890149b9f425a24b6aeb5dddb79bd9a827339d0fe",
+    "bytes": 3147816
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-5/mesh-region10-r0.indices.bin": {
+    "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6",
+    "bytes": 615300
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-5/build-result-r1.json": {
+    "sha256": "8b6d8b54f1a38c8630a546db10beac25d28d4e30eb6d0a8927bde78c38173c85",
+    "bytes": 76666
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-5/mesh-region10-r0.normalized.vertices.bin": {
+    "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce",
+    "bytes": 313860
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-5/mesh-region10-r0.solid.bin": {
+    "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3",
+    "bytes": 627672
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-5/mesh-region10-r0.json": {
+    "sha256": "76f922eaca1aa521d2106e4e6379a23022222105d96fda943a01688d92a10f66",
+    "bytes": 8788
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-1/build-result-r1.json": {
+    "sha256": "3fafcbda54c6448a2f120a3fad4488cc207eaefed8ee91039c8277c39985e1cd",
+    "bytes": 85370
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-1/mesh-region2-r0.json": {
+    "sha256": "5c2d80df4aa8295f793caf23be55abea71653250b53849685c03e5391abb75c6",
+    "bytes": 11146
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-1/mesh-region2-r0.normalized.vertices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-1/mesh-region2-r0.indices.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-1/mesh-region2-r0.solid.bin": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-6/mesh-region7-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-6/mesh-region7-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-6/mesh-region7-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-6/build-result-r1.json": {
+    "sha256": "8e8438cff5ad3ea47c34baacd112843212a398dfc0d230568a615ce9bb760f3a",
+    "bytes": 53109
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-6/mesh-region7-r0.json": {
+    "sha256": "29aaa96b66baceab8505471f2745e2947bbaaa8caca0c76ed58954cb15ba180d",
+    "bytes": 7797
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-4/mesh-region5-r0.json": {
+    "sha256": "53e31ee8fab2c9ae4f3b735c1c05302d05c687b3049fc3c76b7618c626895fc7",
+    "bytes": 10774
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-4/mesh-region5-r0.solid.bin": {
+    "sha256": "54f87e6eb6ff7ebfb850799f8a3dd0d7717848394c691513352fa30da7ff0fa2",
+    "bytes": 2089680
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-4/mesh-region5-r0.indices.bin": {
+    "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec",
+    "bytes": 2061864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-4/mesh-region5-r0.normalized.vertices.bin": {
+    "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b",
+    "bytes": 1044864
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-4/build-result-r1.json": {
+    "sha256": "7910c48789dd6dea53a07078356220f68f568cd154dcc7bb6ea012094b699e05",
+    "bytes": 79706
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-3/mesh-region10-r0.solid.bin": {
+    "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3",
+    "bytes": 627672
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-3/build-result-r1.json": {
+    "sha256": "6ccf8a008b255aff80260a0cc4aa2a6cb675dfda04ab5494cacb164e53732d91",
+    "bytes": 76668
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-3/mesh-region10-r0.indices.bin": {
+    "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6",
+    "bytes": 615300
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-3/mesh-region10-r0.normalized.vertices.bin": {
+    "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce",
+    "bytes": 313860
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-3/mesh-region10-r0.json": {
+    "sha256": "9082b0b09714722f0f05e3365fd091f044498859ecc4081f7719dd7e5db0adf6",
+    "bytes": 8791
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-7/build-result-r1.json": {
+    "sha256": "dc0e3ca813e71035f5f1069178ea9ab526a8c9a92d3c3c2c1f2a410c6773fef5",
+    "bytes": 53107
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-7/mesh-region8-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-7/mesh-region8-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-7/mesh-region8-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-7/mesh-region8-r0.json": {
+    "sha256": "ec3dfb1eb7852926c93efe5bc6206daa156751afa4d028f56b09e7b88637bd5f",
+    "bytes": 7794
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-0/mesh-region1-r0.normalized.vertices.bin": {
+    "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589",
+    "bytes": 245868
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-0/mesh-region1-r0.solid.bin": {
+    "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb",
+    "bytes": 491688
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-0/build-result-r1.json": {
+    "sha256": "ad7e1335b3720c208c6a83c2d2a581a8add9467ebd87f22036d12af783c7cae5",
+    "bytes": 53108
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-0/mesh-region1-r0.indices.bin": {
+    "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4",
+    "bytes": 469656
+  },
+  "/mnt/ml_storage/scratch/atlas-md2a22/final-generation/native/job-0/mesh-region1-r0.json": {
+    "sha256": "c72591662a56eff56d5e3ed8ed84cdf8478aaa5e1e3d992de1c2059a14ca54bf",
+    "bytes": 7799
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "canonical": "/mnt/ml_storage/scratch/atlas-codesign/project1-log.md",
+  "startByte": 5923406,
+  "endByte": 5966668,
+  "archive": "docs/codesign/2026-10-31-md2a22-enterable-parents-log.md",
+  "bytes": 43262,
+  "sha256": "1c1750928c5f587f6044910dfa9296e545ef97e2b25454e4804067fff71b9a40",
+  "scope": "Complete verbatim message range from first A2.2a design request through owner closure; no whitespace normalization."
+}

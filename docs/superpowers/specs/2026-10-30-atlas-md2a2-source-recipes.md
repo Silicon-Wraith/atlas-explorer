@@ -41,3 +41,7 @@ The [card amendments](../../reports/project1-interactive/MD2A21-CARD-2026-10-30.
 ## A2.1 completion
 
 The [full scorecard](../../reports/project1-interactive/MD2A21-SOURCE-RECIPES-2026-10-30.md) records bounded source-input creation and all finite checks, separately completed under reviewed r2 after two preserved failures. A2.1 alone is complete; A2.2 and the broader foundation remain open. Generation/math source `71ec61a`; final source/tool head `fadee82`; later changes documentation/evidence only. No product/browser gate or arbitrary-source claim.
+
+## A2.2a parent integration
+
+PR25 is merged at `9b538df`. [A2.2a](2026-10-31-atlas-md2a22-enterable-parents.md) connects the two qualified parent inputs to actual application navigation/contact/size changes and saved places. [Its full scorecard](../../reports/project1-interactive/MD2A22-ENTERABLE-PARENTS-2026-10-31.md) records1,377 units /88 files/build and29-entry headed gate on `2015ee8`, with completed independent final evidence review supporting the scoped PR. A2.2b retains authored recursive/imported closure and Python negative/integral-float/status3/status4 hardening. This decomposition prioritizes an enterable vertical slice and does not complete the umbrella foundation or add mathematical formations on shrink.

@@ -1,0 +1,57 @@
+[
+  {
+    "role": "design",
+    "revision": "r0",
+    "runId": "20261031T162139Z-5657c7",
+    "sessionId": "1121950e-0297-445b-a0e7-fcfa9798e04e",
+    "model": "claude-opus-5-5",
+    "responseFingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0",
+    "resultFile": "/mnt/ml_storage/scratch/atlas-md2a22/design-result-r0.json",
+    "sha256": "7d26fdbaa614bf3dc4cc11a6dab798dd97634c841da8ce19f15a81bb6205ef34",
+    "scope": "Read-only review; precise read/execution omissions retained in verbatim review report."
+  },
+  {
+    "role": "card",
+    "revision": "r1",
+    "runId": "20261031T162943Z-817c84",
+    "sessionId": "1121950e-0297-445b-a0e7-fcfa9798e04e",
+    "model": "claude-opus-5-5",
+    "responseFingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0",
+    "resultFile": "/mnt/ml_storage/scratch/atlas-md2a22/card-result-r1.json",
+    "sha256": "46e4134129bae16f411aefc1eb2694b8ae95c270ba05ad63addfe1652f0b8af0",
+    "scope": "Read-only review; precise read/execution omissions retained in verbatim review report."
+  },
+  {
+    "role": "card",
+    "revision": "r2",
+    "runId": "20261031T163416Z-adc67e",
+    "sessionId": "1121950e-0297-445b-a0e7-fcfa9798e04e",
+    "model": "claude-opus-5-5",
+    "responseFingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0",
+    "resultFile": "/mnt/ml_storage/scratch/atlas-md2a22/card-result-r2.json",
+    "sha256": "8cc0ed66214107f15566d4922c01aa58d42f91eb101f1c9f0c7ca2843d24bb9a",
+    "scope": "Read-only review; precise read/execution omissions retained in verbatim review report."
+  },
+  {
+    "role": "implementation",
+    "revision": "r0",
+    "runId": "20261031T165313Z-08ed6f",
+    "sessionId": "1121950e-0297-445b-a0e7-fcfa9798e04e",
+    "model": "claude-opus-5-5",
+    "responseFingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0",
+    "resultFile": "/mnt/ml_storage/scratch/atlas-md2a22/implementation-result-r0.json",
+    "sha256": "eae5f90720ef4e5c45d63b208bd08e80e374e0ae9ec11a4a0d4220b4e8ef8580",
+    "scope": "Read-only review; precise read/execution omissions retained in verbatim review report."
+  },
+  {
+    "role": "evidence",
+    "revision": "r0",
+    "runId": "20261031T174012Z-95ffcd",
+    "sessionId": "1121950e-0297-445b-a0e7-fcfa9798e04e",
+    "model": "claude-opus-5-5",
+    "responseFingerprint": "bf2a812a050c13c1525acd1461a705ff4c30535b29ee32135aaf9fb92f5777b0",
+    "resultFile": "/mnt/ml_storage/scratch/atlas-md2a22/evidence-result-r0.json",
+    "sha256": "6b08a1f8d2cfe9a0500dbd853fc2aa7b0682155898a40f9ef743dae2f98d8118",
+    "scope": "Read-only review; precise read/execution omissions retained in verbatim review report."
+  }
+]

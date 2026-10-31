@@ -1,0 +1,87 @@
+{
+  "startedAt": "2026-10-31T16:00:13.965928+00:00",
+  "removedWorktrees": [
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b",
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c",
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a",
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2",
+    "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4",
+    "/mnt/ml_storage/scratch/atlas-preparation-pc1/worktree",
+    "/mnt/ml_storage/scratch/atlas-prs/browser-world-docs"
+  ],
+  "archivedArtifacts": [
+    {
+      "from": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b/artifacts",
+      "to": "/mnt/ml_storage/scratch/atlas-branch-cleanup-2026-10-31/ignored-artifacts/bi1b"
+    },
+    {
+      "from": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c/artifacts",
+      "to": "/mnt/ml_storage/scratch/atlas-branch-cleanup-2026-10-31/ignored-artifacts/bi1c"
+    },
+    {
+      "from": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a/artifacts",
+      "to": "/mnt/ml_storage/scratch/atlas-branch-cleanup-2026-10-31/ignored-artifacts/md2a"
+    },
+    {
+      "from": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2/artifacts",
+      "to": "/mnt/ml_storage/scratch/atlas-branch-cleanup-2026-10-31/ignored-artifacts/md2a2"
+    },
+    {
+      "from": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4/artifacts",
+      "to": "/mnt/ml_storage/scratch/atlas-branch-cleanup-2026-10-31/ignored-artifacts/pc4"
+    },
+    {
+      "from": "/mnt/ml_storage/scratch/atlas-preparation-pc1/worktree/artifacts",
+      "to": "/mnt/ml_storage/scratch/atlas-branch-cleanup-2026-10-31/ignored-artifacts/worktree"
+    }
+  ],
+  "deletedLocalBranches": [
+    "docs/browser-world-roadmap",
+    "feat/bi1b",
+    "feat/bi1c",
+    "feat/md2a",
+    "feat/md2a2",
+    "feat/pc1-preparation-contract",
+    "feat/pc4",
+    "protocol/proportional-process",
+    "report/canyon-flight",
+    "report/field-atlas",
+    "report/pool-and-interpretation-screen",
+    "report/scale-sweep",
+    "report/smooth-shading-closure",
+    "report/surface-geometry",
+    "report/transfer-gain-and-direction",
+    "report/refinement-scale-closure"
+  ],
+  "deletedRemoteBranches": [
+    "charter/north-star",
+    "docs/browser-world-roadmap",
+    "feat/bi1b",
+    "feat/bi1c",
+    "feat/md2a",
+    "feat/md2a2",
+    "feat/pc1-preparation-contract",
+    "feat/pc4",
+    "protocol/proportional-process",
+    "report/canyon-flight",
+    "report/field-atlas",
+    "report/pool-and-interpretation-screen",
+    "report/scale-sweep",
+    "report/smooth-shading-closure",
+    "report/surface-geometry",
+    "report/transfer-gain-and-direction",
+    "report/refinement-scale-closure"
+  ],
+  "kept": [
+    "1b1x/X00",
+    "feat/md2a22",
+    "feat/pc2",
+    "feat/pc3",
+    "feat/project1b1x",
+    "feat/special-project",
+    "main",
+    "report/interactive-handoff"
+  ],
+  "finishedAt": "2026-10-31T16:00:22.568259+00:00",
+  "bundleBytes": 37649055
+}
