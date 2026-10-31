@@ -1,0 +1,261 @@
+{
+  "base": "9b538dfb545217b09f0b8bcbb72e30895931b7e1",
+  "unchanged": [
+    {
+      "file": "scripts/generation/check-import.py",
+      "sha256": "66ca95d267122bca89aa12641c9b5caafa02e66dceb5ad1417d85d372b029db0"
+    },
+    {
+      "file": "scripts/generation/check-parent.py",
+      "sha256": "8615d97d6a7c70d881c3962773d956fc84cdba413f9458844018bf2faa15d38d"
+    },
+    {
+      "file": "scripts/generation/config.mjs",
+      "sha256": "4727af9664943171c605be6ba72452f9ef0533ebf93a6510209f954f63b23a67"
+    },
+    {
+      "file": "scripts/generation/create-parent.py",
+      "sha256": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4"
+    },
+    {
+      "file": "scripts/generation/examples/parent-source.json",
+      "sha256": "8089588ed6796c1307edb10b1862d686eb2fa4341d9e1ba1cc0cdc67dd45c04d"
+    },
+    {
+      "file": "scripts/generation/import-manifest.json",
+      "sha256": "e94e943d384a07c3e5c75f92a10c16f4d323809d85010d619b82bfc5238574f6"
+    },
+    {
+      "file": "scripts/generation/native/adaptive_graph_pr3.py",
+      "sha256": "83147332869f2cbd660253d38e671f8370b87abe7c5a6ee4b693ba7061578f25"
+    },
+    {
+      "file": "scripts/generation/native/builder_bw1.py",
+      "sha256": "50763f620e526ccb6af486c84b0c25a8218598966c3adccef466edffa95047f7"
+    },
+    {
+      "file": "scripts/generation/native/builder_view.py",
+      "sha256": "2b14ae570873f00f176bdfb69440c05ae0a713644ef44768f47a4a65de16f0bf"
+    },
+    {
+      "file": "scripts/generation/native/cache_bw1.py",
+      "sha256": "73f0e0417124a29e138228623a3cf8658af9c4df72e1ba83d24f516f88282573"
+    },
+    {
+      "file": "scripts/generation/native/cache_r0.py",
+      "sha256": "85a42614c61de2d9e783f01d73ae3cfbe7ed367d9223ce13de8b8cc7d04f1e17"
+    },
+    {
+      "file": "scripts/generation/native/cache_view.py",
+      "sha256": "8c4cb50e0af6094f521c9ed04fd9c6e66568354ba93c84eac0dc7cd7274eb5da"
+    },
+    {
+      "file": "scripts/generation/native/check_collision_r0.py",
+      "sha256": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4"
+    },
+    {
+      "file": "scripts/generation/native/dek.py",
+      "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0"
+    },
+    {
+      "file": "scripts/generation/native/descendant_world.py",
+      "sha256": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e"
+    },
+    {
+      "file": "scripts/generation/native/field_fidelity_r0.py",
+      "sha256": "542bea18cf0a591e644877b5773319ac50d03303336bd32445b7ea21a4bce864"
+    },
+    {
+      "file": "scripts/generation/native/fkern.py",
+      "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+    },
+    {
+      "file": "scripts/generation/native/generation_paths.py",
+      "sha256": "f6d7acdc002e99be7098d79f54f56fb0efbe01093aeb8142cb26467f71e9fa4a"
+    },
+    {
+      "file": "scripts/generation/native/h1lib.py",
+      "sha256": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124"
+    },
+    {
+      "file": "scripts/generation/native/pert.py",
+      "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+    },
+    {
+      "file": "scripts/generation/native/region_class.py",
+      "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+    },
+    {
+      "file": "scripts/generation/native/sampling_r0.py",
+      "sha256": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598"
+    },
+    {
+      "file": "scripts/generation/native/streaming_builder_r0.py",
+      "sha256": "554f20376b5424fc89fc7790c9158f9ed6c4e5a1fe930036e42dd9e36db41eb3"
+    },
+    {
+      "file": "scripts/generation/native/view_grid.py",
+      "sha256": "8d00ccabaadc5a003ff6e1a5a54e62f77ef6a2697fded51eb1860aeea43fdf4c"
+    },
+    {
+      "file": "scripts/generation/native/world_grid.py",
+      "sha256": "24ea3190cce577c03748d0f93f42aef44a4f13646b7a853e33825e53a56a392d"
+    },
+    {
+      "file": "scripts/generation/probe-reference.py",
+      "sha256": "3d64d43839157c43b23204496c87e56414abe92a6f0006545403dba6607eef8b"
+    },
+    {
+      "file": "scripts/generation/provenance/legacy-buffer-controls.json",
+      "sha256": "56381e9cf28d4ddc93488c1637987adc9191e831cb4bd8e2b5749fa2c7f21a38"
+    },
+    {
+      "file": "scripts/generation/provenance/original/adaptive_graph_pr3.py",
+      "sha256": "1deea6a1ac9088e8b6c04a72b1181186f9bae172e0bebe9807c6c3d3d4fa8057"
+    },
+    {
+      "file": "scripts/generation/provenance/original/builder_bw1.py",
+      "sha256": "bc86f96273803f1feacce9a5a6bd035ce342b9c6bba8ade0138b6624fe15531c"
+    },
+    {
+      "file": "scripts/generation/provenance/original/builder_view.py",
+      "sha256": "2e5213674926a71c140955143dc167fd4ea29a92fa2c17a165a865c728a5450c"
+    },
+    {
+      "file": "scripts/generation/provenance/original/cache_bw1.py",
+      "sha256": "29f2959011fc62f70ec5054e64149808fc28006711a99ddc067057a958848ad6"
+    },
+    {
+      "file": "scripts/generation/provenance/original/cache_r0.py",
+      "sha256": "42e00980de2916274a041bd1ca8f53ddfa96bbc20bb8dcc5a7adbbcfa9bc972c"
+    },
+    {
+      "file": "scripts/generation/provenance/original/cache_view.py",
+      "sha256": "479a357d232aa8e2672b107db5099e9ccf0d59d45ea5016128d2936b330b772a"
+    },
+    {
+      "file": "scripts/generation/provenance/original/check_collision_r0.py",
+      "sha256": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4"
+    },
+    {
+      "file": "scripts/generation/provenance/original/dek.py",
+      "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0"
+    },
+    {
+      "file": "scripts/generation/provenance/original/descendant_world.py",
+      "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+    },
+    {
+      "file": "scripts/generation/provenance/original/field_fidelity_r0.py",
+      "sha256": "6a938170e4af65778856bff847e3926bec47dd3164a760ec08b7ac8de504ab38"
+    },
+    {
+      "file": "scripts/generation/provenance/original/fkern.py",
+      "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+    },
+    {
+      "file": "scripts/generation/provenance/original/h1lib.py",
+      "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+    },
+    {
+      "file": "scripts/generation/provenance/original/pert.py",
+      "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+    },
+    {
+      "file": "scripts/generation/provenance/original/region_class.py",
+      "sha256": "7dadc9bf5c6ba23e243de06750962d7262f8e0514f3f85a9b6baed1b973c6c1c"
+    },
+    {
+      "file": "scripts/generation/provenance/original/sampling_r0.py",
+      "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+    },
+    {
+      "file": "scripts/generation/provenance/original/streaming_builder_r0.py",
+      "sha256": "1685cfca0b4be883067ed5bac7dd23e4f59eb49b10e85ad8eaf626909756be6c"
+    },
+    {
+      "file": "scripts/generation/provenance/original/view_grid.py",
+      "sha256": "4885fac0724ae9600bee99d5c652b0d51045ba62aa4eaa9fce5d19e4b655c67b"
+    },
+    {
+      "file": "scripts/generation/provenance/original/world_grid.py",
+      "sha256": "a7cc55fce61c52c41e14636434270fe9ec603bde467ca00bfd41f50012f1f43e"
+    },
+    {
+      "file": "scripts/generation/regression-world/approach-r1.json",
+      "sha256": "3113a9d33a8099ed0682f71845823f46ac3124d6c0a45bd7581543a1026ff61d"
+    },
+    {
+      "file": "scripts/generation/regression-world/base.npz",
+      "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+    },
+    {
+      "file": "scripts/generation/regression-world/construction.json",
+      "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+    },
+    {
+      "file": "scripts/generation/regression-world/cpu-screen-r0.json",
+      "sha256": "9f463da3cf68162c0dbaff575dec44079c562f82841e701105b96ed98a25253a"
+    },
+    {
+      "file": "scripts/generation/regression-world/feature-r0.json",
+      "sha256": "87b1a6e303758f7e767e460c6d121d43db9382fa31ec47571be25d8a7b75eca6"
+    },
+    {
+      "file": "scripts/generation/regression-world/frame.json",
+      "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+    },
+    {
+      "file": "scripts/generation/regression-world/gs.json",
+      "sha256": "31f88d35160d4d56bb0937f45e0cfc6568210db0a8f93b7f2fe1340314a1d202"
+    },
+    {
+      "file": "scripts/generation/regression-world/legacy-world.json",
+      "sha256": "22f4200e40b0bc5fe36fe5a310bca2b3cdf8a063128742b6ebc1323d6718a879"
+    },
+    {
+      "file": "scripts/generation/regression-world/levels.json",
+      "sha256": "1b28cf656f304f20e0b6d46e0177841549223f96a9f498ba5068af6730b326e1"
+    },
+    {
+      "file": "scripts/generation/regression-world/policy-certificate.json",
+      "sha256": "94fc27f682b28f97f8f220a6c97ae6295807e0d8a8a27aa2a88cc8d694a431ce"
+    },
+    {
+      "file": "scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.json",
+      "sha256": "e41e0ba46548b4dbe95cd2e3685e98138a255ef51045679614d18a81c8cf28eb"
+    },
+    {
+      "file": "scripts/generation/regression-world/prepared-layers-r0/parent-reference-r0.npz",
+      "sha256": "15074f9bfe6fc91086c83088beef1cbc58211fe5794ad1b76849adf7302b40cd"
+    },
+    {
+      "file": "scripts/generation/regression-world/prepared-static-r0/fixtures-r0.json",
+      "sha256": "e91c31daa47989603689179dca4d44a0799d3abbde476fcef29f0c4162b3096f"
+    },
+    {
+      "file": "scripts/generation/regression-world/reference/fine-control.npz",
+      "sha256": "85f26916ec2927af6a43e22b975fe436b6293561c20a1d9fb418b7f85dcc8877"
+    },
+    {
+      "file": "scripts/generation/source_recipe.py",
+      "sha256": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954"
+    },
+    {
+      "file": "scripts/preparation/native-adapter.mjs",
+      "sha256": "b6cc5df17520063efde7dc5e1264bd985f0cf895abe0cdda134fb87bf012ada1"
+    },
+    {
+      "file": "scripts/preparation/native-controller.mjs",
+      "sha256": "bde521e5cbd6eeaf828af335e9e79c07d843e163ceb0770dc75f44b87790d70d"
+    },
+    {
+      "file": "scripts/preparation/native-worker.py",
+      "sha256": "14f71dda70a8e553e924959f9e0b1d475344c1bc25568920e6f274391a8a7166"
+    },
+    {
+      "file": "src/space/generation/source-recipe.js",
+      "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "schema": "atlas.source-world.certificates",
+  "schemaVersion": 1,
+  "sourcesKey": "ee1382dfe91b037079fec5a2b24d2ae96231e825aa263b92e1f692085e6d0ba4",
+  "evidenceId": "sha256:2949f9afb1a1e3918ccf05f4fcafac91635688f26cf7ed230b5cfa54cae598b2",
+  "worlds": [
+    {
+      "definitionKey": "sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835",
+      "inputKey": "677346ce3e1df3bfc174494eecda4bc5a06dbd30dba1b566175e20a6111fea86",
+      "specimens": {
+        "coarse": {
+          "buffers": [
+            {
+              "role": "vertices",
+              "byteLength": 101400,
+              "sha256": "18d36c87a0d899b7d255b9b10efcf469ecf3e811b0114694ef5e7bb1be1de0c4"
+            },
+            {
+              "role": "surface-indices",
+              "byteLength": 98304,
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "role": "solid-indices",
+              "byteLength": 202752,
+              "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+            }
+          ],
+          "maxSurfaceErrorM": 0.000005439129368309424,
+          "auditSlackM": 0.00000152587890625
+        },
+        "fine": {
+          "buffers": [
+            {
+              "role": "vertices",
+              "byteLength": 101400,
+              "sha256": "1efa0bf2bc06850f6e2803bc654ed6afd850f82e242e8f877464dca4b6e6a51f"
+            },
+            {
+              "role": "surface-indices",
+              "byteLength": 98304,
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "role": "solid-indices",
+              "byteLength": 202752,
+              "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+            }
+          ],
+          "maxSurfaceErrorM": 0.000005439129368309424,
+          "auditSlackM": 0.00000152587890625
+        },
+        "view": {
+          "buffers": [
+            {
+              "role": "vertices",
+              "byteLength": 101400,
+              "sha256": "80cdf506bb0ee3d2e51b7e9f7f0ebd8aafcd116c3ab3bcd8435a11a9d28d2881"
+            },
+            {
+              "role": "surface-indices",
+              "byteLength": 98304,
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            }
+          ],
+          "maxSurfaceErrorM": 0.000005439129368309424,
+          "auditSlackM": 0.00000152587890625
+        }
+      }
+    },
+    {
+      "definitionKey": "sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b",
+      "inputKey": "764a0ab824c2efce9941e0ab45cec7e6c2431de56a192119ef94d71d6e4db254",
+      "specimens": {
+        "coarse": {
+          "buffers": [
+            {
+              "role": "vertices",
+              "byteLength": 101400,
+              "sha256": "0bef51cda6c787deaf81694d25d9e386224e4d3bcda8656d5dbc4d9e5c0ee36b"
+            },
+            {
+              "role": "surface-indices",
+              "byteLength": 98304,
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "role": "solid-indices",
+              "byteLength": 202752,
+              "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+            }
+          ],
+          "maxSurfaceErrorM": 0.000010265596737573318,
+          "auditSlackM": 0.0000030517578125
+        },
+        "fine": {
+          "buffers": [
+            {
+              "role": "vertices",
+              "byteLength": 101400,
+              "sha256": "43961149c4a9b141b2e009fca8e420f1fa4677c7968d57ac706338516875b39c"
+            },
+            {
+              "role": "surface-indices",
+              "byteLength": 98304,
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "role": "solid-indices",
+              "byteLength": 202752,
+              "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+            }
+          ],
+          "maxSurfaceErrorM": 0.000010265596737573318,
+          "auditSlackM": 0.0000030517578125
+        },
+        "view": {
+          "buffers": [
+            {
+              "role": "vertices",
+              "byteLength": 101400,
+              "sha256": "5202560e9ffde67abfccc047f19a8a6b728d176a3b42102d696c6e40984ff91a"
+            },
+            {
+              "role": "surface-indices",
+              "byteLength": 98304,
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            }
+          ],
+          "maxSurfaceErrorM": 0.000010265596737573318,
+          "auditSlackM": 0.0000030517578125
+        }
+      }
+    }
+  ]
+}

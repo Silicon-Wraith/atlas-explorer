@@ -1,0 +1,180 @@
+{
+  "pass_": true,
+  "rows": [
+    {
+      "name": "A",
+      "pass_": true,
+      "definitionKey": "sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835",
+      "rows": [
+        {
+          "kind": "coarse",
+          "surfaceErrorM": 5.439129368309424e-06,
+          "cellCentreErrorM": 5.396393689238721e-06,
+          "roundoffM": [
+            2.67077249205272e-10,
+            2.3839376694922976e-08,
+            3.095053047186269e-08
+          ],
+          "volumeM3": 4.404051905622486,
+          "buffers": [
+            {
+              "byteLength": 202752,
+              "role": "solid-indices",
+              "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+            },
+            {
+              "byteLength": 98304,
+              "role": "surface-indices",
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "byteLength": 101400,
+              "role": "vertices",
+              "sha256": "18d36c87a0d899b7d255b9b10efcf469ecf3e811b0114694ef5e7bb1be1de0c4"
+            }
+          ]
+        },
+        {
+          "kind": "fine",
+          "surfaceErrorM": 5.439129368309424e-06,
+          "cellCentreErrorM": 5.396393689238721e-06,
+          "roundoffM": [
+            2.67077249205272e-10,
+            2.3839376694922976e-08,
+            3.095053047186269e-08
+          ],
+          "volumeM3": 4.404051905622486,
+          "buffers": [
+            {
+              "byteLength": 202752,
+              "role": "solid-indices",
+              "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+            },
+            {
+              "byteLength": 98304,
+              "role": "surface-indices",
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "byteLength": 101400,
+              "role": "vertices",
+              "sha256": "1efa0bf2bc06850f6e2803bc654ed6afd850f82e242e8f877464dca4b6e6a51f"
+            }
+          ]
+        },
+        {
+          "kind": "view",
+          "surfaceErrorM": 5.439129368309424e-06,
+          "cellCentreErrorM": 5.396393689238721e-06,
+          "roundoffM": [
+            2.67077249205272e-10,
+            2.3839376694922976e-08,
+            3.095053047186269e-08
+          ],
+          "volumeM3": null,
+          "buffers": [
+            {
+              "byteLength": 98304,
+              "role": "surface-indices",
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "byteLength": 101400,
+              "role": "vertices",
+              "sha256": "80cdf506bb0ee3d2e51b7e9f7f0ebd8aafcd116c3ab3bcd8435a11a9d28d2881"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "B",
+      "pass_": true,
+      "definitionKey": "sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b",
+      "rows": [
+        {
+          "kind": "coarse",
+          "surfaceErrorM": 1.0265596737573318e-05,
+          "cellCentreErrorM": 9.936376685004689e-06,
+          "roundoffM": [
+            2.5528758440529487e-08,
+            9.524789845727355e-08,
+            3.99255076777294e-08
+          ],
+          "volumeM3": 9.542148432545462,
+          "buffers": [
+            {
+              "byteLength": 202752,
+              "role": "solid-indices",
+              "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+            },
+            {
+              "byteLength": 98304,
+              "role": "surface-indices",
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "byteLength": 101400,
+              "role": "vertices",
+              "sha256": "0bef51cda6c787deaf81694d25d9e386224e4d3bcda8656d5dbc4d9e5c0ee36b"
+            }
+          ]
+        },
+        {
+          "kind": "fine",
+          "surfaceErrorM": 1.0265596737573318e-05,
+          "cellCentreErrorM": 9.936376685004689e-06,
+          "roundoffM": [
+            2.5528758440529487e-08,
+            9.524789845727355e-08,
+            3.99255076777294e-08
+          ],
+          "volumeM3": 9.542148432545462,
+          "buffers": [
+            {
+              "byteLength": 202752,
+              "role": "solid-indices",
+              "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+            },
+            {
+              "byteLength": 98304,
+              "role": "surface-indices",
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "byteLength": 101400,
+              "role": "vertices",
+              "sha256": "43961149c4a9b141b2e009fca8e420f1fa4677c7968d57ac706338516875b39c"
+            }
+          ]
+        },
+        {
+          "kind": "view",
+          "surfaceErrorM": 1.0265596737573318e-05,
+          "cellCentreErrorM": 9.936376685004689e-06,
+          "roundoffM": [
+            2.5528758440529487e-08,
+            9.524789845727355e-08,
+            3.99255076777294e-08
+          ],
+          "volumeM3": null,
+          "buffers": [
+            {
+              "byteLength": 98304,
+              "role": "surface-indices",
+              "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+            },
+            {
+              "byteLength": 101400,
+              "role": "vertices",
+              "sha256": "5202560e9ffde67abfccc047f19a8a6b728d176a3b42102d696c6e40984ff91a"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "cudaImported": false,
+  "python": "3.13.2",
+  "numpy": "2.4.2"
+}

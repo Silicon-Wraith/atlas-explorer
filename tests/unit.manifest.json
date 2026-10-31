@@ -86,6 +86,7 @@
     "tests/unit/prepared-execution.test.js",
     "tests/unit/prepared-run-root.test.js",
     "tests/unit/generation-config.test.js",
-    "tests/unit/source-recipe.test.js"
+    "tests/unit/source-recipe.test.js",
+    "tests/unit/source-parent.test.js"
   ]
 }

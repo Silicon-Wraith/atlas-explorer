@@ -1,0 +1,368 @@
+{
+  "createdAt": "2026-10-31T15:57:49.091600+00:00",
+  "main": "9b538dfb545217b09f0b8bcbb72e30895931b7e1",
+  "archive": "/mnt/ml_storage/scratch/atlas-branch-cleanup-2026-10-31",
+  "allWorktrees": [
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer",
+      "HEAD": "5604e6230da2ed45a3e81272c5c7e04b35e59d44",
+      "branch": "refs/heads/report/interactive-handoff",
+      "dirty": true,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b",
+      "HEAD": "fe09d2f6620c6c3e328696f820830e7be8c8bd21",
+      "branch": "refs/heads/feat/bi1b",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c",
+      "HEAD": "e888030f64235b21abf0f7547113f33d88a7c030",
+      "branch": "refs/heads/feat/bi1c",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a",
+      "HEAD": "1e65b3044c841ce518fdfa1499e17bf8c5a6801d",
+      "branch": "refs/heads/feat/md2a",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2",
+      "HEAD": "5fc84a5e073fb1b18a684120d51d2e7b9463d5c6",
+      "branch": "refs/heads/feat/md2a2",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a22",
+      "HEAD": "9b538dfb545217b09f0b8bcbb72e30895931b7e1",
+      "branch": "refs/heads/feat/md2a22",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc2",
+      "HEAD": "c7f877895d84b49671b9ebf665f1082a6d2faae0",
+      "branch": "refs/heads/feat/pc2",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": [
+        {
+          "pid": 519779,
+          "name": "gnome-text-edit",
+          "cwd": "/home/john-sheppard"
+        }
+      ]
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3",
+      "HEAD": "5f1690c923e7a49035594e64df49353bc8498648",
+      "branch": "refs/heads/feat/pc3",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": [
+        {
+          "pid": 4043478,
+          "name": "bash",
+          "cwd": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc3"
+        }
+      ]
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4",
+      "HEAD": "bbf79ea8bef68e1be8d6b30c068bb250e3768291",
+      "branch": "refs/heads/feat/pc4",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1x",
+      "HEAD": "383e104b232f6ee508ab9a377f349b791ea4eb04",
+      "branch": "refs/heads/feat/project1b1x",
+      "dirty": true,
+      "merged": false,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/special-project",
+      "HEAD": "57ba3b9cb0146724fdfc7ced5e991b4bee61b64d",
+      "branch": "refs/heads/feat/special-project",
+      "dirty": true,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/scratch/atlas-preparation-pc1/worktree",
+      "HEAD": "ee6cd26141dcc2ac1c0377cb52b8d2d23ccb3306",
+      "branch": "refs/heads/feat/pc1-preparation-contract",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/scratch/atlas-prs/browser-world-docs",
+      "HEAD": "33e2df7b3dddde46fbac3a03d52dcacb5b9c5e1c",
+      "branch": "refs/heads/docs/browser-world-roadmap",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    }
+  ],
+  "removeWorktrees": [
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1b",
+      "HEAD": "fe09d2f6620c6c3e328696f820830e7be8c8bd21",
+      "branch": "refs/heads/feat/bi1b",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/bi1c",
+      "HEAD": "e888030f64235b21abf0f7547113f33d88a7c030",
+      "branch": "refs/heads/feat/bi1c",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a",
+      "HEAD": "1e65b3044c841ce518fdfa1499e17bf8c5a6801d",
+      "branch": "refs/heads/feat/md2a",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a2",
+      "HEAD": "5fc84a5e073fb1b18a684120d51d2e7b9463d5c6",
+      "branch": "refs/heads/feat/md2a2",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/pc4",
+      "HEAD": "bbf79ea8bef68e1be8d6b30c068bb250e3768291",
+      "branch": "refs/heads/feat/pc4",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/scratch/atlas-preparation-pc1/worktree",
+      "HEAD": "ee6cd26141dcc2ac1c0377cb52b8d2d23ccb3306",
+      "branch": "refs/heads/feat/pc1-preparation-contract",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    },
+    {
+      "worktree": "/mnt/ml_storage/scratch/atlas-prs/browser-world-docs",
+      "HEAD": "33e2df7b3dddde46fbac3a03d52dcacb5b9c5e1c",
+      "branch": "refs/heads/docs/browser-world-roadmap",
+      "dirty": false,
+      "merged": true,
+      "activeProcesses": []
+    }
+  ],
+  "deleteLocalRefs": [
+    {
+      "ref": "refs/heads/docs/browser-world-roadmap",
+      "sha": "33e2df7b3dddde46fbac3a03d52dcacb5b9c5e1c",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/feat/bi1b",
+      "sha": "fe09d2f6620c6c3e328696f820830e7be8c8bd21",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/feat/bi1c",
+      "sha": "e888030f64235b21abf0f7547113f33d88a7c030",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/feat/md2a",
+      "sha": "1e65b3044c841ce518fdfa1499e17bf8c5a6801d",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/feat/md2a2",
+      "sha": "5fc84a5e073fb1b18a684120d51d2e7b9463d5c6",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/feat/pc1-preparation-contract",
+      "sha": "ee6cd26141dcc2ac1c0377cb52b8d2d23ccb3306",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/feat/pc4",
+      "sha": "bbf79ea8bef68e1be8d6b30c068bb250e3768291",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/protocol/proportional-process",
+      "sha": "c56b750a5db0879e3aef99b6a94ee2b2743d80c5",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/report/canyon-flight",
+      "sha": "d31c6124e21093f5efb714bb006a40a5f50d4e0e",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/report/field-atlas",
+      "sha": "f62077febee9735f91d0bf0dc7c91a9b12a09209",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/report/pool-and-interpretation-screen",
+      "sha": "c73c4cb86209c3f0ccdd183c9e91212b1ffc4719",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/report/scale-sweep",
+      "sha": "73b52e2e7dd45cd625859f669221797a0e7fb8ce",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/report/smooth-shading-closure",
+      "sha": "3da98f3d37996715e5497801ebed1a030c2f6fb1",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/report/surface-geometry",
+      "sha": "f67fecf7a3515e8ee2eec8a6e79c9d22af2b2658",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/report/transfer-gain-and-direction",
+      "sha": "7583ca4137431cc51bf20d5cc20b8d72c7a547a6",
+      "merged": true
+    },
+    {
+      "ref": "refs/heads/report/refinement-scale-closure",
+      "sha": "e21f1a601a7b65ab7b7b0f4424a2c7ef30792e84",
+      "merged": true,
+      "redundantMerge": true
+    }
+  ],
+  "deleteRemoteRefs": [
+    {
+      "ref": "refs/remotes/origin/charter/north-star",
+      "sha": "7ae6992fbf91ed554e958d6b4916a4ca218ecbfa",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/docs/browser-world-roadmap",
+      "sha": "33e2df7b3dddde46fbac3a03d52dcacb5b9c5e1c",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/feat/bi1b",
+      "sha": "fe09d2f6620c6c3e328696f820830e7be8c8bd21",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/feat/bi1c",
+      "sha": "e888030f64235b21abf0f7547113f33d88a7c030",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/feat/md2a",
+      "sha": "1e65b3044c841ce518fdfa1499e17bf8c5a6801d",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/feat/md2a2",
+      "sha": "5fc84a5e073fb1b18a684120d51d2e7b9463d5c6",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/feat/pc1-preparation-contract",
+      "sha": "ee6cd26141dcc2ac1c0377cb52b8d2d23ccb3306",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/feat/pc4",
+      "sha": "bbf79ea8bef68e1be8d6b30c068bb250e3768291",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/protocol/proportional-process",
+      "sha": "c56b750a5db0879e3aef99b6a94ee2b2743d80c5",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/report/canyon-flight",
+      "sha": "d31c6124e21093f5efb714bb006a40a5f50d4e0e",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/report/field-atlas",
+      "sha": "f62077febee9735f91d0bf0dc7c91a9b12a09209",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/report/pool-and-interpretation-screen",
+      "sha": "c73c4cb86209c3f0ccdd183c9e91212b1ffc4719",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/report/scale-sweep",
+      "sha": "73b52e2e7dd45cd625859f669221797a0e7fb8ce",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/report/smooth-shading-closure",
+      "sha": "3da98f3d37996715e5497801ebed1a030c2f6fb1",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/report/surface-geometry",
+      "sha": "f67fecf7a3515e8ee2eec8a6e79c9d22af2b2658",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/report/transfer-gain-and-direction",
+      "sha": "7583ca4137431cc51bf20d5cc20b8d72c7a547a6",
+      "merged": true
+    },
+    {
+      "ref": "refs/remotes/origin/report/refinement-scale-closure",
+      "sha": "190902d6032292707bb34e3b26bc8868497916be",
+      "merged": false,
+      "redundantMerge": true
+    }
+  ],
+  "keepNames": [
+    "1b1x/X00",
+    "feat/md2a22",
+    "feat/pc2",
+    "feat/pc3",
+    "feat/project1b1x",
+    "feat/special-project",
+    "main",
+    "report/interactive-handoff"
+  ],
+  "redundantMergeProof": {
+    "ref": "report/refinement-scale-closure",
+    "remoteHead": "190902d6032292707bb34e3b26bc8868497916be",
+    "parentsAlreadyInMain": true,
+    "remergeDiffEmpty": true
+  }
+}

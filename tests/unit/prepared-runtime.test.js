@@ -30,3 +30,13 @@ test('constant-air decisions are not reported as first surface casts',async()=>{
   const queries=f.events.filter(e=>e.type==='navigation');assert.equal(queries[0].firstSurface,classification==='surface');assert.equal(queries[1].firstSurface,false);await runtime.suspend();
  }
 });
+
+test('fine movement inside global collision coverage stops at the finite pose envelope without killing the runtime',async()=>{
+ const {createPreparedPoseModel}=await import('../../src/space/preparation/pose.js');
+ const f=preparedFixture(),fineBounds={min:[-10,-10,-10],max:[10,10,10]},poseModel=createPreparedPoseModel({world:f.world,grid:f.grid,fineBounds});
+ const produce=async q=>{const output=await f.produce(q);return{...output,result:{...output.result,artifact:{...output.result.artifact,bounds:fineBounds}}};};
+ const runtime=createPreparedRuntime({...f.config,fineBounds,poseModel,produce}),initial=poseModel.create({bodyDiameterM:.25,positionLocalM:[0,poseModel.localBounds.max[1]-.001,0]});
+ await runtime.start(initial);const before=runtime.pose(),result=runtime.move([0,.01,0]);
+ assert.equal(result.waiting,true);assert.equal(result.reason,'finite-domain');assert.deepEqual(runtime.pose(),before);assert.equal(runtime.snapshot().error,null);assert.equal(runtime.snapshot().active,'fine');
+ assert.equal(f.events.filter(e=>e.type==='navigation').at(-1).reason,'finite-domain');assert.equal(runtime.move([0,-.01,0]).waiting,false);assert.equal((await runtime.suspend()).cleanup,true);
+});

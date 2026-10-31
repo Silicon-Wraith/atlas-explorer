@@ -1,0 +1,224 @@
+{
+  "sourceHead": "2015ee853ff98a44d7212b078bcc9a404d2e2499",
+  "pass_": true,
+  "cleanup": true,
+  "phases": [
+    {
+      "label": "A-explore",
+      "kind": "A",
+      "cleanup": true,
+      "pulseSeconds": 37.593,
+      "pulseFrames": 1841,
+      "fps": 48.97188306333626,
+      "navigationMs": {
+        "n": 1762,
+        "p50": 0.10009765625,
+        "p95": 0.2001953125,
+        "p99": 0.300048828125,
+        "max": 0.800048828125
+      },
+      "readinessMs": {
+        "n": 19,
+        "p50": 32.10009765625,
+        "p95": 250.89990234375,
+        "p99": 250.89990234375,
+        "max": 250.89990234375
+      },
+      "contacts": {
+        "0.1": 292,
+        "0.025": 406
+      },
+      "finiteBoundaryEvents": 30,
+      "bufferChecks": "browser producer verifies each actual transfer SHA against certified descriptors",
+      "renderCollision": "receipt enforces revision equality; snapshot equality is not independent evidence",
+      "sourcePreparationCalls": 19,
+      "retirements": 19,
+      "maximumReportedAllocationBytes": {
+        "workerWasmCapacity": 10616832,
+        "mainWasmCapacity": 45219840,
+        "gpuBytes": 589984,
+        "snapshotBytes": 3544802
+      },
+      "processPeakRssKiB": 1847028
+    },
+    {
+      "label": "B-explore",
+      "kind": "B",
+      "cleanup": true,
+      "pulseSeconds": 37.448,
+      "pulseFrames": 1838,
+      "fps": 49.08139286477248,
+      "navigationMs": {
+        "n": 1765,
+        "p50": 0.10009765625,
+        "p95": 0.2001953125,
+        "p99": 0.300048828125,
+        "max": 1
+      },
+      "readinessMs": {
+        "n": 23,
+        "p50": 33.7998046875,
+        "p95": 97.800048828125,
+        "p99": 257.599853515625,
+        "max": 257.599853515625
+      },
+      "contacts": {
+        "0.1": 224,
+        "0.025": 138
+      },
+      "finiteBoundaryEvents": 30,
+      "bufferChecks": "browser producer verifies each actual transfer SHA against certified descriptors",
+      "renderCollision": "receipt enforces revision equality; snapshot equality is not independent evidence",
+      "sourcePreparationCalls": 23,
+      "retirements": 23,
+      "maximumReportedAllocationBytes": {
+        "workerWasmCapacity": 10616832,
+        "mainWasmCapacity": 45219840,
+        "gpuBytes": 589984,
+        "snapshotBytes": 3544802
+      },
+      "processPeakRssKiB": 1828680
+    },
+    {
+      "label": "A-reopen",
+      "kind": "A",
+      "cleanup": true,
+      "pulseSeconds": 0.614,
+      "pulseFrames": 30,
+      "fps": 48.8599348534202,
+      "navigationMs": {
+        "n": 28,
+        "p50": 0.10009765625,
+        "p95": 0.2001953125,
+        "p99": 0.300048828125,
+        "max": 0.300048828125
+      },
+      "readinessMs": {
+        "n": 5,
+        "p50": 34.10009765625,
+        "p95": 250.2001953125,
+        "p99": 250.2001953125,
+        "max": 250.2001953125
+      },
+      "contacts": {
+        "0.1": 0,
+        "0.025": 0
+      },
+      "finiteBoundaryEvents": 0,
+      "bufferChecks": "browser producer verifies each actual transfer SHA against certified descriptors",
+      "renderCollision": "receipt enforces revision equality; snapshot equality is not independent evidence",
+      "sourcePreparationCalls": 5,
+      "retirements": 5,
+      "maximumReportedAllocationBytes": {
+        "workerWasmCapacity": 10616832,
+        "mainWasmCapacity": 22544384,
+        "gpuBytes": 589984,
+        "snapshotBytes": 3544802
+      },
+      "processPeakRssKiB": 1741596
+    },
+    {
+      "label": "B-reopen",
+      "kind": "B",
+      "cleanup": true,
+      "pulseSeconds": 0.614,
+      "pulseFrames": 30,
+      "fps": 48.8599348534202,
+      "navigationMs": {
+        "n": 28,
+        "p50": 0.10009765625,
+        "p95": 0.2001953125,
+        "p99": 0.300048828125,
+        "max": 0.300048828125
+      },
+      "readinessMs": {
+        "n": 5,
+        "p50": 39.39990234375,
+        "p95": 248.800048828125,
+        "p99": 248.800048828125,
+        "max": 248.800048828125
+      },
+      "contacts": {
+        "0.1": 0,
+        "0.025": 0
+      },
+      "finiteBoundaryEvents": 0,
+      "bufferChecks": "browser producer verifies each actual transfer SHA against certified descriptors",
+      "renderCollision": "receipt enforces revision equality; snapshot equality is not independent evidence",
+      "sourcePreparationCalls": 5,
+      "retirements": 5,
+      "maximumReportedAllocationBytes": {
+        "workerWasmCapacity": 10616832,
+        "mainWasmCapacity": 22544384,
+        "gpuBytes": 589984,
+        "snapshotBytes": 3544802
+      },
+      "processPeakRssKiB": 1806588
+    }
+  ],
+  "metrics": {
+    "overallFps": 49.02384979480522,
+    "renderedFrames": 3739,
+    "pulseSeconds": 76.269,
+    "residentNavigationMs": {
+      "n": 3583,
+      "p50": 0.10009765625,
+      "p95": 0.2001953125,
+      "p99": 0.300048828125,
+      "max": 1
+    },
+    "readinessMs": {
+      "n": 52,
+      "p50": 33.7998046875,
+      "p95": 250.2001953125,
+      "p99": 257.599853515625,
+      "max": 257.599853515625
+    },
+    "memory": "unverified complete region attribution; exact GPU/WASM capacities and process RSS reported separately"
+  },
+  "motionAudit": {
+    "pass_": true,
+    "rows": [
+      {
+        "phase": "A-explore",
+        "samples": 190,
+        "contacts": 698,
+        "conservativeSourceClearanceLowerBoundM": 8.243340395419465e-06
+      },
+      {
+        "phase": "B-explore",
+        "samples": 187,
+        "contacts": 362,
+        "conservativeSourceClearanceLowerBoundM": -1.2739647492315906e-06
+      },
+      {
+        "phase": "A-reopen",
+        "samples": 37,
+        "contacts": 0,
+        "conservativeSourceClearanceLowerBoundM": 0.09782743958465098
+      },
+      {
+        "phase": "B-reopen",
+        "samples": 38,
+        "contacts": 0,
+        "conservativeSourceClearanceLowerBoundM": 0.019256117574552516
+      }
+    ],
+    "cudaImported": false
+  },
+  "performanceCriteria": {
+    "fps30": true,
+    "navigationP99Max2ms": true,
+    "navigationMaximum8ms": true,
+    "readinessMaximum1s": true,
+    "regionMemory1GiB": "unverified"
+  },
+  "gpu": {
+    "record": "VENDOR= 0x10de [Google Inc. (NVIDIA)], DEVICE=0x26b1 [ANGLE (NVIDIA, Vulkan 1.4.312 (NVIDIA NVIDIA RTX 6000 Ada Generation (0x000026B1)), NVIDIA-580.173.2.0)], DRIVER_VENDOR=NVIDIA, DRIVER_VERSION=580.173.2.0 *ACTIVE*",
+    "vendorId": 4318,
+    "deviceId": 9905,
+    "driverVendor": "NVIDIA",
+    "driverVersion": "580.173.2.0"
+  },
+  "rawManifestFile": "/mnt/ml_storage/scratch/atlas-md2a22/raw-evidence-manifest.json"
+}

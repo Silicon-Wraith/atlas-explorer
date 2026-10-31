@@ -1,0 +1,10 @@
+{
+  "overallFps": 38.27538741618933,
+  "frames": 862,
+  "seconds": 22.521,
+  "navigationCount": 669,
+  "navigationP99Ms": 4.199951171875,
+  "navigationMaxMs": 4.5,
+  "readinessCount": 16,
+  "readinessMaxMs": 2198.39990234375
+}

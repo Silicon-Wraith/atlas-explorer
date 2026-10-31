@@ -19,20 +19,20 @@ async function main() {
     for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => { if (!stopping) { stopping = true; child.kill(signal); } });
     process.exitCode = await new Promise((resolve, reject) => { child.once('error', reject); child.once('close', code => resolve(code ?? 1)); }); return;
   }
-  let port = 5196, runRoot, noBrowser = false;
+  let port = 5196, runRoot, noBrowser = false, sourceWorld = null;
   const argv = process.argv.slice(2);
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--port') port = Number(argv[++i]); else if (argv[i] === '--run-root') runRoot = argv[++i]; else if (argv[i] === '--no-browser') noBrowser = true; else throw new Error('Unknown argument ' + argv[i]);
+    if (argv[i] === '--port') port = Number(argv[++i]); else if (argv[i] === '--run-root') runRoot = argv[++i]; else if (argv[i] === '--source-world') { if (!argv[i+1]) throw new Error('Source bundle path required'); sourceWorld = path.resolve(argv[++i]); } else if (argv[i] === '--no-browser') noBrowser = true; else throw new Error('Unknown argument ' + argv[i]);
   }
   if (!Number.isSafeInteger(port) || port < 1 || port > 65535 || port === 5190) throw new Error('Choose a private application port');
   await fs.mkdir('/mnt/ml_storage/scratch/atlas-pc4', { recursive: true });
   runRoot = runRoot ? path.resolve(runRoot) : await fs.mkdtemp('/mnt/ml_storage/scratch/atlas-pc4/preview-');
-  await runOwnedPreview({ runRoot, port, noBrowser });
+  await runOwnedPreview({ runRoot, port, noBrowser, sourceWorld });
 }
 
 // Internal composition seam also exercises the actual launcher lifetime in the
 // maintained headed suite. It is not a browser/debug HTTP endpoint.
-export async function runOwnedPreview({ runRoot, port = 5196, noBrowser = false, onReady = async () => {} }) {
+export async function runOwnedPreview({ runRoot, port = 5196, noBrowser = false, sourceWorld = null, onReady = async () => {} }) {
   if (!process.env.ATLAS_GPU_HANDOFF || process.env.ATLAS_GPU_DEFERRED) throw new Error('Explicit hardware handoff required');
   if (!Number.isSafeInteger(port) || port < 1 || port > 65535 || port === 5190) throw new Error('Choose a private application port');
   runRoot = path.resolve(runRoot);
@@ -42,7 +42,7 @@ export async function runOwnedPreview({ runRoot, port = 5196, noBrowser = false,
   const done = new Promise(resolve => { finish = () => { stopping = true; resolve(); }; });
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, finish);
   try {
-    service = await createApplicationServer({ runRoot, port }); console.log('ATLAS prepared world is ready at http://127.0.0.1:' + port);
+    service = await createApplicationServer({ runRoot, port, sourceWorld }); console.log('ATLAS prepared world is ready at http://127.0.0.1:' + port);
     if (!noBrowser && !stopping) {
       browser = await chromium.launch({ channel: 'chrome', headless: false, chromiumSandbox: true, handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false, timeout: 30000, env: chromeLaunchEnv(), args: ['--disable-dev-shm-usage', ...PROJECT0_LAUNCH_ARGS] });
       context = await browser.newContext({ viewport: { width: 1280, height: 720 } }); pageOwner = ownPreviewPages({ context, browser, onEmpty: finish });

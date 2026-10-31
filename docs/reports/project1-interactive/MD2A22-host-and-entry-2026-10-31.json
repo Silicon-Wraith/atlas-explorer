@@ -1,0 +1,100 @@
+{
+  "phases": [
+    {
+      "phase": "A-explore",
+      "entryTimesMs": [
+        502.300048828125,
+        275.199951171875
+      ],
+      "peakGpuBytes": 8996256,
+      "chrome": "155.0.8059.84",
+      "arguments": {
+        "present": [
+          "--enable-gpu",
+          "--use-angle=vulkan",
+          "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan",
+          "--enable-webgpu-developer-features"
+        ],
+        "missing": [],
+        "noSandbox": false,
+        "headless": false,
+        "gpuWatchdogDisabled": false,
+        "developerFeatures": true
+      }
+    },
+    {
+      "phase": "B-explore",
+      "entryTimesMs": [
+        504.0,
+        277.5
+      ],
+      "peakGpuBytes": 8996256,
+      "chrome": "155.0.8059.84",
+      "arguments": {
+        "present": [
+          "--enable-gpu",
+          "--use-angle=vulkan",
+          "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan",
+          "--enable-webgpu-developer-features"
+        ],
+        "missing": [],
+        "noSandbox": false,
+        "headless": false,
+        "gpuWatchdogDisabled": false,
+        "developerFeatures": true
+      }
+    },
+    {
+      "phase": "A-reopen",
+      "entryTimesMs": [
+        475.5
+      ],
+      "peakGpuBytes": 6636320,
+      "chrome": "155.0.8059.84",
+      "arguments": {
+        "present": [
+          "--enable-gpu",
+          "--use-angle=vulkan",
+          "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan",
+          "--enable-webgpu-developer-features"
+        ],
+        "missing": [],
+        "noSandbox": false,
+        "headless": false,
+        "gpuWatchdogDisabled": false,
+        "developerFeatures": true
+      }
+    },
+    {
+      "phase": "B-reopen",
+      "entryTimesMs": [
+        471.199951171875
+      ],
+      "peakGpuBytes": 6636320,
+      "chrome": "155.0.8059.84",
+      "arguments": {
+        "present": [
+          "--enable-gpu",
+          "--use-angle=vulkan",
+          "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan",
+          "--enable-webgpu-developer-features"
+        ],
+        "missing": [],
+        "noSandbox": false,
+        "headless": false,
+        "gpuWatchdogDisabled": false,
+        "developerFeatures": true
+      }
+    }
+  ],
+  "hostAssets": {
+    "/opt/google/chrome/chrome": {
+      "sha256": "cb19b59995072b86cc7f887b3b1c7ab1f63518a7f2ed9f0d33249e1a040e2c76",
+      "bytes": 298913096
+    },
+    "/mnt/ml_storage/scratch/atlas-prepared-demo/rapier.mjs": {
+      "sha256": "02dc6a4e2fffc013bab08fbb44fa68f501d8303615e9afe4c7d89ad4eedda0d0",
+      "bytes": 4340292
+    }
+  }
+}

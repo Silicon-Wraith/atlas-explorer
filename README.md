@@ -64,6 +64,8 @@ A fresh page opens Plane. Select **Space** to prepare its WebGPU pipelines and o
 
 If WebGPU or an adapter is unavailable, Plane stays usable and the message explains Chrome graphics acceleration, HTTPS/localhost and the separate-profile `npm run dev:gpu` route. The release's end-to-end route is flagged Chrome plus actionable unavailability in an ordinary browser (user decision, 2026-10-22). This does not claim flag-free support on every driver. Quaternion visual captures designated diagnostic by plan rev 5.2 are not acceptance evidence. B15's three P3 scenes passed at promotion `31233b5438b8471654bc858c6cf7aca430d576fc`; the [recorded investigation](docs/reports/project1b/1b1-investigation.md) completed all 16 operations. [HANDOFF.md](HANDOFF.md) records the evidence scope and remaining handoff work.
 
+Source-derived parent bundles can also be configured with `npm run dev:world -- --source-world /absolute/path/to/bundle`. The bounded A/B profile, qualification and current acceptance status are documented in [generator setup](scripts/generation/README.md#enter-a-qualified-source-parent). Regression World remains the default; Plane creation and world selection are subsequent work.
+
 ## Explore Plane
 
 - Scroll to zoom toward the pointer; drag to pan. Double-click to dive four times deeper.

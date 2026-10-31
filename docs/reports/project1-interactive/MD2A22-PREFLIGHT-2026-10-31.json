@@ -1,0 +1,1452 @@
+{
+  "started": 1793465304789,
+  "pass": true,
+  "ownedPids": [
+    3039263,
+    3039276
+  ],
+  "cases": [
+    {
+      "name": "A",
+      "hello": {
+        "type": "ready",
+        "mode": "source-parent",
+        "producer": {
+          "instanceId": "7245b4ff-fff6-454b-9590-4fd2c2e979a3",
+          "epoch": 0
+        },
+        "definition": {
+          "assets": [
+            {
+              "role": "canonical-parent-logical-array",
+              "sha256": "436766498eec371b3dd2ce52a472e9aaad38e3d5e0eb10f73a150d6a5ca815fc"
+            }
+          ],
+          "generator": {
+            "id": "atlas.mandelbrot-parent-chart",
+            "version": "affine-distance-r1"
+          },
+          "id": "parent@sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835",
+          "lineage": [
+            {
+              "id": "parent",
+              "parent": null
+            }
+          ],
+          "parameters": {
+            "parent": {
+              "definitionKey": "sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835",
+              "profile": {
+                "array": "little-endian-float64-C",
+                "coordinateArithmetic": "exact-rational-round-once-binary64",
+                "coordinateMapping": "C+U*(x-i*z)",
+                "derivative": "before-z",
+                "distance": "half-milnor",
+                "distanceArithmetic": "binary64-Dc-divide-U",
+                "escapeRadius": "1000000",
+                "failed": "failed-no-surface",
+                "formula": "z*z+c",
+                "heightArithmetic": "binary64-subtract-multiply-subtract",
+                "interior": "strict-cardioid-period2",
+                "interiorDistanceM": "0",
+                "interiorMargin": "0.000000001",
+                "interpolation": "bilinear",
+                "negativeZero": "positive",
+                "outsideDomain": "undefined",
+                "unknown": "unresolved-no-surface"
+              },
+              "recipe": {
+                "generator": {
+                  "id": "atlas.mandelbrot-parent-chart",
+                  "version": "affine-distance-r1"
+                },
+                "grid": {
+                  "cells": 64,
+                  "halfExtentM": "0.8"
+                },
+                "numerics": {
+                  "maxIterations": 131072,
+                  "roundingDenominator": 1024
+                },
+                "schema": "atlas.generation.source-recipe",
+                "schemaVersion": 1,
+                "source": {
+                  "im": "0.131807237950087553359375",
+                  "re": "-0.743334490810060138125000",
+                  "unitsPerMetre": "0.00000078125"
+                },
+                "transfer": {
+                  "referenceDistanceM": "6.8",
+                  "referenceHeightM": "89.06014237811313",
+                  "slope": "2.1600443105285194"
+                }
+              },
+              "schema": "atlas.generation.parent-definition",
+              "schemaVersion": 1,
+              "surface": {
+                "axisOrder": "z,x",
+                "dtype": "<f8",
+                "file": "height.npy",
+                "logicalSha256": "436766498eec371b3dd2ce52a472e9aaad38e3d5e0eb10f73a150d6a5ca815fc",
+                "order": "C",
+                "shape": [
+                  65,
+                  65
+                ]
+              }
+            }
+          },
+          "definitionKey": "fnv1a64:6445db1a85c584bf"
+        },
+        "sources": [
+          {
+            "role": "scripts/generation/source-bundle.mjs",
+            "sha256": "c93ec4644466afb5625acef6e1adaf8c7beb61f100e26c45c8a668f9d347fd0e"
+          },
+          {
+            "role": "scripts/preparation/source-adapter.mjs",
+            "sha256": "a97fde8456962de88f43a30995e460c02ebb1a51aed118206d37acdf644bda41"
+          },
+          {
+            "role": "scripts/preparation/publications.mjs",
+            "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9"
+          },
+          {
+            "role": "src/space/generation/parent-mesh.js",
+            "sha256": "f0efb69ef5f2444c6456ef22a4cb268135552dd2c74f6c1f84f5dd05b15f0cac"
+          },
+          {
+            "role": "src/space/generation/source-recipe.js",
+            "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+          },
+          {
+            "role": "src/shared/scene.js",
+            "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa"
+          },
+          {
+            "role": "src/space/preparation/contract.js",
+            "sha256": "59722894e2d1b2fa3ec7160607bf92fd4bd6229637c22ad62759c6ebe86a73c3"
+          },
+          {
+            "role": "src/space/preparation/spatial-grid.js",
+            "sha256": "03f4eed11ba2d535d6866089d29aa660e7e446ae93f40e4f737a794af07b29c8"
+          },
+          {
+            "role": "src/space/preparation/scene-adapter.js",
+            "sha256": "f87d7b807a0b2780f5cd61f6c50199f64a9296fd49181f95604648a52148aa29"
+          }
+        ],
+        "packages": {
+          "node": "20.20.2"
+        },
+        "sourcesKey": "ee1382dfe91b037079fec5a2b24d2ae96231e825aa263b92e1f692085e6d0ba4",
+        "inputKey": "677346ce3e1df3bfc174494eecda4bc5a06dbd30dba1b566175e20a6111fea86",
+        "transport": {
+          "height.npy": "fcc8ce91565c552ce514ae9f0b52dff59ec9ac8b47d12932f5dbb978a4620bb2",
+          "recipe.json": "96e6896c7715cc260ea4e9925d20b54a675e9699f6980072574e8615679659a4",
+          "result.json": "40de7adc62a787c6a2b098aab024be4c9ae4d77e0329fa839e98f390e2b93044"
+        },
+        "grid": {
+          "origin": [
+            0.0355288508224971,
+            80.33870527780729,
+            -0.1135209393062433
+          ],
+          "axes": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              0
+            ]
+          ],
+          "diameter": 0.1,
+          "spacing": 0.5,
+          "domain": [
+            [
+              -14,
+              13
+            ],
+            [
+              -11,
+              16
+            ],
+            [
+              -32,
+              33
+            ]
+          ],
+          "floatSlack": 1e-8
+        },
+        "viewGrid": {
+          "origin": [
+            0.0355288508224971,
+            80.33870527780729,
+            -0.1135209393062433
+          ],
+          "axes": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              0
+            ]
+          ],
+          "diameter": 0.4,
+          "spacing": 0.5,
+          "domain": [
+            [
+              -2,
+              1
+            ],
+            [
+              -1,
+              2
+            ],
+            [
+              -6,
+              6
+            ]
+          ],
+          "floatSlack": 1e-8
+        },
+        "approach": {
+          "entry": [
+            0.0355288508224971,
+            80.33870527780729,
+            -0.1135209393062433
+          ],
+          "inspection_eye": [
+            0.0355288508224971,
+            80.33870527780729,
+            -0.1135209393062433
+          ],
+          "target": [
+            0,
+            80.3082984939261,
+            0
+          ],
+          "fine_origin": [
+            0.0355288508224971,
+            80.33870527780729,
+            -0.1135209393062433
+          ],
+          "d": 0.025
+        },
+        "feature": {
+          "world_point": [
+            0,
+            80.3082984939261,
+            0
+          ],
+          "light_direction": [
+            -0.3333333333333333,
+            0.6666666666666666,
+            -0.6666666666666666
+          ]
+        },
+        "specimens": {
+          "coarse": {
+            "buffers": [
+              {
+                "role": "vertices",
+                "byteLength": 101400,
+                "sha256": "18d36c87a0d899b7d255b9b10efcf469ecf3e811b0114694ef5e7bb1be1de0c4"
+              },
+              {
+                "role": "surface-indices",
+                "byteLength": 98304,
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "role": "solid-indices",
+                "byteLength": 202752,
+                "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+              }
+            ],
+            "maxSurfaceErrorM": 0.000005439129368309424,
+            "auditSlackM": 0.00000152587890625
+          },
+          "fine": {
+            "buffers": [
+              {
+                "role": "vertices",
+                "byteLength": 101400,
+                "sha256": "1efa0bf2bc06850f6e2803bc654ed6afd850f82e242e8f877464dca4b6e6a51f"
+              },
+              {
+                "role": "surface-indices",
+                "byteLength": 98304,
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "role": "solid-indices",
+                "byteLength": 202752,
+                "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+              }
+            ],
+            "maxSurfaceErrorM": 0.000005439129368309424,
+            "auditSlackM": 0.00000152587890625
+          },
+          "view": {
+            "buffers": [
+              {
+                "role": "vertices",
+                "byteLength": 101400,
+                "sha256": "80cdf506bb0ee3d2e51b7e9f7f0ebd8aafcd116c3ab3bcd8435a11a9d28d2881"
+              },
+              {
+                "role": "surface-indices",
+                "byteLength": 98304,
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              }
+            ],
+            "maxSurfaceErrorM": 0.000005439129368309424,
+            "auditSlackM": 0.00000152587890625
+          }
+        },
+        "certificate": null
+      },
+      "rows": [
+        {
+          "kind": "coarse",
+          "artifact": {
+            "bounds": {
+              "max": [
+                0.8,
+                82.09682465651599,
+                0.8
+              ],
+              "min": [
+                -0.8,
+                78.60672409765453,
+                -0.8
+              ]
+            },
+            "buffers": [
+              {
+                "byteLength": 202752,
+                "role": "solid-indices",
+                "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+              },
+              {
+                "byteLength": 98304,
+                "role": "surface-indices",
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "byteLength": 101400,
+                "role": "vertices",
+                "sha256": "18d36c87a0d899b7d255b9b10efcf469ecf3e811b0114694ef5e7bb1be1de0c4"
+              }
+            ],
+            "classification": "surface",
+            "classificationBasis": {
+              "evidenceId": "sha256:50ce012a4659864396bd6b545e10687e4699cb57e9e2eb8de36cc2326d033e7c",
+              "kind": "constructed-approximation",
+              "method": "paired-closed-uniform-parent-grid",
+              "volumeM3": 4.404051905622432
+            },
+            "intent": "interaction",
+            "qualification": {
+              "denseValidation": false,
+              "evidenceId": "MD2A22/preflight-only",
+              "kind": "empirical",
+              "limits": [
+                "Only the pinned A/B parent definitions and this source/Node policy are qualified.",
+                "Finite independent reconstruction plus analytical interpolation/roundoff evidence; not an exact-arithmetic collision guarantee.",
+                "Whole bounded world duplicated across resident consumer leases; no new mathematical detail on shrink."
+              ],
+              "meshSamples": 0,
+              "referenceSamples": 0,
+              "toleranceM": 0.0000125
+            },
+            "representation": {
+              "builder": {
+                "id": "atlas-parent-grid",
+                "sourceDigests": [
+                  {
+                    "role": "scripts/generation/source-bundle.mjs",
+                    "sha256": "c93ec4644466afb5625acef6e1adaf8c7beb61f100e26c45c8a668f9d347fd0e"
+                  },
+                  {
+                    "role": "scripts/preparation/publications.mjs",
+                    "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9"
+                  },
+                  {
+                    "role": "scripts/preparation/source-adapter.mjs",
+                    "sha256": "a97fde8456962de88f43a30995e460c02ebb1a51aed118206d37acdf644bda41"
+                  },
+                  {
+                    "role": "src/shared/scene.js",
+                    "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa"
+                  },
+                  {
+                    "role": "src/space/generation/parent-mesh.js",
+                    "sha256": "f0efb69ef5f2444c6456ef22a4cb268135552dd2c74f6c1f84f5dd05b15f0cac"
+                  },
+                  {
+                    "role": "src/space/generation/source-recipe.js",
+                    "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+                  },
+                  {
+                    "role": "src/space/preparation/contract.js",
+                    "sha256": "59722894e2d1b2fa3ec7160607bf92fd4bd6229637c22ad62759c6ebe86a73c3"
+                  },
+                  {
+                    "role": "src/space/preparation/scene-adapter.js",
+                    "sha256": "f87d7b807a0b2780f5cd61f6c50199f64a9296fd49181f95604648a52148aa29"
+                  },
+                  {
+                    "role": "src/space/preparation/spatial-grid.js",
+                    "sha256": "03f4eed11ba2d535d6866089d29aa660e7e446ae93f40e4f737a794af07b29c8"
+                  }
+                ],
+                "version": "1"
+              },
+              "dependencies": [
+                {
+                  "role": "canonical-parent-logical-array",
+                  "sha256": "436766498eec371b3dd2ce52a472e9aaad38e3d5e0eb10f73a150d6a5ca815fc"
+                }
+              ],
+              "features": [
+                "parent"
+              ],
+              "sampling": {
+                "cells": 64,
+                "coordinateType": "float32-local-metres-per-unit",
+                "maxSurfaceErrorM": 0.000005439129368309424,
+                "method": "bilinear-grid-v1",
+                "stepM": 0.025,
+                "tileWidthM": 1.6
+              }
+            },
+            "schema": "atlas.preparation.artifact",
+            "schemaVersion": 1,
+            "transform": {
+              "metresPerUnit": 0.1,
+              "originM": [
+                0.0355288508224971,
+                80.33870527780729,
+                -0.1135209393062433
+              ]
+            },
+            "world": {
+              "definitionKey": "fnv1a64:6445db1a85c584bf",
+              "id": "parent@sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835"
+            }
+          }
+        },
+        {
+          "kind": "fine",
+          "artifact": {
+            "bounds": {
+              "max": [
+                0.8,
+                82.09682465651599,
+                0.8
+              ],
+              "min": [
+                -0.8,
+                78.60672409765453,
+                -0.8
+              ]
+            },
+            "buffers": [
+              {
+                "byteLength": 202752,
+                "role": "solid-indices",
+                "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+              },
+              {
+                "byteLength": 98304,
+                "role": "surface-indices",
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "byteLength": 101400,
+                "role": "vertices",
+                "sha256": "1efa0bf2bc06850f6e2803bc654ed6afd850f82e242e8f877464dca4b6e6a51f"
+              }
+            ],
+            "classification": "surface",
+            "classificationBasis": {
+              "evidenceId": "sha256:663d3ff23816e8138b0652d9491015bb439cc306e3af32c15a60e5c48d713b04",
+              "kind": "constructed-approximation",
+              "method": "paired-closed-uniform-parent-grid",
+              "volumeM3": 4.404051905622432
+            },
+            "intent": "interaction",
+            "qualification": {
+              "denseValidation": false,
+              "evidenceId": "MD2A22/preflight-only",
+              "kind": "empirical",
+              "limits": [
+                "Only the pinned A/B parent definitions and this source/Node policy are qualified.",
+                "Finite independent reconstruction plus analytical interpolation/roundoff evidence; not an exact-arithmetic collision guarantee.",
+                "Whole bounded world duplicated across resident consumer leases; no new mathematical detail on shrink."
+              ],
+              "meshSamples": 0,
+              "referenceSamples": 0,
+              "toleranceM": 0.0000125
+            },
+            "representation": {
+              "builder": {
+                "id": "atlas-parent-grid",
+                "sourceDigests": [
+                  {
+                    "role": "scripts/generation/source-bundle.mjs",
+                    "sha256": "c93ec4644466afb5625acef6e1adaf8c7beb61f100e26c45c8a668f9d347fd0e"
+                  },
+                  {
+                    "role": "scripts/preparation/publications.mjs",
+                    "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9"
+                  },
+                  {
+                    "role": "scripts/preparation/source-adapter.mjs",
+                    "sha256": "a97fde8456962de88f43a30995e460c02ebb1a51aed118206d37acdf644bda41"
+                  },
+                  {
+                    "role": "src/shared/scene.js",
+                    "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa"
+                  },
+                  {
+                    "role": "src/space/generation/parent-mesh.js",
+                    "sha256": "f0efb69ef5f2444c6456ef22a4cb268135552dd2c74f6c1f84f5dd05b15f0cac"
+                  },
+                  {
+                    "role": "src/space/generation/source-recipe.js",
+                    "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+                  },
+                  {
+                    "role": "src/space/preparation/contract.js",
+                    "sha256": "59722894e2d1b2fa3ec7160607bf92fd4bd6229637c22ad62759c6ebe86a73c3"
+                  },
+                  {
+                    "role": "src/space/preparation/scene-adapter.js",
+                    "sha256": "f87d7b807a0b2780f5cd61f6c50199f64a9296fd49181f95604648a52148aa29"
+                  },
+                  {
+                    "role": "src/space/preparation/spatial-grid.js",
+                    "sha256": "03f4eed11ba2d535d6866089d29aa660e7e446ae93f40e4f737a794af07b29c8"
+                  }
+                ],
+                "version": "1"
+              },
+              "dependencies": [
+                {
+                  "role": "canonical-parent-logical-array",
+                  "sha256": "436766498eec371b3dd2ce52a472e9aaad38e3d5e0eb10f73a150d6a5ca815fc"
+                }
+              ],
+              "features": [
+                "parent"
+              ],
+              "sampling": {
+                "cells": 64,
+                "coordinateType": "float32-local-metres-per-unit",
+                "maxSurfaceErrorM": 0.000005439129368309424,
+                "method": "bilinear-grid-v1",
+                "stepM": 0.025,
+                "tileWidthM": 1.6
+              }
+            },
+            "schema": "atlas.preparation.artifact",
+            "schemaVersion": 1,
+            "transform": {
+              "metresPerUnit": 0.025,
+              "originM": [
+                0.0355288508224971,
+                80.33870527780729,
+                -0.1135209393062433
+              ]
+            },
+            "world": {
+              "definitionKey": "fnv1a64:6445db1a85c584bf",
+              "id": "parent@sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835"
+            }
+          }
+        },
+        {
+          "kind": "view",
+          "artifact": {
+            "bounds": {
+              "max": [
+                0.8,
+                82.09682465651599,
+                0.8
+              ],
+              "min": [
+                -0.8,
+                78.60672409765453,
+                -0.8
+              ]
+            },
+            "buffers": [
+              {
+                "byteLength": 98304,
+                "role": "surface-indices",
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "byteLength": 101400,
+                "role": "vertices",
+                "sha256": "80cdf506bb0ee3d2e51b7e9f7f0ebd8aafcd116c3ab3bcd8435a11a9d28d2881"
+              }
+            ],
+            "classification": "surface",
+            "classificationBasis": {
+              "evidenceId": "sha256:1c20304845469bbb01d1082a45cef5839506bb9fdd8fa4eaf866be698b9c5933",
+              "kind": "constructed-approximation",
+              "method": "paired-closed-uniform-parent-grid",
+              "volumeM3": 4.404051905622432
+            },
+            "intent": "view",
+            "qualification": {
+              "denseValidation": false,
+              "evidenceId": "MD2A22/preflight-only",
+              "kind": "empirical",
+              "limits": [
+                "Only the pinned A/B parent definitions and this source/Node policy are qualified.",
+                "Finite independent reconstruction plus analytical interpolation/roundoff evidence; not an exact-arithmetic collision guarantee.",
+                "Whole bounded world duplicated across resident consumer leases; no new mathematical detail on shrink."
+              ],
+              "meshSamples": 0,
+              "referenceSamples": 0,
+              "toleranceM": 0.0000125
+            },
+            "representation": {
+              "builder": {
+                "id": "atlas-parent-grid",
+                "sourceDigests": [
+                  {
+                    "role": "scripts/generation/source-bundle.mjs",
+                    "sha256": "c93ec4644466afb5625acef6e1adaf8c7beb61f100e26c45c8a668f9d347fd0e"
+                  },
+                  {
+                    "role": "scripts/preparation/publications.mjs",
+                    "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9"
+                  },
+                  {
+                    "role": "scripts/preparation/source-adapter.mjs",
+                    "sha256": "a97fde8456962de88f43a30995e460c02ebb1a51aed118206d37acdf644bda41"
+                  },
+                  {
+                    "role": "src/shared/scene.js",
+                    "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa"
+                  },
+                  {
+                    "role": "src/space/generation/parent-mesh.js",
+                    "sha256": "f0efb69ef5f2444c6456ef22a4cb268135552dd2c74f6c1f84f5dd05b15f0cac"
+                  },
+                  {
+                    "role": "src/space/generation/source-recipe.js",
+                    "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+                  },
+                  {
+                    "role": "src/space/preparation/contract.js",
+                    "sha256": "59722894e2d1b2fa3ec7160607bf92fd4bd6229637c22ad62759c6ebe86a73c3"
+                  },
+                  {
+                    "role": "src/space/preparation/scene-adapter.js",
+                    "sha256": "f87d7b807a0b2780f5cd61f6c50199f64a9296fd49181f95604648a52148aa29"
+                  },
+                  {
+                    "role": "src/space/preparation/spatial-grid.js",
+                    "sha256": "03f4eed11ba2d535d6866089d29aa660e7e446ae93f40e4f737a794af07b29c8"
+                  }
+                ],
+                "version": "1"
+              },
+              "dependencies": [
+                {
+                  "role": "canonical-parent-logical-array",
+                  "sha256": "436766498eec371b3dd2ce52a472e9aaad38e3d5e0eb10f73a150d6a5ca815fc"
+                }
+              ],
+              "features": [
+                "parent"
+              ],
+              "sampling": {
+                "cells": 64,
+                "coordinateType": "float32-local-metres-per-unit",
+                "maxSurfaceErrorM": 0.000005439129368309424,
+                "method": "bilinear-grid-v1",
+                "stepM": 0.025,
+                "tileWidthM": 1.6
+              }
+            },
+            "schema": "atlas.preparation.artifact",
+            "schemaVersion": 1,
+            "transform": {
+              "metresPerUnit": 0.4,
+              "originM": [
+                0.0355288508224971,
+                80.33870527780729,
+                -0.1135209393062433
+              ]
+            },
+            "world": {
+              "definitionKey": "fnv1a64:6445db1a85c584bf",
+              "id": "parent@sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835"
+            }
+          }
+        }
+      ],
+      "addressesChecked": 51952,
+      "cleanup": {
+        "cleanup": true,
+        "childProcess": false,
+        "publications": 0
+      }
+    },
+    {
+      "name": "B",
+      "hello": {
+        "type": "ready",
+        "mode": "source-parent",
+        "producer": {
+          "instanceId": "61d5aeda-47ab-4bb3-9ddc-6c1ce1aed0b6",
+          "epoch": 0
+        },
+        "definition": {
+          "assets": [
+            {
+              "role": "canonical-parent-logical-array",
+              "sha256": "6514d68017870395fe6b02acd74421fb25e40c9d783586a767a4cf5448b166ba"
+            }
+          ],
+          "generator": {
+            "id": "atlas.mandelbrot-parent-chart",
+            "version": "affine-distance-r1"
+          },
+          "id": "parent@sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b",
+          "lineage": [
+            {
+              "id": "parent",
+              "parent": null
+            }
+          ],
+          "parameters": {
+            "parent": {
+              "definitionKey": "sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b",
+              "profile": {
+                "array": "little-endian-float64-C",
+                "coordinateArithmetic": "exact-rational-round-once-binary64",
+                "coordinateMapping": "C+U*(x-i*z)",
+                "derivative": "before-z",
+                "distance": "half-milnor",
+                "distanceArithmetic": "binary64-Dc-divide-U",
+                "escapeRadius": "1000000",
+                "failed": "failed-no-surface",
+                "formula": "z*z+c",
+                "heightArithmetic": "binary64-subtract-multiply-subtract",
+                "interior": "strict-cardioid-period2",
+                "interiorDistanceM": "0",
+                "interiorMargin": "0.000000001",
+                "interpolation": "bilinear",
+                "negativeZero": "positive",
+                "outsideDomain": "undefined",
+                "unknown": "unresolved-no-surface"
+              },
+              "recipe": {
+                "generator": {
+                  "id": "atlas.mandelbrot-parent-chart",
+                  "version": "affine-distance-r1"
+                },
+                "grid": {
+                  "cells": 64,
+                  "halfExtentM": "0.8"
+                },
+                "numerics": {
+                  "maxIterations": 131072,
+                  "roundingDenominator": 1024
+                },
+                "schema": "atlas.generation.source-recipe",
+                "schemaVersion": 1,
+                "source": {
+                  "im": "0.00688857589984350546875",
+                  "re": "0.275291862284820031484375",
+                  "unitsPerMetre": "0.00000078125"
+                },
+                "transfer": {
+                  "referenceDistanceM": "6.8",
+                  "referenceHeightM": "89.06014237811313",
+                  "slope": "2.1600443105285194"
+                }
+              },
+              "schema": "atlas.generation.parent-definition",
+              "schemaVersion": 1,
+              "surface": {
+                "axisOrder": "z,x",
+                "dtype": "<f8",
+                "file": "height.npy",
+                "logicalSha256": "6514d68017870395fe6b02acd74421fb25e40c9d783586a767a4cf5448b166ba",
+                "order": "C",
+                "shape": [
+                  65,
+                  65
+                ]
+              }
+            }
+          },
+          "definitionKey": "fnv1a64:a31f94642a12b5c1"
+        },
+        "sources": [
+          {
+            "role": "scripts/generation/source-bundle.mjs",
+            "sha256": "c93ec4644466afb5625acef6e1adaf8c7beb61f100e26c45c8a668f9d347fd0e"
+          },
+          {
+            "role": "scripts/preparation/source-adapter.mjs",
+            "sha256": "a97fde8456962de88f43a30995e460c02ebb1a51aed118206d37acdf644bda41"
+          },
+          {
+            "role": "scripts/preparation/publications.mjs",
+            "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9"
+          },
+          {
+            "role": "src/space/generation/parent-mesh.js",
+            "sha256": "f0efb69ef5f2444c6456ef22a4cb268135552dd2c74f6c1f84f5dd05b15f0cac"
+          },
+          {
+            "role": "src/space/generation/source-recipe.js",
+            "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+          },
+          {
+            "role": "src/shared/scene.js",
+            "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa"
+          },
+          {
+            "role": "src/space/preparation/contract.js",
+            "sha256": "59722894e2d1b2fa3ec7160607bf92fd4bd6229637c22ad62759c6ebe86a73c3"
+          },
+          {
+            "role": "src/space/preparation/spatial-grid.js",
+            "sha256": "03f4eed11ba2d535d6866089d29aa660e7e446ae93f40e4f737a794af07b29c8"
+          },
+          {
+            "role": "src/space/preparation/scene-adapter.js",
+            "sha256": "f87d7b807a0b2780f5cd61f6c50199f64a9296fd49181f95604648a52148aa29"
+          }
+        ],
+        "packages": {
+          "node": "20.20.2"
+        },
+        "sourcesKey": "ee1382dfe91b037079fec5a2b24d2ae96231e825aa263b92e1f692085e6d0ba4",
+        "inputKey": "764a0ab824c2efce9941e0ab45cec7e6c2431de56a192119ef94d71d6e4db254",
+        "transport": {
+          "height.npy": "ce687ac354b90c198ce284ff89058ff0ac9790b6f47aa43505b15bd7100f1891",
+          "recipe.json": "c2865852793eca1866b037d4d3930cb8a2f28bc9e228335060eb002940336ffb",
+          "result.json": "1c8b1ad5a9ea46779c5737bfafcaaacd6f524e3a28d3bd3e16d998b8f3440f20"
+        },
+        "grid": {
+          "origin": [
+            -0.10251118968120258,
+            92.21804533096774,
+            -0.15427478968136696
+          ],
+          "axes": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              0
+            ]
+          ],
+          "diameter": 0.1,
+          "spacing": 0.5,
+          "domain": [
+            [
+              -11,
+              16
+            ],
+            [
+              -10,
+              17
+            ],
+            [
+              -68,
+              76
+            ]
+          ],
+          "floatSlack": 1e-8
+        },
+        "viewGrid": {
+          "origin": [
+            -0.10251118968120258,
+            92.21804533096774,
+            -0.15427478968136696
+          ],
+          "axes": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              0
+            ]
+          ],
+          "diameter": 0.4,
+          "spacing": 0.5,
+          "domain": [
+            [
+              -1,
+              2
+            ],
+            [
+              -1,
+              2
+            ],
+            [
+              -15,
+              17
+            ]
+          ],
+          "floatSlack": 1e-8
+        },
+        "approach": {
+          "entry": [
+            -0.10251118968120258,
+            92.21804533096774,
+            -0.15427478968136696
+          ],
+          "inspection_eye": [
+            -0.10251118968120258,
+            92.21804533096774,
+            -0.15427478968136696
+          ],
+          "target": [
+            0,
+            92.43052796446216,
+            0
+          ],
+          "fine_origin": [
+            -0.10251118968120258,
+            92.21804533096774,
+            -0.15427478968136696
+          ],
+          "d": 0.025
+        },
+        "feature": {
+          "world_point": [
+            0,
+            92.43052796446216,
+            0
+          ],
+          "light_direction": [
+            -0.3333333333333333,
+            0.6666666666666666,
+            -0.6666666666666666
+          ]
+        },
+        "specimens": {
+          "coarse": {
+            "buffers": [
+              {
+                "role": "vertices",
+                "byteLength": 101400,
+                "sha256": "0bef51cda6c787deaf81694d25d9e386224e4d3bcda8656d5dbc4d9e5c0ee36b"
+              },
+              {
+                "role": "surface-indices",
+                "byteLength": 98304,
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "role": "solid-indices",
+                "byteLength": 202752,
+                "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+              }
+            ],
+            "maxSurfaceErrorM": 0.000010265596737573318,
+            "auditSlackM": 0.0000030517578125
+          },
+          "fine": {
+            "buffers": [
+              {
+                "role": "vertices",
+                "byteLength": 101400,
+                "sha256": "43961149c4a9b141b2e009fca8e420f1fa4677c7968d57ac706338516875b39c"
+              },
+              {
+                "role": "surface-indices",
+                "byteLength": 98304,
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "role": "solid-indices",
+                "byteLength": 202752,
+                "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+              }
+            ],
+            "maxSurfaceErrorM": 0.000010265596737573318,
+            "auditSlackM": 0.0000030517578125
+          },
+          "view": {
+            "buffers": [
+              {
+                "role": "vertices",
+                "byteLength": 101400,
+                "sha256": "5202560e9ffde67abfccc047f19a8a6b728d176a3b42102d696c6e40984ff91a"
+              },
+              {
+                "role": "surface-indices",
+                "byteLength": 98304,
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              }
+            ],
+            "maxSurfaceErrorM": 0.000010265596737573318,
+            "auditSlackM": 0.0000030517578125
+          }
+        },
+        "certificate": null
+      },
+      "rows": [
+        {
+          "kind": "coarse",
+          "artifact": {
+            "bounds": {
+              "max": [
+                0.8,
+                96.12974563404896,
+                0.8
+              ],
+              "min": [
+                -0.8,
+                88.69025984707798,
+                -0.8
+              ]
+            },
+            "buffers": [
+              {
+                "byteLength": 202752,
+                "role": "solid-indices",
+                "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+              },
+              {
+                "byteLength": 98304,
+                "role": "surface-indices",
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "byteLength": 101400,
+                "role": "vertices",
+                "sha256": "0bef51cda6c787deaf81694d25d9e386224e4d3bcda8656d5dbc4d9e5c0ee36b"
+              }
+            ],
+            "classification": "surface",
+            "classificationBasis": {
+              "evidenceId": "sha256:e952bfb2e4048fba60cc2579d12d1541b7681537e5d4291ef6653b06d392e682",
+              "kind": "constructed-approximation",
+              "method": "paired-closed-uniform-parent-grid",
+              "volumeM3": 9.542148432545453
+            },
+            "intent": "interaction",
+            "qualification": {
+              "denseValidation": false,
+              "evidenceId": "MD2A22/preflight-only",
+              "kind": "empirical",
+              "limits": [
+                "Only the pinned A/B parent definitions and this source/Node policy are qualified.",
+                "Finite independent reconstruction plus analytical interpolation/roundoff evidence; not an exact-arithmetic collision guarantee.",
+                "Whole bounded world duplicated across resident consumer leases; no new mathematical detail on shrink."
+              ],
+              "meshSamples": 0,
+              "referenceSamples": 0,
+              "toleranceM": 0.0000125
+            },
+            "representation": {
+              "builder": {
+                "id": "atlas-parent-grid",
+                "sourceDigests": [
+                  {
+                    "role": "scripts/generation/source-bundle.mjs",
+                    "sha256": "c93ec4644466afb5625acef6e1adaf8c7beb61f100e26c45c8a668f9d347fd0e"
+                  },
+                  {
+                    "role": "scripts/preparation/publications.mjs",
+                    "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9"
+                  },
+                  {
+                    "role": "scripts/preparation/source-adapter.mjs",
+                    "sha256": "a97fde8456962de88f43a30995e460c02ebb1a51aed118206d37acdf644bda41"
+                  },
+                  {
+                    "role": "src/shared/scene.js",
+                    "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa"
+                  },
+                  {
+                    "role": "src/space/generation/parent-mesh.js",
+                    "sha256": "f0efb69ef5f2444c6456ef22a4cb268135552dd2c74f6c1f84f5dd05b15f0cac"
+                  },
+                  {
+                    "role": "src/space/generation/source-recipe.js",
+                    "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+                  },
+                  {
+                    "role": "src/space/preparation/contract.js",
+                    "sha256": "59722894e2d1b2fa3ec7160607bf92fd4bd6229637c22ad62759c6ebe86a73c3"
+                  },
+                  {
+                    "role": "src/space/preparation/scene-adapter.js",
+                    "sha256": "f87d7b807a0b2780f5cd61f6c50199f64a9296fd49181f95604648a52148aa29"
+                  },
+                  {
+                    "role": "src/space/preparation/spatial-grid.js",
+                    "sha256": "03f4eed11ba2d535d6866089d29aa660e7e446ae93f40e4f737a794af07b29c8"
+                  }
+                ],
+                "version": "1"
+              },
+              "dependencies": [
+                {
+                  "role": "canonical-parent-logical-array",
+                  "sha256": "6514d68017870395fe6b02acd74421fb25e40c9d783586a767a4cf5448b166ba"
+                }
+              ],
+              "features": [
+                "parent"
+              ],
+              "sampling": {
+                "cells": 64,
+                "coordinateType": "float32-local-metres-per-unit",
+                "maxSurfaceErrorM": 0.000010265596737573318,
+                "method": "bilinear-grid-v1",
+                "stepM": 0.025,
+                "tileWidthM": 1.6
+              }
+            },
+            "schema": "atlas.preparation.artifact",
+            "schemaVersion": 1,
+            "transform": {
+              "metresPerUnit": 0.1,
+              "originM": [
+                -0.10251118968120258,
+                92.21804533096774,
+                -0.15427478968136696
+              ]
+            },
+            "world": {
+              "definitionKey": "fnv1a64:a31f94642a12b5c1",
+              "id": "parent@sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b"
+            }
+          }
+        },
+        {
+          "kind": "fine",
+          "artifact": {
+            "bounds": {
+              "max": [
+                0.8,
+                96.12974563404896,
+                0.8
+              ],
+              "min": [
+                -0.8,
+                88.69025984707798,
+                -0.8
+              ]
+            },
+            "buffers": [
+              {
+                "byteLength": 202752,
+                "role": "solid-indices",
+                "sha256": "db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37"
+              },
+              {
+                "byteLength": 98304,
+                "role": "surface-indices",
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "byteLength": 101400,
+                "role": "vertices",
+                "sha256": "43961149c4a9b141b2e009fca8e420f1fa4677c7968d57ac706338516875b39c"
+              }
+            ],
+            "classification": "surface",
+            "classificationBasis": {
+              "evidenceId": "sha256:badcc096a9e5a755232326aa672e0a1a1be4830ab787e1f01ee906e8f66ee37a",
+              "kind": "constructed-approximation",
+              "method": "paired-closed-uniform-parent-grid",
+              "volumeM3": 9.542148432545453
+            },
+            "intent": "interaction",
+            "qualification": {
+              "denseValidation": false,
+              "evidenceId": "MD2A22/preflight-only",
+              "kind": "empirical",
+              "limits": [
+                "Only the pinned A/B parent definitions and this source/Node policy are qualified.",
+                "Finite independent reconstruction plus analytical interpolation/roundoff evidence; not an exact-arithmetic collision guarantee.",
+                "Whole bounded world duplicated across resident consumer leases; no new mathematical detail on shrink."
+              ],
+              "meshSamples": 0,
+              "referenceSamples": 0,
+              "toleranceM": 0.0000125
+            },
+            "representation": {
+              "builder": {
+                "id": "atlas-parent-grid",
+                "sourceDigests": [
+                  {
+                    "role": "scripts/generation/source-bundle.mjs",
+                    "sha256": "c93ec4644466afb5625acef6e1adaf8c7beb61f100e26c45c8a668f9d347fd0e"
+                  },
+                  {
+                    "role": "scripts/preparation/publications.mjs",
+                    "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9"
+                  },
+                  {
+                    "role": "scripts/preparation/source-adapter.mjs",
+                    "sha256": "a97fde8456962de88f43a30995e460c02ebb1a51aed118206d37acdf644bda41"
+                  },
+                  {
+                    "role": "src/shared/scene.js",
+                    "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa"
+                  },
+                  {
+                    "role": "src/space/generation/parent-mesh.js",
+                    "sha256": "f0efb69ef5f2444c6456ef22a4cb268135552dd2c74f6c1f84f5dd05b15f0cac"
+                  },
+                  {
+                    "role": "src/space/generation/source-recipe.js",
+                    "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+                  },
+                  {
+                    "role": "src/space/preparation/contract.js",
+                    "sha256": "59722894e2d1b2fa3ec7160607bf92fd4bd6229637c22ad62759c6ebe86a73c3"
+                  },
+                  {
+                    "role": "src/space/preparation/scene-adapter.js",
+                    "sha256": "f87d7b807a0b2780f5cd61f6c50199f64a9296fd49181f95604648a52148aa29"
+                  },
+                  {
+                    "role": "src/space/preparation/spatial-grid.js",
+                    "sha256": "03f4eed11ba2d535d6866089d29aa660e7e446ae93f40e4f737a794af07b29c8"
+                  }
+                ],
+                "version": "1"
+              },
+              "dependencies": [
+                {
+                  "role": "canonical-parent-logical-array",
+                  "sha256": "6514d68017870395fe6b02acd74421fb25e40c9d783586a767a4cf5448b166ba"
+                }
+              ],
+              "features": [
+                "parent"
+              ],
+              "sampling": {
+                "cells": 64,
+                "coordinateType": "float32-local-metres-per-unit",
+                "maxSurfaceErrorM": 0.000010265596737573318,
+                "method": "bilinear-grid-v1",
+                "stepM": 0.025,
+                "tileWidthM": 1.6
+              }
+            },
+            "schema": "atlas.preparation.artifact",
+            "schemaVersion": 1,
+            "transform": {
+              "metresPerUnit": 0.025,
+              "originM": [
+                -0.10251118968120258,
+                92.21804533096774,
+                -0.15427478968136696
+              ]
+            },
+            "world": {
+              "definitionKey": "fnv1a64:a31f94642a12b5c1",
+              "id": "parent@sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b"
+            }
+          }
+        },
+        {
+          "kind": "view",
+          "artifact": {
+            "bounds": {
+              "max": [
+                0.8,
+                96.12974563404896,
+                0.8
+              ],
+              "min": [
+                -0.8,
+                88.69025984707798,
+                -0.8
+              ]
+            },
+            "buffers": [
+              {
+                "byteLength": 98304,
+                "role": "surface-indices",
+                "sha256": "5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333"
+              },
+              {
+                "byteLength": 101400,
+                "role": "vertices",
+                "sha256": "5202560e9ffde67abfccc047f19a8a6b728d176a3b42102d696c6e40984ff91a"
+              }
+            ],
+            "classification": "surface",
+            "classificationBasis": {
+              "evidenceId": "sha256:c0e8ea55e686385c90639a93543020b80e4aaf3d3a7440e663656f51292059b2",
+              "kind": "constructed-approximation",
+              "method": "paired-closed-uniform-parent-grid",
+              "volumeM3": 9.542148432545453
+            },
+            "intent": "view",
+            "qualification": {
+              "denseValidation": false,
+              "evidenceId": "MD2A22/preflight-only",
+              "kind": "empirical",
+              "limits": [
+                "Only the pinned A/B parent definitions and this source/Node policy are qualified.",
+                "Finite independent reconstruction plus analytical interpolation/roundoff evidence; not an exact-arithmetic collision guarantee.",
+                "Whole bounded world duplicated across resident consumer leases; no new mathematical detail on shrink."
+              ],
+              "meshSamples": 0,
+              "referenceSamples": 0,
+              "toleranceM": 0.0000125
+            },
+            "representation": {
+              "builder": {
+                "id": "atlas-parent-grid",
+                "sourceDigests": [
+                  {
+                    "role": "scripts/generation/source-bundle.mjs",
+                    "sha256": "c93ec4644466afb5625acef6e1adaf8c7beb61f100e26c45c8a668f9d347fd0e"
+                  },
+                  {
+                    "role": "scripts/preparation/publications.mjs",
+                    "sha256": "9a6a7af2957697f56b8932f026ab6aa0a62aa12c53aa0328f197c1df96c26cb9"
+                  },
+                  {
+                    "role": "scripts/preparation/source-adapter.mjs",
+                    "sha256": "a97fde8456962de88f43a30995e460c02ebb1a51aed118206d37acdf644bda41"
+                  },
+                  {
+                    "role": "src/shared/scene.js",
+                    "sha256": "d31d6d2c349f1d5c31068a4c0ceaf1fce78b1ed60d74bbaf35a77211b6c02ffa"
+                  },
+                  {
+                    "role": "src/space/generation/parent-mesh.js",
+                    "sha256": "f0efb69ef5f2444c6456ef22a4cb268135552dd2c74f6c1f84f5dd05b15f0cac"
+                  },
+                  {
+                    "role": "src/space/generation/source-recipe.js",
+                    "sha256": "7ea9baac47224ff887961db5f8cba97080c38447be976b2af8015a58f169268a"
+                  },
+                  {
+                    "role": "src/space/preparation/contract.js",
+                    "sha256": "59722894e2d1b2fa3ec7160607bf92fd4bd6229637c22ad62759c6ebe86a73c3"
+                  },
+                  {
+                    "role": "src/space/preparation/scene-adapter.js",
+                    "sha256": "f87d7b807a0b2780f5cd61f6c50199f64a9296fd49181f95604648a52148aa29"
+                  },
+                  {
+                    "role": "src/space/preparation/spatial-grid.js",
+                    "sha256": "03f4eed11ba2d535d6866089d29aa660e7e446ae93f40e4f737a794af07b29c8"
+                  }
+                ],
+                "version": "1"
+              },
+              "dependencies": [
+                {
+                  "role": "canonical-parent-logical-array",
+                  "sha256": "6514d68017870395fe6b02acd74421fb25e40c9d783586a767a4cf5448b166ba"
+                }
+              ],
+              "features": [
+                "parent"
+              ],
+              "sampling": {
+                "cells": 64,
+                "coordinateType": "float32-local-metres-per-unit",
+                "maxSurfaceErrorM": 0.000010265596737573318,
+                "method": "bilinear-grid-v1",
+                "stepM": 0.025,
+                "tileWidthM": 1.6
+              }
+            },
+            "schema": "atlas.preparation.artifact",
+            "schemaVersion": 1,
+            "transform": {
+              "metresPerUnit": 0.4,
+              "originM": [
+                -0.10251118968120258,
+                92.21804533096774,
+                -0.15427478968136696
+              ]
+            },
+            "world": {
+              "definitionKey": "fnv1a64:a31f94642a12b5c1",
+              "id": "parent@sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b"
+            }
+          }
+        }
+      ],
+      "addressesChecked": 114208,
+      "cleanup": {
+        "cleanup": true,
+        "childProcess": false,
+        "publications": 0
+      }
+    }
+  ],
+  "checker": {
+    "stdout": "{\"pass_\": true, \"rows\": [{\"name\": \"A\", \"pass_\": true, \"definitionKey\": \"sha256:1708c2b3da033268830041a8cd7adb14bbcdfd96e061a086f10bf85370a8b835\", \"rows\": [{\"kind\": \"coarse\", \"surfaceErrorM\": 5.439129368309424e-06, \"cellCentreErrorM\": 5.396393689238721e-06, \"roundoffM\": [2.67077249205272e-10, 2.3839376694922976e-08, 3.095053047186269e-08], \"volumeM3\": 4.404051905622486, \"buffers\": [{\"byteLength\": 202752, \"role\": \"solid-indices\", \"sha256\": \"db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37\"}, {\"byteLength\": 98304, \"role\": \"surface-indices\", \"sha256\": \"5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333\"}, {\"byteLength\": 101400, \"role\": \"vertices\", \"sha256\": \"18d36c87a0d899b7d255b9b10efcf469ecf3e811b0114694ef5e7bb1be1de0c4\"}]}, {\"kind\": \"fine\", \"surfaceErrorM\": 5.439129368309424e-06, \"cellCentreErrorM\": 5.396393689238721e-06, \"roundoffM\": [2.67077249205272e-10, 2.3839376694922976e-08, 3.095053047186269e-08], \"volumeM3\": 4.404051905622486, \"buffers\": [{\"byteLength\": 202752, \"role\": \"solid-indices\", \"sha256\": \"db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37\"}, {\"byteLength\": 98304, \"role\": \"surface-indices\", \"sha256\": \"5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333\"}, {\"byteLength\": 101400, \"role\": \"vertices\", \"sha256\": \"1efa0bf2bc06850f6e2803bc654ed6afd850f82e242e8f877464dca4b6e6a51f\"}]}, {\"kind\": \"view\", \"surfaceErrorM\": 5.439129368309424e-06, \"cellCentreErrorM\": 5.396393689238721e-06, \"roundoffM\": [2.67077249205272e-10, 2.3839376694922976e-08, 3.095053047186269e-08], \"volumeM3\": null, \"buffers\": [{\"byteLength\": 98304, \"role\": \"surface-indices\", \"sha256\": \"5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333\"}, {\"byteLength\": 101400, \"role\": \"vertices\", \"sha256\": \"80cdf506bb0ee3d2e51b7e9f7f0ebd8aafcd116c3ab3bcd8435a11a9d28d2881\"}]}]}, {\"name\": \"B\", \"pass_\": true, \"definitionKey\": \"sha256:2e9f43fa0b04b4f86d346c5055de68d7cdcb6e16db3b7a34596104edaea5bf5b\", \"rows\": [{\"kind\": \"coarse\", \"surfaceErrorM\": 1.0265596737573318e-05, \"cellCentreErrorM\": 9.936376685004689e-06, \"roundoffM\": [2.5528758440529487e-08, 9.524789845727355e-08, 3.99255076777294e-08], \"volumeM3\": 9.542148432545462, \"buffers\": [{\"byteLength\": 202752, \"role\": \"solid-indices\", \"sha256\": \"db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37\"}, {\"byteLength\": 98304, \"role\": \"surface-indices\", \"sha256\": \"5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333\"}, {\"byteLength\": 101400, \"role\": \"vertices\", \"sha256\": \"0bef51cda6c787deaf81694d25d9e386224e4d3bcda8656d5dbc4d9e5c0ee36b\"}]}, {\"kind\": \"fine\", \"surfaceErrorM\": 1.0265596737573318e-05, \"cellCentreErrorM\": 9.936376685004689e-06, \"roundoffM\": [2.5528758440529487e-08, 9.524789845727355e-08, 3.99255076777294e-08], \"volumeM3\": 9.542148432545462, \"buffers\": [{\"byteLength\": 202752, \"role\": \"solid-indices\", \"sha256\": \"db89356cfde1bbf2a0c7f8318fce0a6049d0c65b670b48a2d62e8208c1c0ea37\"}, {\"byteLength\": 98304, \"role\": \"surface-indices\", \"sha256\": \"5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333\"}, {\"byteLength\": 101400, \"role\": \"vertices\", \"sha256\": \"43961149c4a9b141b2e009fca8e420f1fa4677c7968d57ac706338516875b39c\"}]}, {\"kind\": \"view\", \"surfaceErrorM\": 1.0265596737573318e-05, \"cellCentreErrorM\": 9.936376685004689e-06, \"roundoffM\": [2.5528758440529487e-08, 9.524789845727355e-08, 3.99255076777294e-08], \"volumeM3\": null, \"buffers\": [{\"byteLength\": 98304, \"role\": \"surface-indices\", \"sha256\": \"5d4a80f5627b8758f72a11a2803572e0024d34bf87e6f8f4b5ad503ac3a4b333\"}, {\"byteLength\": 101400, \"role\": \"vertices\", \"sha256\": \"5202560e9ffde67abfccc047f19a8a6b728d176a3b42102d696c6e40984ff91a\"}]}]}], \"cudaImported\": false, \"python\": \"3.13.2\", \"numpy\": \"2.4.2\"}\n",
+    "stderr": "",
+    "timedOut": false,
+    "exitCode": 0,
+    "signal": null,
+    "spawnError": null,
+    "cleanup": "confirmed"
+  },
+  "independentSources": {
+    "scripts/experiments/md2a22-qualify.py": "d4a6fefdf1afe5227dcd5bc0d5fd45c9d7b090eec51341934e33ce3caeec1789",
+    "scripts/generation/create-parent.py": "613c1c2702a0ffce2888fbf99eaacff559a61cf1699d303e7d2bade9c8789ec4",
+    "scripts/generation/source_recipe.py": "25f51fd6d334b524f97545dd2360f7a80f4cc31297fb0a970a96ba97c2380954",
+    "scripts/generation/native/check_collision_r0.py": "436bc6e9d876c5ffb4a331f4215df4718aed5d416f7027d9e20bf2601012e6b4"
+  },
+  "ended": 1793465305551
+}

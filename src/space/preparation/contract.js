@@ -123,9 +123,10 @@ export function createPreparedArtifact(value) {
   object(r, ['builder', 'sampling', 'dependencies', 'features'], 'representation');
   object(r.builder, ['id', 'version', 'sourceDigests'], 'builder'); text(r.builder.id, 'builder.id'); text(r.builder.version, 'builder.version');
   digestList(r.builder.sourceDigests, 'canonical sources'); if (!r.builder.sourceDigests.length) invalid('canonical sources required');
-  object(r.sampling, ['cells', 'stepM', 'tileWidthM', 'rtinToleranceM', 'coordinateType'], 'sampling');
+  const uniform = r.sampling?.method === 'bilinear-grid-v1';
+  object(r.sampling, uniform ? ['method', 'cells', 'stepM', 'tileWidthM', 'maxSurfaceErrorM', 'coordinateType'] : ['cells', 'stepM', 'tileWidthM', 'rtinToleranceM', 'coordinateType'], 'sampling');
   count(r.sampling.cells, 'cells'); if (!r.sampling.cells) invalid('sampling cells must be positive');
-  for (const key of ['stepM', 'tileWidthM', 'rtinToleranceM']) number(r.sampling[key], key, true);
+  for (const key of ['stepM', 'tileWidthM', uniform ? 'maxSurfaceErrorM' : 'rtinToleranceM']) number(r.sampling[key], key, true);
   if (r.sampling.coordinateType !== 'float32-local-metres-per-unit') invalid('unsupported numerical format');
   digestList(r.dependencies, 'representation dependencies'); list(r.features, 'features').forEach(item => text(item, 'feature')); unique(r.features, 'features');
   list(value.buffers, 'buffers').forEach(item => {

@@ -53,3 +53,12 @@ test('a saved rolled quaternion supplies its full orthonormal render basis and s
   for(const key of ['forward','right','up'])assert.ok(actual[key].every((x,i)=>Math.abs(x-prior[key][i])<1e-14));
  }
 });
+
+test('position support agrees with pose admission at fine limits including anchored float64 rounding',()=>{
+ const m=model(),small=m.create({bodyDiameterM:D/4,positionLocalM:fineOrigin.map((x,i)=>x-origin[i])}),radius=.501*m.fineD+m.roundoffBoundM;
+ for(let axis=0;axis<3;axis++)for(const side of ['min','max'])for(const offset of [-2e-13,0,2e-13]){
+  const p=[...fineOrigin];p[axis]=fineBounds[side][axis]+(side==='min'?radius:-radius)+offset;let admitted=true;
+  try{m.withPositionM(small,p);}catch{admitted=false;}
+  assert.equal(m.supportsPositionM(p,m.fineD),admitted);
+ }
+});
