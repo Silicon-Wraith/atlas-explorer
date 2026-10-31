@@ -20,3 +20,23 @@ Generated data, JIT caches, temporary files and raw evidence stay in explicit sc
 Limits: source-driven canonical-parent input creation and the Plane-to-world recipe/workflow are subsequent MD2.A slices. The legacy parent-input builder substituted zero for unresolved distance estimates; the saved base records one such sample. That is retained fixture provenance, not a policy for new worlds. Direct CPU references are independent of RTIN/Manifold meshing but share rule/evaluator code. Finite checks, one sparse forward-reference specimen, standing readiness/navigation-tail misses, unverified full region-memory attribution, fixed domain/two scales, first-drag roll and driver/hang recovery limits remain explicit. More than one source-generated world is not yet claimed.
 
 An offline experimental [source-recipe creator](SOURCE-RECIPES.md) now generates bounded parent inputs from exact source strings. It is separate from the unchanged Regression World runtime; recursive/imported closure and preparation/UI integration remain subsequent increments.
+
+## Enter a qualified source parent
+
+A2.2a adds a bounded parent-only application route. The default is still Regression World. After creating an A2.1 bundle using [SOURCE-RECIPES.md](SOURCE-RECIPES.md), launch:
+
+```sh
+npm run dev:world -- --source-world /absolute/path/to/bundle
+```
+
+The launcher owns the same GPU lock/headed browser and cleanup as the default route. Switch to Space, then Landscape. WASD/QE, wheel/body-size controls and Landscape scene files work through the existing preparation boundary. One world is configured per launch; a different world file refuses explicitly. Shrinking shows the same bilinear mathematical surface at a smaller body size. Additional formations and Plane creation/selection are subsequent work.
+
+Only the independently qualified A/B mathematical definitions and current source/Node policy are admitted by `source-world-certificates.json`. A mathematically identical rebuilt/relocated numeric bundle retains its definition and qualification; transport/provenance hashes are separately checked, never part of world identity. Other sources fail explicitly rather than becoming empty space. The A2.1 creator still evaluates the mathematics on CUDA. This route constructs/indexes an existing 65×65 heightfield on the CPU once; navigation performs prepared collision queries and no mathematical iteration. It adds no Python preparation worker.
+
+Maintainer qualification uses an explicit CPU interpreter with NumPy, then pins the emitted certificate before the full headed product gate:
+
+```sh
+ATLAS_REFERENCE_PYTHON=/path/to/cpu/python node scripts/experiments/md2a22-preflight.mjs /mnt/ml_storage/scratch/atlas-md2a22/new-preflight
+```
+
+Set `ATLAS_PARENT_A` / `ATLAS_PARENT_B` to the previously checked source bundle directories; defaults point at preserved A2.1 data on the configured workstation. Each output directory must be new. `ATLAS_SOURCE_WORLD_INPUTS` selects that preflight directory for the maintained `source-worlds` browser entry; `ATLAS_REFERENCE_PYTHON` is also required for its independent motion audit. Requalification is a measured maintainer operation, not automatic certificate acceptance at application startup. [Frozen criteria](../../docs/reports/project1-interactive/MD2A22-CARD-2026-10-31.md) and [independent CPU evidence](../../docs/reports/project1-interactive/MD2A22-qualification-2026-10-31.json) define the limited claim. Headed product acceptance is pending.

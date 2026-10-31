@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createNativeAdapter } from './native-adapter.mjs';
+import { createSourceAdapter, SOURCE_WORLD_CERTIFICATE } from './source-adapter.mjs';
 import { createStaticHandler } from '../static-handler.mjs';
 import { applicationRequestAllowed, createApplicationClientOwner, ApplicationSessionError, APPLICATION_SESSION_POLICY } from './application-policy.mjs';
 
@@ -12,9 +13,12 @@ async function readJson(req) {
   let text = ''; for await (const chunk of req) { text += chunk; if (text.length > 65536) throw new Error('Application request too large'); }
   return JSON.parse(text);
 }
-export async function createApplicationServer({ runRoot, port = 5196, root = project, bundle = GENERATION_BUNDLE,
-  certificatePath = process.env.ATLAS_GENERATION_CERTIFICATE ?? GENERATION_CERTIFICATE, physicsPath = '/mnt/ml_storage/scratch/atlas-prepared-demo/rapier.mjs',
-  adapterFactory = createNativeAdapter, sessionPolicy = APPLICATION_SESSION_POLICY, now = () => performance.now() }) {
+export async function createApplicationServer({ runRoot, port = 5196, root = project, bundle = GENERATION_BUNDLE, sourceWorld = null,
+  certificatePath = null, physicsPath = '/mnt/ml_storage/scratch/atlas-prepared-demo/rapier.mjs',
+  adapterFactory = null, sessionPolicy = APPLICATION_SESSION_POLICY, now = () => performance.now() }) {
+  if (sourceWorld !== null) bundle = path.resolve(sourceWorld);
+  adapterFactory ??= sourceWorld === null ? createNativeAdapter : createSourceAdapter;
+  certificatePath ??= sourceWorld === null ? process.env.ATLAS_GENERATION_CERTIFICATE ?? GENERATION_CERTIFICATE : SOURCE_WORLD_CERTIFICATE;
   runRoot = path.resolve(runRoot); if (!runRoot.startsWith('/mnt/ml_storage/scratch/')) throw new Error('Application evidence requires a scratch output root');
   const events = []; let adapter, initialization, initializationFailure, startupController, closing = false, shutdown;
   const event = e => events.push({ time: Date.now(), ...e });
@@ -68,7 +72,7 @@ export async function createApplicationServer({ runRoot, port = 5196, root = pro
         try {
           const value = healthy(await initialize()); clients.require(id, nonce); client.adapter = value;
           if (closing || client.closed || clients.current() !== client) throw new ApplicationSessionError('expired', 'Landscape opening was superseded', 410);
-          const a = value.hello().approach, feature = JSON.parse(await fs.readFile(path.join(bundle, 'feature-r0.json'), 'utf8'));
+          const hello = value.hello(), a = hello.approach, feature = hello.feature ?? JSON.parse(await fs.readFile(path.join(bundle, 'feature-r0.json'), 'utf8'));
           clients.require(id, nonce); healthy(value);
           json({ world: value.world, producer: value.producer(), grid: value.grid.config, viewGrid: value.viewGrid.config, fineBounds: value.fineBounds,
             session: { ...clients.describe(client), heartbeatMs: sessionPolicy.heartbeatMs },

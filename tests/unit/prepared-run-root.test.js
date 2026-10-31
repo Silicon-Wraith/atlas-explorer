@@ -17,3 +17,10 @@ test('MD2.A ownership and maintained suites reject escaped and look-alike eviden
   for(const root of ['/mnt/ml_storage/scratch/atlas-md2ax/run','/mnt/ml_storage/scratch/atlas-md2a/../outside','/tmp/atlas-md2a/run'])assert.throws(()=>preparedRunRoot(root,role));
  }
 });
+
+test('MD2.A2.2 evidence accepts its exact namespace across maintained roles and refuses lookalikes',()=>{
+ for(const role of ['application','session','files','http','recovery','generation','source']){
+  assert.equal(preparedRunRoot('/mnt/ml_storage/scratch/atlas-md2a22/run',role),'/mnt/ml_storage/scratch/atlas-md2a22/run');
+  for(const root of ['/mnt/ml_storage/scratch/atlas-md2a22x/run','/mnt/ml_storage/scratch/atlas-md2a22/../outside','/tmp/atlas-md2a22/run'])assert.throws(()=>preparedRunRoot(root,role));
+ }
+});

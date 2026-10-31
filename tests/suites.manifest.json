@@ -252,6 +252,22 @@
         "Relocated mathematical references qualify all actual coarse fine and view source policies",
         "Native ownership control confirms process cleanup and preserves source-qualified evidence"
       ]
+    },
+    {
+      "id": "source-worlds",
+      "gpu": true,
+      "timeoutMs": 360000,
+      "command": [
+        "tests/source-worlds.mjs"
+      ],
+      "report": "artifacts/source-worlds-report.json",
+      "evidence": "browser",
+      "requiredPasses": [
+        "Both source worlds enter on maintained headed NVIDIA hardware and contact terrain at both body sizes",
+        "Source rendering and collision agree while size changes preserve position and finite boundaries stay active",
+        "Both downloaded source places reopen exactly after fresh helpers and browsers and another world refuses",
+        "Independent delivered-triangle motion audits and all source-world cleanup pass"
+      ]
     }
   ],
   "diagnostics": [

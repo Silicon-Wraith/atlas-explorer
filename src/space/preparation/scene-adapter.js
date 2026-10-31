@@ -8,6 +8,9 @@ import { createSpatialGrid } from './spatial-grid.js';
 export const PREPARED_MODEL = Object.freeze({ id: 'prepared-world', version: 1 });
 const cameraFields = ['kind', 'originM', 'positionLocalM', 'orientationWxyz', 'bodyDiameterM', 'verticalFovDegrees'];
 const knownWorlds = new WeakSet();
+const sourceParent = world => world.generator.id === 'atlas.mandelbrot-parent-chart' && world.generator.version === 'affine-distance-r1';
+const coverageProfile = world => sourceParent(world) ? 'source-parent-global-r1' : 'pc2-half-d-r1';
+const samplingProfile = world => sourceParent(world) ? 'source-parent-bilinear-r1' : 'retained-native-r1';
 const invalid = (message, path = '') => { throw new SceneError('invalid-value', message, path); };
 function vector(value, length, path) {
   if (!Array.isArray(value) || value.length !== length || !Array.from(value).every(Number.isFinite)) invalid(`${length} finite components required`, path);
@@ -49,13 +52,13 @@ const validateModel = input => {
   const world = worldValue(input.parameters.world), camera = cameraValue(input.camera);
   if (!Array.isArray(input.slices) || input.slices.length || input.iteration !== null) invalid('prepared scenes require empty slices and null iteration');
   requireObject(input.tracing, 'tracing', ['profile', 'coverageProfile', 'maxErrorFraction']);
-  if (input.tracing.profile !== 'prepared-triangles-v1' || input.tracing.coverageProfile !== 'pc2-half-d-r1' || input.tracing.maxErrorFraction !== .01) invalid('unsupported prepared tracing policy', 'tracing');
+  if (input.tracing.profile !== 'prepared-triangles-v1' || input.tracing.coverageProfile !== coverageProfile(world) || input.tracing.maxErrorFraction !== .01) invalid('unsupported prepared tracing policy', 'tracing');
   requireObject(input.appearance, 'appearance', ['material', 'lighting', 'lightDirection']);
   if (input.appearance.material !== 'neutral' || input.appearance.lighting !== 'pc2-lambert-v1') invalid('unsupported prepared appearance', 'appearance');
   const lightDirection = vector(input.appearance.lightDirection, 3, 'appearance.lightDirection');
   if (Math.abs(Math.hypot(...lightDirection) - 1) > 1e-6) invalid('unit light direction required', 'appearance.lightDirection');
   requireObject(input.sampling, 'sampling', ['profile']);
-  if (input.sampling.profile !== 'retained-native-r1') invalid('unsupported prepared sampling', 'sampling');
+  if (input.sampling.profile !== samplingProfile(world)) invalid('unsupported prepared sampling', 'sampling');
   return { conventions: PREPARED_CONVENTION, parameters: { world }, camera, slices: [], iteration: null,
     tracing: { ...input.tracing }, appearance: { ...input.appearance, lightDirection }, sampling: { ...input.sampling } };
 };
@@ -66,8 +69,8 @@ export function createPreparedSceneAdapter({ maxSceneBytes } = {}) {
     if (pose.kind !== PREPARED_CAMERA_KIND || pose.conventions !== PREPARED_CONVENTION || canonicalJson(pose.world) !== canonicalJson(worldReference(world))) invalid('pose/world convention mismatch');
     return sceneCodec.validate({ application: APPLICATION, applicationVersion: APPLICATION_VERSION, schema: SCENE_SCHEMA, schemaVersion: SCENE_SCHEMA_VERSION,
       workspace: 'space', model: PREPARED_MODEL, conventions: PREPARED_CONVENTION, parameters: { world }, camera: cameraFromPreparedPose(pose), slices: [], iteration: null,
-      tracing: { profile: 'prepared-triangles-v1', coverageProfile: 'pc2-half-d-r1', maxErrorFraction: .01 },
-      appearance: { material: 'neutral', lighting: 'pc2-lambert-v1', lightDirection }, sampling: { profile: 'retained-native-r1' }, provenance: { createdBy: 'atlas' } });
+      tracing: { profile: 'prepared-triangles-v1', coverageProfile: coverageProfile(world), maxErrorFraction: .01 },
+      appearance: { material: 'neutral', lighting: 'pc2-lambert-v1', lightDirection }, sampling: { profile: samplingProfile(world) }, provenance: { createdBy: 'atlas' } });
   }
   function encodeSceneFile(scene) {
     const value = sceneCodec.validate(scene), canonical = sceneCodec.serialize(value), pretty = JSON.stringify(JSON.parse(canonical), null, 2) + '\n';

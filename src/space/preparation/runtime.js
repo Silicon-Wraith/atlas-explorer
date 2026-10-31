@@ -105,6 +105,10 @@ export function createPreparedRuntime({ runtimeId, world, producerIdentity, grid
     if (closed || fatal || !active) throw fatal ?? new Error('Movement has no active runtime');
     if (!Array.isArray(deltaM) || deltaM.length !== 3 || !deltaM.every(Number.isFinite) || length(deltaM) > .05 * pose.bodyDiameterM + 1e-12) throw new RangeError('Movement exceeds the bounded prepared step');
     const began = now(), start = poseModel.positionM(pose), end = add(start, deltaM); let candidate = active;
+    if (!poseModel.supportsPositionM(end, pose.bodyDiameterM)) {
+      event('navigation', { ms: now() - began, waiting: true, reason: 'finite-domain', firstSurface: false, bodyD: pose.bodyDiameterM });
+      return { waiting: true, reason: 'finite-domain', hit: null };
+    }
     if (pose.bodyDiameterM === D) {
       const nearest = grid.nearest(end), best = nearest && residents.get(grid.key(nearest));
       if (best && best !== active && regionCovers(best, start, end, D) && regionClear(best, start, D)) candidate = best;

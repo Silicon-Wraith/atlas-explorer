@@ -126,17 +126,17 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
     if(!active||current!==state||state.cancelled)return;const interval=time-last,dt=Math.min(.05,Math.max(0,interval/1000));last=time;
     try{
       const permitted=state.client.check();if(!active||state.cancelled)return;
-      let velocity=[0,0,0],waiting=false;
+      let velocity=[0,0,0],waiting=false,waitingReason=null;
       if(permitted&&eligible()){
         const f=preparedForward(state.runtime.pose()),right=norm([f[2],0,-f[0]]);
         for(const[key,axis,sign]of[['w',f,1],['s',f,-1],['d',right,1],['a',right,-1],['e',[0,1,0],1],['q',[0,1,0],-1]])if(keys.has(key))velocity=add(velocity,mul(axis,sign));
-        if(Math.hypot(...velocity)){velocity=mul(norm(velocity),.5*state.runtime.pose().bodyDiameterM);if(state.client.check()){const before=state.runtime.pose();waiting=state.runtime.move(mul(velocity,dt)).waiting;if(!equalPreparedCameras(before,state.runtime.pose()))scaleMessage='';}}
+        if(Math.hypot(...velocity)){velocity=mul(norm(velocity),.5*state.runtime.pose().bodyDiameterM);if(state.client.check()){const before=state.runtime.pose(),movement=state.runtime.move(mul(velocity,dt));waiting=movement.waiting;waitingReason=movement.reason;if(!equalPreparedCameras(before,state.runtime.pose()))scaleMessage='';}}
       }else clearInput();
       if(permitted&&state.client.check()&&time-lastPrediction>=100){lastPrediction=time;state.runtime.predict(velocity);}
       advanceScale(state,time,permitted);
       if(!active||state.cancelled)return;storePose(state);if(permitted&&!resizing)draw(state);
       const snapshot=state.runtime.snapshot();if(snapshot.error)throw new Error(snapshot.error);
-      status(!permitted?(state.client.snapshot().session?.message||'Checking the landscape session…'):scaleIntent?'Preparing smaller formations…':scaleMessage|| (waiting?'Preparing nearby terrain…':snapshot.pending.length?'Preparing the landscape ahead…':''));
+      status(!permitted?(state.client.snapshot().session?.message||'Checking the landscape session…'):scaleIntent?smallerPreparation():scaleMessage|| (waiting?(waitingReason==='finite-domain'?'Reached the edge of this prepared world.':'Preparing nearby terrain…'):snapshot.pending.length?'Preparing the landscape ahead…':''));
       if(indicator)indicator.textContent=`Landscape · scale ${retained.bodyDiameterM/state.poseModel.D} · WASD move · Q/E down/up · drag to look · wheel to change scale`;
       event('frame',{ms:interval,pending:snapshot.pending.length>0,waiting,rendered:permitted&&!resizing,sessionVerified:permitted,position:state.poseModel.positionM(retained),bodyD:retained.bodyDiameterM,key:snapshot.key,renderRevision:snapshot.key,collisionRevision:snapshot.key,gpuBytes:state.renderer.bytes(),ownedInteraction:snapshot.ownedInteraction,ownedView:snapshot.ownedView});
     }catch(error){event('workspace-error',{message:error.message});interrupt(state,{code:error.code??'preparation-failed',message:error.message});return;}
@@ -153,12 +153,13 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
     if(success){storePose(intent.state);if(intent.discrete)settleNavigation();else quietNavigation();}
     if(message)status(message);intent.resolve(success);
   }
+  function smallerPreparation(){return metadata?.world?.generator.id==='atlas.mandelbrot-parent-chart'?'Preparing the smaller scale…':'Preparing smaller formations…';}
   function cancelScale(){if(scaleIntent)finishScale(scaleIntent,false);}
   function fineResident(state){const resident=state.runtime.snapshot().resident;return resident.includes('fine')&&resident.includes('0,0,0');}
   function advanceScale(state,time,permitted){
     const intent=scaleIntent;if(!intent)return;
     if(!permitted||!eligible()||current!==intent.state||state!==intent.state||state.cancelled||intent.sequence!==scaleSequence){cancelScale();return;}
-    if(time>=intent.deadline){finishScale(intent,false,'Smaller formations are not ready yet; try again.');return;}
+    if(time>=intent.deadline){finishScale(intent,false,metadata?.world?.generator.id==='atlas.mandelbrot-parent-chart'?'Smaller scale is not ready yet; try again.':'Smaller formations are not ready yet; try again.');return;}
     // Prediction owns preparation retries. A scale attempt must not flood that queue.
     if(fineResident(state)&&state.client.check()){
       const success=state.runtime.scale(true);
@@ -171,7 +172,7 @@ export function createPreparedWorldWorkspace({ shell, workerUrl, loadPhysics, re
     if(state.runtime.scale(smaller)){storePose(state);if(discrete)settleNavigation();else quietNavigation();return true;}
     if(!smaller){scaleMessage='Move away from the surface before growing.';status(scaleMessage);return false;}
     if(fineResident(state)){scaleMessage='Smaller scale needs clear prepared detail coverage at your current position.';status(scaleMessage);return false;}
-    status('Preparing smaller formations…');
+    status(smallerPreparation());
     return new Promise(resolve=>{
       const bound=env.scaleIntentMs??8000,intent={state,sequence:mine,discrete,resolve,deadline:performance.now()+bound,timer:null};
       scaleIntent=intent;intent.timer=setTimer(()=>finishScale(intent,false,'Smaller formations are not ready yet; try again.'),bound);
