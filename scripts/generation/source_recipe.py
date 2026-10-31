@@ -82,26 +82,26 @@ def preflight(recipe):
         exponent = (m[5] or '0').lstrip('0') or '0'
         if len(m[2]) + len(m[3] or '') > 1024 or abs(int((m[4] or '') + exponent)) > 2048:
             raise Unsupported('native decimal range: at most 1024 digits and exponent magnitude 2048')
-    def exact(text):
+    def fraction_value(text):
         m = decimal(text)
         # Bound exponent parsing independently of its harmless leading zero spelling.
         exponent = (m[5] or '0').lstrip('0') or '0'
         mantissa = m[1] + (m[2] or '0') + ('.' + m[3] if m[3] is not None else '')
         return Fraction(mantissa + 'e' + (m[4] or '') + exponent)
-    r, im, unit = (exact(recipe['source'][x]) for x in ['re', 'im', 'unitsPerMetre'])
-    half = exact(recipe['grid']['halfExtentM']); cells = recipe['grid']['cells']
+    r, im, unit = (fraction_value(recipe['source'][x]) for x in ['re', 'im', 'unitsPerMetre'])
+    half = fraction_value(recipe['grid']['halfExtentM']); cells = recipe['grid']['cells']
     step = 2 * half * unit / cells
     positions = [half * Fraction(2 * i - cells, cells) for i in range(cells + 1)]
-    exact = [[r + unit * p for p in positions], [im - unit * p for p in positions]]
+    exact_axes = [[r + unit * p for p in positions], [im - unit * p for p in positions]]
     try:
-        axes = [[float(x) for x in axis] for axis in exact]
-        transfers = {k: float(exact(v)) for k, v in recipe['transfer'].items()}
+        axes = [[float(x) for x in axis] for axis in exact_axes]
+        transfers = {k: float(fraction_value(v)) for k, v in recipe['transfer'].items()}
         u = float(unit)
     except (OverflowError, ValueError) as e:
         raise Unsupported('binary64 range') from e
     if not all(math.isfinite(x) for axis in axes for x in axis) or not all(math.isfinite(x) for x in transfers.values()) or not math.isfinite(u) or u <= 0 or transfers['slope'] <= 0:
         raise Unsupported('binary64 range')
-    errors = [abs(Fraction.from_float(x) - exact[a][i]) for a, axis in enumerate(axes) for i, x in enumerate(axis)]
+    errors = [abs(Fraction.from_float(x) - exact_axes[a][i]) for a, axis in enumerate(axes) for i, x in enumerate(axis)]
     maximum = max(errors)
     if maximum > step / recipe['numerics']['roundingDenominator'] or any(axes[0][i] >= axes[0][i+1] or axes[1][i] <= axes[1][i+1] for i in range(cells)):
         raise Unsupported('coordinate rounding exceeds 1/1024 sample spacing or collapses samples')
