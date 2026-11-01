@@ -43,7 +43,7 @@ export function nativeArtifact(raw, { hello, world, certificate, qualification =
 
 export async function createNativeAdapter({ bundle = GENERATION_BUNDLE, runRoot, python, onEvent = () => {}, onController = () => {} }) {
   bundle = path.resolve(bundle); runRoot = path.resolve(runRoot);
-  await verifyGenerationBundle({bundle});
+  const verifiedGeneration = await verifyGenerationBundle({bundle});
   ensure(runRoot.startsWith('/mnt/ml_storage/scratch/'), 'native outputs must be under scratch');
   const output = path.join(runRoot, 'native');
   let stopped = false, terminal = null;
@@ -56,6 +56,8 @@ export async function createNativeAdapter({ bundle = GENERATION_BUNDLE, runRoot,
     onController(controller);
     hello = await controller.ready; world = createWorldRecord(hello.definition); grid = createSpatialGrid(hello.grid); D = grid.config.diameter;
     ensure(world.id === 'H1C-surface-child@ee2564d40bda7ef6', 'canonical world mismatch');
+    const binding=hello.recursiveRecipe;
+    ensure(binding&&same(Object.fromEntries(Object.keys(verifiedGeneration.recursiveRecipe).map(k=>[k,binding[k]])),verifiedGeneration.recursiveRecipe)&&binding.actualProjectionDigest===binding.projectionDigest&&binding.legacyDefinitionKey===world.definitionKey,'native recipe compatibility mismatch');
     viewGrid = createSpatialGrid({ ...hello.grid, diameter: 4 * D, domain: [[-1, 3], [-1, 1], [-1, 1]] });
     fineOrigin = hello.approach.fine_origin; fineBounds = cubeBounds(fineOrigin, hello.approach.fine_half_extent_m);
     ensure(containsBounds(grid.bounds([0, 0, 0]), fineBounds), 'fine dependency not enclosed by canonical home');

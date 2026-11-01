@@ -117,8 +117,8 @@ try:
                 for t,v in zip(target.elts,value,strict=True):env[t.id]=v
         return env,tree
     data=GENERATION/'regression-world'
-    h,htree=constants(GENERATION/'native/h1lib.py');d,dtree=constants(GENERATION/'native/descendant_world.py');dek,dektree=constants(GENERATION/'native/dek.py')
-    _,stree=constants(GENERATION/'native/sampling_r0.py')
+    h,htree=constants(GENERATION/'provenance/original/h1lib.py');d,dtree=constants(GENERATION/'provenance/original/descendant_world.py');dek,dektree=constants(GENERATION/'provenance/original/dek.py')
+    _,stree=constants(GENERATION/'provenance/original/sampling_r0.py')
     con=read(data/'construction.json');fr=read(data/'frame.json');seed=read(data/'levels.json')['seed']['c']
     with np.load(data/'base.npz',allow_pickle=False) as parent:
         ref=[dict(name='parent',F=parent['o'].tolist(),u=fr['u'],v=fr['v'],n=fr['normal'],C=complex(*seed),H=h['H0'],A=h['A0'],L=h['L0'])]
@@ -133,7 +133,7 @@ try:
             descriptors[name]=dict(header,sha256=sha(reference_canonical(header)+b'\0'+a.tobytes(order='C')))
         independent_asset=dict(transportSha256=sha((data/'base.npz').read_bytes()), gridSamples=len(parent['g']), origin=parent['o'].tolist(),
                               finite=int(np.isfinite(parent['t0']).sum()),nan=int(np.isnan(parent['t0']).sum()),unresolvedDiagnostic=int(parent['unres']))
-    recipe=read(GENERATION/'examples/regression-recursive.json');projected=R.load_inputs(recipe,data,GENERATION)
+    recipe=read(GENERATION/'regression-world/recursive-recipe.json');projected=R.load_inputs(recipe,data,GENERATION)
     check(bits(projected['components'])==bits(ref),'Component numeric bits differ')
     descendant=dict(id='descendant',parent='gchild',A0=d['A0'],B0=d['B0'],HALF=d['HALF'],AMPLITUDE=d['AMPLITUDE'],RATIO=d['RATIO'],rule='surface-descendant-r1')
     check(bits(projected['descendants'])==bits([descendant]),'Descendant numeric bits differ')
@@ -148,8 +148,11 @@ try:
     check(float(recipe['field']['escapeRadius'])==dek['R'],'Escape radius')
     # Parent relationships are explicit authoring metadata; runtime cuts are composed in order.
     result['projection']=dict(bits=bits(projected), componentOrder=[c['name'] for c in ref], constantSources=['h1lib.py','sampling_r0.py','descendant_world.py','dek.py'],
-                              sourceBindings=recipe['sourceBindings'], lineageScope='Authored root/child/gchild/descendant hierarchy; legacy runtime has no full lineage record.',
+                              sourceBindings=recipe['sourceBindings'], referenceRoot='provenance/original', lineageScope='Authored root/child/gchild/descendant hierarchy; legacy runtime has no full lineage record.',
                               arithmeticScope='Parameter-bit comparison only. Evaluator arithmetic order is source-hash-bound, not proved equivalent across CPU/GPU paths.')
+    check(R.projection_bits(projected)==bits(projected),'Shared serializer differs from independent packed-bit control')
+    frozen=read(PROJECT/'tests/reference/legacy-recursive-projection.json')
+    check(bits(projected)==frozen['bits'] and R.projection_key(projected)==frozen['projectionDigest'],'Frozen legacy projection differs')
     passed('projection',dict(components=len(ref),descendants=1,sourceBindings=len(recipe['sourceBindings'])))
 
     check(recipe['parentGrid']['arrays']==descriptors,'Independent logical descriptors differ')
@@ -224,6 +227,9 @@ try:
     result['sourceBundles']=bundles
     passed('bundles',bundles)
     check(not any(name.split('.')[0] in FORBIDDEN for name in sys.modules),'Unexpected native/GPU import')
+    from check_recipe_intake import check_intake
+    result['intake']=check_intake(OUT/'intake')
+    passed('intake',result['intake'])
     result.update(pass_=True,elapsedS=time.monotonic()-START)
 except BaseException as error:
     import traceback

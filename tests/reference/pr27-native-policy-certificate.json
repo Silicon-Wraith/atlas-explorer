@@ -1,0 +1,36 @@
+{
+  "sourcesKey": "fnv1a64:13ad585ee91d5b57",
+  "evidenceId": "sha256:896f11432f0fd391e19383a7c74b4c5a92ee0c12690683d86b991acdafff0c2d",
+  "policies": {
+    "coarse": {
+      "sampling": {
+        "cells": 256,
+        "stepM": 0.000103759765625,
+        "tileWidthM": 0.0265625,
+        "rtinToleranceM": 2.65625e-05,
+        "coordinateType": "float32-local-metres-per-unit"
+      },
+      "qualifiedSpecimens": 3
+    },
+    "fine": {
+      "sampling": {
+        "cells": 256,
+        "stepM": 2.593994140625e-05,
+        "tileWidthM": 0.006640625,
+        "rtinToleranceM": 6.640625e-06,
+        "coordinateType": "float32-local-metres-per-unit"
+      },
+      "qualifiedSpecimens": 1
+    },
+    "view": {
+      "sampling": {
+        "cells": 256,
+        "stepM": 0.0004150390625,
+        "tileWidthM": 0.10625,
+        "rtinToleranceM": 0.00010625,
+        "coordinateType": "float32-local-metres-per-unit"
+      },
+      "qualifiedSpecimens": 1
+    }
+  }
+}

@@ -210,7 +210,7 @@
     },
     "descendant_world.py": {
       "file": "native/descendant_world.py",
-      "sha256": "8ede804b6714dea49635d66acbefcddaa06837976ddc533af9011b844a86259e",
+      "sha256": "3c075f1c990445ffd0ee31e9d1614171e75296e13a199ce7209dc076c51927e1",
       "edits": [
         {
           "before": "from pathlib import Path",
@@ -235,6 +235,10 @@
         {
           "before": "WORLD_ID='H1C-surface-child@'+hashlib.sha256(json.dumps(SPEC,sort_keys=True).encode()).hexdigest()[:16]",
           "after": "WORLD_ID='H1C-surface-child@ee2564d40bda7ef6'  # Explicit legacy compatibility alias; actual sources are bound separately."
+        },
+        {
+          "before": "A0,B0=-.029882812666932553,-.11953125059172012\nHALF=.0033203125;AMPLITUDE=.0002;RATIO=64.",
+          "after": "from recipe_inputs import descendant_input\nRECIPE_DESCENDANT=descendant_input()\nA0,B0=RECIPE_DESCENDANT['A0'],RECIPE_DESCENDANT['B0']\nHALF=RECIPE_DESCENDANT['HALF'];AMPLITUDE=RECIPE_DESCENDANT['AMPLITUDE'];RATIO=RECIPE_DESCENDANT['RATIO']"
         }
       ]
     },
@@ -312,7 +316,7 @@
     },
     "sampling_r0.py": {
       "file": "native/sampling_r0.py",
-      "sha256": "e328994bd4a395e463b601b2d7a184ece37709696085e59661999fafb74d0598",
+      "sha256": "0f8e65593690092e6b420efbaea8b01952d69a5bf556b01b9974c9c54dde47d7",
       "edits": [
         {
           "before": "from pathlib import Path",
@@ -341,6 +345,10 @@
         {
           "before": "(HERE.parent / 'gs.json')",
           "after": "asset('gs.json')"
+        },
+        {
+          "before": "COMPONENTS = [dict(name='parent', F=H.O, u=H.UA, v=H.VA, n=H.NRM,\n                   C=H.CS, H=H.H0, A=H.A0, L=H.L0)]\nfor k in ('K1', 'K2'):\n    c = dict(CON[k]); c['C'] = complex(*c['C'])\n    for key in ('F', 'u', 'v', 'n'): c[key] = np.asarray(c[key])\n    COMPONENTS.append(c)",
+          "after": "from recipe_inputs import component_inputs, validate_residual\nvalidate_residual(H)\nCOMPONENTS = component_inputs()\nfor c in COMPONENTS:\n    for key in ('F', 'u', 'v', 'n'): c[key] = np.asarray(c[key])"
         }
       ]
     },
@@ -472,14 +480,37 @@
       "sha256": "22f4200e40b0bc5fe36fe5a310bca2b3cdf8a063128742b6ebc1323d6718a879",
       "bytes": 1409,
       "role": "frozen-legacy-definition"
+    },
+    "recursive-recipe.json": {
+      "sha256": "6cfe0cc3f77df16fc1a2efd02912e4623dec4c84b165460701ba357fa9067c00",
+      "role": "complete-imported-recursive-recipe"
     }
   },
   "legacyWorldFile": "regression-world/legacy-world.json",
-  "scope": "Runtime generation ownership only; input creation and general recipes are later slices. Legacy six-asset world definition is incomplete; all current executable/input provenance is separately bound.",
+  "scope": "Imported runtime recipe consumption with strict legacy compatibility; new authored worlds remain a subsequent slice.",
   "newModules": {
     "generation_paths.py": {
       "file": "native/generation_paths.py",
-      "sha256": "f6d7acdc002e99be7098d79f54f56fb0efbe01093aeb8142cb26467f71e9fa4a"
+      "sha256": "6e05ee34be6e1b8fd977efeb5df98dd431ea76b2fe64989cf835d2ff1983003d"
+    },
+    "recipe_inputs.py": {
+      "file": "native/recipe_inputs.py",
+      "sha256": "0324965f51bf4bb7e5594f36305a5fdbcc81ba6dde761bc1178c0f0f8e8abb09"
+    },
+    "recursive_recipe.py": {
+      "file": "recursive_recipe.py",
+      "sha256": "5b6bb1d807c4166450e040bfe24b4d153a4e22f7092ff2b599946c2096c4c5fd"
+    },
+    "source_recipe.py": {
+      "file": "source_recipe.py",
+      "sha256": "31f14c6e206a81b5c7c7394353d2923b8047c1fab7db0128cb4a8ce5b5269c07"
     }
+  },
+  "recursiveRecipe": {
+    "file": "recursive-recipe.json",
+    "recipeKey": "sha256:aa84be2466822b30161edea1d8721046d34239053275374713faccf24be3a905",
+    "projectionDigest": "sha256:a9b4ddcb17c15cdb3a6d03e8aea8f976a520ad7a4d7321f154cee5586692c9c2",
+    "legacyId": "H1C-surface-child@ee2564d40bda7ef6",
+    "legacyDefinitionKey": "fnv1a64:4c29d6f7f61fbb06"
   }
 }
