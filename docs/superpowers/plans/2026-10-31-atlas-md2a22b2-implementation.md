@@ -10,3 +10,5 @@
 6. Freeze decisive evidence, complete independent review, archive verbatim peer log and all-criteria scorecard, update roadmap and publish reviewed PR. B3 fresh-parent/authored-feature work remains open after this merge.
 
 Assertions: fixed mathematical content and exact old parameters; unchanged field/kernel/CSG arithmetic; explicit immutable parent/representation dependencies; only the known current recipe may use the legacy alias; no stale certificate admission; actual GPU and saved-file evidence; no navigation-time mathematical discovery; no control retuning or hidden acceptance targets; no full-foundation/new-feature claim from this integration.
+
+B2 status: all six tasks implemented/verified, full30-entry headed gate passes on69298ce, completed independent evidence review supports the scoped PR. One recommended post-gate test-only fixture hash assertion passes all seven focused guarded tests. The full criterion/tier/standing-target report is [published](../../reports/project1-interactive/MD2B2-RUNTIME-RECIPES-2026-10-31.md). B3 remains open; the advisor merges the PR.

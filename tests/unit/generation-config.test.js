@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {decodeSceneFile,encodeSceneFile} from '../../src/space/preparation/scene-adapter.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -48,5 +49,6 @@ test('unregistered recipe keys aliases or projections refuse before a native pro
 
 test('the preserved actual pre-recipe place uses the current schema and exact legacy definition',async()=>{
  const bytes=await fs.readFile(new URL('../reference/legacy-prepared-place.json',import.meta.url),'utf8');const scene=decodeSceneFile(bytes);
+ const provenance=JSON.parse(await fs.readFile(new URL('../reference/legacy-place-provenance.json',import.meta.url)));assert.equal(createHash('sha256').update(bytes).digest('hex'),provenance.sha256);
  assert.equal(scene.schema,'atlas.scene');assert.equal(scene.parameters.world.id,'H1C-surface-child@ee2564d40bda7ef6');assert.equal(scene.parameters.world.definitionKey,'fnv1a64:4c29d6f7f61fbb06');assert.equal(encodeSceneFile(scene),bytes);
 });

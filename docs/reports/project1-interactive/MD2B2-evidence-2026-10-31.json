@@ -1,0 +1,857 @@
+{
+  "sourceCommit": "69298ce075a79c0daaa7dc02535163b35cfa0ca8",
+  "base": "9436b04",
+  "gate": {
+    "record": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/md2a22b2/artifacts/gates/2026-11-01T00-09-03-471Z-69298ce075a7.json",
+    "recordSha256": "569aa66a1e9832a375adb36486523707ef0de90577c114ef1a49c511e10f6c20",
+    "startedAt": "2026-11-01T00:09:03.471Z",
+    "finishedAt": "2026-11-01T00:43:54.395Z",
+    "elapsedS": 2090.9240000247955,
+    "overall": {
+      "state": "passed",
+      "exitCode": 0,
+      "reason": "every required suite passed"
+    },
+    "results": {
+      "unit": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "build": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "reference": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "performance-entry": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "acceptance-audit": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "preparation-session-http": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "preparation-recovery-http": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "generation-contract": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "browser": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "workflow": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "browser-hardware": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "navigation": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "graphics": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-coexistence": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-recovery": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-numerics": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-rendering": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-shell": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-interaction": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-performance-bulb": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-performance-quaternion": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-performance-menger": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-prewarm": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-prepared": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-preparation-session": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-prepared-files": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "space-prepared-recovery": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "generation-ownership": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "source-worlds": {
+        "state": "passed",
+        "reason": "exit 0 with valid evidence"
+      },
+      "cleanup": {
+        "state": "passed",
+        "reason": "every owned process exited"
+      }
+    },
+    "requiredIds": [
+      "unit",
+      "build",
+      "reference",
+      "browser",
+      "workflow",
+      "browser-hardware",
+      "navigation",
+      "graphics",
+      "space-coexistence",
+      "space-recovery",
+      "space-numerics",
+      "space-rendering",
+      "space-shell",
+      "space-interaction",
+      "space-performance-bulb",
+      "space-performance-quaternion",
+      "space-performance-menger",
+      "space-prewarm",
+      "performance-entry",
+      "acceptance-audit",
+      "space-prepared",
+      "preparation-session-http",
+      "space-preparation-session",
+      "space-prepared-files",
+      "preparation-recovery-http",
+      "space-prepared-recovery",
+      "generation-ownership",
+      "source-worlds",
+      "generation-contract",
+      "cleanup"
+    ]
+  },
+  "native": {
+    "nativeElapsedMs": 24011,
+    "projectionDigest": "sha256:a9b4ddcb17c15cdb3a6d03e8aea8f976a520ad7a4d7321f154cee5586692c9c2",
+    "sourcesKey": "fnv1a64:a927f8d8ed9c0753",
+    "qualificationS": 8.815159298013896,
+    "qualificationSpecimens": 5,
+    "statusElapsedMs": 4471,
+    "statusReference": {
+      "pass_": true,
+      "cpuOnly": true,
+      "mpmathDigits": 50,
+      "rows": [
+        {
+          "case": "mixed",
+          "status": "resolved",
+          "counts": {
+            "0": 0,
+            "1": 1,
+            "3": 8,
+            "4": 0
+          },
+          "plateau": "positive-zero; creator host proof, not normalization-branch coverage"
+        },
+        {
+          "case": "failed",
+          "status": "failed",
+          "counts": {
+            "0": 0,
+            "1": 0,
+            "3": 1,
+            "4": 8
+          },
+          "plateau": null
+        },
+        {
+          "case": "unknown",
+          "status": "unresolved",
+          "counts": {
+            "0": 9,
+            "1": 0,
+            "3": 0,
+            "4": 0
+          },
+          "plateau": null
+        }
+      ],
+      "direct": {
+        "status": [
+          3,
+          1,
+          4,
+          0
+        ],
+        "iterations": [
+          -2,
+          1,
+          -1,
+          -1
+        ],
+        "overflow": "mathematically escaping finite input; binary64 a2 not representable"
+      },
+      "relTolerance": "1e-10",
+      "absTolerance": "1e-12"
+    },
+    "ownedPids": [
+      3468614,
+      3468625,
+      3468940,
+      3469196,
+      3469212,
+      3469224,
+      3469275,
+      3469289
+    ],
+    "allPidsGone": true,
+    "gpuLockFree": true
+  },
+  "construction": {
+    "sourceCommit": "69298ce075a79c0daaa7dc02535163b35cfa0ca8",
+    "oldConstructionKey": "sha256:af77121a3682c4681d94886efb458112769317f5e494c17bf104161e7e144931",
+    "newConstructionKey": "sha256:aa84be2466822b30161edea1d8721046d34239053275374713faccf24be3a905",
+    "legacyId": "H1C-surface-child@ee2564d40bda7ef6",
+    "legacyDefinitionKey": "fnv1a64:4c29d6f7f61fbb06",
+    "preflightRows": [
+      {
+        "label": "home",
+        "key": "fnv1a64:8d5b92239a025eeb",
+        "buffers": [
+          {
+            "byteLength": 491688,
+            "role": "solid-indices",
+            "sha256": "147bd0a635b3c4b19eef27031207b25b717251e3ba1999bcc6c6defbdf98f2cb"
+          },
+          {
+            "byteLength": 469656,
+            "role": "surface-indices",
+            "sha256": "69b8290e1dc8aa794b5d4b18d9fdc6730bb234a0ebf7aae2f8978b9909392dc4"
+          },
+          {
+            "byteLength": 245868,
+            "role": "vertices",
+            "sha256": "ede4bb2fb6770b011aa7897958171369e2b190cef601b9f02b521a26bdae1589"
+          }
+        ]
+      },
+      {
+        "label": "new-3d",
+        "key": "fnv1a64:9238ab287e0faf99",
+        "buffers": [
+          {
+            "byteLength": 0,
+            "role": "solid-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "surface-indices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "byteLength": 0,
+            "role": "vertices",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      },
+      {
+        "label": "domain-corner",
+        "key": "fnv1a64:76b87530ddadc074",
+        "buffers": [
+          {
+            "byteLength": 3147816,
+            "role": "solid-indices",
+            "sha256": "242366fb15ac5d777e7de39890149b9f425a24b6aeb5dddb79bd9a827339d0fe"
+          },
+          {
+            "byteLength": 3114096,
+            "role": "surface-indices",
+            "sha256": "92f74c4aaf2723f2f3f1a6d4845adbbdace7bfa4b8096f40a302891fb54f8067"
+          },
+          {
+            "byteLength": 1573932,
+            "role": "vertices",
+            "sha256": "d1ccdeda062475efc87b577237977c65b093528386d3cf17c25aed115a2c2350"
+          }
+        ]
+      },
+      {
+        "label": "fine-control",
+        "key": "fnv1a64:8126aff2d67e56f4",
+        "buffers": [
+          {
+            "byteLength": 627672,
+            "role": "solid-indices",
+            "sha256": "0929f7daf89aa0c323b25b8cd5d323c68da4f5b53924e7bb5f593eb8370cc3b3"
+          },
+          {
+            "byteLength": 615300,
+            "role": "surface-indices",
+            "sha256": "a0d20b85d9a2df8d4fadf89948b5b469f6caa382b729290e4b13c806474544e6"
+          },
+          {
+            "byteLength": 313860,
+            "role": "vertices",
+            "sha256": "04a16c8d4dec8ea2140b774c6a97852be3773cf0d44a1c11c03b4d103f4bc5ce"
+          }
+        ]
+      },
+      {
+        "label": "view",
+        "key": "fnv1a64:ec1676a51c4f8425",
+        "buffers": [
+          {
+            "byteLength": 2061864,
+            "role": "surface-indices",
+            "sha256": "c2768f34976e8326bb9dd6eca2b3fa3417f15ff12e08ba3f5a40fc47ef1effec"
+          },
+          {
+            "byteLength": 1044864,
+            "role": "vertices",
+            "sha256": "d002601760d29288a4b1bee87137bb175deab3a4b0b48fde7ba16b67cdd89c0b"
+          }
+        ]
+      }
+    ],
+    "qualificationLimits": [
+      [],
+      [
+        "Finite occupancy samples, not proof of complete air/solid."
+      ],
+      [],
+      [],
+      []
+    ],
+    "qualificationSamples": [
+      {
+        "kind": "coarse",
+        "referenceSamples": 608,
+        "meshSamples": 512
+      },
+      {
+        "kind": "coarse",
+        "referenceSamples": 1024,
+        "meshSamples": 0
+      },
+      {
+        "kind": "coarse",
+        "referenceSamples": 229,
+        "meshSamples": 512
+      },
+      {
+        "kind": "fine",
+        "referenceSamples": 655,
+        "meshSamples": 512
+      },
+      {
+        "kind": "view",
+        "referenceSamples": 826,
+        "meshSamples": 512
+      }
+    ],
+    "kernelAndClientDiffEmpty": true
+  },
+  "cpu": {
+    "root": "/mnt/ml_storage/scratch/atlas-md2a22b2/cpu-contract-r1",
+    "elapsedMs": 2292,
+    "pass_": true,
+    "cleanup": true,
+    "caseCounts": {
+      "sourceCases": 53,
+      "recursiveCases": 39
+    },
+    "intake": {
+      "binding": {
+        "file": "recursive-recipe.json",
+        "recipeKey": "sha256:aa84be2466822b30161edea1d8721046d34239053275374713faccf24be3a905",
+        "projectionDigest": "sha256:a9b4ddcb17c15cdb3a6d03e8aea8f976a520ad7a4d7321f154cee5586692c9c2",
+        "legacyId": "H1C-surface-child@ee2564d40bda7ef6",
+        "legacyDefinitionKey": "fnv1a64:4c29d6f7f61fbb06"
+      },
+      "negativeCases": [
+        {
+          "case": "valid",
+          "accepted": true,
+          "forbiddenImports": []
+        },
+        {
+          "case": "missing",
+          "accepted": false,
+          "forbiddenImports": [],
+          "reason": "[Errno 2] No such file or directory: '/mnt/ml_storage/scratch/atlas-md2a22b2/cpu-contract-r1/intake/copy/scripts/generation/regression-world/recursive-recipe.json'"
+        },
+        {
+          "case": "transport",
+          "accepted": false,
+          "forbiddenImports": [],
+          "reason": "Regression input digest mismatch: recursive-recipe.json"
+        },
+        {
+          "case": "semantic-rehashed",
+          "accepted": false,
+          "forbiddenImports": [],
+          "reason": "Recipe changes the legacy mathematical projection"
+        },
+        {
+          "case": "names-rehashed",
+          "accepted": false,
+          "forbiddenImports": [],
+          "reason": "Unsupported imported component names/descendant parent"
+        },
+        {
+          "case": "alias",
+          "accepted": false,
+          "forbiddenImports": [],
+          "reason": "Unsupported legacy recipe alias or projection binding"
+        },
+        {
+          "case": "parent",
+          "accepted": false,
+          "forbiddenImports": [],
+          "reason": "Regression input digest mismatch: base.npz"
+        },
+        {
+          "case": "source-rehashed",
+          "accepted": false,
+          "forbiddenImports": [],
+          "reason": "Evaluator source integrity mismatch: native/h1lib.py"
+        }
+      ],
+      "residualMismatchRefused": true,
+      "assemblyFromProjection": true,
+      "cudaImported": false
+    },
+    "policy": {
+      "cases": 1110,
+      "outcomes": {
+        "resolved": 14,
+        "unresolved": 70,
+        "failed": 1026
+      },
+      "syntheticOnly": true,
+      "actualGPUStatus3And4": "unverified; B2"
+    },
+    "toolchain": {
+      "python": "3.13.2 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:02) [GCC 11.2.0]",
+      "interpreter": "/home/john-sheppard/miniconda3_fresh/bin/python3",
+      "numpy": "2.4.2",
+      "numpyFile": "/home/john-sheppard/miniconda3_fresh/lib/python3.13/site-packages/numpy/__init__.py"
+    }
+  },
+  "legacyMetrics": {
+    "route": "default Regression World, application-route",
+    "frames": 870,
+    "seconds": 22.81,
+    "overallFps": 38.141166155195094,
+    "fpsTarget": 30,
+    "fpsPass": true,
+    "residentNavigationCalls": 669,
+    "navigationP99Ms": 4.099853515625,
+    "navigationMaxMs": 4.2998046875,
+    "maxReadinessMs": 2331.800048828125,
+    "readinessTargetMs": 1000,
+    "regionAssociatedMemory": "unverified",
+    "method": "rendered frames / recorded route seconds; nearest-rank p99 excludes waiting and first-surface calls"
+  },
+  "sourceMetrics": {
+    "phases": [
+      {
+        "label": "A-explore",
+        "frames": 1841,
+        "seconds": 37.655,
+        "fps": 48.89124950205816,
+        "navCalls": 1762,
+        "navP99": 0.300048828125,
+        "navMax": 1,
+        "readyMax": 251.5
+      },
+      {
+        "label": "B-explore",
+        "frames": 1837,
+        "seconds": 37.424,
+        "fps": 49.0861479264643,
+        "navCalls": 1764,
+        "navP99": 0.300048828125,
+        "navMax": 1.199951171875,
+        "readyMax": 255.800048828125
+      },
+      {
+        "label": "A-reopen",
+        "frames": 30,
+        "seconds": 0.618,
+        "fps": 48.54368932038835,
+        "navCalls": 28,
+        "navP99": 0.300048828125,
+        "navMax": 0.300048828125,
+        "readyMax": 248.800048828125
+      },
+      {
+        "label": "B-reopen",
+        "frames": 30,
+        "seconds": 0.618,
+        "fps": 48.54368932038835,
+        "navCalls": 28,
+        "navP99": 0.2001953125,
+        "navMax": 0.2001953125,
+        "readyMax": 248.7998046875
+      }
+    ],
+    "overallFps": 48.9811963572037,
+    "frames": 3738,
+    "seconds": 76.315,
+    "sourceAudit": {
+      "pass_": true,
+      "rows": [
+        {
+          "phase": "A-explore",
+          "samples": 190,
+          "contacts": 698,
+          "conservativeSourceClearanceLowerBoundM": 7.614027525661331e-06
+        },
+        {
+          "phase": "B-explore",
+          "samples": 189,
+          "contacts": 361,
+          "conservativeSourceClearanceLowerBoundM": -1.462861763765347e-06
+        },
+        {
+          "phase": "A-reopen",
+          "samples": 40,
+          "contacts": 0,
+          "conservativeSourceClearanceLowerBoundM": 0.09782782926725164
+        },
+        {
+          "phase": "B-reopen",
+          "samples": 43,
+          "contacts": 0,
+          "conservativeSourceClearanceLowerBoundM": 0.019255926464999486
+        }
+      ],
+      "cudaImported": false
+    }
+  },
+  "oldPlace": {
+    "legacyReopen": {
+      "sourceSha256": "907f4037be0d16ed54445a0dc670c7b1b59737e3e6cd33937139f0dc24ff4dc5",
+      "exactReexport": true,
+      "pose": {
+        "kind": "prepared-pose-v1",
+        "originM": [
+          1414.9757562519364,
+          79.21086912557448,
+          1040.6400501279961
+        ],
+        "positionLocalM": [
+          0,
+          0.010624999999976126,
+          0
+        ],
+        "orientationWxyz": [
+          0.694988416321868,
+          -0.3381745597100256,
+          0.5705688873447808,
+          0.27763323492962966
+        ],
+        "bodyDiameterM": 0.0265625,
+        "verticalFovDegrees": 75.13718405765499
+      },
+      "world": {
+        "assets": [
+          {
+            "role": "base-field-evaluator",
+            "sha256": "a85d630bd684d29b4e9a5ac5e85cb7c8193af12f9e32c8beed61ad6ba3d2d87e"
+          },
+          {
+            "role": "canonical-parent-frame",
+            "sha256": "561a2a4ce0f89b2563c031d03079538653d58e05419d6e8783e3a5aa744022ec"
+          },
+          {
+            "role": "canonical-parent-samples",
+            "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b"
+          },
+          {
+            "role": "construction",
+            "sha256": "0ab8ee621f34f8e8dcc8220c321104f4cf123f05229a39f8896d241ec52110a3"
+          },
+          {
+            "role": "descendant-rule",
+            "sha256": "ed36d6f4c21d993f82c6439a963d1e79f75e578925a2f7647f62ed25ae1a384e"
+          },
+          {
+            "role": "parent-field-kernel",
+            "sha256": "bed1c48c353d79b0b7e4eae1df3620a58e53b8ae4dfe1e86dbc233f7418dc22d"
+          }
+        ],
+        "generator": {
+          "id": "atlas.surface-descendant",
+          "version": "surface-descendant-r1"
+        },
+        "id": "H1C-surface-child@ee2564d40bda7ef6",
+        "lineage": [
+          {
+            "id": "H1C@61bbb572d425d9ee",
+            "parent": null
+          },
+          {
+            "id": "H1C/gchild/surface-descendant-r1",
+            "parent": "H1C@61bbb572d425d9ee"
+          }
+        ],
+        "parameters": {
+          "amplitude_m": 0.0002,
+          "chart_centre": [
+            -0.029882812666932553,
+            -0.11953125059172012
+          ],
+          "half_support_m": 0.0033203125,
+          "rule": "f3=f2-(A3/A2)*(-kernel_floor(q*(a-a0),q*(b-b0)))",
+          "source_scale": 64
+        },
+        "definitionKey": "fnv1a64:4c29d6f7f61fbb06"
+      },
+      "producer": {
+        "instanceId": "fd204f07-dd64-4cd3-94e0-5adca99df69f",
+        "epoch": 0
+      }
+    },
+    "cleanup": true,
+    "pass_": true,
+    "fixtureSha256": "907f4037be0d16ed54445a0dc670c7b1b59737e3e6cd33937139f0dc24ff4dc5",
+    "reexportSha256": "907f4037be0d16ed54445a0dc670c7b1b59737e3e6cd33937139f0dc24ff4dc5"
+  },
+  "cleanup": {
+    "ownedPids": [
+      3468614,
+      3468625,
+      3468940,
+      3469196,
+      3469212,
+      3469224,
+      3469275,
+      3469289,
+      3478758,
+      3510869,
+      3510937,
+      3510947,
+      3510948,
+      3510950,
+      3510974,
+      3510976,
+      3510982,
+      3511011,
+      3511063,
+      3511120,
+      3511129,
+      3511196,
+      3512951,
+      3513319,
+      3517202,
+      3517216,
+      3517226,
+      3517227,
+      3517229,
+      3517254,
+      3517256,
+      3517263,
+      3517292,
+      3517349,
+      3517373,
+      3517382,
+      3517486,
+      3517766,
+      3517776,
+      3517777,
+      3517779,
+      3517804,
+      3517806,
+      3517812,
+      3517840,
+      3517872,
+      3517895,
+      3517969,
+      3518693,
+      3519047,
+      3519236,
+      3519247,
+      3519257,
+      3519258,
+      3519260,
+      3519284,
+      3519286,
+      3519294,
+      3519323,
+      3519385,
+      3519412,
+      3519421,
+      3519546,
+      3520060,
+      3520070,
+      3520071,
+      3520073,
+      3520098,
+      3520100,
+      3520111,
+      3520134,
+      3520168,
+      3520190,
+      3520264,
+      3520571,
+      3520828,
+      3521135,
+      3521146,
+      3521340,
+      3521580,
+      3521601,
+      3521614,
+      3521648,
+      3521684,
+      3521685,
+      3521696,
+      3521707,
+      3521708,
+      3521710,
+      3521735,
+      3521737,
+      3521747,
+      3521769,
+      3521778,
+      3521779,
+      3521855,
+      3522804,
+      3522814,
+      3522815,
+      3522817,
+      3522842,
+      3522844,
+      3522847,
+      3522875,
+      3522884,
+      3522885,
+      3522948,
+      3523809,
+      3523822,
+      3523823,
+      3523825,
+      3523850,
+      3523852,
+      3523856,
+      3523884,
+      3523893,
+      3523894,
+      3523957,
+      3524085,
+      3524095,
+      3524096,
+      3524098,
+      3524125,
+      3524127,
+      3524132,
+      3524159,
+      3524168,
+      3524169,
+      3524234
+    ],
+    "alive": [],
+    "portsClosed": {
+      "5190": true,
+      "5195": true,
+      "5196": true,
+      "5197": true,
+      "5198": true,
+      "5199": true
+    },
+    "gpuLockFree": true,
+    "scope": "Additional known prepared/native/source workflow PID audit; full gate process-group and browser cleanup are primary evidence.",
+    "preexistingOrphanRetired": {
+      "pid": 3954904,
+      "cwd": "/mnt/ml_storage/dev/projects/mandelbrot_explorer/.worktrees/project1b1-B15 (deleted)",
+      "outsideGate": true,
+      "cleanup": true
+    }
+  },
+  "sourceHashes": {
+    "scripts/experiments/md2b2-check-status.py": "dc7d109e72eb37eb250e664c383f4b69bd516054325285e0d6e93833b0efa7fb",
+    "scripts/experiments/md2b2-gpu-status.py": "b469b1bdf37a09c25389decf6cc5a1aeee95d7259bded680fb2bf6c5557d1260",
+    "scripts/experiments/md2b2-status.mjs": "2c68ca103e4d2aa777f53d33f97be956071ad8b23ae3128124c3dd7da83e1532",
+    "scripts/generation/README.md": "962694135ecfad6c60591e0cc2914a96e027fa6b2d02a9304dd3f35e05a40fb5",
+    "scripts/generation/SOURCE-RECIPES.md": "b19af2d02b2823445c449ea09731b3d709ca354da37e3c228d59d20f12838f59",
+    "scripts/generation/check-recursive-inputs.py": "7b10e4093279336fd803febd841024db9fc26c20ebdf65c3cba26a1bdcb3f24e",
+    "scripts/generation/check_recipe_intake.py": "29f6d10379349c682fb3eb556aca1393d9f8a24ff9f01fe4b703d7d9c3947eec",
+    "scripts/generation/config.mjs": "5488334acf9768247a399256a4c4fc9b59b9892d28ddc8778168ee70db74e7c9",
+    "scripts/generation/import-manifest.json": "15804eeb75b43128831e1731cba3176f1997bde446f8af7dab8c75ba3c1b93c6",
+    "scripts/generation/native/descendant_world.py": "3c075f1c990445ffd0ee31e9d1614171e75296e13a199ce7209dc076c51927e1",
+    "scripts/generation/native/generation_paths.py": "6e05ee34be6e1b8fd977efeb5df98dd431ea76b2fe64989cf835d2ff1983003d",
+    "scripts/generation/native/recipe_inputs.py": "0324965f51bf4bb7e5594f36305a5fdbcc81ba6dde761bc1178c0f0f8e8abb09",
+    "scripts/generation/native/sampling_r0.py": "0f8e65593690092e6b420efbaea8b01952d69a5bf556b01b9974c9c54dde47d7",
+    "scripts/generation/recursive_recipe.py": "5b6bb1d807c4166450e040bfe24b4d153a4e22f7092ff2b599946c2096c4c5fd",
+    "scripts/generation/regression-world/policy-certificate.json": "8cd97f126363aede6b8aa49ab581cba6ee4f2e4edfd291dc549fbabf9f4a6a1a",
+    "scripts/generation/regression-world/recursive-recipe.json": "6cfe0cc3f77df16fc1a2efd02912e4623dec4c84b165460701ba357fa9067c00",
+    "scripts/preparation/native-adapter.mjs": "38bfb8d26760fe6269dd0cb29d500a47101d59306deaf5c15c186ee2be2e248c",
+    "scripts/preparation/native-worker.py": "94abef29545c5cd7b87f0465dcc7b64b01d7829cdcb541b2e25e412de6ec9b7f",
+    "tests/generation-contract.mjs": "c58fb6b34df4d5ceda0c0b6669df9d842c0bff35a7b0831695e1fae35c2c6297",
+    "tests/generation-ownership.mjs": "c6740c423aa00ace9338632a76005551109258b6710d849bbabcb6ef4e582f49",
+    "tests/reference/generation-status-cases.json": "19839df2541541f93a0c3a2b71fde2346b9dc196d5c6304c62531985311cd44b",
+    "tests/reference/legacy-place-provenance.json": "9b7d2b2d262e2b77c6105700202efdffc679b4e5129f3d5ac90dc84052aef72f",
+    "tests/reference/legacy-prepared-place.json": "907f4037be0d16ed54445a0dc670c7b1b59737e3e6cd33937139f0dc24ff4dc5",
+    "tests/reference/legacy-recursive-projection.json": "e44b8623e6553bc4867f68a215162f88d9eef433944c396ab0cfb64f1a8b494d",
+    "tests/reference/pr27-native-policy-certificate.json": "94fc27f682b28f97f8f220a6c97ae6295807e0d8a8a27aa2a88cc8d694a431ce",
+    "tests/space-prepared-files.mjs": "f8da7dfc8edc4ea392e2931a1bdd1107526eec8617ed6e51b95df51461c9a598",
+    "tests/suites.manifest.json": "2d8ee11b93df7eaa66f5df1f93ef911dcb657657e784940f813dcbe74bfa2c54",
+    "tests/unit/generation-config.test.js": "cacfdef9d7f035dacff6ab26a00859cfe6351a9cbe5df459b74fedccea6af0a1"
+  },
+  "postGate": {
+    "scope": "test-only historical fixture SHA pin and documentation/report corrections",
+    "file": "tests/unit/generation-config.test.js",
+    "beforeSha256": "cacfdef9d7f035dacff6ab26a00859cfe6351a9cbe5df459b74fedccea6af0a1",
+    "afterSha256": "323b33add06026453c2949dbfe11a12c5739999bd3064d01da5e35d20801c26a",
+    "focusedGuardedTests": 7,
+    "log": "/mnt/ml_storage/scratch/atlas-md2a22b2/unit-fixture-pin-r0.log",
+    "runtimeSourceUnchanged": true,
+    "reviewRun": "20261101T005527Z-257704",
+    "peerApiCostsUsd": {
+      "20261031T233826Z-23b223": 7.1620776,
+      "20261031T234746Z-d214f0": 8.0921024,
+      "20261101T005527Z-257704": 12.765144600000003
+    },
+    "peerApiTotalUsd": 28.019324600000004
+  }
+}
