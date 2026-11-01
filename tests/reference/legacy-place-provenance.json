@@ -1,0 +1,8 @@
+{
+  "source": "/mnt/ml_storage/scratch/atlas-md2a22/final-files/actual-saved-scene.json",
+  "sha256": "907f4037be0d16ed54445a0dc670c7b1b59737e3e6cd33937139f0dc24ff4dc5",
+  "record": "/mnt/ml_storage/scratch/atlas-md2a22/final-files/files.json",
+  "recordSha256": "11deb87dfdf32273929d5e5889d9c8b2c67e18a3bc59144542e9f951f8310f02",
+  "pass": true,
+  "cleanup": true
+}

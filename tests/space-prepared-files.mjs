@@ -71,6 +71,15 @@ try{
  assert.notEqual(restored.metadata.producer.instanceId,first.setup.fixture.producer.instanceId);assert.deepEqual(restored.pose,saved);assert.deepEqual(restored.requestedScene,snapshot);
  const exported=await download(path.join(root,'actual-reexported-scene.json'));assert.equal(exported,bytes);detail.reopen={producer:restored.metadata.producer.instanceId,exactReexport:true,history:await hist()};
  pass('The downloaded scene reopens after a new helper and browser with exact promised place and bytes');
+ const legacyFilename=path.resolve('tests/reference/legacy-prepared-place.json'),legacyBytes=await fs.readFile(legacyFilename,'utf8'),legacy=JSON.parse(legacyBytes);
+ assert.equal(legacy.schema,'atlas.scene');assert.equal(legacy.schemaVersion,1);assert.equal(legacy.parameters.world.id,'H1C-surface-child@ee2564d40bda7ef6');assert.equal(legacy.parameters.world.definitionKey,'fnv1a64:4c29d6f7f61fbb06');
+ await page.setInputFiles('#landscape-open-scene',legacyFilename);await ready(legacy.camera.positionLocalM);const oldPlace=await state();assert.deepEqual(camera(oldPlace.pose),legacy.camera);assert.deepEqual(oldPlace.requestedScene,legacy);
+ const legacyExport=await download(path.join(root,'legacy-reexported-scene.json'));assert.equal(legacyExport,legacyBytes);
+ detail.legacyReopen={sourceSha256:createHash('sha256').update(legacyBytes).digest('hex'),exactReexport:true,pose:camera(oldPlace.pose),world:oldPlace.requestedScene.parameters.world,producer:oldPlace.metadata.producer};
+ await page.screenshot({path:path.join(root,'legacy-restored-place.png')});
+ pass('A preserved pre-recipe Landscape place reopens and reexports byte-for-byte');
+ await page.setInputFiles('#landscape-open-scene',filename);await ready(saved.positionLocalM);assert.deepEqual((await state()).pose,saved);
+
 
  const before=await hist();await pulse(250,'history-navigation');const moved=(await state()).pose,after=await hist();
  assert.equal(after.camera.length,before.camera.length+1);assert.equal(after.undoDepth,before.undoDepth);

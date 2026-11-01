@@ -39,17 +39,17 @@ flock /mnt/ml_storage/scratch/atlas-gpu.lock env \
 
 `ATLAS_GENERATION_PYTHON` overrides the GPU interpreter. The reference interpreter setting is required; missing libraries fail before generation. The maintained comparison has a 180-second bound, frozen pre-screened A/B sources, exact order/chunk rebuild controls, independent 50-digit checks, negative controls and moved/tampered bundle checks. The recorded first comparison had a preflight naming failure; the repaired native run stopped on a missing reference dependency. Its verification was completed separately under reviewed r2 on identical frozen data; it was not relabelled as a passing original run. See the [full report](../../docs/reports/project1-interactive/MD2A21-SOURCE-RECIPES-2026-10-30.md) for exact measured heads, process failures, limits and review scope.
 
-## Imported recursive recipe (B1)
+## Imported recursive runtime recipe (B2)
 
-`examples/regression-recursive.json` now records the existing rich landscape's parent, child, grandchild and descendant choices. It binds the immutable tilted parent grid and all six evaluator sources. Its complete construction key is separate from the unchanged legacy scene ID. The new JS and stdlib Python codecs are inert: current preparation does not consume them yet. This does not add a new world, regenerate the historical parent or complete recursive runtime integration.
+`regression-world/recursive-recipe.json` is the registered recipe for the existing rich landscape. Native preparation loads its component and descendant numbers before constructing reference orbits. Its alias record binds the recipe key, original numerical projection digest and exact legacy world/definition keys. A changed mathematical projection cannot reuse that alias. The old Scene world record remains compatible; this is not arbitrary-world admission.
 
-The imported profile keeps the old float arithmetic, TA unknown-to-zero history and bilinear `(u,v)` parent interpolation distinct from the new affine-distance profile. Its source hashes bind operation order; matching parameter bits is not a proof that all evaluator paths are equivalent. Historical search provenance and current non-mathematical preparation inputs remain documented in the [design](../../docs/superpowers/specs/2026-10-31-atlas-md2a22b-recursive-inputs.md).
+`examples/regression-recursive.json` preserves B1's original format fixture. Its adapted-source bindings predate runtime integration, so it is not the current runtime grant. Integration changes two adapted source hashes and the construction key while preserving numerical parameters; the new key is `sha256:aa84be2466822b30161edea1d8721046d34239053275374713faccf24be3a905`. The immutable tilted parent, old representation inputs and evaluator/CSG arithmetic are preserved. The primary GPU evaluator remains float32 perturbation with binary64 fallback; source binding does not prove numerical equivalence across all paths.
 
-Run the maintained native-free contract with an installed CPU Python and NumPy:
+Run the maintained native-free contract with CPU Python, NumPy and mpmath:
 
 ```sh
 ATLAS_REFERENCE_PYTHON=/path/to/cpu/python node tests/generation-contract.mjs \
-  /mnt/ml_storage/scratch/atlas-md2a22b/new-contract-run
+  /mnt/ml_storage/scratch/atlas-md2a22b2/new-contract-run
 ```
 
-The output directory must be new. The command needs no server, browser, CUDA or GPU lock; it owns one bounded CPU child and confirms its cleanup. Node unit tests never launch Python. Missing Python/NumPy fails or remains incomplete. Future full gates include this entry and require the interpreter setting. The fixture parent bundles under `tests/reference/source-parent-controls/` preserve prior qualified bytes for compatibility checks, not new mathematical evidence. See the [B1 scorecard](../../docs/reports/project1-interactive/MD2A22B1-RECURSIVE-INPUTS-2026-10-31.md).
+The output directory must be new. The CPU contract checks exact input projection against frozen original sources, current registered dependencies/alias intake, immutable data and format parity. It never validates GPU execution by itself. Missing Python/dependencies fails or remains incomplete. Node unit tests never launch Python. Actual CUDA status and native geometry controls extend the maintained `generation-ownership` GPU entry; the full gate remains30 required entries. See the [B2 design](../../docs/superpowers/specs/2026-10-31-atlas-md2a22b2-runtime-recipes.md). New authored formations, fresh parent profiles/domain/entry and modern world identities remain B3.

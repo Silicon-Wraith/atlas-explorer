@@ -184,6 +184,7 @@
         "An actual nondefault Landscape file contains complete portable world and camera data",
         "The existing viewer refuses a prepared file without changing its scene or histories",
         "The downloaded scene reopens after a new helper and browser with exact promised place and bytes",
+        "A preserved pre-recipe Landscape place reopens and reexports byte-for-byte",
         "Actual navigation makes one camera entry and Back Forward restore it without content edits",
         "Opening a complete file is one Undo Redo edit with exact scene restoration",
         "Invalid files preserve history and unsupported requested poses remain explicit through Retry and Undo",
@@ -236,7 +237,7 @@
     {
       "id": "generation-ownership",
       "gpu": true,
-      "timeoutMs": 300000,
+      "timeoutMs": 420000,
       "command": [
         "tests/generation-ownership.mjs"
       ],
@@ -250,7 +251,9 @@
         "Opposite order resident reuse and actual rebuild preserve current representation and geometry",
         "Stale producer epochs are rejected and all migration publications retire",
         "Relocated mathematical references qualify all actual coarse fine and view source policies",
-        "Native ownership control confirms process cleanup and preserves source-qualified evidence"
+        "Native ownership control confirms process cleanup and preserves source-qualified evidence",
+        "Actual native parameters consume the registered recipe with the frozen legacy projection",
+        "Real CUDA and creator status controls agree with independent CPU and high precision references"
       ]
     },
     {
@@ -284,7 +287,7 @@
         "Imported component and descendant numeric bits match the independent static reference",
         "Immutable parent arrays and evaluator bindings pass relocation and corruption controls",
         "Synthetic status decisions preserve the original policy and existing source bundles verify",
-        "Existing application native representation inputs and certificates remain byte-identical and unimported",
+        "Current runtime recipe retains the frozen mathematical inputs and validated legacy intake",
         "CPU contract evidence classifies honestly and its owned child cleanup is confirmed"
       ]
     }

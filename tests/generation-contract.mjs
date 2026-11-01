@@ -42,16 +42,16 @@ try{
  assert.equal(detail.pythonRun.timedOut,false,'CPU child exceeded deadline');
  assert.equal(detail.pythonRun.exitCode,0,detail.pythonRun.stderr+'\n'+detail.pythonRun.stdout);
  const py=await read(path.join(root,'python-results.json'));assert.equal(py.pass_,true,py.error);detail.python=py;
- for(const name of ['parity','projection','parent','policy','bundles'])assert.ok(py.checks.some(c=>c.name===name),'Missing Python check '+name);
+ for(const name of ['parity','projection','parent','policy','bundles','intake'])assert.ok(py.checks.some(c=>c.name===name),'Missing Python check '+name);
  pass('JS and Python recipe verdicts canonical bytes and identities agree on the frozen corpus');
  pass('Imported component and descendant numeric bits match the independent static reference');
  pass('Immutable parent arrays and evaluator bindings pass relocation and corruption controls');
  pass('Synthetic status decisions preserve the original policy and existing source bundles verify');
+ // Preserve B1's historical baseline; only immutable mathematical inputs are a continuing freeze.
  const baseline=await read(path.join(project,'tests/reference/generation-runtime-baseline.json'));
- for(const[file,expected]of Object.entries(baseline.files))assert.equal(hash(await fs.readFile(path.join(project,file))),expected,'Preexisting runtime changed '+file);
- async function checkImports(dir){for(const entry of await fs.readdir(dir,{withFileTypes:true})){const file=path.join(dir,entry.name);if(entry.isDirectory())await checkImports(file);else if(/\.(js|mjs|py)$/.test(entry.name)&&file!==path.join(project,'src/space/generation/recursive-recipe.js'))assert.doesNotMatch(await fs.readFile(file,'utf8'),/recursive[-_]recipe/,'New production codec import '+file);}}
- await checkImports(path.join(project,'src'));await checkImports(path.join(project,'scripts/preparation'));
- detail.runtimeBaseline={base:baseline.base,files:Object.keys(baseline.files).length,sha256:hash(await fs.readFile(path.join(project,'tests/reference/generation-runtime-baseline.json')))};
+ const frozen=Object.entries(baseline.files).filter(([file])=>file.startsWith('scripts/generation/provenance/')||file.startsWith('scripts/generation/regression-world/')&&!file.endsWith('policy-certificate.json')||['h1lib.py','dek.py','pert.py','fkern.py'].some(name=>file==='scripts/generation/native/'+name));
+ for(const[file,expected]of frozen)assert.equal(hash(await fs.readFile(path.join(project,file))),expected,'Immutable mathematical/representation input changed '+file);
+ detail.immutableControls={historicalBase:baseline.base,files:frozen.length};
  const generation=await verifyGenerationBundle();detail.importValidation={modules:generation.modules,inputs:generation.inputs};
  // Recompute the installed source certificate's actual source list and Node key, without a helper or GPU.
  const adapter=await fs.readFile(path.join(project,'scripts/preparation/source-adapter.mjs'),'utf8'),list=adapter.match(/const sourceFiles=(\[[\s\S]+?\]);/);
@@ -62,7 +62,7 @@ try{
  const sourcesKey=hash(canonicalJson({sources,packages:{node:process.versions.node}}));assert.equal(sourcesKey,certificate.sourcesKey,'Installed certificate source key changed');
  detail.sourceCertificate={sourcesKey,inputs:{}};
  for(const name of ['A','B']){const bundle=await readSourceBundle(path.join(project,'tests/reference/source-parent-controls',name));const world=certificate.worlds.find(w=>w.definitionKey===bundle.definition.definitionKey);assert.ok(world,'Existing input absent from installed certificate');assert.equal(world.inputKey,bundle.inputKey);detail.sourceCertificate.inputs[name]={definitionKey:world.definitionKey,inputKey:world.inputKey};}
- pass('Existing application native representation inputs and certificates remain byte-identical and unimported');
+ pass('Current runtime recipe retains the frozen mathematical inputs and validated legacy intake');
  // The gate's real classifier is exercised against success, failure and absent toolchain evidence.
  const evidence=report.concat([{name:'CPU contract evidence classifies honestly and its owned child cleanup is confirmed'}]);
  assert.equal(validateEvidence(suite,{report:evidence}).ok,true);

@@ -1,0 +1,140 @@
+{
+  "source": "B1 r1 independent original numeric-bit projection; values must not be retuned",
+  "projectionDigest": "sha256:a9b4ddcb17c15cdb3a6d03e8aea8f976a520ad7a4d7321f154cee5586692c9c2",
+  "bits": {
+    "components": [
+      {
+        "name": "parent",
+        "C": [
+          "638929c674c9e7bf",
+          "06dae533cddec03f"
+        ],
+        "H": "0000000000001440",
+        "A": "333333333333f33f",
+        "L": "333333333333eb3f",
+        "F": [
+          "18626401351c9640",
+          "21409b29bb135440",
+          "db135c7957419040"
+        ],
+        "u": [
+          "eaa4a4d76764eebf",
+          "000000000000803c",
+          "46b5a29b0508d4bf"
+        ],
+        "v": [
+          "a3d8479edbdccf3f",
+          "0c78ef86e265e3bf",
+          "da4382a0ed2be8bf"
+        ],
+        "n": [
+          "ccdd75e61449c83f",
+          "23e8413f4773e93f",
+          "50a70fb5616ce2bf"
+        ]
+      },
+      {
+        "name": "child",
+        "C": [
+          "3c016fb674c9e7bf",
+          "68416f0bcddec03f"
+        ],
+        "H": "333333333333eb3f",
+        "A": "333333333333d33f",
+        "L": "333333333333cb3f",
+        "F": [
+          "eda0ed87c21b9640",
+          "4c73ec941de85340",
+          "7070f9588a419040"
+        ],
+        "u": [
+          "07fca0aef2ceeb3f",
+          "0000000000000000",
+          "32d0b768a6aadfbf"
+        ],
+        "v": [
+          "cd6aeef5cfabdebf",
+          "2666abf777d7cf3f",
+          "0857ccc928efeabf"
+        ],
+        "n": [
+          "924b337b8a82bf3f",
+          "a29623b27afeee3f",
+          "040b82c8b9abcb3f"
+        ],
+        "htop": "312a5c0f0ae9df3f"
+      },
+      {
+        "name": "gchild",
+        "C": [
+          "39bf83d474c9e7bf",
+          "34a025a9cbdec03f"
+        ],
+        "H": "333333333333cb3f",
+        "A": "333333333333b33f",
+        "L": "333333333333ab3f",
+        "F": [
+          "ef8a6787c41b9640",
+          "0991b53628d25340",
+          "8ee6734822429040"
+        ],
+        "u": [
+          "237465826de2eb3f",
+          "0000000000000000",
+          "9b1396b8d665dfbf"
+        ],
+        "v": [
+          "e72fb13e329fdebf",
+          "00cbc17ce147cc3f",
+          "12c157470332ebbf"
+        ],
+        "n": [
+          "73656314a3bfbb3f",
+          "4099ab338c35ef3f",
+          "745adab1c2a4c83f"
+        ],
+        "htop": "333333333333b33f"
+      }
+    ],
+    "descendants": [
+      {
+        "id": "descendant",
+        "parent": "gchild",
+        "A0": "f2c6779c99999ebf",
+        "B0": "0234249c9999bebf",
+        "HALF": "3333333333336b3f",
+        "AMPLITUDE": "2d431cebe2362a3f",
+        "RATIO": "0000000000005040",
+        "rule": "surface-descendant-r1"
+      }
+    ],
+    "lineage": [
+      {
+        "id": "parent",
+        "parent": null
+      },
+      {
+        "id": "child",
+        "parent": "parent"
+      },
+      {
+        "id": "gchild",
+        "parent": "child"
+      },
+      {
+        "id": "descendant",
+        "parent": "gchild"
+      }
+    ],
+    "U": "2d431cebe236aa3e",
+    "N0": 32768,
+    "composition": {
+      "operator": "ordered-subtraction-of-capped-graph-intervals-r1",
+      "root": "parent",
+      "cutters": [
+        "child",
+        "gchild"
+      ]
+    }
+  }
+}

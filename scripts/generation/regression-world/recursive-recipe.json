@@ -1,0 +1,227 @@
+{
+  "schema": "atlas.generation.recursive-recipe",
+  "schemaVersion": 1,
+  "generator": {
+    "id": "atlas.surface-descendant",
+    "version": "imported-legacy-r1"
+  },
+  "field": {
+    "formula": "z*z+c",
+    "derivative": "before-z",
+    "escapeRadius": "1000000",
+    "distance": "half-milnor-Dc-divide-U",
+    "unitsPerMetre": "7.8125e-07",
+    "initialIterations": 32768,
+    "recheckIterations": 131072,
+    "referenceOrbitIterations": 131072,
+    "interior": "strict-cardioid-period2",
+    "interiorMargin": "0.000000001",
+    "interiorDistanceM": "0",
+    "coordinateArithmetic": "legacy-binary64-source-bound",
+    "unknown": "nan-no-surface",
+    "taper": {
+      "flatUntil": "0.8",
+      "zeroFrom": "1",
+      "width": "0.2",
+      "shape": "half-plus-half-cosine"
+    },
+    "carve": "-A*w*exp(-D/L)",
+    "cap": "htop*w",
+    "gpuFallback": "pert-status2-or-nonfinite-status1-to-direct-keep-finite1-or3",
+    "parentInterpolation": {
+      "method": "bilinear",
+      "axes": "u,v",
+      "indexing": "ij",
+      "outside": "nan-unknown"
+    },
+    "importedParent": {
+      "profile": "legacy-ta-tilted-r0",
+      "coordinateArithmetic": "legacy-float-grid",
+      "unknown": "zero-substitution-before-TA",
+      "bisections": 36
+    }
+  },
+  "sourceBindings": [
+    {
+      "file": "native/h1lib.py",
+      "sha256": "c1925c1900e4bdd74f9bb7996aade56905a9a799605b100fa9f37b7b82c9f124"
+    },
+    {
+      "file": "native/sampling_r0.py",
+      "sha256": "0f8e65593690092e6b420efbaea8b01952d69a5bf556b01b9974c9c54dde47d7"
+    },
+    {
+      "file": "native/descendant_world.py",
+      "sha256": "3c075f1c990445ffd0ee31e9d1614171e75296e13a199ce7209dc076c51927e1"
+    },
+    {
+      "file": "native/dek.py",
+      "sha256": "dd4888d272c3b9d182d6162fc08c5ee358b758e21a46941881bc54352180a7f0"
+    },
+    {
+      "file": "native/pert.py",
+      "sha256": "5b0121b381a42544ca4be5c406a8547f47c4880c4c3d8c07c13feef9779b9929"
+    },
+    {
+      "file": "native/fkern.py",
+      "sha256": "945aff22ef2645683cccfb36f1a487c13ef0cbacb2297e19e67330a1e5a2fb17"
+    }
+  ],
+  "parentGrid": {
+    "file": "base.npz",
+    "sha256": "8ed49a2a78098f57c8a4176677ea0bdd9563fb5d9a364c6b491a93af8d33951b",
+    "arrays": {
+      "g": {
+        "dtype": "<f8",
+        "shape": [
+          1201
+        ],
+        "order": "C",
+        "sha256": "c277a6455ccf7f480513af2ea1ad8059eaccb50942b602aa7b429ca2697c465a"
+      },
+      "t0": {
+        "dtype": "<f8",
+        "shape": [
+          1201,
+          1201
+        ],
+        "order": "C",
+        "sha256": "781709cc3b7506032d36c58d2a5c895614ed33523ef71f6385e23618b02c3b6d"
+      },
+      "o": {
+        "dtype": "<f8",
+        "shape": [
+          3
+        ],
+        "order": "C",
+        "sha256": "bfb5f40c697e11597c32c0115aaafe4c81b2308287f4130eacaf9ebc09a20148"
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "parent",
+      "parent": null,
+      "source": {
+        "re": "-0.7433418150288101",
+        "im": "0.13179936441493129"
+      },
+      "frame": {
+        "origin": [
+          "1415.0517631230232",
+          "80.30829849396879",
+          "1040.3354238879317"
+        ],
+        "u": [
+          "-0.9497565471439462",
+          "2.7755575615628914e-17",
+          "-0.3129896182898232"
+        ],
+        "v": [
+          "0.24892754772708256",
+          "-0.6061871180970697",
+          "-0.755362332815021"
+        ],
+        "n": [
+          "0.18973027470540982",
+          "0.7953220592019118",
+          "-0.5757301842070124"
+        ]
+      },
+      "halfSupportM": "5.0",
+      "amplitudeM": "1.2",
+      "lengthM": "0.85",
+      "capM": null
+    },
+    {
+      "id": "child",
+      "parent": "parent",
+      "source": {
+        "re": "-0.7433417857319351",
+        "im": "0.13179934557275463"
+      },
+      "frame": {
+        "origin": [
+          "1414.9399716500732",
+          "79.62680552569253",
+          "1040.3851050352932"
+        ],
+        "u": [
+          "0.8690122042388574",
+          "0.0",
+          "-0.4947906515728874"
+        ],
+        "v": [
+          "-0.4792365934060115",
+          "0.2487630805324425",
+          "-0.841694254052272"
+        ],
+        "n": [
+          "0.12308564670392588",
+          "0.9685643653180771",
+          "0.21617815294674625"
+        ]
+      },
+      "halfSupportM": "0.85",
+      "amplitudeM": "0.3",
+      "lengthM": "0.2125",
+      "capM": "0.49859858989717326"
+    },
+    {
+      "id": "gchild",
+      "parent": "child",
+      "source": {
+        "re": "-0.7433418417622085",
+        "im": "0.13179918059472728"
+      },
+      "frame": {
+        "origin": [
+          "1414.9419227770375",
+          "79.28370444995029",
+          "1040.5334795102567"
+        ],
+        "u": [
+          "0.8713901087572861",
+          "0.0",
+          "-0.4905907442665069"
+        ],
+        "v": [
+          "-0.4784665691593077",
+          "0.2209436282315309",
+          "-0.8498550790227759"
+        ],
+        "n": [
+          "0.10839289901504916",
+          "0.9752865800080954",
+          "0.1925280922339031"
+        ]
+      },
+      "halfSupportM": "0.2125",
+      "amplitudeM": "0.075",
+      "lengthM": "0.053125",
+      "capM": "0.075"
+    }
+  ],
+  "descendants": [
+    {
+      "id": "descendant",
+      "parent": "gchild",
+      "chartCentreM": [
+        "-0.029882812666932553",
+        "-0.11953125059172012"
+      ],
+      "halfSupportM": "0.0033203125",
+      "amplitudeM": "0.0002",
+      "sourceScale": "64.0",
+      "rule": "surface-descendant-r1"
+    }
+  ],
+  "composition": {
+    "operator": "ordered-subtraction-of-capped-graph-intervals-r1",
+    "root": "parent",
+    "cutters": [
+      "child",
+      "gchild"
+    ]
+  }
+}
