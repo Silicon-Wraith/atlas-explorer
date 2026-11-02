@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "creator": [
+    {
+      "id": "mixed",
+      "recipe": {
+        "generator": {
+          "id": "atlas.mandelbrot-parent-chart",
+          "version": "affine-distance-r1"
+        },
+        "grid": {
+          "halfExtentM": "1",
+          "cells": 2
+        },
+        "numerics": {
+          "maxIterations": 131072,
+          "roundingDenominator": 1024
+        },
+        "schema": "atlas.generation.source-recipe",
+        "schemaVersion": 1,
+        "source": {
+          "re": "0.2",
+          "im": "0",
+          "unitsPerMetre": "0.1"
+        },
+        "transfer": {
+          "referenceDistanceM": "0",
+          "referenceHeightM": "-0.0",
+          "slope": "1"
+        }
+      }
+    },
+    {
+      "id": "failed",
+      "recipe": {
+        "generator": {
+          "id": "atlas.mandelbrot-parent-chart",
+          "version": "affine-distance-r1"
+        },
+        "grid": {
+          "halfExtentM": "1",
+          "cells": 2
+        },
+        "numerics": {
+          "maxIterations": 1,
+          "roundingDenominator": 1024
+        },
+        "schema": "atlas.generation.source-recipe",
+        "schemaVersion": 1,
+        "source": {
+          "re": "0",
+          "im": "0",
+          "unitsPerMetre": "1e308"
+        },
+        "transfer": {
+          "referenceDistanceM": "0",
+          "referenceHeightM": "-0.0",
+          "slope": "1"
+        }
+      }
+    },
+    {
+      "id": "unknown",
+      "recipe": {
+        "generator": {
+          "id": "atlas.mandelbrot-parent-chart",
+          "version": "affine-distance-r1"
+        },
+        "grid": {
+          "halfExtentM": "0.000001",
+          "cells": 2
+        },
+        "numerics": {
+          "maxIterations": 1,
+          "roundingDenominator": 1024
+        },
+        "schema": "atlas.generation.source-recipe",
+        "schemaVersion": 1,
+        "source": {
+          "re": "-0.122561166876",
+          "im": "0.744861766619",
+          "unitsPerMetre": "0.00000078125"
+        },
+        "transfer": {
+          "referenceDistanceM": "0",
+          "referenceHeightM": "-0.0",
+          "slope": "1"
+        }
+      }
+    }
+  ],
+  "direct": {
+    "source": [
+      0,
+      0
+    ],
+    "unitsPerMetre": 1,
+    "real": [
+      0,
+      2000000,
+      1e+308,
+      -0.122561166876
+    ],
+    "imag": [
+      0,
+      0,
+      0,
+      0.744861766619
+    ],
+    "maxIterations": 1,
+    "expectedStatuses": [
+      3,
+      1,
+      4,
+      0
+    ]
+  }
+}

@@ -29,6 +29,8 @@ def main():
     import cache_view as V
     V.field = V.Cache(0); V.validation = V.Cache(0); V.topology = V.Cache(0)
     W = C.B.W
+    from recipe_inputs import actual_binding
+    recipe_binding = actual_binding(W.S, W)
     assert C.B.CONTENT_ID == F.B.CONTENT_ID == V.B.CONTENT_ID == definition['id']
     graphs = [('bw1_adaptive_graph', C.B.G), ('adaptive_graph_pr3', F.B.G), ('bw1_view_graph', V.B.G)]
     assert len({id(module) for _, module in graphs}) == 3
@@ -55,7 +57,7 @@ def main():
     approach = json.loads(P.asset('approach-r1.json').read_text())
     emit({'type': 'ready', 'producer': {'instanceId': instance, 'epoch': epoch}, 'definition': definition,
           'grid': {'origin': GRID.ORIGIN.tolist(), 'axes': [GRID.TANGENT.tolist(), GRID.BINORMAL.tolist(), GRID.NORMAL.tolist()], 'diameter': GRID.D},
-          'approach': approach, 'sources': source_rows, 'sourceFiles': source_files,
+          'approach': approach, 'recursiveRecipe': recipe_binding, 'sources': source_rows, 'sourceFiles': source_files,
           'device': {'name': str(C.B.S.cp.cuda.runtime.getDeviceProperties(0)['name']), 'index': C.B.S.cp.cuda.runtime.getDevice()},
           'ownership': {'modules': module_rows, 'inputs': [str(p) for p in sorted(P.read_inputs)], 'graphsDistinct': True, 'sharedInteractionCaches': True, 'viewCachesDisabled': True},
           'cacheLimits': {'source': C.field.limit, 'validation': C.validation.limit, 'topology': C.topology.limit},

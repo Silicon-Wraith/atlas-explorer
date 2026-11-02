@@ -38,6 +38,7 @@ def configure_packages():
     if not path.is_dir():
         raise ValueError('Configured native package directory is unavailable: ' + str(path))
     sys.path.insert(0, str(path))
+    sys.path.insert(0, str(GENERATION))
     sys.path.insert(0, str(CODE))
     return path
 
@@ -75,6 +76,10 @@ def validate_inputs():
     for row in definition['assets']:
         if hashlib.sha256(bound[row['role']].read_bytes()).hexdigest() != row['sha256']:
             raise ValueError('Legacy mathematical asset mismatch: ' + row['role'])
+    if str(GENERATION) not in sys.path:
+        sys.path.insert(0, str(GENERATION))
+    from recipe_inputs import load_for_legacy
+    load_for_legacy(definition)
     return definition
 
 
@@ -111,17 +116,20 @@ def install_io_guard():
 
 
 def owned_provenance(extra_modules=()):
-    modules = {name: module for name, module in list(sys.modules.items()) if getattr(module, '__file__', None)
-               and Path(module.__file__).resolve().is_relative_to(CODE)}
+    allowed_support = {(GENERATION / row['file']).resolve() for row in json.loads(MANIFEST.read_text())['newModules'].values()}
+    # Entry scripts are recorded separately by their caller (the worker adds itself).
+    modules = {name: module for name, module in list(sys.modules.items()) if name not in ('__main__', '__mp_main__') and getattr(module, '__file__', None)
+               and Path(module.__file__).resolve().is_relative_to(GENERATION)}
     for name, module in extra_modules:
         if name in modules and modules[name] is not module:
             raise ValueError('First-party module-name collision: ' + name)
         modules[name] = module
     for name, module in modules.items():
-        if not Path(module.__file__).resolve().is_relative_to(CODE):
+        if not Path(module.__file__).resolve().is_relative_to(CODE) and Path(module.__file__).resolve() not in allowed_support:
             raise ValueError('Unowned first-party module: ' + name)
     files = {Path(module.__file__).resolve() for module in modules.values()}
     files.update(CODE / name for name in json.loads(MANIFEST.read_text())['adaptations'])
+    files.update(allowed_support)
     files.update(read_inputs)
     files.add(MANIFEST)
     rows = [{'role': str(path.relative_to(GENERATION)), 'file': str(path),

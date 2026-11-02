@@ -1,5 +1,6 @@
 // MD2.A1 native GPU migration control; all new world computation is project-owned.
 import './support/entry-guard.mjs';
+import {runGenerationStatusControls} from '../scripts/experiments/md2b2-status.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -12,7 +13,7 @@ import {createPreparationRequest,worldReference,representationKey} from '../src/
 import {preparedRunRoot} from './support/prepared-run-root.mjs';
 import {installSuiteDeadline} from './support/bounded.mjs';
 if(!process.env.ATLAS_GPU_HANDOFF||process.env.ATLAS_GPU_DEFERRED)throw Error('Native ownership acceptance requires one exclusive GPU handoff');
-installSuiteDeadline('generation-ownership',300000);
+installSuiteDeadline('generation-ownership',420000);
 const root=preparedRunRoot(process.env.ATLAS_GENERATION_RUN_ROOT??'/mnt/ml_storage/scratch/atlas-md2a/generation-'+new Date().toISOString().replace(/[:.]/g,'-'),'generation');await fs.mkdir(root);
 const report=[],detail={started:Date.now(),rows:[],checks:[],events:[],cleanup:false,ownedPids:[process.pid]},exec=promisify(execFile);
 const pass=name=>{report.push({name});detail.checks.push(name);console.log('PASS '+name);};
@@ -27,13 +28,15 @@ async function request(label,{retire=true,rebuild=true}={}){
 }
 try{
  adapter=await createNativeAdapter({runRoot:root,onController:value=>{controller=value;detail.ownedPids.push(value.pid);},onEvent:e=>detail.events.push(e)});detail.ownedPids.push(adapter.snapshot().pid);detail.hello=adapter.hello();assert.deepEqual(adapter.world,gold.world);
+ const frozen=JSON.parse(await fs.readFile('tests/reference/legacy-recursive-projection.json'));const binding=detail.hello.recursiveRecipe;assert.equal(binding.actualProjectionDigest,frozen.projectionDigest);assert.deepEqual(binding.nativeInputs,frozen.bits);assert.equal(binding.legacyDefinitionKey,adapter.world.definitionKey);assert.deepEqual(binding.componentIds,['parent','child','gchild']);
+ pass('Actual native parameters consume the registered recipe with the frozen legacy projection');
  assert.match(detail.hello.device.name,/NVIDIA|RTX/);pass('Owned generation uses the recorded native CUDA hardware and frozen legacy world');
  const own=detail.hello.ownership;assert.equal(own.graphsDistinct,true);assert.equal(own.sharedInteractionCaches,true);assert.equal(own.viewCachesDisabled,true);
- for(const m of own.modules)assert.ok(m.file.startsWith(path.join(GENERATION_ROOT,'native')+path.sep),m.file);
+ for(const m of own.modules)assert.ok(m.file.startsWith(GENERATION_ROOT+path.sep)&&!m.file.includes('/provenance/'),m.file);
  for(const f of own.inputs)assert.ok(f.startsWith(GENERATION_BUNDLE+path.sep),f);
  for(const row of detail.hello.sourceFiles)if(!row.role.startsWith('external-package/'))assert.ok(row.file.startsWith(GENERATION_ROOT+path.sep)||row.file===path.resolve('scripts/preparation/native-worker.py'),row.file);
  pass('Actual first-party modules and registered inputs are repository-owned with distinct mesh modules');
- assert.throws(()=>adapter.installCertificate({sourcesKey:'legacy-or-wrong'}),/certificate source mismatch/);pass('Legacy or mismatched source certificates remain rejected');
+ assert.throws(()=>adapter.installCertificate({sourcesKey:'legacy-or-wrong'}),/certificate source mismatch/);const oldCertificate=JSON.parse(await fs.readFile('tests/reference/pr27-native-policy-certificate.json'));assert.throws(()=>adapter.installCertificate(oldCertificate),/certificate source mismatch/);pass('Legacy or mismatched source certificates remain rejected');
  for(const label of ['home','new-3d','domain-corner','fine-control','view'])await request(label);
  pass('Fresh home new3D corner fine and view buffers exactly match preserved same-host controls');
  await adapter.reset();await request('fine-control');const first=await request('home',{retire:false,rebuild:false}),reuse=await request('home',{retire:false,rebuild:false});assert.equal(reuse.cacheHit,true);assert.equal(first.key,reuse.key);adapter.retire(first.token);adapter.retire(reuse.token);
@@ -46,6 +49,7 @@ try{
  await exec(process.execPath,['scripts/experiments/pc2-qualification-input.mjs',root,'migration.json'],options);await exec(process.env.ATLAS_GENERATION_PYTHON??'/mnt/ml_storage/scratch/venvs/gpu/bin/python',['scripts/experiments/pc2-qualify.py',root],options);
  const q=JSON.parse(await fs.readFile(path.join(root,'qualification.json'),'utf8')),certificate=JSON.parse(await fs.readFile(path.join(root,'policy-certificate.json'),'utf8'));assert.equal(q.pass,true);assert.deepEqual(Object.keys(certificate.policies).sort(),['coarse','fine','view']);
  pass('Relocated mathematical references qualify all actual coarse fine and view source policies');
+ detail.statusControls=await runGenerationStatusControls({root:path.join(root,'status'),onPid:pid=>detail.ownedPids.push(pid)});assert.equal(detail.statusControls.cleanup,true);pass('Real CUDA and creator status controls agree with independent CPU and high precision references');
  pass('Native ownership control confirms process cleanup and preserves source-qualified evidence');detail.pass=true;
 }catch(error){detail.failure=error.stack??String(error);report.push({name:'FAIL',error:detail.failure});process.exitCode=1;console.error(detail.failure);}
 finally{

@@ -6,8 +6,10 @@ ROOT=DATA
 # Direct reference imports resolve from the owned native package.
 import field_fidelity_r0 as F
 S=F.S;H=S.H;K2=next(c for c in S.COMPONENTS if c['name']=='gchild')
-A0,B0=-.029882812666932553,-.11953125059172012
-HALF=.0033203125;AMPLITUDE=.0002;RATIO=64.
+from recipe_inputs import descendant_input
+RECIPE_DESCENDANT=descendant_input()
+A0,B0=RECIPE_DESCENDANT['A0'],RECIPE_DESCENDANT['B0']
+HALF=RECIPE_DESCENDANT['HALF'];AMPLITUDE=RECIPE_DESCENDANT['AMPLITUDE'];RATIO=RECIPE_DESCENDANT['RATIO']
 BASE_VALUES=S.values
 BASE_INPUTS=[ROOT/'construction.json',Path(S.__file__),Path(H.__file__),Path(__file__),asset('base.npz'),asset('frame.json')]
 INPUT_HASHES={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in BASE_INPUTS}

@@ -1,3 +1,5 @@
+import {recursiveRecipeKey,createRecursiveRecipe} from '../../src/space/generation/recursive-recipe.js';
+import {createWorldRecord} from '../../src/space/preparation/contract.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -20,5 +22,10 @@ export async function verifyGenerationBundle({root=GENERATION_ROOT,bundle=GENERA
  const world=JSON.parse(await readFile(owned(root,manifest.legacyWorldFile),'utf8'));
  const roles={'construction':'regression-world/construction.json','canonical-parent-samples':'regression-world/base.npz','canonical-parent-frame':'regression-world/frame.json','base-field-evaluator':'provenance/original/sampling_r0.py','parent-field-kernel':'provenance/original/h1lib.py','descendant-rule':'provenance/original/descendant_world.py'};
  for(const row of world.assets)if(digest(await readFile(owned(root,roles[row.role])))!==row.sha256)throw Error('Legacy world asset mismatch: '+row.role);
- return{world,modules:Object.keys(manifest.adaptations).length,inputs:Object.keys(manifest.inputs).length};
+ const binding=manifest.recursiveRecipe;
+ if(!binding||binding.file!=='recursive-recipe.json'||binding.legacyId!==world.id||binding.legacyId!=='H1C-surface-child@ee2564d40bda7ef6'||binding.legacyDefinitionKey!==createWorldRecord(world).definitionKey||binding.legacyDefinitionKey!=='fnv1a64:4c29d6f7f61fbb06'||binding.projectionDigest!=='sha256:a9b4ddcb17c15cdb3a6d03e8aea8f976a520ad7a4d7321f154cee5586692c9c2')throw Error('Invalid recursive recipe legacy binding');
+ const recipe=createRecursiveRecipe(JSON.parse(await readFile(owned(bundle,binding.file),'utf8')));
+ if(await recursiveRecipeKey(recipe)!==binding.recipeKey||JSON.stringify(recipe.components.map(c=>c.id))!==JSON.stringify(['parent','child','gchild'])||recipe.descendants.length!==1||recipe.descendants[0].id!=='descendant'||recipe.descendants[0].parent!=='gchild')throw Error('Unsupported recursive recipe key or component names');
+ for(const row of recipe.sourceBindings)if(digest(await readFile(owned(root,row.file)))!==row.sha256)throw Error('Recursive recipe evaluator source mismatch');
+ return{world,recursiveRecipe:{...binding},modules:Object.keys(manifest.adaptations).length,inputs:Object.keys(manifest.inputs).length};
 }

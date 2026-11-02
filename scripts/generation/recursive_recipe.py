@@ -217,3 +217,22 @@ def load_inputs(value, parent_root, generation_root):
     """Validate immutable dependencies before exposing parameters for future use."""
     verify_parent(value, parent_root); verify_sources(value, generation_root)
     return project_inputs(value)
+
+def projection_bits(value):
+    """One binary64 serializer for CPU controls and actual native intake evidence."""
+    if isinstance(value, complex):
+        return [projection_bits(value.real), projection_bits(value.imag)]
+    if isinstance(value, float):
+        return struct.pack('<d', value).hex()
+    if type(value) is list:
+        return [projection_bits(v) for v in value]
+    if type(value) is dict:
+        return {k:projection_bits(v) for k,v in value.items()}
+    if hasattr(value, 'tolist'):
+        return projection_bits(value.tolist())
+    if value is None or type(value) in (str, int, bool):
+        return value
+    raise TypeError('Unsupported numeric projection value')
+
+def projection_key(value):
+    return key(projection_bits(value))

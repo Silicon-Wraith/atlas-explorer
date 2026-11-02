@@ -20,12 +20,11 @@ import h1lib as H
 
 CON = json.loads(asset('construction.json').read_text())
 GS = json.loads(asset('gs.json').read_text())['fixtures']
-COMPONENTS = [dict(name='parent', F=H.O, u=H.UA, v=H.VA, n=H.NRM,
-                   C=H.CS, H=H.H0, A=H.A0, L=H.L0)]
-for k in ('K1', 'K2'):
-    c = dict(CON[k]); c['C'] = complex(*c['C'])
+from recipe_inputs import component_inputs, validate_residual
+validate_residual(H)
+COMPONENTS = component_inputs()
+for c in COMPONENTS:
     for key in ('F', 'u', 'v', 'n'): c[key] = np.asarray(c[key])
-    COMPONENTS.append(c)
 REFS = {c['name']: pert.ref_orbit(c['C'], 131072) for c in COMPONENTS}
 
 def taper(a):
